@@ -13,7 +13,7 @@ export class ErrorBoundary extends Component {
   render() {
     if (this.state.hasError) {
       return (
-        <div style={{ padding: '32px', color: 'var(--severity-critical)', fontFamily: 'var(--font-mono)' }}>
+        <div style={{ padding: '32px', color: 'var(--severity-critical)', fontFamily: 'var(--font)' }}>
           <h2>Tool Error</h2>
           <p style={{ marginTop: '8px', color: 'var(--text-muted)' }}>
             {this.state.error?.message || 'This tool encountered an unexpected error.'}

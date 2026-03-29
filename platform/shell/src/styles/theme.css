@@ -1,19 +1,31 @@
 :root {
-  --bg-primary: #0d1117;
-  --bg-surface: #0a1628;
-  --bg-sidebar: #060d18;
-  --border: #1e3a5f;
-  --accent: #00c8ff;
-  --accent-secondary: #4a9eff;
-  --text-primary: #e6edf3;
-  --text-muted: #8b949e;
-  --severity-critical: #ff4444;
-  --severity-high: #ff8c00;
-  --severity-medium: #ffd700;
-  --severity-low: #00c8ff;
-  --severity-info: #4a9eff;
-  --font-mono: 'Consolas', 'Monaco', monospace;
-  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --bg-primary: #111110;
+  --bg-surface: #1a1917;
+  --bg-sidebar: #0e0d0c;
+  --border: #1f1e1c;
+  --text-primary: #e8e6e3;
+  --text-muted: #4a4845;
+  --text-subtle: #333330;
+  --severity-critical: #ef4444;
+  --severity-high: #d97706;
+  --severity-medium: #ca8a04;
+  --severity-low: #16a34a;
+  --severity-info: #60a5fa;
+  --btn-primary-bg: #e8e6e3;
+  --btn-primary-text: #111110;
+  --font: 'Source Code Pro', 'Consolas', 'Monaco', monospace;
+}
+
+[data-theme="light"] {
+  --bg-primary: #faf8f5;
+  --bg-surface: #ffffff;
+  --bg-sidebar: #f0ece6;
+  --border: #e0d8cc;
+  --text-primary: #1a1714;
+  --text-muted: #8a8078;
+  --text-subtle: #c0b8b0;
+  --btn-primary-bg: #1a1714;
+  --btn-primary-text: #faf8f5;
 }
 
 * {
@@ -25,6 +37,7 @@
 body {
   background: var(--bg-primary);
   color: var(--text-primary);
-  font-family: var(--font-sans);
+  font-family: var(--font);
+  font-weight: 500;
   min-height: 100vh;
 }

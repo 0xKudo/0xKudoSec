@@ -9,15 +9,13 @@ const styles = {
     flexShrink: 0,
   },
   brand: {
-    color: 'var(--accent)',
-    fontFamily: 'var(--font-mono)',
+    color: 'var(--text-primary)',
     fontWeight: 'bold',
     fontSize: '15px',
   },
   backLink: {
     color: 'var(--text-muted)',
     fontSize: '12px',
-    fontFamily: 'var(--font-mono)',
     textDecoration: 'none',
   },
 };
