@@ -141,7 +141,18 @@ A unified cybersecurity tools platform at `tools.laynekudo.com`. 19 planned tool
 - Optional context field, encoding hint selector
 - 4 new tests passing (41 total)
 
-**Next: Tool 11 — Security Policy Translator**
+**Tool 11 (Security Policy Translator) — COMPLETE**
+- `tools/security-policy-translator/manifest.json`, `server/routes.js`, `client/index.jsx`
+- `POST /translate` — Claude-only, no external APIs
+- Supports NIST, ISO 27001, CIS, SOC 2, HIPAA, PCI-DSS, GDPR, CMMC, internal policy
+- Extracts controls with IDs, plain-English explanations, owner teams, action items, compliance gaps
+- 4 new tests passing (45 total)
+
+**Fix applied to Tool 10 and shared Claude service:**
+- Claude was wrapping JSON responses in markdown code fences — fixed globally in `platform/server/services/claude.js`
+- `max_tokens` raised from 1024 to 4096 — improves response completeness across all tools
+
+**Next: Tool 12 — Reverse Shell Generator**
 
 ---
 
