@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { ToolRegistryProvider, useTools } from './context/ToolRegistry';
+import { WorkspaceProvider } from './context/WorkspaceContext';
 import { TopNav } from './components/TopNav';
 import { Sidebar } from './components/Sidebar';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -78,6 +79,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <ToolRegistryProvider>
+        <WorkspaceProvider>
         <div style={styles.layout}>
           <TopNav />
           <div style={styles.body}>
@@ -87,6 +89,7 @@ export default function App() {
             </main>
           </div>
         </div>
+        </WorkspaceProvider>
       </ToolRegistryProvider>
     </BrowserRouter>
   );
