@@ -1,0 +1,9 @@
+{
+  "id": "threat-intel",
+  "name": "Threat Intelligence Aggregator",
+  "description": "Look up IPs, domains, URLs, and file hashes across AbuseIPDB, VirusTotal, Shodan, IPInfo, ThreatFox, URLhaus, and MalwareBazaar.",
+  "route": "/threat-intel",
+  "icon": "shield",
+  "tags": ["blue-team", "threat-intel"],
+  "status": "active"
+}
