@@ -66,9 +66,15 @@ router.post('/analyze', requireFields(['payload']), async (req, res) => {
 
   try {
     const raw = await askClaude(CLAUDE_SYSTEM_PROMPT, prompt);
-    result = JSON.parse(raw);
-  } catch {
-    // Return default on failure
+    try {
+      result = JSON.parse(raw);
+    } catch {
+      // Claude responded but not with valid JSON — return raw text as explanation
+      result.explanation = raw?.slice(0, 2000) || 'Claude returned an unparseable response.';
+      result.intent = 'See explanation for Claude response.';
+    }
+  } catch (err) {
+    result.explanation = `Claude API error: ${err.message}`;
   }
 
   res.json(result);
