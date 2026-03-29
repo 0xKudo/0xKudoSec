@@ -102,7 +102,15 @@ A unified cybersecurity tools platform at `tools.laynekudo.com`. 19 planned tool
 - 4 new tests passing (21 total)
 - New env var: `ABUSEIPDB_API_KEY`
 
-**Next: Tool 6 — Network Threat Analyzer**
+**Tool 6 (Network Threat Analyzer) — COMPLETE**
+- `tools/network-threat-analyzer/manifest.json`, `server/routes.js`, `client/index.jsx`
+- `POST /analyze` (paste) + `POST /analyze-file` (upload) — firewall, NetFlow, Zeek, Suricata, syslog, pcap-summary
+- Auto-detects log type, Claude identifies threats, anomalies, suspicious IPs, recommendations
+- Paste tab + upload tab UI, per-threat severity cards, suspicious IP chips
+- 4 new tests passing (25 total)
+- Note: live network capture deferred to Electron phase (documented in spec)
+
+**Next: Tool 7 — Network Scanner (nmap wrapper)**
 
 ---
 
