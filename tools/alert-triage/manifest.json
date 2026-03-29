@@ -1,0 +1,9 @@
+{
+  "id": "alert-triage",
+  "name": "Alert Triage Assistant",
+  "description": "Paste a SIEM alert. Get severity assessment, likely attack vector, and recommended next steps.",
+  "route": "/alert-triage",
+  "icon": "shield",
+  "tags": ["blue-team", "ai-assisted", "soc"],
+  "status": "active"
+}
