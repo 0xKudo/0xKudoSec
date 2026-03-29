@@ -1,0 +1,9 @@
+{
+  "id": "log-anomaly-explainer",
+  "name": "Log Anomaly Explainer",
+  "description": "Paste system, application, or security logs. Claude identifies anomalies, explains what they mean in plain English, and recommends next steps.",
+  "route": "/log-anomaly-explainer",
+  "icon": "file-text",
+  "tags": ["blue-team", "ai-assisted", "soc"],
+  "status": "active"
+}
