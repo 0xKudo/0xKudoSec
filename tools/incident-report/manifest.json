@@ -1,0 +1,9 @@
+{
+  "id": "incident-report",
+  "name": "Incident Report Generator",
+  "description": "Generate a structured incident report from a raw alert or an imported Alert Triage result.",
+  "route": "/incident-report",
+  "icon": "file-text",
+  "tags": ["blue-team", "ai-assisted", "reporting"],
+  "status": "active"
+}

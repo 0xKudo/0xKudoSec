@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useWorkspace } from '../../../platform/shell/src/context/WorkspaceContext.jsx';
 
 const SEVERITY_COLORS = {
   critical: 'var(--severity-critical)',
@@ -98,6 +99,7 @@ export default function AlertTriageTool() {
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const { push } = useWorkspace();
 
   async function handleAnalyze() {
     if (!alertText.trim()) return;
@@ -116,6 +118,7 @@ export default function AlertTriageTool() {
         setError(data.error || 'Analysis failed.');
       } else {
         setResult(data);
+        push('alert-triage', `${data.severity.toUpperCase()} — ${data.attackVector}`, data, 'alert-triage');
       }
     } catch {
       setError('Network error. Is the server running?');
