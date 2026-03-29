@@ -24,7 +24,7 @@ This is Layne Kudo's project. Layne is self-taught, building this as a portfolio
 | 3 | Phishing Email Analyzer | Complete — paste text or upload .eml file |
 | 4+ | All remaining tools | Backlog |
 
-**Next: Tool 5 — Threat Intelligence Aggregator**
+**Next: Tool 6 — Network Threat Analyzer**
 
 **Full context:** `HANDOFF.md` (in this folder)
 **Full design spec:** `2026-03-26-cybertools-platform-design.md` (in this folder)
@@ -128,7 +128,7 @@ Flag any security concern before proceeding, even if it slows implementation dow
 | 2 | Incident Report Generator | Blue | Complete |
 | 3 | Phishing Email Analyzer | Blue | Complete |
 | 4 | OSINT Recon Dashboard | Purple | Complete |
-| 5 | Threat Intelligence Aggregator | Blue | Backlog |
+| 5 | Threat Intelligence Aggregator | Blue | Complete — AbuseIPDB, VirusTotal, Shodan, IPInfo, ThreatFox, URLhaus, MalwareBazaar |
 | 6 | Network Threat Analyzer | Blue | Backlog |
 | 7 | Network Scanner (nmap wrapper) | Purple | Backlog |
 | 8 | Log Anomaly Explainer | Blue | Backlog |

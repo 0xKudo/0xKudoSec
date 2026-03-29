@@ -93,7 +93,16 @@ A unified cybersecurity tools platform at `tools.laynekudo.com`. 19 planned tool
 - Required env vars: `SHODAN_API_KEY`, `VIRUSTOTAL_API_KEY`, `HUNTER_API_KEY`, `IPINFO_TOKEN` (WHOIS uses free public API)
 - **Known issues (deferred):** WHOIS returns 404 from both rdap.org and rdap.iana.org for tested domains — need alternate source or paid whoisjsonapi plan. Shodan free tier blocks host data; card shows resolved IP only.
 
-**Next: Tool 5 — Threat Intelligence Aggregator**
+**Tool 5 (Threat Intelligence Aggregator) — COMPLETE**
+- `tools/threat-intel/manifest.json`, `server/routes.js`, `client/index.jsx`
+- `POST /analyze` — accepts IP, domain, URL, or file hash (auto-detected), runs parallel lookups
+- Sources: AbuseIPDB, VirusTotal, Shodan, IPInfo, ThreatFox, URLhaus, MalwareBazaar
+- Keyless sources: ThreatFox, URLhaus, MalwareBazaar (abuse.ch public APIs)
+- Claude synthesizes into threatLevel/flags/recommendations, WorkspaceContext push on success
+- 4 new tests passing (21 total)
+- New env var: `ABUSEIPDB_API_KEY`
+
+**Next: Tool 6 — Network Threat Analyzer**
 
 ---
 
@@ -202,6 +211,8 @@ VIRUSTOTAL_API_KEY=       # https://www.virustotal.com/gui/join-us
 HUNTER_API_KEY=           # https://hunter.io
 IPINFO_TOKEN=             # https://ipinfo.io/signup
 # WHOIS — no key needed, uses public whoisjsonapi.com endpoint
+ABUSEIPDB_API_KEY=        # https://www.abuseipdb.com/register
+# ThreatFox, URLhaus, MalwareBazaar — no key needed (abuse.ch public APIs)
 ```
 
 ---
