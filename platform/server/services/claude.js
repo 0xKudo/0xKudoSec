@@ -17,7 +17,7 @@ export const claudeClient = new Anthropic({
 export async function askClaude(systemPrompt, userMessage) {
   const message = await claudeClient.messages.create({
     model: 'claude-sonnet-4-6',
-    max_tokens: 1024,
+    max_tokens: 4096,
     system: systemPrompt,
     messages: [{ role: 'user', content: userMessage }],
   });
@@ -26,5 +26,6 @@ export async function askClaude(systemPrompt, userMessage) {
   if (block.type !== 'text') {
     throw new Error('Unexpected response type from Claude API');
   }
-  return block.text;
+  // Strip markdown code fences if Claude wraps JSON in ```json ... ```
+  return block.text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
 }
