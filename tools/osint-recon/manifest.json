@@ -1,0 +1,9 @@
+{
+  "id": "osint-recon",
+  "name": "OSINT Recon Dashboard",
+  "description": "Aggregate OSINT data on a domain, IP, or email from Shodan, VirusTotal, Hunter.io, IPInfo, and WHOIS.",
+  "route": "/osint-recon",
+  "icon": "search",
+  "tags": ["red-team", "blue-team", "recon"],
+  "status": "active"
+}
