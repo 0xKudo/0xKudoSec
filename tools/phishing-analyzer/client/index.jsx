@@ -140,13 +140,91 @@ const styles = {
     marginBottom: '20px',
     wordBreak: 'break-all',
   },
+  tabRow: {
+    display: 'flex',
+    gap: '0',
+    marginBottom: '12px',
+    borderBottom: '1px solid var(--border)',
+  },
+  tab: (active) => ({
+    padding: '8px 16px',
+    fontSize: '12px',
+    cursor: 'pointer',
+    background: 'none',
+    border: 'none',
+    borderBottom: active ? '2px solid var(--text-primary)' : '2px solid transparent',
+    color: active ? 'var(--text-primary)' : 'var(--text-muted)',
+    fontFamily: 'var(--font)',
+    marginBottom: '-1px',
+  }),
+  uploadArea: {
+    width: '100%',
+    minHeight: '120px',
+    background: 'var(--bg-surface)',
+    border: '1px dashed var(--border)',
+    borderRadius: '4px',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '8px',
+    marginBottom: '12px',
+    cursor: 'pointer',
+    color: 'var(--text-muted)',
+    fontSize: '13px',
+  },
+  fileChosen: {
+    color: 'var(--text-primary)',
+    fontSize: '13px',
+    marginBottom: '12px',
+  },
 };
 
 export default function PhishingAnalyzerTool() {
+  const [tab, setTab] = useState('paste'); // 'paste' | 'upload'
   const [emailText, setEmailText] = useState('');
+  const [selectedFile, setSelectedFile] = useState(null);
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  function handleFileChange(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (!file.name.toLowerCase().endsWith('.eml')) {
+      setError('Only .eml files are accepted');
+      return;
+    }
+    setError(null);
+    setSelectedFile(file);
+  }
+
+  async function handleUploadAnalyze() {
+    if (!selectedFile) return;
+    setLoading(true);
+    setError(null);
+    setResult(null);
+
+    try {
+      const formData = new FormData();
+      formData.append('emailFile', selectedFile);
+
+      const res = await fetch('/api/tools/phishing-analyzer/analyze-file', {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || 'Analysis failed.');
+      } else {
+        setResult(data);
+      }
+    } catch {
+      setError('Network error. Is the server running?');
+    } finally {
+      setLoading(false);
+    }
+  }
 
   async function handleAnalyze() {
     if (!emailText.trim()) return;
@@ -182,21 +260,55 @@ export default function PhishingAnalyzerTool() {
         </p>
       </div>
 
-      <textarea
-        style={styles.textarea}
-        placeholder="Paste email content here (headers, body, links)..."
-        value={emailText}
-        onChange={e => setEmailText(e.target.value)}
-        disabled={loading}
-      />
+      <div style={styles.tabRow}>
+        <button style={styles.tab(tab === 'paste')} onClick={() => setTab('paste')}>Paste Text</button>
+        <button style={styles.tab(tab === 'upload')} onClick={() => setTab('upload')}>Upload .eml</button>
+      </div>
 
-      <button
-        style={styles.button(loading)}
-        onClick={handleAnalyze}
-        disabled={loading || !emailText.trim()}
-      >
-        {loading ? 'Analyzing...' : 'Analyze Email'}
-      </button>
+      {tab === 'paste' && (
+        <>
+          <textarea
+            style={styles.textarea}
+            placeholder="Paste email content here (headers, body, links)..."
+            value={emailText}
+            onChange={e => setEmailText(e.target.value)}
+            disabled={loading}
+          />
+          <button
+            style={styles.button(loading)}
+            onClick={handleAnalyze}
+            disabled={loading || !emailText.trim()}
+          >
+            {loading ? 'Analyzing...' : 'Analyze Email'}
+          </button>
+        </>
+      )}
+
+      {tab === 'upload' && (
+        <>
+          <label style={styles.uploadArea}>
+            <span>Click to select a .eml file</span>
+            <span style={{ fontSize: '11px', color: 'var(--text-subtle)' }}>Max 100kb</span>
+            <input
+              type="file"
+              accept=".eml"
+              style={{ display: 'none' }}
+              onChange={handleFileChange}
+              disabled={loading}
+            />
+          </label>
+          {selectedFile && (
+            <div style={styles.fileChosen}>Selected: {selectedFile.name}</div>
+          )}
+          <button
+            style={styles.button(loading)}
+            onClick={handleUploadAnalyze}
+            disabled={loading || !selectedFile}
+          >
+            {loading ? 'Analyzing...' : 'Analyze File'}
+          </button>
+        </>
+      )}
 
       {error && <p style={styles.error}>{error}</p>}
 
