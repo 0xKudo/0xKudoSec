@@ -133,7 +133,15 @@ A unified cybersecurity tools platform at `tools.laynekudo.com`. 19 planned tool
 - EPSS score bar, Exploit-DB links, CVSS scores, CWE/CAPEC mappings
 - 4 new tests passing (37 total)
 
-**Next: Tool 10 — Payload Obfuscation Explainer**
+**Tool 10 (Payload Obfuscation Explainer) — COMPLETE**
+- `tools/payload-obfuscation-explainer/manifest.json`, `server/routes.js`, `client/index.jsx`
+- `POST /analyze` — Claude-only, no external APIs
+- Supports base64, hex, URL, HTML, unicode, ROT13, PowerShell, JavaScript, Python, bash
+- Returns decoded payload, encoding layers, IOCs, threat level, malicious flag, plain-English explanation
+- Optional context field, encoding hint selector
+- 4 new tests passing (41 total)
+
+**Next: Tool 11 — Security Policy Translator**
 
 ---
 
