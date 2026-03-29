@@ -151,31 +151,39 @@ async function fetchWhois(target, type) {
 }
 
 async function fetchRdap(domain) {
-  try {
-    const res = await fetch(`https://rdap.org/domain/${encodeURIComponent(domain)}`);
-    const text = await res.text();
-    if (!text || !text.trim()) return { error: 'RDAP returned empty response' };
-    let data;
-    try { data = JSON.parse(text); } catch { return { error: 'RDAP returned invalid response' }; }
-    if (!res.ok) return { error: `WHOIS/RDAP lookup failed (${res.status})` };
-    const nameServers = data.nameservers?.map(ns => ns.ldhName).filter(Boolean);
-    const registrar = data.entities?.find(e => e.roles?.includes('registrar'));
-    const registrant = data.entities?.find(e => e.roles?.includes('registrant'));
-    const getDate = (type) => data.events?.find(e => e.eventAction === type)?.eventDate;
-    return {
-      domainName: data.ldhName,
-      registrar: registrar?.vcardArray?.[1]?.find(v => v[0] === 'fn')?.[3],
-      createdDate: getDate('registration'),
-      expiresDate: getDate('expiration'),
-      updatedDate: getDate('last changed'),
-      nameServers: nameServers?.length ? nameServers : undefined,
-      status: Array.isArray(data.status) ? data.status.join(', ') : data.status,
-      registrantOrg: registrant?.vcardArray?.[1]?.find(v => v[0] === 'org')?.[3],
-      registrantCountry: registrant?.vcardArray?.[1]?.find(v => v[0] === 'adr')?.[3]?.[6],
-    };
-  } catch (err) {
-    return { error: err.message };
+  const endpoints = [
+    `https://rdap.org/domain/${encodeURIComponent(domain)}`,
+    `https://rdap.iana.org/domain/${encodeURIComponent(domain)}`,
+  ];
+  let lastError = 'RDAP lookup failed';
+  for (const url of endpoints) {
+    try {
+      const res = await fetch(url, { headers: { 'Accept': 'application/rdap+json, application/json' } });
+      const text = await res.text();
+      if (!text || !text.trim()) { lastError = 'RDAP returned empty response'; continue; }
+      let data;
+      try { data = JSON.parse(text); } catch { lastError = 'RDAP returned invalid response'; continue; }
+      if (!res.ok) { lastError = `RDAP lookup failed (${res.status})`; continue; }
+      const nameServers = data.nameservers?.map(ns => ns.ldhName).filter(Boolean);
+      const registrar = data.entities?.find(e => e.roles?.includes('registrar'));
+      const registrant = data.entities?.find(e => e.roles?.includes('registrant'));
+      const getDate = (type) => data.events?.find(e => e.eventAction === type)?.eventDate;
+      return {
+        domainName: data.ldhName,
+        registrar: registrar?.vcardArray?.[1]?.find(v => v[0] === 'fn')?.[3],
+        createdDate: getDate('registration'),
+        expiresDate: getDate('expiration'),
+        updatedDate: getDate('last changed'),
+        nameServers: nameServers?.length ? nameServers : undefined,
+        status: Array.isArray(data.status) ? data.status.join(', ') : data.status,
+        registrantOrg: registrant?.vcardArray?.[1]?.find(v => v[0] === 'org')?.[3],
+        registrantCountry: registrant?.vcardArray?.[1]?.find(v => v[0] === 'adr')?.[3]?.[6],
+      };
+    } catch (err) {
+      lastError = err.message;
+    }
   }
+  return { error: lastError };
 }
 
 router.post('/analyze', requireFields(['target']), async (req, res) => {
