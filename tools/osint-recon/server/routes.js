@@ -29,13 +29,23 @@ async function fetchShodan(target, type) {
   const key = process.env.SHODAN_API_KEY;
   if (!key) return { error: 'API key not configured' };
   try {
-    const endpoint = type === 'ip'
-      ? `https://api.shodan.io/shodan/host/${encodeURIComponent(target)}?key=${key}`
-      : `https://api.shodan.io/dns/resolve?hostnames=${encodeURIComponent(target)}&key=${key}`;
-    const res = await fetch(endpoint);
-    const data = await res.json();
-    if (!res.ok) return { error: data.error || 'Shodan request failed' };
-    return data;
+    if (type === 'ip') {
+      const res = await fetch(`https://api.shodan.io/shodan/host/${encodeURIComponent(target)}?key=${key}`);
+      const data = await res.json();
+      if (!res.ok) return { skipped: data.error || 'Shodan host lookup requires a paid plan' };
+      return data;
+    } else {
+      // Free tier: DNS resolve gives us the IP, then we do a host lookup
+      const dnsRes = await fetch(`https://api.shodan.io/dns/resolve?hostnames=${encodeURIComponent(target)}&key=${key}`);
+      const dnsData = await dnsRes.json();
+      if (!dnsRes.ok) return { skipped: dnsData.error || 'Shodan DNS resolve failed' };
+      const ip = dnsData[target];
+      if (!ip) return { skipped: 'Shodan could not resolve domain to IP' };
+      const hostRes = await fetch(`https://api.shodan.io/shodan/host/${encodeURIComponent(ip)}?key=${key}`);
+      const hostData = await hostRes.json();
+      if (!hostRes.ok) return { skipped: hostData.error || 'Shodan host lookup requires a paid plan' };
+      return hostData;
+    }
   } catch (err) {
     return { error: err.message };
   }
@@ -116,9 +126,14 @@ async function fetchWhois(target, type) {
   if (type === 'ip') return { skipped: 'WHOIS lookup not applicable for IPs — use IPInfo instead' };
   const domain = type === 'email' ? target.split('@')[1] : target;
   try {
-    const res = await fetch(`https://www.whoisjsonapi.com/v1/${encodeURIComponent(domain)}`);
+    const res = await fetch(`https://www.whoisjsonapi.com/v1/${encodeURIComponent(domain)}`, {
+      headers: { 'Accept': 'application/json' },
+    });
     const data = await res.json();
-    if (!res.ok) return { error: 'WHOIS request failed' };
+    if (!res.ok) {
+      // Fall back to rdap (free, no key required)
+      return fetchRdap(domain);
+    }
     return {
       domainName: data.domain_name,
       registrar: data.registrar?.name,
@@ -129,6 +144,31 @@ async function fetchWhois(target, type) {
       status: data.status,
       registrantOrg: data.registrant?.organization,
       registrantCountry: data.registrant?.country,
+    };
+  } catch {
+    return fetchRdap(domain);
+  }
+}
+
+async function fetchRdap(domain) {
+  try {
+    const res = await fetch(`https://rdap.org/domain/${encodeURIComponent(domain)}`);
+    const data = await res.json();
+    if (!res.ok) return { error: `WHOIS/RDAP lookup failed (${res.status})` };
+    const nameServers = data.nameservers?.map(ns => ns.ldhName).filter(Boolean);
+    const registrar = data.entities?.find(e => e.roles?.includes('registrar'));
+    const registrant = data.entities?.find(e => e.roles?.includes('registrant'));
+    const getDate = (type) => data.events?.find(e => e.eventAction === type)?.eventDate;
+    return {
+      domainName: data.ldhName,
+      registrar: registrar?.vcardArray?.[1]?.find(v => v[0] === 'fn')?.[3],
+      createdDate: getDate('registration'),
+      expiresDate: getDate('expiration'),
+      updatedDate: getDate('last changed'),
+      nameServers: nameServers?.length ? nameServers : undefined,
+      status: Array.isArray(data.status) ? data.status.join(', ') : data.status,
+      registrantOrg: registrant?.vcardArray?.[1]?.find(v => v[0] === 'org')?.[3],
+      registrantCountry: registrant?.vcardArray?.[1]?.find(v => v[0] === 'adr')?.[3]?.[6],
     };
   } catch (err) {
     return { error: err.message };
