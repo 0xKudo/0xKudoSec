@@ -1,6 +1,8 @@
 import { readdirSync, existsSync, readFileSync } from 'fs';
 import { resolve, join } from 'path';
-import { fileURLToPath } from 'url';
+import { fileURLToPath, pathToFileURL } from 'url';
+
+const isVitest = typeof process.env.VITEST !== 'undefined';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 const TOOLS_DIR = resolve(__dirname, '../../tools');
@@ -30,7 +32,8 @@ export async function loadTools(app) {
     manifests.push(manifest);
 
     if (existsSync(routesPath)) {
-      const { default: router } = await import(routesPath);
+      const importPath = isVitest ? routesPath : pathToFileURL(routesPath).href;
+      const { default: router } = await import(importPath);
       app.use(`/api/tools/${manifest.id}`, router);
       console.log(`[loader] Mounted tool: ${manifest.id}`);
     }
