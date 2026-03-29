@@ -43,7 +43,7 @@ async function fetchShodan(target, type) {
       if (!ip) return { skipped: 'Shodan could not resolve domain to IP' };
       const hostRes = await fetch(`https://api.shodan.io/shodan/host/${encodeURIComponent(ip)}?key=${key}`);
       const hostData = await hostRes.json();
-      if (!hostRes.ok) return { skipped: `Shodan: ${hostData.error || 'host lookup requires a paid plan'}` };
+      if (!hostRes.ok) return { ip_str: ip, skipped: `Host data requires a paid Shodan plan` };
       return hostData;
     }
   } catch (err) {

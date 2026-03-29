@@ -148,6 +148,7 @@ function SourceCard({ title, data }) {
   if (data.skipped) return (
     <div style={styles.sourceCard}>
       <div style={styles.sourceTitle}>{title}</div>
+      {data.ip_str && <SourceRow label="Resolved IP" value={data.ip_str} />}
       <div style={styles.skippedText}>{data.skipped}</div>
     </div>
   );
