@@ -42,9 +42,9 @@ attachment-risk, brand-impersonation, grammar-issues, unusual-request, header-an
 If no suspicious URLs are found, return an empty array for suspiciousUrls.
 If no suspicious sender, return an empty string for suspiciousSender.`;
 
-async function runAnalysis(emailText, res) {
-  if (emailText.length > 20000) {
-    return res.status(400).json({ error: 'Email content exceeds maximum length of 20000 characters' });
+async function runAnalysis(emailText, res, maxLength = 20000) {
+  if (emailText.length > maxLength) {
+    return res.status(400).json({ error: `Email content exceeds maximum length of ${maxLength} characters` });
   }
 
   try {
@@ -87,7 +87,7 @@ router.post('/analyze-file', (req, res, next) => {
   }
 
   const emailText = req.file.buffer.toString('utf-8');
-  await runAnalysis(emailText, res);
+  await runAnalysis(emailText, res, 100000);
 });
 
 export default router;
