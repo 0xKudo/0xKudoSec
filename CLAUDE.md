@@ -24,7 +24,7 @@ This is Layne Kudo's project. Layne is self-taught, building this as a portfolio
 | 3 | Phishing Email Analyzer | Complete — paste text or upload .eml file |
 | 4+ | All remaining tools | Backlog |
 
-**Next: Tool 4 — OSINT Recon Dashboard**
+**Next: Tool 5 — Threat Intelligence Aggregator**
 
 **Full context:** `HANDOFF.md` (in this folder)
 **Full design spec:** `2026-03-26-cybertools-platform-design.md` (in this folder)
@@ -127,7 +127,7 @@ Flag any security concern before proceeding, even if it slows implementation dow
 | 1 | Alert Triage Assistant | Blue | Complete |
 | 2 | Incident Report Generator | Blue | Complete |
 | 3 | Phishing Email Analyzer | Blue | Complete |
-| 4 | OSINT Recon Dashboard | Purple | Next |
+| 4 | OSINT Recon Dashboard | Purple | Complete |
 | 5 | Threat Intelligence Aggregator | Blue | Backlog |
 | 6 | Network Threat Analyzer | Blue | Backlog |
 | 7 | Network Scanner (nmap wrapper) | Purple | Backlog |
@@ -163,6 +163,11 @@ NODE_ENV=development
 AUTH0_DOMAIN=             # from Auth0 dashboard
 AUTH0_CLIENT_ID=          # from Auth0 dashboard
 AUTH0_AUDIENCE=https://tools.laynekudo.com/api
+SHODAN_API_KEY=           # https://account.shodan.io
+VIRUSTOTAL_API_KEY=       # https://www.virustotal.com/gui/join-us
+HUNTER_API_KEY=           # https://hunter.io
+IPINFO_TOKEN=             # https://ipinfo.io/signup
+# WHOIS uses free public whoisjsonapi.com endpoint — no key needed
 ```
 
 ---
