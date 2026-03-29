@@ -133,21 +133,18 @@ async function fetchIPInfo(indicator, type) {
 
 async function fetchThreatFox(indicator, type) {
   try {
-    let queryType;
-    if (type === 'hash') queryType = 'search_hash';
-    else if (type === 'ip') queryType = 'search_ioc';
-    else if (type === 'domain') queryType = 'search_ioc';
-    else if (type === 'url') queryType = 'search_ioc';
-    else queryType = 'search_ioc';
-
+    const queryType = type === 'hash' ? 'search_hash' : 'search_ioc';
     const res = await fetch('https://threatfox-api.abuse.ch/api/v1/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ query: queryType, search_term: indicator }),
     });
-    const data = await res.json();
-    if (data.query_status === 'no_result') return { skipped: 'No ThreatFox matches found' };
-    if (data.query_status !== 'ok') return { error: data.query_status || 'ThreatFox request failed' };
+    const text = await res.text();
+    if (!text || !text.trim()) return { error: 'ThreatFox returned empty response' };
+    let data;
+    try { data = JSON.parse(text); } catch { return { error: 'ThreatFox returned invalid response' }; }
+    if (data.query_status === 'no_result' || data.query_status === 'no_results') return { skipped: 'No ThreatFox matches found' };
+    if (data.query_status !== 'ok') return { skipped: `ThreatFox: ${data.query_status}` };
     const iocs = (data.data || []).slice(0, 5);
     return {
       matchCount: data.data?.length || 0,
@@ -206,9 +203,12 @@ async function fetchMalwareBazaar(indicator, type) {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({ query: 'get_info', hash: indicator }).toString(),
     });
-    const data = await res.json();
+    const text = await res.text();
+    if (!text || !text.trim()) return { error: 'MalwareBazaar returned empty response' };
+    let data;
+    try { data = JSON.parse(text); } catch { return { error: 'MalwareBazaar returned invalid response' }; }
     if (data.query_status === 'hash_not_found') return { skipped: 'Hash not found in MalwareBazaar' };
-    if (data.query_status !== 'ok') return { error: data.query_status || 'MalwareBazaar request failed' };
+    if (data.query_status !== 'ok') return { skipped: `MalwareBazaar: ${data.query_status}` };
     const sample = data.data?.[0];
     if (!sample) return { skipped: 'No data returned' };
     return {
