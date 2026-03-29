@@ -110,7 +110,15 @@ A unified cybersecurity tools platform at `tools.laynekudo.com`. 19 planned tool
 - 4 new tests passing (25 total)
 - Note: live network capture deferred to Electron phase (documented in spec)
 
-**Next: Tool 7 — Network Scanner (nmap wrapper)**
+**Tool 7 (Network Scanner) — COMPLETE**
+- `tools/network-scanner/manifest.json`, `server/routes.js`, `client/index.jsx`
+- `POST /scan` — 6 whitelisted scan profiles (ping, quick, full, service, OS, vuln)
+- Target validated by regex — no shell metacharacters, user input never interpolated into nmap args
+- Claude analyzes raw nmap output into riskLevel/findings/recommendations
+- Raw nmap output toggle in UI, authorization warning banner
+- 4 new tests passing (29 total), child_process mocked in tests
+
+**Next: Tool 8 — Log Anomaly Explainer**
 
 ---
 
