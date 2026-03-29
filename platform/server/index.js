@@ -1,4 +1,8 @@
-import 'dotenv/config';
+import { config } from 'dotenv';
+import { resolve } from 'path';
+import { fileURLToPath as _fileURLToPath } from 'url';
+const _dirname = _fileURLToPath(new URL('.', import.meta.url));
+config({ path: resolve(_dirname, '../../.env') });
 import express from 'express';
 import helmet from 'helmet';
 import { corsMiddleware } from './middleware/cors.js';
