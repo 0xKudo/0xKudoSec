@@ -91,6 +91,7 @@ A unified cybersecurity tools platform at `tools.laynekudo.com`. 19 planned tool
 - WorkspaceContext push on successful analysis
 - 4 new tests passing (17 total)
 - Required env vars: `SHODAN_API_KEY`, `VIRUSTOTAL_API_KEY`, `HUNTER_API_KEY`, `IPINFO_TOKEN` (WHOIS uses free public API)
+- **Known issues (deferred):** WHOIS returns 404 from both rdap.org and rdap.iana.org for tested domains — need alternate source or paid whoisjsonapi plan. Shodan free tier blocks host data; card shows resolved IP only.
 
 **Next: Tool 5 — Threat Intelligence Aggregator**
 
