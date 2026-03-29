@@ -1,0 +1,15 @@
+{
+  "name": "cybertools",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "platform/server",
+    "platform/shell",
+    "platform/shared"
+  ],
+  "scripts": {
+    "dev:server": "npm run dev --workspace=platform/server",
+    "dev:shell": "npm run dev --workspace=platform/shell",
+    "test": "npm run test --workspace=platform/server"
+  }
+}
