@@ -118,7 +118,14 @@ A unified cybersecurity tools platform at `tools.laynekudo.com`. 19 planned tool
 - Raw nmap output toggle in UI, authorization warning banner
 - 4 new tests passing (29 total), child_process mocked in tests
 
-**Next: Tool 8 — Log Anomaly Explainer**
+**Tool 8 (Log Anomaly Explainer) — COMPLETE**
+- `tools/log-anomaly-explainer/manifest.json`, `server/routes.js`, `client/index.jsx`
+- `POST /analyze` (paste) + `POST /analyze-file` (upload) — syslog, auth, Apache/Nginx, Windows Event, Docker, Kubernetes, database
+- Auto-detects log source, Claude identifies anomalies with plain-English explanations, severity, line refs
+- Paste + upload tabs, per-anomaly cards, clean banner when nothing found
+- 4 new tests passing (33 total)
+
+**Next: Tool 9 — CVE Exploit Mapper**
 
 ---
 
