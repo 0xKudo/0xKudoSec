@@ -1,0 +1,9 @@
+{
+  "id": "phishing-analyzer",
+  "name": "Phishing Email Analyzer",
+  "description": "Paste a suspicious email. Get phishing indicators, confidence score, and recommended actions.",
+  "route": "/phishing-analyzer",
+  "icon": "mail",
+  "tags": ["blue-team", "ai-assisted", "soc"],
+  "status": "active"
+}
