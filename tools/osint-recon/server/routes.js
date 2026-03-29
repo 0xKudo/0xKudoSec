@@ -32,7 +32,7 @@ async function fetchShodan(target, type) {
     if (type === 'ip') {
       const res = await fetch(`https://api.shodan.io/shodan/host/${encodeURIComponent(target)}?key=${key}`);
       const data = await res.json();
-      if (!res.ok) return { skipped: data.error || 'Shodan host lookup requires a paid plan' };
+      if (!res.ok) return { skipped: `Shodan: ${data.error || 'host lookup requires a paid plan'}` };
       return data;
     } else {
       // Free tier: DNS resolve gives us the IP, then we do a host lookup
@@ -43,7 +43,7 @@ async function fetchShodan(target, type) {
       if (!ip) return { skipped: 'Shodan could not resolve domain to IP' };
       const hostRes = await fetch(`https://api.shodan.io/shodan/host/${encodeURIComponent(ip)}?key=${key}`);
       const hostData = await hostRes.json();
-      if (!hostRes.ok) return { skipped: hostData.error || 'Shodan host lookup requires a paid plan' };
+      if (!hostRes.ok) return { skipped: `Shodan: ${hostData.error || 'host lookup requires a paid plan'}` };
       return hostData;
     }
   } catch (err) {
@@ -153,7 +153,10 @@ async function fetchWhois(target, type) {
 async function fetchRdap(domain) {
   try {
     const res = await fetch(`https://rdap.org/domain/${encodeURIComponent(domain)}`);
-    const data = await res.json();
+    const text = await res.text();
+    if (!text || !text.trim()) return { error: 'RDAP returned empty response' };
+    let data;
+    try { data = JSON.parse(text); } catch { return { error: 'RDAP returned invalid response' }; }
     if (!res.ok) return { error: `WHOIS/RDAP lookup failed (${res.status})` };
     const nameServers = data.nameservers?.map(ns => ns.ldhName).filter(Boolean);
     const registrar = data.entities?.find(e => e.roles?.includes('registrar'));
