@@ -24,7 +24,9 @@ export async function createApp() {
 export default app;
 
 // Only start listening when run directly (not imported by tests)
-if (process.argv[1] === new URL(import.meta.url).pathname) {
+import { fileURLToPath } from 'url';
+const __filename = fileURLToPath(import.meta.url);
+if (process.argv[1] === __filename) {
   const PORT = process.env.PORT || 4000;
   createApp().then(() => {
     app.listen(PORT, () => {
