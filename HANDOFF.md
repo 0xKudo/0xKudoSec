@@ -125,7 +125,15 @@ A unified cybersecurity tools platform at `tools.laynekudo.com`. 19 planned tool
 - Paste + upload tabs, per-anomaly cards, clean banner when nothing found
 - 4 new tests passing (33 total)
 
-**Next: Tool 9 — CVE Exploit Mapper**
+**Tool 9 (CVE Exploit Mapper) — COMPLETE**
+- `tools/cve-exploit-mapper/manifest.json`, `server/routes.js`, `client/index.jsx`
+- `POST /lookup` — CVE ID or keyword search, parallel lookups: NVD, EPSS, Exploit-DB, CIRCL
+- All sources free with no API keys required
+- Claude synthesizes riskLevel + exploitabilityLevel (actively-exploited/poc-available/theoretical/none)
+- EPSS score bar, Exploit-DB links, CVSS scores, CWE/CAPEC mappings
+- 4 new tests passing (37 total)
+
+**Next: Tool 10 — Payload Obfuscation Explainer**
 
 ---
 

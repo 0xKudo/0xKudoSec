@@ -24,7 +24,7 @@ This is Layne Kudo's project. Layne is self-taught, building this as a portfolio
 | 3 | Phishing Email Analyzer | Complete — paste text or upload .eml file |
 | 4+ | All remaining tools | Backlog |
 
-**Next: Tool 9 — CVE Exploit Mapper**
+**Next: Tool 10 — Payload Obfuscation Explainer**
 
 **Full context:** `HANDOFF.md` (in this folder)
 **Full design spec:** `2026-03-26-cybertools-platform-design.md` (in this folder)
@@ -132,7 +132,7 @@ Flag any security concern before proceeding, even if it slows implementation dow
 | 6 | Network Threat Analyzer | Blue | Complete |
 | 7 | Network Scanner (nmap wrapper) | Purple | Complete |
 | 8 | Log Anomaly Explainer | Blue | Complete |
-| 9 | CVE Exploit Mapper | Purple | Backlog |
+| 9 | CVE Exploit Mapper | Purple | Complete |
 | 10 | Payload Obfuscation Explainer | Purple | Backlog |
 | 11 | Security Policy Translator | Blue | Backlog |
 | 12 | Reverse Shell Generator | Red | Backlog |
