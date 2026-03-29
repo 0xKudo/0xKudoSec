@@ -132,11 +132,13 @@ async function fetchIPInfo(indicator, type) {
 }
 
 async function fetchThreatFox(indicator, type) {
+  const key = process.env.ABUSECH_API_KEY;
+  if (!key) return { error: 'ABUSECH_API_KEY not configured' };
   try {
     const queryType = type === 'hash' ? 'search_hash' : 'search_ioc';
     const res = await fetch('https://threatfox-api.abuse.ch/api/v1/', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'Auth-Key': key },
       body: JSON.stringify({ query: queryType, search_term: indicator }),
     });
     const text = await res.text();
@@ -144,7 +146,7 @@ async function fetchThreatFox(indicator, type) {
     let data;
     try { data = JSON.parse(text); } catch { return { error: 'ThreatFox returned invalid response' }; }
     if (data.query_status === 'no_result' || data.query_status === 'no_results') return { skipped: 'No ThreatFox matches found' };
-    if (data.query_status !== 'ok') return { skipped: `ThreatFox: ${data.query_status}` };
+    if (data.query_status !== 'ok') return { skipped: `ThreatFox: ${data.query_status ?? JSON.stringify(data).slice(0, 100)}` };
     const iocs = (data.data || []).slice(0, 5);
     return {
       matchCount: data.data?.length || 0,
@@ -196,11 +198,13 @@ async function fetchURLhaus(indicator, type) {
 }
 
 async function fetchMalwareBazaar(indicator, type) {
+  const key = process.env.ABUSECH_API_KEY;
+  if (!key) return { error: 'ABUSECH_API_KEY not configured' };
   if (type !== 'hash') return { skipped: 'MalwareBazaar only supports hash lookups' };
   try {
     const res = await fetch('https://mb-api.abuse.ch/api/v1/', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Auth-Key': key },
       body: new URLSearchParams({ query: 'get_info', hash: indicator }).toString(),
     });
     const text = await res.text();
@@ -208,7 +212,7 @@ async function fetchMalwareBazaar(indicator, type) {
     let data;
     try { data = JSON.parse(text); } catch { return { error: 'MalwareBazaar returned invalid response' }; }
     if (data.query_status === 'hash_not_found') return { skipped: 'Hash not found in MalwareBazaar' };
-    if (data.query_status !== 'ok') return { skipped: `MalwareBazaar: ${data.query_status}` };
+    if (data.query_status !== 'ok') return { skipped: `MalwareBazaar: ${data.query_status ?? JSON.stringify(data).slice(0, 100)}` };
     const sample = data.data?.[0];
     if (!sample) return { skipped: 'No data returned' };
     return {
