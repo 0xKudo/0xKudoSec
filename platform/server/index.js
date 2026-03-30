@@ -12,11 +12,21 @@ import { loadTools } from './loader.js';
 
 const app = express();
 
-app.use(helmet());
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: process.env.NODE_ENV === 'production' ? 'same-origin' : 'cross-origin' },
+}));
 app.use(corsMiddleware);
 app.use(express.json({ limit: '50kb' }));
 app.use('/api', apiRateLimiter);
 app.use('/api', apiRoutes);
+
+// JWT error handler — must be defined after routes, takes 4 args
+app.use((err, req, res, next) => {
+  if (err.name === 'UnauthorizedError') {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  next(err);
+});
 
 // createApp sets up the express app and loads tools.
 // Call start() to actually bind to a port (not called during tests).
