@@ -4,6 +4,11 @@
   "description": "Paste an obfuscated or encoded payload. Claude decodes and explains what it does in plain English — base64, hex, URL encoding, PowerShell, JavaScript, and more.",
   "route": "/payload-obfuscation-explainer",
   "icon": "code",
-  "tags": ["red-team", "blue-team", "ai-assisted"],
-  "status": "active"
+  "tags": [
+    "red-team",
+    "blue-team",
+    "ai-assisted"
+  ],
+  "status": "active",
+  "requiresAuth": true
 }

@@ -1,0 +1,13 @@
+{
+  "id": "subdomain-enumerator",
+  "name": "Subdomain Enumerator",
+  "description": "Enumerate subdomains via Certificate Transparency logs, HackerTarget, SecurityTrails, and brute-force DNS resolution. Claude synthesizes results and flags notable findings.",
+  "route": "/subdomain-enumerator",
+  "icon": "🔍",
+  "tags": [
+    "red-team",
+    "recon"
+  ],
+  "status": "active",
+  "requiresAuth": true
+}

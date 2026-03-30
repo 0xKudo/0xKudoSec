@@ -4,6 +4,11 @@
   "description": "Run nmap scans against a target host or network range. Strict argument whitelist — no raw user input passed to shell.",
   "route": "/network-scanner",
   "icon": "scan",
-  "tags": ["red-team", "blue-team", "network"],
-  "status": "active"
+  "tags": [
+    "red-team",
+    "blue-team",
+    "network"
+  ],
+  "status": "active",
+  "requiresAuth": true
 }

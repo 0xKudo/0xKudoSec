@@ -4,6 +4,12 @@
   "description": "Paste or upload firewall logs, NetFlow, Zeek, Suricata, or pcap summaries. Claude analyzes for threats, anomalies, lateral movement, and exfiltration.",
   "route": "/network-threat-analyzer",
   "icon": "network",
-  "tags": ["blue-team", "ai-assisted", "soc", "network"],
-  "status": "active"
+  "tags": [
+    "blue-team",
+    "ai-assisted",
+    "soc",
+    "network"
+  ],
+  "status": "active",
+  "requiresAuth": true
 }

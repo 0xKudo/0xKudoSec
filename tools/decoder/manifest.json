@@ -1,0 +1,12 @@
+{
+  "id": "decoder",
+  "name": "Decoder",
+  "description": "Encode and decode data across multiple formats: URL, HTML, Base64, hex, binary, ROT13, Unicode, and JWT inspection.",
+  "route": "/decoder",
+  "icon": "🔄",
+  "tags": [
+    "purple-team"
+  ],
+  "status": "active",
+  "requiresAuth": false
+}

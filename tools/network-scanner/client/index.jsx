@@ -1,13 +1,13 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useWorkspace } from '../../../platform/shell/src/context/WorkspaceContext.jsx';
 
 const RISK_COLORS = {
   critical: 'var(--severity-critical)',
-  high: 'var(--severity-high)',
-  medium: 'var(--severity-medium)',
-  low: 'var(--severity-low)',
-  clean: 'var(--severity-low)',
-  unknown: 'var(--text-muted)',
+  high:     'var(--severity-high)',
+  medium:   'var(--severity-medium)',
+  low:      'var(--severity-low)',
+  clean:    'var(--severity-low)',
+  unknown:  'var(--text-muted)',
 };
 
 const SCAN_TYPES = [
@@ -26,7 +26,7 @@ const styles = {
   subtitle: { color: 'var(--text-muted)', fontSize: '13px' },
   warning: {
     background: 'var(--bg-surface)',
-    border: `1px solid var(--severity-high)`,
+    border: '1px solid var(--severity-high)',
     borderRadius: '4px',
     padding: '12px 16px',
     color: 'var(--severity-high)',
@@ -56,19 +56,73 @@ const styles = {
     padding: '10px 12px',
     outline: 'none',
   },
-  button: (loading) => ({
-    background: loading ? 'var(--bg-surface)' : 'var(--btn-primary-bg)',
-    color: loading ? 'var(--text-muted)' : 'var(--btn-primary-text)',
+  scanBtn: {
+    background: 'var(--btn-primary-bg)',
+    color: 'var(--btn-primary-text)',
     border: '1px solid var(--border)',
     borderRadius: '4px',
     padding: '10px 20px',
     fontFamily: 'var(--font)',
     fontSize: '13px',
     fontWeight: 'bold',
-    cursor: loading ? 'not-allowed' : 'pointer',
+    cursor: 'pointer',
     whiteSpace: 'nowrap',
-  }),
+  },
+  stopBtn: {
+    background: 'none',
+    color: 'var(--severity-critical)',
+    border: '1px solid var(--severity-critical)',
+    borderRadius: '4px',
+    padding: '10px 20px',
+    fontFamily: 'var(--font)',
+    fontSize: '13px',
+    fontWeight: 'bold',
+    cursor: 'pointer',
+    whiteSpace: 'nowrap',
+  },
   error: { color: 'var(--severity-critical)', fontSize: '13px', marginTop: '12px' },
+  livePanel: {
+    marginTop: '20px',
+    background: 'var(--bg-primary)',
+    border: '1px solid var(--border)',
+    borderRadius: '4px',
+  },
+  livePanelHeader: {
+    padding: '8px 14px',
+    borderBottom: '1px solid var(--border)',
+    fontSize: '11px',
+    color: 'var(--text-muted)',
+    letterSpacing: '0.06em',
+    textTransform: 'uppercase',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+  },
+  pulse: {
+    width: '7px',
+    height: '7px',
+    borderRadius: '50%',
+    background: 'var(--severity-low)',
+    flexShrink: 0,
+  },
+  analyzing: {
+    width: '7px',
+    height: '7px',
+    borderRadius: '50%',
+    background: 'var(--accent-amber)',
+    flexShrink: 0,
+  },
+  liveOutput: {
+    padding: '12px 14px',
+    fontFamily: 'var(--font)',
+    fontSize: '11px',
+    color: 'var(--text-muted)',
+    whiteSpace: 'pre-wrap',
+    wordBreak: 'break-all',
+    maxHeight: '300px',
+    overflowY: 'auto',
+    lineHeight: '1.6',
+  },
   results: { marginTop: '24px' },
   summaryCard: {
     background: 'var(--bg-surface)',
@@ -113,6 +167,17 @@ const styles = {
     maxHeight: '400px',
     overflowY: 'auto',
   },
+  toggleBtn: {
+    background: 'none',
+    border: '1px solid var(--border)',
+    color: 'var(--text-muted)',
+    borderRadius: '4px',
+    padding: '8px 16px',
+    fontFamily: 'var(--font)',
+    fontSize: '12px',
+    cursor: 'pointer',
+    marginBottom: '8px',
+  },
 };
 
 export default function NetworkScanner() {
@@ -120,17 +185,46 @@ export default function NetworkScanner() {
   const [scanType, setScanType] = useState('quick');
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [liveLines, setLiveLines] = useState([]);
   const [error, setError] = useState(null);
   const [showRaw, setShowRaw] = useState(false);
+  const scanIdRef = useRef(null);
+  const esRef = useRef(null);
+  const outputRef = useRef(null);
   const { push } = useWorkspace();
+
+  useEffect(() => {
+    try {
+      const restore = JSON.parse(localStorage.getItem('workspace-restore-network-scanner') || 'null');
+      if (restore) {
+        setTarget(restore.target || '');
+        setResult(restore);
+        localStorage.removeItem('workspace-restore-network-scanner');
+      }
+    } catch {}
+  }, []);
+
+  // Auto-scroll live output
+  useEffect(() => {
+    if (outputRef.current) {
+      outputRef.current.scrollTop = outputRef.current.scrollHeight;
+    }
+  }, [liveLines]);
 
   async function handleScan() {
     if (!target.trim()) return;
+
     setLoading(true);
+    setAnalyzing(false);
     setError(null);
     setResult(null);
+    setLiveLines([]);
     setShowRaw(false);
+    scanIdRef.current = null;
 
+    // Step 1 — initiate scan, get scanId
+    let scanId;
     try {
       const res = await fetch('/api/tools/network-scanner/scan', {
         method: 'POST',
@@ -139,16 +233,77 @@ export default function NetworkScanner() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error || 'Scan failed.');
-      } else {
-        setResult(data);
-        push('network-scanner', `${data.scanType}: ${data.target}`, data, 'network-scanner');
+        setError(data.error || 'Failed to start scan.');
+        setLoading(false);
+        return;
       }
+      scanId = data.scanId;
+      scanIdRef.current = scanId;
     } catch {
       setError('Network error. Is the server running?');
-    } finally {
       setLoading(false);
+      return;
     }
+
+    // Step 2 — open SSE stream
+    const es = new EventSource(`/api/tools/network-scanner/scan-stream/${scanId}`);
+    esRef.current = es;
+
+    es.addEventListener('line', e => {
+      const { line } = JSON.parse(e.data);
+      setLiveLines(prev => [...prev, line]);
+    });
+
+    es.addEventListener('analyzing', () => {
+      setAnalyzing(true);
+    });
+
+    es.addEventListener('done', e => {
+      const data = JSON.parse(e.data);
+      setResult(data);
+      setLoading(false);
+      setAnalyzing(false);
+      push('network-scanner', `${data.scanType}: ${data.target}`, data, 'network-scanner');
+      es.close();
+      esRef.current = null;
+    });
+
+    es.addEventListener('cancelled', () => {
+      setLoading(false);
+      setAnalyzing(false);
+      setError('Scan stopped.');
+      es.close();
+      esRef.current = null;
+    });
+
+    es.addEventListener('error', e => {
+      try {
+        const data = JSON.parse(e.data);
+        setError(data.error || 'Scan error.');
+      } catch {
+        // SSE connection error (e.g. server closed) — only show if still loading
+        setError(prev => prev || null);
+      }
+      setLoading(false);
+      setAnalyzing(false);
+      es.close();
+      esRef.current = null;
+    });
+  }
+
+  async function handleStop() {
+    // Close the SSE connection (server will detect close and kill nmap)
+    if (esRef.current) { esRef.current.close(); esRef.current = null; }
+    // Belt-and-suspenders: also hit cancel endpoint
+    if (scanIdRef.current) {
+      try {
+        await fetch(`/api/tools/network-scanner/cancel/${scanIdRef.current}`, { method: 'POST' });
+      } catch {}
+      scanIdRef.current = null;
+    }
+    setLoading(false);
+    setAnalyzing(false);
+    setError('Scan stopped.');
   }
 
   return (
@@ -183,16 +338,32 @@ export default function NetworkScanner() {
             <option key={t.value} value={t.value}>{t.label}</option>
           ))}
         </select>
-        <button
-          style={styles.button(loading)}
-          onClick={handleScan}
-          disabled={loading || !target.trim()}
-        >
-          {loading ? 'Scanning...' : 'Scan'}
-        </button>
+        {loading ? (
+          <button style={styles.stopBtn} onClick={handleStop}>Stop</button>
+        ) : (
+          <button style={styles.scanBtn} onClick={handleScan} disabled={!target.trim()}>
+            Scan
+          </button>
+        )}
       </div>
 
       {error && <p style={styles.error}>{error}</p>}
+
+      {/* Live output panel — visible while scanning */}
+      {(loading || liveLines.length > 0) && !result && (
+        <div style={styles.livePanel}>
+          <div style={styles.livePanelHeader}>
+            {analyzing ? (
+              <><div style={styles.analyzing} />Analyzing with Claude...</>
+            ) : (
+              <><div style={styles.pulse} />Live output</>
+            )}
+          </div>
+          <div style={styles.liveOutput} ref={outputRef}>
+            {liveLines.join('\n')}
+          </div>
+        </div>
+      )}
 
       {result && (
         <div style={styles.results}>
@@ -225,10 +396,7 @@ export default function NetworkScanner() {
 
           {result.rawOutput && (
             <div>
-              <button
-                style={{ ...styles.button(false), marginBottom: '8px', fontWeight: 'normal' }}
-                onClick={() => setShowRaw(v => !v)}
-              >
+              <button style={styles.toggleBtn} onClick={() => setShowRaw(v => !v)}>
                 {showRaw ? 'Hide' : 'Show'} Raw nmap Output
               </button>
               {showRaw && <div style={styles.rawOutput}>{result.rawOutput}</div>}

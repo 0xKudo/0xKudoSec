@@ -1,0 +1,13 @@
+{
+  "id": "scanner",
+  "name": "Vulnerability Scanner",
+  "description": "Passive and active web vulnerability scanner. Passive mode checks headers, cookies, and forms. Active mode probes inputs with XSS and SQLi payloads — requires authorization.",
+  "route": "/scanner",
+  "icon": "🔬",
+  "tags": [
+    "purple-team",
+    "recon"
+  ],
+  "status": "active",
+  "requiresAuth": true
+}

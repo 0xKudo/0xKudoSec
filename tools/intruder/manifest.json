@@ -1,0 +1,12 @@
+{
+  "id": "intruder",
+  "name": "Intruder",
+  "description": "Automated HTTP request fuzzing. Mark injection points in a request template with §placeholders§, supply a payload list, and fire all combinations. Spot anomalies by status code, response length, and duration.",
+  "route": "/intruder",
+  "icon": "💉",
+  "tags": [
+    "red-team"
+  ],
+  "status": "active",
+  "requiresAuth": true
+}

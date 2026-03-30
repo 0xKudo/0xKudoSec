@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useWorkspace } from '../../../platform/shell/src/context/WorkspaceContext.jsx';
 
 const RISK_COLORS = {
@@ -221,6 +221,17 @@ export default function OsintReconTool() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const { push } = useWorkspace();
+
+  useEffect(() => {
+    try {
+      const restore = JSON.parse(localStorage.getItem('workspace-restore-osint-recon') || 'null');
+      if (restore) {
+        setTarget(restore.target || '');
+        setResult(restore);
+        localStorage.removeItem('workspace-restore-osint-recon');
+      }
+    } catch {}
+  }, []);
 
   async function handleAnalyze() {
     if (!target.trim()) return;

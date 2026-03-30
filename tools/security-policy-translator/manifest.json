@@ -4,6 +4,11 @@
   "description": "Paste security policy text from NIST, ISO 27001, CIS, SOC 2, HIPAA, or internal docs. Claude translates into plain English, extracts required controls, and explains what each team needs to do.",
   "route": "/security-policy-translator",
   "icon": "file",
-  "tags": ["blue-team", "compliance", "ai-assisted"],
-  "status": "active"
+  "tags": [
+    "blue-team",
+    "compliance",
+    "ai-assisted"
+  ],
+  "status": "active",
+  "requiresAuth": true
 }

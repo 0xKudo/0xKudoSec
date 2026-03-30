@@ -1,0 +1,13 @@
+{
+  "id": "http-repeater",
+  "name": "HTTP Repeater",
+  "description": "Craft and replay HTTP requests. Edit method, URL, headers, and body, then inspect the full response. Saved request history for quick replay.",
+  "route": "/http-repeater",
+  "icon": "🔁",
+  "tags": [
+    "purple-team",
+    "recon"
+  ],
+  "status": "active",
+  "requiresAuth": true
+}

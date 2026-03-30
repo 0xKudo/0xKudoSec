@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useWorkspace } from '../../../platform/shell/src/context/WorkspaceContext.jsx';
 
 const SEVERITY_COLORS = {
@@ -100,6 +100,13 @@ export default function AlertTriageTool() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const { push } = useWorkspace();
+
+  useEffect(() => {
+    try {
+      const restore = JSON.parse(localStorage.getItem('workspace-restore-alert-triage') || 'null');
+      if (restore) { setResult(restore); localStorage.removeItem('workspace-restore-alert-triage'); }
+    } catch {}
+  }, []);
 
   async function handleAnalyze() {
     if (!alertText.trim()) return;

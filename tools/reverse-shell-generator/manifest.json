@@ -1,0 +1,12 @@
+{
+  "id": "reverse-shell-generator",
+  "name": "Reverse Shell Generator",
+  "description": "Generate ready-to-use reverse shell one-liners for common languages and tools. Paste attacker IP and port, pick a shell type, copy the payload.",
+  "route": "/reverse-shell-generator",
+  "icon": "terminal",
+  "tags": [
+    "red-team"
+  ],
+  "status": "active",
+  "requiresAuth": false
+}

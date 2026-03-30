@@ -1,0 +1,12 @@
+{
+  "id": "wordlist-generator",
+  "name": "Wordlist / Password Generator",
+  "description": "Generate wordlists from character sets or base words with pattern rules. Download as .txt or push to workspace for use with Intruder.",
+  "route": "/wordlist-generator",
+  "icon": "list",
+  "tags": [
+    "red-team"
+  ],
+  "status": "active",
+  "requiresAuth": false
+}

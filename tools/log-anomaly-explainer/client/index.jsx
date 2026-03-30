@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useWorkspace } from '../../../platform/shell/src/context/WorkspaceContext.jsx';
 
 const SEVERITY_COLORS = {
@@ -150,6 +150,13 @@ export default function LogAnomalyExplainer() {
   const [error, setError] = useState(null);
   const fileInputRef = useRef(null);
   const { push } = useWorkspace();
+
+  useEffect(() => {
+    try {
+      const restore = JSON.parse(localStorage.getItem('workspace-restore-log-anomaly-explainer') || 'null');
+      if (restore) { setResult(restore); localStorage.removeItem('workspace-restore-log-anomaly-explainer'); }
+    } catch {}
+  }, []);
 
   async function handleAnalyze() {
     setLoading(true);

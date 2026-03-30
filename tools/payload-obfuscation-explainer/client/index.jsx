@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useWorkspace } from '../../../platform/shell/src/context/WorkspaceContext.jsx';
 
 const THREAT_COLORS = {
@@ -141,6 +141,13 @@ export default function PayloadObfuscationExplainer() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const { push } = useWorkspace();
+
+  useEffect(() => {
+    try {
+      const restore = JSON.parse(localStorage.getItem('workspace-restore-payload-obfuscation-explainer') || 'null');
+      if (restore) { setResult(restore); localStorage.removeItem('workspace-restore-payload-obfuscation-explainer'); }
+    } catch {}
+  }, []);
 
   async function handleAnalyze() {
     if (!payload.trim()) return;

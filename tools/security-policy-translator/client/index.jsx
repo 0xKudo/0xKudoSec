@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useWorkspace } from '../../../platform/shell/src/context/WorkspaceContext.jsx';
 
 const FRAMEWORK_HINTS = [
@@ -130,6 +130,13 @@ export default function SecurityPolicyTranslator() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const { push } = useWorkspace();
+
+  useEffect(() => {
+    try {
+      const restore = JSON.parse(localStorage.getItem('workspace-restore-security-policy-translator') || 'null');
+      if (restore) { setResult(restore); localStorage.removeItem('workspace-restore-security-policy-translator'); }
+    } catch {}
+  }, []);
 
   async function handleTranslate() {
     if (!policyText.trim()) return;
