@@ -243,7 +243,21 @@ A unified cybersecurity tools platform at `tools.laynekudo.com`. 19 planned tool
 - 8 new tests passing (87 total)
 - Sidebar updated: Payload Generator moved from comingSoon to active routes in Simulate/Test section
 
-**Next: SIEM Phase 2 — PostgreSQL schema + ingest layer**
+**Next: Auth Implementation (spec + plan written, ready to execute)**
+
+**Auth design spec:** `docs/specs/2026-03-30-auth-design.md`
+**Auth implementation plan:** `docs/plans/2026-03-30-auth.md`
+
+Key decisions locked in:
+- Auth0 as single hub — social (Google/GitHub) + email/password via Auth0 Database Connection
+- `express-jwt` + `jwks-rsa` already installed — `requireAuth` middleware uses `req.auth` (not `req.user`)
+- Protected tools gated via `requiresAuth: true` in manifest — loader applies middleware automatically
+- Public tools: decoder, reverse-shell-generator, wordlist-generator, payload-generator
+- AES-256-GCM encryption for email/name in users table — `DB_ENCRYPTION_KEY` env var (32-byte hex)
+- `userProvisioning.js` deferred to SIEM Phase 2 when PostgreSQL is set up
+- Auth0 dashboard setup required before coding (tenant, SPA app, API, social connections, email verification)
+
+**After auth: SIEM Phase 2 — PostgreSQL schema + ingest layer**
 
 ## Remaining Build Order (agreed 2026-03-29)
 
