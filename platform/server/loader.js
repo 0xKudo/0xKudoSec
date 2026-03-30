@@ -1,6 +1,7 @@
 import { readdirSync, existsSync, readFileSync } from 'fs';
 import { resolve, join } from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
+import { requireAuth } from './middleware/requireAuth.js';
 
 const isVitest = typeof process.env.VITEST !== 'undefined';
 
@@ -34,8 +35,14 @@ export async function loadTools(app) {
     if (existsSync(routesPath)) {
       const importPath = isVitest ? routesPath : pathToFileURL(routesPath).href;
       const { default: router } = await import(importPath);
-      app.use(`/api/tools/${manifest.id}`, router);
-      console.log(`[loader] Mounted tool: ${manifest.id}`);
+
+      if (manifest.requiresAuth) {
+        app.use(`/api/tools/${manifest.id}`, requireAuth, router);
+        console.log(`[loader] Mounted tool (auth required): ${manifest.id}`);
+      } else {
+        app.use(`/api/tools/${manifest.id}`, router);
+        console.log(`[loader] Mounted tool (public): ${manifest.id}`);
+      }
     }
   }
 
