@@ -8,8 +8,8 @@ This file contains everything needed to resume this project in a new conversatio
 
 A unified cybersecurity tools platform at `tools.laynekudo.com`. 19 planned tool modules covering blue team, red team, and purple team workflows. Built as a monorepo — one repo, shared platform frame, each tool is an isolated module.
 
-**Spec:** `../public_html/docs/superpowers/specs/2026-03-26-cybertools-platform-design.md`
-**Plan:** `../public_html/docs/superpowers/plans/2026-03-26-cybertools-platform.md`
+**Spec:** `docs/specs/2026-03-26-cybertools-platform-design.md`
+**Plan:** `docs/plans/2026-03-26-cybertools-platform.md`
 
 ---
 
@@ -152,7 +152,132 @@ A unified cybersecurity tools platform at `tools.laynekudo.com`. 19 planned tool
 - Claude was wrapping JSON responses in markdown code fences — fixed globally in `platform/server/services/claude.js`
 - `max_tokens` raised from 1024 to 4096 — improves response completeness across all tools
 
-**Next: Tool 12 — Reverse Shell Generator**
+**Tool 12 (Reverse Shell Generator) — COMPLETE**
+- `tools/reverse-shell-generator/manifest.json`, `server/routes.js`, `client/index.jsx`
+- `GET /shell-types` + `POST /generate` — lhost/lport/shellType inputs, strict validation
+- 20 shell types: bash (3 variants), sh, python/python3, php/php-exec, perl, ruby, netcat/netcat-e/ncat, socat, powershell/powershell-b64 (b64 encoded server-side), golang, java, awk, nodejs
+- Each response includes payloads[], listenerCommand (nc), msfListener (multi/handler commands)
+- No Claude API — pure static template generation
+- WorkspaceContext push on generate
+- Authorization warning banner
+- 7 new tests passing (52 total)
+- Fix applied: PowerShell payload wrapped in outer double quotes with inner single quotes so `-Command` parses correctly from CMD
+- Fix applied: replaced `iex` with `[scriptblock]::Create()` — Windows Defender was pattern-matching `iex` in HTTP response body and returning 403
+- Fix applied: helmet `crossOriginResourcePolicy` set to `cross-origin` in dev, `same-origin` in production
+
+**Tool 13 (Wordlist / Password Generator) — COMPLETE**
+- `tools/wordlist-generator/manifest.json`, `server/routes.js`, `client/index.jsx`
+- `POST /charset` — generate from character sets (lowercase/uppercase/digits/symbols/custom) + length range
+- `POST /pattern` — generate from base words with mutation rules (base variants, leet, digits, years, symbols)
+- Max 10,000 entries, preview first 500 in UI, download full list as .txt, copy all button
+- No Claude, no external APIs. WorkspaceContext push on generate.
+- 7 new tests passing (59 total)
+- Fix applied: charset tab now streams download directly (no memory buffering) — words written in batches of 1,000
+- Fix applied: preview endpoint returns first 100 entries + estimated total count; download is separate streamed endpoint
+- Fix applied: `NODE_ENV=development` removes all entry limits (Infinity) and raises max length to 32; production caps at 1,000,000 entries and max length 16
+- UI shows "no limit — local mode" in dev, cap warning in production
+
+**Tool 14 (Subdomain Enumerator) — COMPLETE**
+- `tools/subdomain-enumerator/manifest.json`, `server/routes.js`, `client/index.jsx`
+- `POST /enumerate` — domain input, source checkboxes (crt.sh, HackerTarget, SecurityTrails, brute-force)
+- crt.sh and HackerTarget are free with no API key; SecurityTrails requires `SECURITYTRAILS_API_KEY`
+- Brute-force: DNS resolution against built-in ~70 prefix wordlist or custom wordlist (one per line)
+- All sources run in parallel, dedup into sorted unique subdomain list
+- Claude synthesizes: riskLevel, summary, flags, notable subdomains, recommendations
+- UI: source checkboxes, custom brute wordlist textarea, AI analysis card, per-source result cards, full subdomain list with copy/download
+- WorkspaceContext push on successful enumeration
+- 4 new tests passing (63 total)
+
+**Tool 15 (HTTP Repeater) — COMPLETE**
+- `tools/http-repeater/manifest.json`, `server/routes.js`, `client/index.jsx`
+- `POST /send` — proxies request to target URL, returns status, headers, body, durationMs, byteLength
+- Validates method (7 allowed), URL format, blocks localhost/loopback/RFC-1918 ranges
+- Redirects not auto-followed — shown raw (manual redirect)
+- Response body capped at 2MB, binary responses show byte count instead of raw bytes
+- UI: method dropdown, URL input, headers textarea, body textarea (hidden for GET/HEAD), response panel with Body/Headers tabs
+- Request history: last 20 saved to localStorage, click to reload any entry
+- 4 new tests passing (67 total)
+
+**Tool 17 (Intruder) — COMPLETE**
+- `tools/intruder/manifest.json`, `server/routes.js`, `client/index.jsx`
+- `POST /attack` — method, urlTemplate, headers, body, payloads array (max 500)
+- Injection points marked with §placeholders§ — substituted in URL, headers, and body
+- Concurrency: 5 parallel requests per batch
+- Anomaly detection: flags responses where status != baseline or length deviates >20% from median
+- Built-in payload lists: Common Passwords, SQL Injection, XSS Payloads, Path Traversal, Common Usernames
+- UI: request template panel + payload panel side by side, results table with status colors, click row to expand response body
+- SSRF protections same as HTTP Repeater
+- WorkspaceContext push when anomalies found
+- 4 new tests passing (71 total)
+
+**Deferred: Tool 16 — Proxy (skipped for now, returning later)**
+**Tool 18 (Scanner) — COMPLETE**
+- `tools/scanner/manifest.json`, `server/routes.js`, `client/index.jsx`
+- `POST /scan` — passive mode (default) + active mode (requires authorized: true)
+- Passive checks: security headers (HSTS, CSP, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy), cookie flags (HttpOnly, Secure, SameSite), form analysis (GET method, missing CSRF tokens), info leakage (Server header, X-Powered-By, sensitive HTML comments)
+- Active checks: XSS reflection probes + SQLi error probes on discovered query params (up to 5 URLs, 4 probes each)
+- Claude synthesizes riskLevel, summary, top priorities
+- UI: passive/active mode cards, authorization checkbox (active only), findings grouped by severity
+- SSRF protections same as other tools
+- 4 new tests passing (75 total)
+
+**Tool 19 (Decoder) — COMPLETE**
+- `tools/decoder/manifest.json`, `server/routes.js`, `client/index.jsx`
+- `POST /transform` — input + operation, returns output
+- `GET /operations` — lists all available operations
+- Supported formats: URL (decode/encode/encode-all), HTML (decode/encode), Base64 (decode/encode/url-safe variants), Hex (decode/encode), Binary (decode/encode), ROT13, Unicode (\\uXXXX decode/encode), JWT inspect (header + payload, no verify)
+- No Claude, no external APIs — pure server-side transforms
+- UI: grouped operation sidebar, input textarea, Transform button, output box with "Use as input" swap and copy buttons
+- 4 new tests passing (79 total)
+
+**Tool 20 (Payload Generator) — COMPLETE**
+- `tools/payload-generator/manifest.json`, `server/routes.js`, `client/index.jsx`
+- Two tabs: msfvenom and Web Payloads
+- `GET /msf-payloads` — 23 payloads across Linux/Windows/macOS/Android/PHP/Python/Java/Shellcode, 6 encoders
+- `POST /msf-generate` — builds msfvenom command + multi/handler listener block; validates lhost, lport, encoder, badchars, outputFile
+- `GET /web-categories` — 7 categories: XSS (13), SQLi (14), CMDi (12), SSTI (10), Path Traversal (10), XXE (5), Open Redirect (10)
+- `GET /web-payloads/:category` — returns full payload list for category
+- No Claude, no external APIs — pure static templates
+- WorkspaceContext push on msfvenom generate
+- Authorization warning banners on both tabs
+- 8 new tests passing (87 total)
+- Sidebar updated: Payload Generator moved from comingSoon to active routes in Simulate/Test section
+
+**Next: SIEM Phase 2 — PostgreSQL schema + ingest layer**
+
+## Remaining Build Order (agreed 2026-03-29)
+
+**Phase 2 — SIEM backend + real data (build + test locally first)**
+1. PostgreSQL schema — logs, alerts, cases, case_events, evidence, detection_rules, playbooks
+2. Ingest endpoints — POST /api/ingest/beats (Winlogbeat), POST /api/ingest/syslog, POST /api/ingest/raw
+3. Ingest auth — INGEST_API_KEY bearer token (separate from Auth0, agents can't do OAuth)
+4. Winlogbeat on home machines → local server (validate real event flow)
+5. Replace mock SiemDashboard data with live PostgreSQL queries
+6. Alert Queue — detection rules run on ingest, write to alerts table, React view
+7. Log Search — tsvector GIN index on message column, React UI
+8. Cases — CRUD + React split panel (timeline, linked alerts, evidence, playbook checklist)
+9. Detection Rules — rule builder UI + rule engine
+
+**Phase 3 — VPS deployment**
+10. Provision VPS (Ubuntu 22.04, 2 vCPU / 2–4 GB RAM, Hetzner or DigitalOcean ~$6–12/mo)
+11. Install Node, PostgreSQL, Nginx, Certbot
+12. Nginx — SSL termination, serve React dist/, proxy /api → Express port 4000
+13. Let's Encrypt cert for tools.laynekudo.com
+14. Deploy — PM2, env vars, DB schema migration
+15. Switch Winlogbeat + syslog forwarder to tools.laynekudo.com
+16. UFW — expose only 80, 443, 22; PostgreSQL localhost only; log retention cron (90 days)
+
+**Phase 4 — Electron + Proxy**
+17. Electron wrapper — BrowserWindow wrapping built React dist/, Express in-process or child
+18. Proxy tool — ProxyService in Electron main, 127.0.0.1:8080, node-http-mitm-proxy, intercept queue UI
+19. Live network capture (tshark subprocess) — scoped into Electron phase alongside Proxy
+
+**Post-build improvements (2026-03-29):**
+- Payload Generator: fixed import path (../../../../ → ../../../); removed redundant subtitle from header
+- Payload Generator: "Send to" dropdown added to msfvenom result panel and every web payload row — writes payload to `payload-generator-import` localStorage key and navigates to Intruder, HTTP Repeater, or Scanner on click
+- Intruder, HTTP Repeater, Scanner: read `payload-generator-import` on mount, pre-fill relevant field (payloads list / body / URL), then clear key
+- Dashboard workspace panel: items with a known source tool are now clickable — writes `item.data` to `workspace-restore-{tool-id}` localStorage key and navigates to that tool
+- All 11 tools that push to workspace now restore prior results on mount via `workspace-restore-{id}` key: Alert Triage, Threat Intel, OSINT Recon, CVE Exploit Mapper, Log Anomaly Explainer, Network Threat Analyzer, Network Scanner, Payload Obfuscation Explainer, Security Policy Translator, Subdomain Enumerator, Scanner
 
 ---
 
@@ -227,6 +352,7 @@ Every tool needs:
 | 17 | Intruder (automated attack automation) | Red |
 | 18 | Scanner (passive + active, XSS/SQLi) | Purple |
 | 19 | Decoder (URL, HTML, Base64, hex) | Purple |
+| 20 | Payload Generator (msfvenom builder + web payloads) | Red |
 
 ---
 

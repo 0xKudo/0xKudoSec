@@ -135,19 +135,21 @@ Flag any security concern before proceeding, even if it slows implementation dow
 | 9 | CVE Exploit Mapper | Purple | Complete |
 | 10 | Payload Obfuscation Explainer | Purple | Complete |
 | 11 | Security Policy Translator | Blue | Complete |
-| 12 | Reverse Shell Generator | Red | Backlog |
-| 13 | Wordlist / Password Generator | Red | Backlog |
-| 14 | Subdomain Enumerator | Red | Backlog |
-| 15 | HTTP Repeater (Burp-style, full save/replay) | Purple | Backlog |
+| 12 | Reverse Shell Generator | Red | Complete — 20 shell types, static templates, no Claude |
+| 13 | Wordlist / Password Generator | Red | Complete — charset + pattern tabs, leet/digits/years rules, download .txt |
+| 14 | Subdomain Enumerator | Red | Complete — crt.sh + HackerTarget (free), brute-force DNS; SecurityTrails removed (enterprise-only pricing) |
+| 15 | HTTP Repeater (Burp-style, full save/replay) | Purple | Complete — method/URL/headers/body, response panel, localStorage history |
 | 16 | Proxy (capture/replay now, full intercept in Electron) | Purple | Backlog |
-| 17 | Intruder (automated attack automation) | Red | Backlog |
-| 18 | Scanner (passive + active XSS/SQLi, auth checkbox) | Purple | Backlog |
-| 19 | Decoder (URL, HTML, Base64, hex) | Purple | Backlog |
+| 17 | Intruder (automated attack automation) | Red | Complete — §placeholder§ injection, anomaly detection, built-in payload lists |
+| 18 | Vulnerability Scanner (passive + active XSS/SQLi, auth checkbox) | Purple | Complete — header/cookie/form passive checks + active XSS/SQLi probes, auth checkbox required |
+| 19 | Decoder (URL, HTML, Base64, hex) | Purple | Complete — URL/HTML/Base64/Hex/Binary/ROT13/Unicode/JWT, swap output→input |
+| 20 | Payload Generator (msfvenom builder + web payloads: XSS/SQLi/CMDi/SSTI/path traversal/XXE/open redirect) | Red | Backlog — static templates Phase 1, Claude evasion/WAF bypass layer Phase 2 |
 
 **Special notes:**
 - Proxy: built with `ProxyService` interface so Electron version swaps to full intercepting proxy without changing UI
 - Scanner: active mode requires explicit "I have authorization" checkbox before any scan fires
 - Network Scanner: server-side nmap subprocess, strict argument whitelist
+- Wordlist Generator: `NODE_ENV=development` removes all entry limits and raises max length to 32. Production caps at 1M entries. Use this pattern for any future tool that should behave differently locally vs deployed.
 
 ---
 
@@ -172,12 +174,22 @@ IPINFO_TOKEN=             # https://ipinfo.io/signup
 
 ---
 
+## Documentation Location
+
+All docs for this project live inside this repo only. Never write specs, plans, or notes to any path outside `c:\Users\lsgra\Desktop\claude projects\cybertools`.
+
+- Specs go in `docs/specs/`
+- Implementation plans go in `docs/plans/`
+
+Do not reference or write to `public_html` or any other sibling directory.
+
 ## Related Files
 
 | File | Purpose |
 |------|---------|
 | `HANDOFF.md` | Full context summary, task log, and decision history |
-| `2026-03-26-cybertools-platform-design.md` | Complete design spec |
-| `2026-03-26-cybertools-platform.md` | Step-by-step implementation plan |
+| `docs/specs/2026-03-26-cybertools-platform-design.md` | Complete design spec |
+| `docs/plans/2026-03-26-cybertools-platform.md` | Step-by-step implementation plan |
+| `docs/specs/2026-03-30-auth-design.md` | Auth design spec (Auth0 + email/password) |
 | `platform/shared/constants.js` | Severity levels, tag colors — shared by server and shell |
 | `.env.example` | Template for required environment variables |
