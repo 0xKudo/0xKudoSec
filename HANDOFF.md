@@ -243,7 +243,32 @@ A unified cybersecurity tools platform at `tools.laynekudo.com`. 19 planned tool
 - 8 new tests passing (87 total)
 - Sidebar updated: Payload Generator moved from comingSoon to active routes in Simulate/Test section
 
-**Next: Auth Implementation (spec + plan written, ready to execute)**
+**Auth Implementation — CODE COMPLETE, awaiting Auth0 dashboard setup + manual verification**
+
+**What's built:**
+- `platform/server/services/encryption.js` — AES-256-GCM encrypt/decrypt, uses `DB_ENCRYPTION_KEY`
+- `platform/server/middleware/requireAuth.js` — express-jwt + jwks-rsa, verifies Auth0 JWTs, sets `req.auth`
+- `platform/server/index.js` — JWT UnauthorizedError handler returning clean 401 JSON
+- `platform/server/loader.js` — reads `requiresAuth` from manifest, applies middleware automatically
+- `platform/server/tests/setup.js` — global test mock for requireAuth (injects fake `req.auth`)
+- `platform/server/vitest.config.js` — updated with setupFiles + DB_ENCRYPTION_KEY in env
+- All 19 tool manifests — `requiresAuth: true` (15 protected) or `false` (4 public)
+- `platform/shell/src/main.jsx` — Auth0Provider wrapping entire app
+- `platform/shell/src/components/RequireAuth.jsx` — redirects unauthenticated users to Auth0
+- `platform/shell/src/components/TopNav.jsx` — login/logout button + user name display
+- `platform/shell/src/App.jsx` — protected tool routes + SIEM wrapped in RequireAuth
+- `platform/shell/.env.local` — template for Vite Auth0 env vars (gitignored, fill with real values)
+- `.env.example` — added DB_ENCRYPTION_KEY
+
+**To activate auth (requires your action):**
+1. Complete Auth0 dashboard setup (see `docs/plans/2026-03-30-auth.md` Pre-Implementation section)
+2. Fill `.env` with AUTH0_DOMAIN, AUTH0_CLIENT_ID, AUTH0_AUDIENCE, DB_ENCRYPTION_KEY
+3. Fill `platform/shell/.env.local` with VITE_AUTH0_DOMAIN, VITE_AUTH0_CLIENT_ID, VITE_AUTH0_AUDIENCE
+4. Run `npm run dev` and follow manual verification checklist in the plan
+
+**IMPORTANT:** `req.auth` (not `req.user`) — express-jwt v8 changed the property name. All future SIEM code reading the authenticated user must use `req.auth.sub`.
+
+**Next: SIEM Phase 2 — PostgreSQL schema + ingest layer**
 
 **Auth design spec:** `docs/specs/2026-03-30-auth-design.md`
 **Auth implementation plan:** `docs/plans/2026-03-30-auth.md`
