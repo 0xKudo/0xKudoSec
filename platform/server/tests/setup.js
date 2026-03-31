@@ -8,3 +8,10 @@ vi.mock('../middleware/requireAuth.js', () => ({
     next();
   },
 }));
+
+// Mock db.js so tests don't need a real PostgreSQL connection.
+vi.mock('../services/db.js', () => ({
+  default: {
+    query: vi.fn().mockResolvedValue({ rows: [], rowCount: 0 }),
+  },
+}));

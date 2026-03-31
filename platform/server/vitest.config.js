@@ -14,7 +14,9 @@ export default defineConfig({
         k === 'ALLOWED_ORIGIN' ||
         k === 'PORT' ||
         k === 'NODE_ENV' ||
-        k === 'DB_ENCRYPTION_KEY'
+        k === 'DB_ENCRYPTION_KEY' ||
+        k === 'DATABASE_URL' ||
+        k === 'INGEST_API_KEY'
       )
     ),
   },
