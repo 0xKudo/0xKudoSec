@@ -8,6 +8,7 @@ import helmet from 'helmet';
 import { corsMiddleware } from './middleware/cors.js';
 import { apiRateLimiter } from './middleware/rateLimiter.js';
 import apiRoutes from './routes/tools.js';
+import ingestRoutes from './routes/ingest.js';
 import { loadTools } from './loader.js';
 
 const app = express();
@@ -19,6 +20,7 @@ app.use(corsMiddleware);
 app.use(express.json({ limit: '50kb' }));
 app.use('/api', apiRateLimiter);
 app.use('/api', apiRoutes);
+app.use('/api/ingest', ingestRoutes);
 
 // JWT error handler — must be defined after routes, takes 4 args
 app.use((err, req, res, next) => {
