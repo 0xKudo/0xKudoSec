@@ -6,7 +6,7 @@ const s = {
     alignItems: 'center',
     justifyContent: 'center',
     height: '100%',
-    minHeight: '300px',
+    boxSizing: 'border-box',
     padding: '40px 24px',
   },
   card: {
