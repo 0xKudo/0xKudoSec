@@ -6,7 +6,9 @@ import { TopNav } from './components/TopNav';
 import { Sidebar } from './components/Sidebar';
 import { SiemSidebar } from './components/SiemSidebar';
 import { Dashboard, trackToolVisit } from './components/Dashboard';
+import { DashboardMobile } from './components/DashboardMobile';
 import { SiemDashboard } from './components/SiemDashboard';
+import { SiemDashboardMobile } from './components/SiemDashboardMobile';
 import { LogSources } from './components/LogSources';
 import { AlertQueue } from './components/AlertQueue';
 import { DetectionRules } from './components/DetectionRules';
@@ -16,22 +18,25 @@ import { SiemSettings } from './components/SiemSettings';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { RequireAuth } from './components/RequireAuth';
 import { useAuth0 } from '@auth0/auth0-react';
+import { useIsMobile } from './hooks/useIsMobile';
 import './styles/theme.css';
 
 const styles = {
-  layout: {
+  layout: { display: 'flex', flexDirection: 'column', height: '100vh' },
+  body: { display: 'flex', flex: 1, overflow: 'hidden' },
+  content: { flex: 1, overflow: 'auto' },
+  overlay: {
+    position: 'fixed', inset: 0, zIndex: 200,
     display: 'flex',
-    flexDirection: 'column',
-    height: '100vh',
   },
-  body: {
-    display: 'flex',
-    flex: 1,
-    overflow: 'hidden',
+  overlayBackdrop: {
+    position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 200,
   },
-  content: {
-    flex: 1,
-    overflow: 'auto',
+  overlayDrawer: {
+    position: 'relative', zIndex: 201,
+    background: 'var(--bg-sidebar)', overflowY: 'auto',
+    width: '260px', flexShrink: 0,
+    borderRight: '1px solid var(--border)',
   },
 };
 
@@ -62,35 +67,71 @@ function ToolLoader({ toolId }) {
 
 function AppInner() {
   const { isAuthenticated } = useAuth0();
+  const isMobile = useIsMobile();
   const [activeApp, setActiveApp] = useState('siem');
   const [siemView, setSiemView] = useState('dashboard');
+  const [menuOpen, setMenuOpen] = useState(false);
   const tools = useTools();
   const navigate = useNavigate();
 
   const switchApp = (app) => {
     setActiveApp(app);
+    setMenuOpen(false);
     if (app === 'tools') navigate('/dashboard');
   };
 
-  const navigateDashboard = () => navigate('/dashboard');
   const switchToSiem = () => switchApp('siem');
+
+  const handleSiemNavigate = (view) => {
+    setSiemView(view);
+    setMenuOpen(false);
+  };
+
+  const handleToolNavigate = (route) => {
+    navigate(route);
+    setMenuOpen(false);
+  };
 
   return (
     <div style={styles.layout}>
-      <TopNav activeApp={activeApp} onSwitchApp={switchApp} />
+      <TopNav activeApp={activeApp} onSwitchApp={switchApp} onMenuToggle={() => setMenuOpen(o => !o)} />
+
+      {/* Mobile slide-out drawer */}
+      {isMobile && menuOpen && (
+        <>
+          <div style={styles.overlayBackdrop} onClick={() => setMenuOpen(false)} />
+          <div style={styles.overlay}>
+            <div style={styles.overlayDrawer}>
+              {activeApp === 'siem' ? (
+                <SiemSidebar
+                  activeView={siemView}
+                  onNavigate={handleSiemNavigate}
+                  onSwitchToTools={() => switchApp('tools')}
+                  isAuthenticated={isAuthenticated}
+                />
+              ) : (
+                <Sidebar onSwitchToSiem={switchToSiem} onNavigate={handleToolNavigate} />
+              )}
+            </div>
+          </div>
+        </>
+      )}
+
       <div style={styles.body}>
 
         {activeApp === 'siem' && (
           <>
-            <SiemSidebar
-              activeView={siemView}
-              onNavigate={setSiemView}
-              onSwitchToTools={() => switchApp('tools')}
-              isAuthenticated={isAuthenticated}
-            />
+            {!isMobile && (
+              <SiemSidebar
+                activeView={siemView}
+                onNavigate={setSiemView}
+                onSwitchToTools={() => switchApp('tools')}
+                isAuthenticated={isAuthenticated}
+              />
+            )}
             <main style={{ flex: 1, overflow: 'auto', background: 'var(--bg-primary)', minWidth: 0 }}>
               <RequireAuth>
-                {siemView === 'dashboard' && <SiemDashboard onNavigate={setSiemView} />}
+                {siemView === 'dashboard' && (isMobile ? <SiemDashboardMobile onNavigate={setSiemView} /> : <SiemDashboard onNavigate={setSiemView} />)}
                 {siemView === 'logsources' && <LogSources />}
                 {siemView === 'alerts' && <AlertQueue onNavigate={setSiemView} />}
                 {siemView === 'rules' && <DetectionRules onNavigate={setSiemView} />}
@@ -109,7 +150,7 @@ function AppInner() {
 
         {activeApp === 'tools' && (
           <>
-            <Sidebar onSwitchToSiem={switchToSiem} />
+            {!isMobile && <Sidebar onSwitchToSiem={switchToSiem} />}
             <main style={styles.content}>
               <Routes>
                 {tools.filter(t => t.status === 'active').map(t => (
@@ -120,9 +161,7 @@ function AppInner() {
                       <ErrorBoundary>
                         <div style={{ padding: '24px' }}>
                           {t.requiresAuth ? (
-                            <RequireAuth>
-                              <ToolLoader toolId={t.id} />
-                            </RequireAuth>
+                            <RequireAuth><ToolLoader toolId={t.id} /></RequireAuth>
                           ) : (
                             <ToolLoader toolId={t.id} />
                           )}
@@ -131,8 +170,8 @@ function AppInner() {
                     }
                   />
                 ))}
-                <Route path="/dashboard" element={<Dashboard />} />
-                <Route path="*" element={<Dashboard />} />
+                <Route path="/dashboard" element={isMobile ? <DashboardMobile /> : <Dashboard />} />
+                <Route path="*" element={isMobile ? <DashboardMobile /> : <Dashboard />} />
               </Routes>
             </main>
           </>

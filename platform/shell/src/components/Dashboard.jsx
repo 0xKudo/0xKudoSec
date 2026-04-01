@@ -14,7 +14,7 @@ export function trackToolVisit(toolId) {
   } catch {}
 }
 
-function loadRecentTools() {
+export function loadRecentTools() {
   try {
     return JSON.parse(localStorage.getItem(RECENT_TOOLS_KEY) || '[]');
   } catch {

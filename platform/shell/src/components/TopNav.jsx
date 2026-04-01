@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
+import { useIsMobile } from '../hooks/useIsMobile';
 
 const styles = {
   nav: {
@@ -74,11 +75,12 @@ const styles = {
   },
 };
 
-export function TopNav({ activeApp, onSwitchApp }) {
+export function TopNav({ activeApp, onSwitchApp, onMenuToggle }) {
   const [theme, setTheme] = useState(() => {
     return localStorage.getItem('cybertools_theme') || 'dark';
   });
   const { isAuthenticated, user, loginWithRedirect, logout } = useAuth0();
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -89,42 +91,60 @@ export function TopNav({ activeApp, onSwitchApp }) {
 
   return (
     <nav style={styles.nav}>
-      <div style={styles.brand}>// 0xKudo Security Platform</div>
-
-      <div style={{ display: 'flex', alignItems: 'stretch' }}>
-        {['siem', 'tools'].map(app => (
-          <div
-            key={app}
-            style={styles.appTab(activeApp === app)}
-            onClick={() => onSwitchApp(app)}
-            onMouseEnter={e => { if (activeApp !== app) e.currentTarget.style.color = 'var(--text-primary)'; }}
-            onMouseLeave={e => { if (activeApp !== app) e.currentTarget.style.color = 'var(--text-muted)'; }}
+      {isMobile ? (
+        <>
+          <button
+            onClick={onMenuToggle}
+            style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '18px', padding: '0 16px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
           >
-            {app === 'siem' ? 'SIEM' : 'Tools'}
-          </div>
-        ))}
-      </div>
-
-      <div style={styles.right}>
-        {isAuthenticated ? (
-          <>
-            <span style={styles.userName}>{user.name || user.email}</span>
-            <button
-              style={styles.authBtn}
-              onClick={() => logout({ logoutParams: { returnTo: window.location.origin } })}
-            >
-              [ logout ]
-            </button>
-          </>
-        ) : (
-          <button style={styles.authBtn} onClick={() => loginWithRedirect()}>
-            [ login ]
+            ☰
           </button>
-        )}
-        <button style={styles.themeToggle} onClick={toggleTheme}>
-          {theme === 'dark' ? '☀' : '☾'}
-        </button>
-      </div>
+          <div style={{ ...styles.brand, borderRight: 'none', fontSize: '12px' }}>// 0xKudo</div>
+          <div style={{ display: 'flex', alignItems: 'stretch' }}>
+            {['siem', 'tools'].map(app => (
+              <div key={app} style={styles.appTab(activeApp === app)} onClick={() => onSwitchApp(app)}>
+                {app === 'siem' ? 'SIEM' : 'Tools'}
+              </div>
+            ))}
+          </div>
+          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px', padding: '0 8px' }}>
+            {isAuthenticated ? (
+              <button style={styles.authBtn} onClick={() => logout({ logoutParams: { returnTo: window.location.origin } })}>[ out ]</button>
+            ) : (
+              <button style={styles.authBtn} onClick={() => loginWithRedirect()}>[ login ]</button>
+            )}
+            <button style={styles.themeToggle} onClick={toggleTheme}>{theme === 'dark' ? '☀' : '☾'}</button>
+          </div>
+        </>
+      ) : (
+        <>
+          <div style={styles.brand}>// 0xKudo Security Platform</div>
+          <div style={{ display: 'flex', alignItems: 'stretch' }}>
+            {['siem', 'tools'].map(app => (
+              <div
+                key={app}
+                style={styles.appTab(activeApp === app)}
+                onClick={() => onSwitchApp(app)}
+                onMouseEnter={e => { if (activeApp !== app) e.currentTarget.style.color = 'var(--text-primary)'; }}
+                onMouseLeave={e => { if (activeApp !== app) e.currentTarget.style.color = 'var(--text-muted)'; }}
+              >
+                {app === 'siem' ? 'SIEM' : 'Tools'}
+              </div>
+            ))}
+          </div>
+          <div style={styles.right}>
+            {isAuthenticated ? (
+              <>
+                <span style={styles.userName}>{user.name || user.email}</span>
+                <button style={styles.authBtn} onClick={() => logout({ logoutParams: { returnTo: window.location.origin } })}>[ logout ]</button>
+              </>
+            ) : (
+              <button style={styles.authBtn} onClick={() => loginWithRedirect()}>[ login ]</button>
+            )}
+            <button style={styles.themeToggle} onClick={toggleTheme}>{theme === 'dark' ? '☀' : '☾'}</button>
+          </div>
+        </>
+      )}
     </nav>
   );
 }
