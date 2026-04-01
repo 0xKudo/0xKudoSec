@@ -636,6 +636,31 @@ router.get('/cases/:id/alerts', wrap(async (req, res) => {
   res.json(rows);
 }));
 
+// ── USER SETTINGS ────────────────────────────────────────────────────────────
+
+router.get('/settings', wrap(async (req, res) => {
+  const { rows } = await pool.query(
+    'SELECT * FROM user_settings WHERE user_id = $1',
+    [uid(req)]
+  );
+  res.json(rows[0] || { log_retention_days: 90 });
+}));
+
+router.patch('/settings', wrap(async (req, res) => {
+  const days = parseInt(req.body.log_retention_days, 10);
+  if (isNaN(days) || days < 1 || days > 3650) {
+    return res.status(400).json({ error: 'log_retention_days must be between 1 and 3650' });
+  }
+  const { rows } = await pool.query(
+    `INSERT INTO user_settings (user_id, log_retention_days)
+     VALUES ($1, $2)
+     ON CONFLICT (user_id) DO UPDATE SET log_retention_days = $2, updated_at = NOW()
+     RETURNING *`,
+    [uid(req), days]
+  );
+  res.json(rows[0]);
+}));
+
 // ── LOG EXPORT ───────────────────────────────────────────────────────────────
 
 router.get('/logs/export', wrap(async (req, res) => {

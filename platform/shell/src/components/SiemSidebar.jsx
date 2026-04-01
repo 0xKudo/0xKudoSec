@@ -75,6 +75,9 @@ const NAV = [
     { id: 'logsearch', label: 'Log Search' },
     { id: 'timeline', label: 'Timeline' },
   ]},
+  { section: 'System', items: [
+    { id: 'settings', label: 'Settings' },
+  ]},
 ];
 
 export function SiemSidebar({ activeView, onNavigate, onSwitchToTools }) {

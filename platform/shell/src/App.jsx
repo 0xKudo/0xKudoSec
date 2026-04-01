@@ -12,6 +12,7 @@ import { AlertQueue } from './components/AlertQueue';
 import { DetectionRules } from './components/DetectionRules';
 import { LogSearch } from './components/LogSearch';
 import { Cases } from './components/Cases';
+import { SiemSettings } from './components/SiemSettings';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { RequireAuth } from './components/RequireAuth';
 import { useAuth0 } from '@auth0/auth0-react';
@@ -98,7 +99,8 @@ function AppInner() {
                 {siemView === 'rules' && <DetectionRules onNavigate={setSiemView} />}
                 {siemView === 'logsearch' && <LogSearch />}
                 {siemView === 'cases' && <Cases onNavigate={setSiemView} />}
-                {!['dashboard','logsources','alerts','rules','logsearch','cases'].includes(siemView) && (
+                {siemView === 'settings' && <SiemSettings />}
+                {!['dashboard','logsources','alerts','rules','logsearch','cases','settings'].includes(siemView) && (
                   <div style={{ padding: '40px', color: 'var(--text-muted)', fontSize: '13px' }}>
                     {siemView.charAt(0).toUpperCase() + siemView.slice(1)} — coming soon
                   </div>

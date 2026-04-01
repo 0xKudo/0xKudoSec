@@ -69,6 +69,13 @@ CREATE TABLE IF NOT EXISTS ingest_sources (
   UNIQUE (name, user_id)
 );
 
+-- Per-user settings
+CREATE TABLE IF NOT EXISTS user_settings (
+  user_id              VARCHAR(255) PRIMARY KEY,
+  log_retention_days   INTEGER NOT NULL DEFAULT 90,
+  updated_at           TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- Per-user ingest API keys for log shippers
 CREATE TABLE IF NOT EXISTS user_ingest_keys (
   user_id    VARCHAR(255) PRIMARY KEY,
