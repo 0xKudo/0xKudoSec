@@ -102,6 +102,10 @@ function AppInner() {
           <div style={styles.overlayBackdrop} onClick={() => setMenuOpen(false)} />
           <div style={styles.overlay}>
             <div style={styles.overlayDrawer}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 14px', height: '44px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
+                <span style={{ fontSize: '12px', color: 'var(--text-muted)', letterSpacing: '0.04em' }}>Menu</span>
+                <button onClick={() => setMenuOpen(false)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '18px', cursor: 'pointer', padding: '0', lineHeight: 1 }}>✕</button>
+              </div>
               {activeApp === 'siem' ? (
                 <SiemSidebar
                   activeView={siemView}
