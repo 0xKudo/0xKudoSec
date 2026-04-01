@@ -91,7 +91,7 @@ function AppInner() {
               onNavigate={setSiemView}
               onSwitchToTools={() => switchApp('tools')}
             />
-            <main style={{ flex: 1, overflow: 'auto', background: 'var(--bg-primary)', minWidth: 0, position: 'relative' }}>
+            <main style={{ flex: 1, overflow: 'auto', background: 'var(--bg-primary)', minWidth: 0 }}>
               <RequireAuth>
                 {siemView === 'dashboard' && <SiemDashboard onNavigate={setSiemView} />}
                 {siemView === 'logsources' && <LogSources />}
