@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useAuth0 } from '@auth0/auth0-react';
 import { useWorkspace } from '../../../platform/shell/src/context/WorkspaceContext.jsx';
 
 const RISK_COLORS = {
@@ -181,6 +182,7 @@ const styles = {
 };
 
 export default function NetworkScanner() {
+  const { getAccessTokenSilently } = useAuth0();
   const [target, setTarget] = useState('');
   const [scanType, setScanType] = useState('quick');
   const [result, setResult] = useState(null);
@@ -226,9 +228,10 @@ export default function NetworkScanner() {
     // Step 1 — initiate scan, get scanId
     let scanId;
     try {
+      const token = await getAccessTokenSilently();
       const res = await fetch('/api/tools/network-scanner/scan', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ target: target.trim(), scanType }),
       });
       const data = await res.json();
@@ -297,7 +300,8 @@ export default function NetworkScanner() {
     // Belt-and-suspenders: also hit cancel endpoint
     if (scanIdRef.current) {
       try {
-        await fetch(`/api/tools/network-scanner/cancel/${scanIdRef.current}`, { method: 'POST' });
+        const token = await getAccessTokenSilently().catch(() => '');
+      await fetch(`/api/tools/network-scanner/cancel/${scanIdRef.current}`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
       } catch {}
       scanIdRef.current = null;
     }
