@@ -13,8 +13,20 @@ Unified cybersecurity tools platform at `tools.laynekudo.com`. Monorepo — shar
 
 **All 19 tools complete. Auth complete. SIEM Phase 2 complete.**
 
+### Recently Completed
+- Mobile layout: hamburger drawer, SiemDashboardMobile, DashboardMobile, useIsMobile hook
+- Mobile nav: X close button in drawer, compact login/theme buttons, brand text retained at smaller size
+- Auth fix: all 15 auth-required tool clients now send Bearer token via getAccessTokenSilently
+- SSE auth fix: requireAuth middleware accepts token from query param (for EventSource streams)
+- nmap installed on VPS
+- Shipper zip download: `GET /api/siem/shipper-download` streams pre-configured zip with user's API key
+- Auth token in query string fix for scan-stream SSE endpoint
+- Mobile-only layout fixes for network-scanner and subdomain-enumerator (isMobile conditionals)
+- Toast on mobile tap of locked tool in Sidebar
+
 ### Next: SIEM Phase 3
-- Log retention setting (user-configurable, stored in DB, cron on VPS)
+- Log retention cron on VPS (UI + API done, cron not yet implemented)
+- Continue mobile layout fixes for remaining tools
 - Then Phase 4: Electron + Proxy tool
 
 ---
