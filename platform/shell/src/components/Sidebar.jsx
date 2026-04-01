@@ -140,7 +140,7 @@ export function Sidebar({ onSwitchToSiem }) {
               return (
                 <div
                   key={tool.id}
-                  title={isLocked ? 'Login to access this feature.' : undefined}
+                  title={isLocked ? 'Log in to access this feature.' : undefined}
                   style={{
                     ...styles.navItem(isActive),
                     ...(isLocked ? { opacity: 0.4, cursor: 'default' } : {}),

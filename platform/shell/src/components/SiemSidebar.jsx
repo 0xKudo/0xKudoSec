@@ -91,7 +91,7 @@ export function SiemSidebar({ activeView, onNavigate, onSwitchToTools, isAuthent
             return (
               <div
                 key={item.id}
-                title={locked ? 'Login to access this feature.' : undefined}
+                title={locked ? 'Log in to access this feature.' : undefined}
                 style={{
                   ...styles.navItem(activeView === item.id),
                   ...(locked ? { opacity: 0.4, cursor: 'default' } : {}),
