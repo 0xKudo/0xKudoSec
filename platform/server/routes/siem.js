@@ -1,8 +1,14 @@
 // platform/server/routes/siem.js
 import { Router } from 'express';
 import { randomBytes } from 'crypto';
+import { readFileSync } from 'fs';
+import { resolve, dirname } from 'path';
+import { fileURLToPath } from 'url';
+import archiver from 'archiver';
 import pool from '../services/db.js';
 import { requireAuth } from '../middleware/requireAuth.js';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const router = Router();
 router.use(requireAuth);
@@ -330,6 +336,35 @@ router.post('/ingest-key', async (req, res) => {
   );
   res.json(rows[0]);
 });
+
+router.get('/shipper-download', wrap(async (req, res) => {
+  const { rows } = await pool.query(
+    'SELECT api_key FROM user_ingest_keys WHERE user_id = $1',
+    [uid(req)]
+  );
+  if (!rows[0]) return res.status(400).json({ error: 'Generate an ingest key first.' });
+
+  const apiKey = rows[0].api_key;
+  const ingestUrl = process.env.ALLOWED_ORIGIN
+    ? process.env.ALLOWED_ORIGIN.replace(/\/$/, '').replace(/^http:/, 'https:') + '/api/ingest/beats'
+    : 'https://tools.laynekudo.com/api/ingest/beats';
+
+  const shipperDir = resolve(__dirname, '../../../shipper');
+  const indexJs = readFileSync(resolve(shipperDir, 'index.js'), 'utf8');
+  const packageJson = readFileSync(resolve(shipperDir, 'package.json'), 'utf8');
+  const envContents = `INGEST_URL=${ingestUrl}\nINGEST_API_KEY=${apiKey}\nPOLL_INTERVAL_MS=60000\nBATCH_SIZE=50\nHOURS_BACK=24\n`;
+
+  res.setHeader('Content-Type', 'application/zip');
+  res.setHeader('Content-Disposition', 'attachment; filename="0xkudo-shipper.zip"');
+
+  const archive = archiver('zip', { zlib: { level: 9 } });
+  archive.on('error', err => { throw err; });
+  archive.pipe(res);
+  archive.append(indexJs, { name: '0xkudo-shipper/index.js' });
+  archive.append(packageJson, { name: '0xkudo-shipper/package.json' });
+  archive.append(envContents, { name: '0xkudo-shipper/.env' });
+  await archive.finalize();
+}));
 
 // ── DETECTION RULES ─────────────────────────────────────────────────────────
 

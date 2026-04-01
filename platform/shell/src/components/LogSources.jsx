@@ -406,15 +406,37 @@ export function LogSources() {
         )}
       </div>
 
-      {/* Shipper Config — only shown during one-time reveal */}
-      {newKey && (
+      {/* Shipper Download — shown whenever a key exists */}
+      {(keyMeta?.exists || newKey) && (
         <div style={s.section}>
-          <div style={s.sectionTitle}>Shipper Configuration</div>
-          <div style={s.keyBox}>
-            {`INGEST_URL=http://localhost:4000/api/ingest/beats\nINGEST_API_KEY=${newKey}\nPOLL_INTERVAL_MS=60000\nBATCH_SIZE=10\nHOURS_BACK=1`}
+          <div style={s.sectionTitle}>Windows Log Shipper</div>
+          <div style={s.note} >
+            Download the shipper to forward Windows Event Logs from any machine to your SIEM. Your API key is pre-configured — just unzip, run <code>npm install</code>, then <code>node index.js</code>.
           </div>
-          <div style={s.note}>
-            For the Node.js shipper, copy this into <code>shipper/.env</code> and restart. For other log forwarders, set <code>INGEST_API_KEY</code> as the Bearer token in the Authorization header.
+          <div style={{ marginTop: '12px', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+            <button style={s.btnPrimary} onClick={async () => {
+              const token = await getAccessTokenSilently();
+              const res = await fetch('/api/siem/shipper-download', { headers: { Authorization: `Bearer ${token}` } });
+              if (!res.ok) { alert('Download failed — try again.'); return; }
+              const blob = await res.blob();
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = '0xkudo-shipper.zip';
+              a.click();
+              URL.revokeObjectURL(url);
+            }}>
+              Download Shipper (.zip)
+            </button>
+          </div>
+          <div style={{ ...s.note, marginTop: '12px' }}>
+            <strong style={{ color: 'var(--text-primary)' }}>Setup:</strong><br />
+            1. Unzip <code>0xkudo-shipper.zip</code><br />
+            2. Open a terminal in the <code>0xkudo-shipper</code> folder<br />
+            3. Run <code>npm install</code><br />
+            4. Run <code>node index.js</code><br />
+            Your machine will appear in Active Sources below within one minute.
+            If you regenerate your API key, download a fresh copy of the shipper.
           </div>
         </div>
       )}
