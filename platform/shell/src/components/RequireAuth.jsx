@@ -5,10 +5,13 @@ export function RequireAuth({ children }) {
   const { isAuthenticated, isLoading, loginWithRedirect } = useAuth0();
 
   useEffect(() => {
+    // Don't redirect while Auth0 is processing a callback (code/state in URL)
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('code') || params.get('state')) return;
     if (!isLoading && !isAuthenticated) {
-      loginWithRedirect();
+      loginWithRedirect({ appState: { returnTo: window.location.pathname } });
     }
-  }, [isLoading, isAuthenticated, loginWithRedirect]);
+  }, [isLoading, isAuthenticated]); // eslint-disable-line
 
   if (isLoading) {
     return (

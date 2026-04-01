@@ -101,9 +101,6 @@ export function TopNav({ activeApp, onSwitchApp }) {
       </div>
 
       <div style={styles.right}>
-        <button style={styles.themeToggle} onClick={toggleTheme}>
-          {theme === 'dark' ? '[ light ]' : '[ dark ]'}
-        </button>
         {isAuthenticated ? (
           <>
             <span style={styles.userName}>{user.name || user.email}</span>
@@ -119,7 +116,9 @@ export function TopNav({ activeApp, onSwitchApp }) {
             [ login ]
           </button>
         )}
-        <a href="https://laynekudo.com" style={styles.backLink}>← laynekudo.com</a>
+        <button style={styles.themeToggle} onClick={toggleTheme}>
+          {theme === 'dark' ? '☀' : '☾'}
+        </button>
       </div>
     </nav>
   );
