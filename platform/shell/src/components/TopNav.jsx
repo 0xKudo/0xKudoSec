@@ -92,12 +92,17 @@ export function TopNav({ activeApp, onSwitchApp }) {
       <div style={styles.brand}>// 0xKudo Security Platform</div>
 
       <div style={{ display: 'flex', alignItems: 'stretch' }}>
-        <div style={styles.appTab(activeApp === 'siem')} onClick={() => onSwitchApp('siem')}>
-          SIEM
-        </div>
-        <div style={styles.appTab(activeApp === 'tools')} onClick={() => onSwitchApp('tools')}>
-          Tools
-        </div>
+        {['siem', 'tools'].map(app => (
+          <div
+            key={app}
+            style={styles.appTab(activeApp === app)}
+            onClick={() => onSwitchApp(app)}
+            onMouseEnter={e => { if (activeApp !== app) e.currentTarget.style.color = 'var(--text-primary)'; }}
+            onMouseLeave={e => { if (activeApp !== app) e.currentTarget.style.color = 'var(--text-muted)'; }}
+          >
+            {app === 'siem' ? 'SIEM' : 'Tools'}
+          </div>
+        ))}
       </div>
 
       <div style={styles.right}>
