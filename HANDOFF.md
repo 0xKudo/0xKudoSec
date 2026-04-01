@@ -1,12 +1,8 @@
-# 0xKudo Security Toolkit — Project Handoff
+# 0xKudo Security Toolkit — Handoff
 
-This file contains everything needed to resume this project in a new conversation without losing context.
+## What This Is
 
----
-
-## What This Project Is
-
-A unified cybersecurity tools platform at `tools.laynekudo.com`. 19 planned tool modules covering blue team, red team, and purple team workflows. Built as a monorepo — one repo, shared platform frame, each tool is an isolated module.
+Unified cybersecurity tools platform at `tools.laynekudo.com`. Monorepo — shared Express/React platform, 19+ isolated tool modules.
 
 **Spec:** `docs/specs/2026-03-26-cybertools-platform-design.md`
 **Plan:** `docs/plans/2026-03-26-cybertools-platform.md`
@@ -15,423 +11,187 @@ A unified cybersecurity tools platform at `tools.laynekudo.com`. 19 planned tool
 
 ## Current Status
 
-**Task 1 (Monorepo Scaffold) — COMPLETE**
-- Folder structure, root `package.json` with npm workspaces, `.gitignore`, `.env.example`
-- `platform/server/package.json`, `platform/shell/package.json`, `platform/shared/package.json` + `constants.js`
-- `npm install` completed — 279 packages installed
+**All 19 tools complete. Auth complete. SIEM Phase 2 complete.**
 
-**Task 2 (Express Server) — COMPLETE**
-- `platform/server/middleware/cors.js` — CORS locked to `ALLOWED_ORIGIN` env var
-- `platform/server/middleware/rateLimiter.js` — 60 req/min per IP
-- `platform/server/middleware/validate.js` — `requireFields()` factory for input validation
-- `platform/server/routes/tools.js` — `GET /api/health` and `GET /api/tools`
-- `platform/server/loader.js` — dynamically discovers and mounts tool routes from `tools/` dir
-- `platform/server/index.js` — Express entry point with all middleware wired up
-- `platform/server/vitest.config.js` — loads `.env` from repo root for tests
-- Health test passing
+### Next: SIEM Phase 3
+- Log retention setting (user-configurable, stored in DB, cron on VPS)
+- Then Phase 4: Electron + Proxy tool
 
-**Task 3 (Claude API Service) — COMPLETE**
-- `platform/server/services/claude.js` — singleton Anthropic SDK client + `askClaude()` helper
-- `.env` created and populated with real `ANTHROPIC_API_KEY`
-- Claude client test passing
+---
 
-**Task 4 (React Shell) — COMPLETE**
-- `platform/shell/index.html`, `vite.config.js` — Vite entry, proxies `/api` to Express on port 4000
-- `platform/shell/src/styles/theme.css` — Warm Dark theme (CSS variables), light mode toggle via `[data-theme="light"]`
-- `platform/shell/src/components/TopNav.jsx` — branding + back link
-- `platform/shell/src/components/ErrorBoundary.jsx` — catches tool crashes
-- `platform/shell/src/App.jsx` — layout skeleton
-- `platform/shell/src/main.jsx` — React root
-- Theme corrected from old cyber blue palette to Warm Dark per spec
+## Tools (All Complete)
 
-**Task 5 (Tool Registry + Sidebar) — COMPLETE**
-- `platform/shell/src/context/ToolRegistry.jsx` — fetches `/api/tools`, exposes via `useTools()` hook
-- `platform/shell/src/components/Sidebar.jsx` — tag filter chips, favorites (★), active route highlight
-- `platform/shell/src/App.jsx` — updated with `ToolRegistryProvider`, `Sidebar`, dynamic `ToolLoader`, `ToolRoutes`
-- Sidebar shows empty state correctly (no tools registered yet)
+1. Alert Triage Assistant
+2. Incident Report Generator
+3. Phishing Email Analyzer
+4. OSINT Recon Dashboard
+5. Threat Intelligence Aggregator
+6. Network Threat Analyzer
+7. Network Scanner (nmap)
+8. Log Anomaly Explainer
+9. CVE Exploit Mapper
+10. Payload Obfuscation Explainer
+11. Security Policy Translator
+12. Reverse Shell Generator
+13. Wordlist / Password Generator
+14. Subdomain Enumerator
+15. HTTP Repeater
+16. Proxy — deferred to Electron phase
+17. Intruder
+18. Vulnerability Scanner
+19. Decoder
+20. Payload Generator
 
-**Task 6 (WorkspaceContext) — COMPLETE**
-- `platform/shell/src/context/WorkspaceContext.jsx` — `push(type, label, data, source)` + `clear()`, localStorage backed
-- `App.jsx` updated — `WorkspaceProvider` wraps layout inside `ToolRegistryProvider`
+---
 
-**Task 7 (Alert Triage — Manifest + Server Route) — COMPLETE**
-- `tools/alert-triage/manifest.json` — id, name, description, route, tags, status
-- `tools/alert-triage/server/routes.js` — `POST /analyze` with Claude integration, input validation, JSON parsing + severity validation
-- `platform/server/tests/alert-triage.test.js` — 2 tests passing (400 on missing field, 200 on valid input), Claude mocked
+## Auth (Complete)
 
-**Task 8 (Alert Triage — React UI) — COMPLETE**
-- `tools/alert-triage/client/index.jsx` — textarea input, Analyze button, severity badge, summary/attack vector/actions result panel
-- Uses Warm Dark CSS variables (corrected from plan's old cyber blue references)
+- Auth0 — Google + GitHub social login + email/password
+- `platform/server/middleware/requireAuth.js` — lazy-init to avoid ESM hoisting issue (reads `AUTH0_DOMAIN` at request time, not import time)
+- 15 tools protected, 4 public (decoder, reverse-shell-generator, wordlist-generator, payload-generator)
+- Auth0 custom domain: `auth.laynekudo.com` (CNAME on Hostinger)
+- App defaults to SIEM when authenticated, tools when not
 
-**Task 9 (Production Readiness) — COMPLETE**
-- `platform/server/ecosystem.config.js` — PM2 config for production deployment
-- `platform/shell/vite.config.js` — `VITE_BASE_URL` env support for domain-portable builds
-- All 4 tests passing, production build clean (`platform/shell/dist/`)
+**Critical:** `req.auth.sub` — express-jwt v8 uses `req.auth`, not `req.user`.
 
-**Tool 2 (Incident Report Generator) — COMPLETE**
-- `tools/incident-report/manifest.json`, `server/routes.js`, `client/index.jsx`
-- `POST /analyze` — accepts incidentText + optional severity hint, returns structured 10-field report
-- UI has "Import from Alert Triage" banner (WorkspaceContext integration), severity dropdown, plain-text export
-- Alert Triage now pushes results to WorkspaceContext after each analysis
-- 5 new tests passing (9 total)
+---
 
-**Tool 3 (Phishing Email Analyzer) — COMPLETE**
-- `tools/phishing-analyzer/` — manifest, server route, React UI
-- `POST /analyze` — verdict (phishing/suspicious/legitimate/unknown), confidence, indicators with types, suspicious URLs, sender, recommended actions
-- 4 new tests passing (13 total)
+## SIEM Phase 2 (Complete)
 
-- Added .eml file upload (`POST /analyze-file`) via multer — memory storage only, 100kb max, extension + MIME validated. `.msg` support deferred.
+### Database Schema
+- PostgreSQL 18, `cybertools` database
+- `logs` table — 24 columns + `user_id VARCHAR(255)` for per-user data scoping
+- `ingest_sources` table — unique on `(name, user_id)` composite key
+- `user_ingest_keys` table — maps `user_id` to `api_key`, generated per user from Log Sources page
+- All SIEM queries scoped to `req.auth.sub` (user_id)
+- Schema: `docs/schema.sql`
 
-**Tool 4 (OSINT Recon Dashboard) — COMPLETE**
-- `tools/osint-recon/manifest.json`, `server/routes.js`, `client/index.jsx`
-- `POST /analyze` — auto-detects domain/IP/email, runs parallel lookups: Shodan, VirusTotal, Hunter.io, IPInfo, WHOIS
-- Each source returns gracefully with `{error}` or `{skipped}` if unavailable (no API key configured)
-- Claude synthesizes all results into summary/riskLevel/flags/recommendations
-- UI: target input + auto-detect type selector, AI summary card with risk badge, per-source SourceCard grid
-- WorkspaceContext push on successful analysis
-- 4 new tests passing (17 total)
-- Required env vars: `SHODAN_API_KEY`, `VIRUSTOTAL_API_KEY`, `HUNTER_API_KEY`, `IPINFO_TOKEN` (WHOIS uses free public API)
-- **Known issues (deferred):** WHOIS returns 404 from both rdap.org and rdap.iana.org for tested domains — need alternate source or paid whoisjsonapi plan. Shodan free tier blocks host data; card shows resolved IP only.
+### Ingest Pipeline
+- `platform/server/routes/ingest.js` — `POST /api/ingest/beats`
+  - Looks up `user_id` from `user_ingest_keys` table by Bearer token
+  - Falls back to env `INGEST_API_KEY` for dev (no user scoping)
+  - Tags all events with `user_id`
+- `platform/server/services/ingest/normalizeEvent.js`
+  - `event_category` from event ID lookup table (not Windows Keywords bitmask)
+  - Sysmon field names: `SourceIp`, `DestinationIp`, `DestinationPort`, `Image` in `event_data`
+  - Network fields: `ed.SourceIp || ed.SourceAddress` etc.
 
-**Tool 5 (Threat Intelligence Aggregator) — COMPLETE**
-- `tools/threat-intel/manifest.json`, `server/routes.js`, `client/index.jsx`
-- `POST /analyze` — accepts IP, domain, URL, or file hash (auto-detected), runs parallel lookups
-- Sources: AbuseIPDB, VirusTotal, Shodan, IPInfo, ThreatFox, URLhaus, MalwareBazaar
-- Keyless sources: ThreatFox, URLhaus, MalwareBazaar (abuse.ch public APIs)
-- Claude synthesizes into threatLevel/flags/recommendations, WorkspaceContext push on success
-- 4 new tests passing (21 total)
-- New env var: `ABUSEIPDB_API_KEY`
+### SIEM API Routes (`platform/server/routes/siem.js`)
+- All 11 endpoints scoped to `req.auth.sub`
+- `GET /api/siem/ingest-key` — fetch user's current key
+- `POST /api/siem/ingest-key` — generate/regenerate key
+- Mounted before global rate limiter to avoid 429s from WebSocket-triggered refreshes
 
-**Tool 6 (Network Threat Analyzer) — COMPLETE**
-- `tools/network-threat-analyzer/manifest.json`, `server/routes.js`, `client/index.jsx`
-- `POST /analyze` (paste) + `POST /analyze-file` (upload) — firewall, NetFlow, Zeek, Suricata, syslog, pcap-summary
-- Auto-detects log type, Claude identifies threats, anomalies, suspicious IPs, recommendations
-- Paste tab + upload tab UI, per-threat severity cards, suspicious IP chips
-- 4 new tests passing (25 total)
-- Note: live network capture deferred to Electron phase (documented in spec)
+### Frontend
+- `SiemDashboard.jsx` — live data, WebSocket real-time updates (1s debounce), 30s polling fallback, time range selector, severity + category filters, clickable event rows open detail modal with scroll
+- `LogSources.jsx` — ingest key generation, key hidden by default (reveal toggle), shipper config block, active sources table
+- `App.jsx` — defaults to SIEM on login via `useEffect` on `isAuthenticated`
 
-**Tool 7 (Network Scanner) — COMPLETE**
-- `tools/network-scanner/manifest.json`, `server/routes.js`, `client/index.jsx`
-- `POST /scan` — 6 whitelisted scan profiles (ping, quick, full, service, OS, vuln)
-- Target validated by regex — no shell metacharacters, user input never interpolated into nmap args
-- Claude analyzes raw nmap output into riskLevel/findings/recommendations
-- Raw nmap output toggle in UI, authorization warning banner
-- 4 new tests passing (29 total), child_process mocked in tests
+### Node.js Shipper (`shipper/`)
+- Reads Windows Event Log via PowerShell `-File` (temp file at `%TEMP%/cybertools-query.ps1`)
+- **Must run as Administrator** — Security and Sysmon channels require elevated privileges
+- Channel order: Sysmon first, Security last (Security is slowest)
+- Security channel capped at `-MaxEvents 200` to prevent timeout
+- Batch size: 50, Poll interval: 60s, Hours back: 24
+- Survives network errors (try/catch in `ship()`, `safePoll()` wrapper)
+- Registered as Windows scheduled task "CybertoolsShipper" — runs at login, restarts on crash
+- Uses per-user API key from Log Sources page (not the env fallback key)
 
-**Tool 8 (Log Anomaly Explainer) — COMPLETE**
-- `tools/log-anomaly-explainer/manifest.json`, `server/routes.js`, `client/index.jsx`
-- `POST /analyze` (paste) + `POST /analyze-file` (upload) — syslog, auth, Apache/Nginx, Windows Event, Docker, Kubernetes, database
-- Auto-detects log source, Claude identifies anomalies with plain-English explanations, severity, line refs
-- Paste + upload tabs, per-anomaly cards, clean banner when nothing found
-- 4 new tests passing (33 total)
+### Log Sources (Windows)
+- Sysmon v15.20 at `C:\Sysmon\` — SwiftOnSecurity config + custom network exclude rule
+- Windows Firewall auditing enabled (`auditpol` — events 5156/5157)
+- Network events (Sysmon event 3) require admin to read
 
-**Tool 9 (CVE Exploit Mapper) — COMPLETE**
-- `tools/cve-exploit-mapper/manifest.json`, `server/routes.js`, `client/index.jsx`
-- `POST /lookup` — CVE ID or keyword search, parallel lookups: NVD, EPSS, Exploit-DB, CIRCL
-- All sources free with no API keys required
-- Claude synthesizes riskLevel + exploitabilityLevel (actively-exploited/poc-available/theoretical/none)
-- EPSS score bar, Exploit-DB links, CVSS scores, CWE/CAPEC mappings
-- 4 new tests passing (37 total)
+### Key Decisions
+- Winlogbeat can't POST to custom HTTP — Node.js shipper is lightweight agent path; Logstash is enterprise path
+- WebSocket server attached to Express HTTP server at `/ws` path, broadcasts `new_events` on ingest
+- SIEM routes exempted from rate limiter by mounting before `app.use('/api', apiRateLimiter)`
 
-**Tool 10 (Payload Obfuscation Explainer) — COMPLETE**
-- `tools/payload-obfuscation-explainer/manifest.json`, `server/routes.js`, `client/index.jsx`
-- `POST /analyze` — Claude-only, no external APIs
-- Supports base64, hex, URL, HTML, unicode, ROT13, PowerShell, JavaScript, Python, bash
-- Returns decoded payload, encoding layers, IOCs, threat level, malicious flag, plain-English explanation
-- Optional context field, encoding hint selector
-- 4 new tests passing (41 total)
+---
 
-**Tool 11 (Security Policy Translator) — COMPLETE**
-- `tools/security-policy-translator/manifest.json`, `server/routes.js`, `client/index.jsx`
-- `POST /translate` — Claude-only, no external APIs
-- Supports NIST, ISO 27001, CIS, SOC 2, HIPAA, PCI-DSS, GDPR, CMMC, internal policy
-- Extracts controls with IDs, plain-English explanations, owner teams, action items, compliance gaps
-- 4 new tests passing (45 total)
+## VPS Deployment (Live at tools.laynekudo.com)
 
-**Fix applied to Tool 10 and shared Claude service:**
-- Claude was wrapping JSON responses in markdown code fences — fixed globally in `platform/server/services/claude.js`
-- `max_tokens` raised from 1024 to 4096 — improves response completeness across all tools
+- **Provider:** Hetzner CPX22 — 4GB RAM, 80GB SSD, Nuremberg
+- **OS:** Ubuntu 24.04 LTS
+- **Stack:** Node.js 22, PostgreSQL 16, Nginx, PM2, Let's Encrypt (Certbot)
+- **Repo:** `github.com:0xKudoX/0xKudoSec.git` (private) — SSH deploy key on VPS (read-only)
+- **App dir:** `/var/www/cybertools`
+- **PM2 config:** `/var/www/cybertools/ecosystem.config.cjs` — injects all env vars directly (bypasses dotenv ESM hoisting issue)
+- **Frontend build:** `platform/shell/dist/` — served by Nginx as static files
+- **WebSocket:** proxied through Nginx at `/ws` — frontend uses `window.location.host` (no hardcoded port)
 
-**Tool 12 (Reverse Shell Generator) — COMPLETE**
-- `tools/reverse-shell-generator/manifest.json`, `server/routes.js`, `client/index.jsx`
-- `GET /shell-types` + `POST /generate` — lhost/lport/shellType inputs, strict validation
-- 20 shell types: bash (3 variants), sh, python/python3, php/php-exec, perl, ruby, netcat/netcat-e/ncat, socat, powershell/powershell-b64 (b64 encoded server-side), golang, java, awk, nodejs
-- Each response includes payloads[], listenerCommand (nc), msfListener (multi/handler commands)
-- No Claude API — pure static template generation
-- WorkspaceContext push on generate
-- Authorization warning banner
-- 7 new tests passing (52 total)
-- Fix applied: PowerShell payload wrapped in outer double quotes with inner single quotes so `-Command` parses correctly from CMD
-- Fix applied: replaced `iex` with `[scriptblock]::Create()` — Windows Defender was pattern-matching `iex` in HTTP response body and returning 403
-- Fix applied: helmet `crossOriginResourcePolicy` set to `cross-origin` in dev, `same-origin` in production
+### Deploy workflow
+```bash
+# On local machine
+git push
 
-**Tool 13 (Wordlist / Password Generator) — COMPLETE**
-- `tools/wordlist-generator/manifest.json`, `server/routes.js`, `client/index.jsx`
-- `POST /charset` — generate from character sets (lowercase/uppercase/digits/symbols/custom) + length range
-- `POST /pattern` — generate from base words with mutation rules (base variants, leet, digits, years, symbols)
-- Max 10,000 entries, preview first 500 in UI, download full list as .txt, copy all button
-- No Claude, no external APIs. WorkspaceContext push on generate.
-- 7 new tests passing (59 total)
-- Fix applied: charset tab now streams download directly (no memory buffering) — words written in batches of 1,000
-- Fix applied: preview endpoint returns first 100 entries + estimated total count; download is separate streamed endpoint
-- Fix applied: `NODE_ENV=development` removes all entry limits (Infinity) and raises max length to 32; production caps at 1,000,000 entries and max length 16
-- UI shows "no limit — local mode" in dev, cap warning in production
+# On VPS
+cd /var/www/cybertools && git pull && cd platform/shell && npm run build
+# Server picks up JS changes automatically via PM2 watch (or pm2 restart cybertools)
+```
 
-**Tool 14 (Subdomain Enumerator) — COMPLETE**
-- `tools/subdomain-enumerator/manifest.json`, `server/routes.js`, `client/index.jsx`
-- `POST /enumerate` — domain input, source checkboxes (crt.sh, HackerTarget, SecurityTrails, brute-force)
-- crt.sh and HackerTarget are free with no API key; SecurityTrails requires `SECURITYTRAILS_API_KEY`
-- Brute-force: DNS resolution against built-in ~70 prefix wordlist or custom wordlist (one per line)
-- All sources run in parallel, dedup into sorted unique subdomain list
-- Claude synthesizes: riskLevel, summary, flags, notable subdomains, recommendations
-- UI: source checkboxes, custom brute wordlist textarea, AI analysis card, per-source result cards, full subdomain list with copy/download
-- WorkspaceContext push on successful enumeration
-- 4 new tests passing (63 total)
-
-**Tool 15 (HTTP Repeater) — COMPLETE**
-- `tools/http-repeater/manifest.json`, `server/routes.js`, `client/index.jsx`
-- `POST /send` — proxies request to target URL, returns status, headers, body, durationMs, byteLength
-- Validates method (7 allowed), URL format, blocks localhost/loopback/RFC-1918 ranges
-- Redirects not auto-followed — shown raw (manual redirect)
-- Response body capped at 2MB, binary responses show byte count instead of raw bytes
-- UI: method dropdown, URL input, headers textarea, body textarea (hidden for GET/HEAD), response panel with Body/Headers tabs
-- Request history: last 20 saved to localStorage, click to reload any entry
-- 4 new tests passing (67 total)
-
-**Tool 17 (Intruder) — COMPLETE**
-- `tools/intruder/manifest.json`, `server/routes.js`, `client/index.jsx`
-- `POST /attack` — method, urlTemplate, headers, body, payloads array (max 500)
-- Injection points marked with §placeholders§ — substituted in URL, headers, and body
-- Concurrency: 5 parallel requests per batch
-- Anomaly detection: flags responses where status != baseline or length deviates >20% from median
-- Built-in payload lists: Common Passwords, SQL Injection, XSS Payloads, Path Traversal, Common Usernames
-- UI: request template panel + payload panel side by side, results table with status colors, click row to expand response body
-- SSRF protections same as HTTP Repeater
-- WorkspaceContext push when anomalies found
-- 4 new tests passing (71 total)
-
-**Deferred: Tool 16 — Proxy (skipped for now, returning later)**
-**Tool 18 (Scanner) — COMPLETE**
-- `tools/scanner/manifest.json`, `server/routes.js`, `client/index.jsx`
-- `POST /scan` — passive mode (default) + active mode (requires authorized: true)
-- Passive checks: security headers (HSTS, CSP, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy), cookie flags (HttpOnly, Secure, SameSite), form analysis (GET method, missing CSRF tokens), info leakage (Server header, X-Powered-By, sensitive HTML comments)
-- Active checks: XSS reflection probes + SQLi error probes on discovered query params (up to 5 URLs, 4 probes each)
-- Claude synthesizes riskLevel, summary, top priorities
-- UI: passive/active mode cards, authorization checkbox (active only), findings grouped by severity
-- SSRF protections same as other tools
-- 4 new tests passing (75 total)
-
-**Tool 19 (Decoder) — COMPLETE**
-- `tools/decoder/manifest.json`, `server/routes.js`, `client/index.jsx`
-- `POST /transform` — input + operation, returns output
-- `GET /operations` — lists all available operations
-- Supported formats: URL (decode/encode/encode-all), HTML (decode/encode), Base64 (decode/encode/url-safe variants), Hex (decode/encode), Binary (decode/encode), ROT13, Unicode (\\uXXXX decode/encode), JWT inspect (header + payload, no verify)
-- No Claude, no external APIs — pure server-side transforms
-- UI: grouped operation sidebar, input textarea, Transform button, output box with "Use as input" swap and copy buttons
-- 4 new tests passing (79 total)
-
-**Tool 20 (Payload Generator) — COMPLETE**
-- `tools/payload-generator/manifest.json`, `server/routes.js`, `client/index.jsx`
-- Two tabs: msfvenom and Web Payloads
-- `GET /msf-payloads` — 23 payloads across Linux/Windows/macOS/Android/PHP/Python/Java/Shellcode, 6 encoders
-- `POST /msf-generate` — builds msfvenom command + multi/handler listener block; validates lhost, lport, encoder, badchars, outputFile
-- `GET /web-categories` — 7 categories: XSS (13), SQLi (14), CMDi (12), SSTI (10), Path Traversal (10), XXE (5), Open Redirect (10)
-- `GET /web-payloads/:category` — returns full payload list for category
-- No Claude, no external APIs — pure static templates
-- WorkspaceContext push on msfvenom generate
-- Authorization warning banners on both tabs
-- 8 new tests passing (87 total)
-- Sidebar updated: Payload Generator moved from comingSoon to active routes in Simulate/Test section
-
-**Auth Implementation — CODE COMPLETE, awaiting Auth0 dashboard setup + manual verification**
-
-**What's built:**
-- `platform/server/services/encryption.js` — AES-256-GCM encrypt/decrypt, uses `DB_ENCRYPTION_KEY`
-- `platform/server/middleware/requireAuth.js` — express-jwt + jwks-rsa, verifies Auth0 JWTs, sets `req.auth`
-- `platform/server/index.js` — JWT UnauthorizedError handler returning clean 401 JSON
-- `platform/server/loader.js` — reads `requiresAuth` from manifest, applies middleware automatically
-- `platform/server/tests/setup.js` — global test mock for requireAuth (injects fake `req.auth`)
-- `platform/server/vitest.config.js` — updated with setupFiles + DB_ENCRYPTION_KEY in env
-- All 19 tool manifests — `requiresAuth: true` (15 protected) or `false` (4 public)
-- `platform/shell/src/main.jsx` — Auth0Provider wrapping entire app
-- `platform/shell/src/components/RequireAuth.jsx` — redirects unauthenticated users to Auth0
-- `platform/shell/src/components/TopNav.jsx` — login/logout button + user name display
-- `platform/shell/src/App.jsx` — protected tool routes + SIEM wrapped in RequireAuth
-- `platform/shell/.env.local` — template for Vite Auth0 env vars (gitignored, fill with real values)
-- `.env.example` — added DB_ENCRYPTION_KEY
-
-**To activate auth (requires your action):**
-1. Complete Auth0 dashboard setup (see `docs/plans/2026-03-30-auth.md` Pre-Implementation section)
-2. Fill `.env` with AUTH0_DOMAIN, AUTH0_CLIENT_ID, AUTH0_AUDIENCE, DB_ENCRYPTION_KEY
-3. Fill `platform/shell/.env.local` with VITE_AUTH0_DOMAIN, VITE_AUTH0_CLIENT_ID, VITE_AUTH0_AUDIENCE
-4. Run `npm run dev` and follow manual verification checklist in the plan
-
-**IMPORTANT:** `req.auth` (not `req.user`) — express-jwt v8 changed the property name. All future SIEM code reading the authenticated user must use `req.auth.sub`.
-
-**Next: SIEM Phase 2 — PostgreSQL schema + ingest layer**
-
-**Auth design spec:** `docs/specs/2026-03-30-auth-design.md`
-**Auth implementation plan:** `docs/plans/2026-03-30-auth.md`
-
-Key decisions locked in:
-- Auth0 as single hub — social (Google/GitHub) + email/password via Auth0 Database Connection
-- `express-jwt` + `jwks-rsa` already installed — `requireAuth` middleware uses `req.auth` (not `req.user`)
-- Protected tools gated via `requiresAuth: true` in manifest — loader applies middleware automatically
-- Public tools: decoder, reverse-shell-generator, wordlist-generator, payload-generator
-- AES-256-GCM encryption for email/name in users table — `DB_ENCRYPTION_KEY` env var (32-byte hex)
-- `userProvisioning.js` deferred to SIEM Phase 2 when PostgreSQL is set up
-- Auth0 dashboard setup required before coding (tenant, SPA app, API, social connections, email verification)
-
-**After auth: SIEM Phase 2 — PostgreSQL schema + ingest layer**
-
-## Remaining Build Order (agreed 2026-03-29)
-
-**Phase 2 — SIEM backend + real data (build + test locally first)**
-1. PostgreSQL schema — logs, alerts, cases, case_events, evidence, detection_rules, playbooks
-2. Ingest endpoints — POST /api/ingest/beats (Winlogbeat), POST /api/ingest/syslog, POST /api/ingest/raw
-3. Ingest auth — INGEST_API_KEY bearer token (separate from Auth0, agents can't do OAuth)
-4. Winlogbeat on home machines → local server (validate real event flow)
-5. Replace mock SiemDashboard data with live PostgreSQL queries
-6. Alert Queue — detection rules run on ingest, write to alerts table, React view
-7. Log Search — tsvector GIN index on message column, React UI
-8. Cases — CRUD + React split panel (timeline, linked alerts, evidence, playbook checklist)
-9. Detection Rules — rule builder UI + rule engine
-
-**Phase 3 — VPS deployment**
-10. Provision VPS (Ubuntu 22.04, 2 vCPU / 2–4 GB RAM, Hetzner or DigitalOcean ~$6–12/mo)
-11. Install Node, PostgreSQL, Nginx, Certbot
-12. Nginx — SSL termination, serve React dist/, proxy /api → Express port 4000
-13. Let's Encrypt cert for tools.laynekudo.com
-14. Deploy — PM2, env vars, DB schema migration
-15. Switch Winlogbeat + syslog forwarder to tools.laynekudo.com
-16. UFW — expose only 80, 443, 22; PostgreSQL localhost only; log retention cron (90 days)
-
-**Phase 4 — Electron + Proxy**
-17. Electron wrapper — BrowserWindow wrapping built React dist/, Express in-process or child
-18. Proxy tool — ProxyService in Electron main, 127.0.0.1:8080, node-http-mitm-proxy, intercept queue UI
-19. Live network capture (tshark subprocess) — scoped into Electron phase alongside Proxy
-
-**Post-build improvements (2026-03-29):**
-- Payload Generator: fixed import path (../../../../ → ../../../); removed redundant subtitle from header
-- Payload Generator: "Send to" dropdown added to msfvenom result panel and every web payload row — writes payload to `payload-generator-import` localStorage key and navigates to Intruder, HTTP Repeater, or Scanner on click
-- Intruder, HTTP Repeater, Scanner: read `payload-generator-import` on mount, pre-fill relevant field (payloads list / body / URL), then clear key
-- Dashboard workspace panel: items with a known source tool are now clickable — writes `item.data` to `workspace-restore-{tool-id}` localStorage key and navigates to that tool
-- All 11 tools that push to workspace now restore prior results on mount via `workspace-restore-{id}` key: Alert Triage, Threat Intel, OSINT Recon, CVE Exploit Mapper, Log Anomaly Explainer, Network Threat Analyzer, Network Scanner, Payload Obfuscation Explainer, Security Policy Translator, Subdomain Enumerator, Scanner
+### Key VPS fixes applied
+- `logs.user_id`, `ingest_sources.user_id` added via ALTER TABLE (schema.sql updated)
+- `user_ingest_keys` table created for per-user ingest key management
+- `ingest_sources` unique constraint changed from `(name)` to `(name, user_id)`
+- CORS: no-origin requests (same-origin browser) always allowed regardless of NODE_ENV
+- WebSocket URL: `window.location.host` not `hostname:4000`
 
 ---
 
 ## How to Run
 
 ```bash
+# Must be admin PowerShell for Security + Sysmon channels
 cd "Desktop\claude projects\cybertools"
-npm run dev        # starts both server (port 4000) and shell (port 5173) concurrently
+npm run dev   # server :4000 + shell :5173 + shipper
 ```
 
-Then open http://localhost:5173
-
 ---
 
-## Architecture Decisions (All Settled)
+## Key Architecture
 
-- **Monorepo** with npm workspaces — one repo, `platform/` + `tools/`
-- **Node/Express** backend — Claude API key server-side only
-- **React/Vite** frontend shell
-- **Auth0** — multi-user accounts, Google + GitHub social login, JWT verified server-side
-- **WorkspaceContext** — React context + localStorage for inter-tool data sharing. Designed to upgrade to server-side `/api/workspace` later without changing tool code.
-- **Proxy tool** — request capture/replay now (web); upgrades to full intercepting proxy in Electron via `ProxyService` interface swap
-- **Scanner** — passive mode default, active mode behind explicit authorization checkbox
-- **Network Scanner** — server-side nmap subprocess with strict argument whitelist
-- **Domain-portable** — no hardcoded URLs, `ALLOWED_ORIGIN` env var drives CORS
+- Backend: Node/Express port 4000
+- Frontend: React/Vite port 5173, proxies `/api` to Express
+- Auth: Auth0 (`auth.laynekudo.com`), JWT verified server-side
+- Claude API: singleton in `platform/server/services/claude.js` — never in client
+- Inter-tool data: WorkspaceContext (React context + localStorage)
+- Tests: Vitest, mock Claude with `vi.mock`, use `createApp()` not `app` directly
 
----
+## Environment Variables
 
-## Theme & Design (Settled)
-
-- **Font:** Source Code Pro Medium (weight 500), self-hosted in `platform/shell/src/fonts/`, used for ALL text
-- **Dark mode (default):** Warm Dark — `#111110` bg, `#e8e6e3` text, `#0e0d0c` sidebar, `#1f1e1c` border
-- **Light mode (toggle):** Warm Light — `#faf8f5` bg, `#1a1714` text, `#f0ece6` sidebar, `#e0d8cc` border
-- **No color accent** — severity colors only (critical red, high orange, medium yellow, low green, info blue)
-- **Toggle:** Sun/moon in top nav, `data-theme` attribute on `<html>`, saved to localStorage
-- **CSS variable:** `--font` (not `--font-mono` or `--font-sans`) — single font stack for everything
-
----
-
-## Tool Manifest Contract
-
-Every tool needs:
-1. `manifest.json` — id, name, description, route, icon, tags, status
-2. `client/index.jsx` — default export React component (renders in content area)
-3. `server/routes.js` — default export Express router (mounted at `/api/tools/[id]/`)
-4. Never import from another tool's files
-5. Never instantiate own Anthropic client — use `platform/server/services/claude.js`
-6. Validate all inputs before calling external services
-
----
-
-## 19 Planned Tools
-
-| # | Tool | Team |
-|---|------|------|
-| 1 | Alert Triage Assistant | Blue — **first build** |
-| 2 | Incident Report Generator | Blue |
-| 3 | Phishing Email Analyzer | Blue |
-| 4 | OSINT Recon Dashboard | Purple |
-| 5 | Threat Intelligence Aggregator | Blue |
-| 6 | Network Threat Analyzer | Blue |
-| 7 | Network Scanner (nmap) | Purple |
-| 8 | Log Anomaly Explainer | Blue |
-| 9 | CVE Exploit Mapper | Purple |
-| 10 | Payload Obfuscation Explainer | Purple |
-| 11 | Security Policy Translator | Blue |
-| 12 | Reverse Shell Generator | Red |
-| 13 | Wordlist / Password Generator | Red |
-| 14 | Subdomain Enumerator | Red |
-| 15 | HTTP Repeater (Burp-style) | Purple |
-| 16 | Proxy (capture/replay → full intercept in Electron) | Purple |
-| 17 | Intruder (automated attack automation) | Red |
-| 18 | Scanner (passive + active, XSS/SQLi) | Purple |
-| 19 | Decoder (URL, HTML, Base64, hex) | Purple |
-| 20 | Payload Generator (msfvenom builder + web payloads) | Red |
-
----
-
-## Security Baseline (Non-Negotiable)
-
-Every endpoint, every tool, no exceptions:
-- Claude API key server-side only — never in client
-- Input validation before any external call
-- Rate limiting: 60 req/min per IP on all `/api/*`
-- CORS locked to `ALLOWED_ORIGIN` env var
-- Helmet HTTP security headers
-- JWT auth on all `/api/tools/*` routes
-- Tool routes isolated — no cross-tool imports
-- Payload cap: 50kb
-- nmap: strict argument whitelist, no raw user input to shell
-
----
-
-## Environment Variables Needed
-
-Copy `.env.example` to `.env` and fill in:
 ```
-ANTHROPIC_API_KEY=        # from console.anthropic.com
+ANTHROPIC_API_KEY=
 ALLOWED_ORIGIN=http://localhost:5173
 PORT=4000
 NODE_ENV=development
-AUTH0_DOMAIN=             # from Auth0 dashboard
-AUTH0_CLIENT_ID=          # from Auth0 dashboard
+AUTH0_DOMAIN=auth.laynekudo.com
+AUTH0_CLIENT_ID=TzIyCNnyNhhlKpm0W7uAhPKgcEnv1Cda
 AUTH0_AUDIENCE=https://tools.laynekudo.com/api
-SHODAN_API_KEY=           # https://account.shodan.io
-VIRUSTOTAL_API_KEY=       # https://www.virustotal.com/gui/join-us
-HUNTER_API_KEY=           # https://hunter.io
-IPINFO_TOKEN=             # https://ipinfo.io/signup
-# WHOIS — no key needed, uses public whoisjsonapi.com endpoint
-ABUSEIPDB_API_KEY=        # https://www.abuseipdb.com/register
-# ThreatFox, URLhaus, MalwareBazaar — no key needed (abuse.ch public APIs)
+DATABASE_URL=postgresql://postgres:<password>@localhost:5432/cybertools
+INGEST_API_KEY=<dev fallback key — users should use per-user keys from Log Sources page>
+DB_ENCRYPTION_KEY=    # 32-byte hex
+SHODAN_API_KEY=
+VIRUSTOTAL_API_KEY=
+HUNTER_API_KEY=
+IPINFO_TOKEN=
+ABUSEIPDB_API_KEY=
+OTX_API_KEY=
+ABUSECH_API_KEY=
 ```
 
----
+Frontend (`platform/shell/.env.local`):
+```
+VITE_AUTH0_DOMAIN=auth.laynekudo.com
+VITE_AUTH0_CLIENT_ID=TzIyCNnyNhhlKpm0W7uAhPKgcEnv1Cda
+VITE_AUTH0_AUDIENCE=https://tools.laynekudo.com/api
+```
 
-## Teaching Style Preference
-
-Brief summaries only — no step-by-step explanations. Keep prose minimal.
+Shipper (`shipper/.env`):
+```
+INGEST_URL=https://tools.laynekudo.com/api/ingest/beats
+INGEST_API_KEY=<per-user key from Log Sources page>
+POLL_INTERVAL_MS=60000
+BATCH_SIZE=50
+HOURS_BACK=24
+```
