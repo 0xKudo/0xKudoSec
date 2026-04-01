@@ -2,11 +2,14 @@ import { useAuth0 } from '@auth0/auth0-react';
 
 const s = {
   wrap: {
+    position: 'fixed',
+    inset: 0,
     display: 'flex',
-    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    background: 'var(--bg-primary)',
     padding: '40px 24px',
+    zIndex: 10,
   },
   card: {
     background: 'var(--bg-surface)',

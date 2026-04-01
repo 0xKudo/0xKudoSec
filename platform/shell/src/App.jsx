@@ -85,27 +85,29 @@ function AppInner() {
       <div style={styles.body}>
 
         {activeApp === 'siem' && (
-          <RequireAuth>
+          <>
             <SiemSidebar
               activeView={siemView}
               onNavigate={setSiemView}
               onSwitchToTools={() => switchApp('tools')}
             />
             <main style={{ flex: 1, overflow: 'auto', background: 'var(--bg-primary)', minWidth: 0 }}>
-              {siemView === 'dashboard' && <SiemDashboard onNavigate={setSiemView} />}
-              {siemView === 'logsources' && <LogSources />}
-              {siemView === 'alerts' && <AlertQueue onNavigate={setSiemView} />}
-              {siemView === 'rules' && <DetectionRules onNavigate={setSiemView} />}
-              {siemView === 'logsearch' && <LogSearch />}
-              {siemView === 'cases' && <Cases onNavigate={setSiemView} />}
-              {siemView === 'settings' && <SiemSettings />}
-              {!['dashboard','logsources','alerts','rules','logsearch','cases','settings'].includes(siemView) && (
-                <div style={{ padding: '40px', color: 'var(--text-muted)', fontSize: '13px' }}>
-                  {siemView.charAt(0).toUpperCase() + siemView.slice(1)} — coming soon
-                </div>
-              )}
+              <RequireAuth>
+                {siemView === 'dashboard' && <SiemDashboard onNavigate={setSiemView} />}
+                {siemView === 'logsources' && <LogSources />}
+                {siemView === 'alerts' && <AlertQueue onNavigate={setSiemView} />}
+                {siemView === 'rules' && <DetectionRules onNavigate={setSiemView} />}
+                {siemView === 'logsearch' && <LogSearch />}
+                {siemView === 'cases' && <Cases onNavigate={setSiemView} />}
+                {siemView === 'settings' && <SiemSettings />}
+                {!['dashboard','logsources','alerts','rules','logsearch','cases','settings'].includes(siemView) && (
+                  <div style={{ padding: '40px', color: 'var(--text-muted)', fontSize: '13px' }}>
+                    {siemView.charAt(0).toUpperCase() + siemView.slice(1)} — coming soon
+                  </div>
+                )}
+              </RequireAuth>
             </main>
-          </RequireAuth>
+          </>
         )}
 
         {activeApp === 'tools' && (
