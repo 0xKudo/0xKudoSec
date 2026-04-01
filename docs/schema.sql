@@ -2,6 +2,7 @@
 
 CREATE TABLE IF NOT EXISTS logs (
   id               BIGSERIAL PRIMARY KEY,
+  user_id          VARCHAR(255) NOT NULL DEFAULT '',
   source           VARCHAR(32),
   host             VARCHAR(255),
   source_ip        INET,
