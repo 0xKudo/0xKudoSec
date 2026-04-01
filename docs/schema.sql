@@ -61,10 +61,19 @@ CREATE TRIGGER logs_search_vector_trigger
 
 CREATE TABLE IF NOT EXISTS ingest_sources (
   id          SERIAL PRIMARY KEY,
-  name        VARCHAR(255) UNIQUE NOT NULL,
+  user_id     VARCHAR(255) NOT NULL DEFAULT '',
+  name        VARCHAR(255) NOT NULL,
   type        VARCHAR(32),
   last_seen   TIMESTAMPTZ,
-  event_count BIGINT DEFAULT 0
+  event_count BIGINT DEFAULT 0,
+  UNIQUE (name, user_id)
+);
+
+-- Per-user ingest API keys for log shippers
+CREATE TABLE IF NOT EXISTS user_ingest_keys (
+  user_id    VARCHAR(255) PRIMARY KEY,
+  api_key    VARCHAR(255) NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- Detection rules: match conditions that auto-create alerts
