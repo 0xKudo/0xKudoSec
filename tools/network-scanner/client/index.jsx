@@ -248,8 +248,9 @@ export default function NetworkScanner() {
       return;
     }
 
-    // Step 2 — open SSE stream
-    const es = new EventSource(`/api/tools/network-scanner/scan-stream/${scanId}`);
+    // Step 2 — open SSE stream (EventSource can't send headers, token goes in query param)
+    const streamToken = await getAccessTokenSilently();
+    const es = new EventSource(`/api/tools/network-scanner/scan-stream/${scanId}?token=${encodeURIComponent(streamToken)}`);
     esRef.current = es;
 
     es.addEventListener('line', e => {
