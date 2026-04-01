@@ -62,11 +62,7 @@ function ToolLoader({ toolId }) {
 
 function AppInner() {
   const { isAuthenticated } = useAuth0();
-  const [activeApp, setActiveApp] = useState('tools');
-
-  useEffect(() => {
-    if (isAuthenticated) setActiveApp('siem');
-  }, [isAuthenticated]);
+  const [activeApp, setActiveApp] = useState('siem');
   const [siemView, setSiemView] = useState('dashboard');
   const tools = useTools();
   const navigate = useNavigate();
