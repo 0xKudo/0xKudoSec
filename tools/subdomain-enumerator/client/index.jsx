@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
+import { useIsMobile } from '../../../platform/shell/src/hooks/useIsMobile.js';
 import { useWorkspace } from '../../../platform/shell/src/context/WorkspaceContext.jsx';
 
 const SOURCE_OPTIONS = [
@@ -127,6 +128,7 @@ const styles = {
 
 export default function SubdomainEnumerator() {
   const { getAccessTokenSilently } = useAuth0();
+  const isMobile = useIsMobile();
   const [domain, setDomain] = useState('');
   const [sources, setSources] = useState(['crtsh', 'hackertarget']);
   const [bruteCustom, setBruteCustom] = useState('');
@@ -210,19 +212,35 @@ export default function SubdomainEnumerator() {
 
       <div style={styles.section}>
         <span style={styles.label}>Target Domain</span>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
-          <input
-            style={{ ...styles.input, minWidth: 0, width: '100%', boxSizing: 'border-box' }}
-            placeholder="example.com"
-            value={domain}
-            onChange={e => setDomain(e.target.value)}
-            disabled={loading}
-            onKeyDown={e => e.key === 'Enter' && canEnumerate && handleEnumerate()}
-          />
-          <button style={styles.button(!canEnumerate)} onClick={handleEnumerate} disabled={!canEnumerate}>
-            {loading ? 'Enumerating...' : 'Enumerate'}
-          </button>
-        </div>
+        {isMobile ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
+            <input
+              style={{ ...styles.input, minWidth: 0, width: '100%', boxSizing: 'border-box' }}
+              placeholder="example.com"
+              value={domain}
+              onChange={e => setDomain(e.target.value)}
+              disabled={loading}
+              onKeyDown={e => e.key === 'Enter' && canEnumerate && handleEnumerate()}
+            />
+            <button style={{ ...styles.button(!canEnumerate), width: '100%' }} onClick={handleEnumerate} disabled={!canEnumerate}>
+              {loading ? 'Enumerating...' : 'Enumerate'}
+            </button>
+          </div>
+        ) : (
+          <div style={styles.inputRow}>
+            <input
+              style={styles.input}
+              placeholder="example.com"
+              value={domain}
+              onChange={e => setDomain(e.target.value)}
+              disabled={loading}
+              onKeyDown={e => e.key === 'Enter' && canEnumerate && handleEnumerate()}
+            />
+            <button style={styles.button(!canEnumerate)} onClick={handleEnumerate} disabled={!canEnumerate}>
+              {loading ? 'Enumerating...' : 'Enumerate'}
+            </button>
+          </div>
+        )}
       </div>
 
       <div style={styles.section}>
@@ -325,7 +343,10 @@ export default function SubdomainEnumerator() {
           </div>
 
           {/* Full subdomain list */}
-          <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+          <div style={isMobile
+            ? { display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '10px' }
+            : styles.resultHeader
+          }>
             <span style={styles.sectionHeader}>
               All Subdomains — {result.totalUnique} unique
             </span>

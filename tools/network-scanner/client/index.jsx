@@ -326,18 +326,46 @@ export default function NetworkScanner() {
         ⚠ Only scan targets you own or have explicit written authorization to test. Unauthorized scanning is illegal in most jurisdictions.
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>
-        <input
-          style={{ ...styles.input, width: '100%', boxSizing: 'border-box' }}
-          placeholder="192.168.1.1, 192.168.1.0/24, or hostname"
-          value={target}
-          onChange={e => setTarget(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && !loading && target.trim() && handleScan()}
-          disabled={loading}
-        />
-        <div style={{ display: 'flex', gap: '8px' }}>
+      {isMobile ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>
+          <input
+            style={{ ...styles.input, width: '100%', boxSizing: 'border-box' }}
+            placeholder="192.168.1.1, 192.168.1.0/24, or hostname"
+            value={target}
+            onChange={e => setTarget(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && !loading && target.trim() && handleScan()}
+            disabled={loading}
+          />
           <select
-            style={{ ...styles.select, flex: 1 }}
+            style={{ ...styles.select, width: '100%', boxSizing: 'border-box' }}
+            value={scanType}
+            onChange={e => setScanType(e.target.value)}
+            disabled={loading}
+          >
+            {SCAN_TYPES.map(t => (
+              <option key={t.value} value={t.value}>{t.label}</option>
+            ))}
+          </select>
+          {loading ? (
+            <button style={{ ...styles.stopBtn, width: '100%' }} onClick={handleStop}>Stop</button>
+          ) : (
+            <button style={{ ...styles.scanBtn, width: '100%' }} onClick={handleScan} disabled={!target.trim()}>
+              Scan
+            </button>
+          )}
+        </div>
+      ) : (
+        <div style={styles.inputRow}>
+          <input
+            style={styles.input}
+            placeholder="192.168.1.1, 192.168.1.0/24, or hostname"
+            value={target}
+            onChange={e => setTarget(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && !loading && target.trim() && handleScan()}
+            disabled={loading}
+          />
+          <select
+            style={styles.select}
             value={scanType}
             onChange={e => setScanType(e.target.value)}
             disabled={loading}
@@ -354,7 +382,7 @@ export default function NetworkScanner() {
             </button>
           )}
         </div>
-      </div>
+      )}
 
       {error && <p style={styles.error}>{error}</p>}
 
