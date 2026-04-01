@@ -75,7 +75,7 @@ const styles = {
   },
 };
 
-export function TopNav({ activeApp, onSwitchApp, onMenuToggle }) {
+export function TopNav({ activeApp, onSwitchApp, onMenuToggle, menuOpen }) {
   const [theme, setTheme] = useState(() => {
     return localStorage.getItem('cybertools_theme') || 'dark';
   });
@@ -95,25 +95,25 @@ export function TopNav({ activeApp, onSwitchApp, onMenuToggle }) {
         <>
           <button
             onClick={onMenuToggle}
-            style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '18px', padding: '0 16px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+            style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '20px', padding: '0 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', flexShrink: 0 }}
           >
-            ☰
+            {menuOpen ? '✕' : '☰'}
           </button>
-          <div style={{ ...styles.brand, borderRight: 'none', fontSize: '12px' }}>// 0xKudo</div>
+          <div style={{ ...styles.brand, borderRight: 'none', fontSize: '12px', padding: '0 8px' }}>// 0xKudo</div>
           <div style={{ display: 'flex', alignItems: 'stretch' }}>
             {['siem', 'tools'].map(app => (
-              <div key={app} style={styles.appTab(activeApp === app)} onClick={() => onSwitchApp(app)}>
+              <div key={app} style={{ ...styles.appTab(activeApp === app), padding: '0 12px' }} onClick={() => onSwitchApp(app)}>
                 {app === 'siem' ? 'SIEM' : 'Tools'}
               </div>
             ))}
           </div>
-          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px', padding: '0 8px' }}>
+          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '6px', padding: '0 8px', flexShrink: 0 }}>
             {isAuthenticated ? (
-              <button style={styles.authBtn} onClick={() => logout({ logoutParams: { returnTo: window.location.origin } })}>[ out ]</button>
+              <button style={{ ...styles.authBtn, padding: '4px 8px', fontSize: '10px' }} onClick={() => logout({ logoutParams: { returnTo: window.location.origin } })}>out</button>
             ) : (
-              <button style={styles.authBtn} onClick={() => loginWithRedirect()}>[ login ]</button>
+              <button style={{ ...styles.authBtn, padding: '4px 8px', fontSize: '10px' }} onClick={() => loginWithRedirect()}>login</button>
             )}
-            <button style={styles.themeToggle} onClick={toggleTheme}>{theme === 'dark' ? '☀' : '☾'}</button>
+            <button style={{ ...styles.themeToggle, padding: '4px 8px' }} onClick={toggleTheme}>{theme === 'dark' ? '☀' : '☾'}</button>
           </div>
         </>
       ) : (

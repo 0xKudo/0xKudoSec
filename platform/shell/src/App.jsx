@@ -94,7 +94,7 @@ function AppInner() {
 
   return (
     <div style={styles.layout}>
-      <TopNav activeApp={activeApp} onSwitchApp={switchApp} onMenuToggle={() => setMenuOpen(o => !o)} />
+      <TopNav activeApp={activeApp} onSwitchApp={switchApp} onMenuToggle={() => setMenuOpen(o => !o)} menuOpen={menuOpen} />
 
       {/* Mobile slide-out drawer */}
       {isMobile && menuOpen && (
