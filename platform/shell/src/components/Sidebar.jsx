@@ -105,11 +105,22 @@ export function Sidebar({ onSwitchToSiem }) {
   const location = useLocation();
   const { isAuthenticated } = useAuth0();
   const [openSections, setOpenSections] = useState({});
+  const [toast, setToast] = useState(false);
+
+  const showToast = () => {
+    setToast(true);
+    setTimeout(() => setToast(false), 2000);
+  };
 
   const toggleSection = (id) => setOpenSections(s => ({ ...s, [id]: !s[id] }));
 
   return (
     <aside style={styles.sidebar}>
+      {toast && (
+        <div style={{ position: 'fixed', bottom: '24px', left: '50%', transform: 'translateX(-50%)', background: 'var(--bg-surface)', border: '1px solid var(--border)', color: 'var(--text-muted)', fontSize: '12px', padding: '8px 16px', zIndex: 300, whiteSpace: 'nowrap' }}>
+          Log in to access this feature.
+        </div>
+      )}
       <div
         style={styles.navItem(location.pathname === '/dashboard')}
         onClick={() => navigate('/dashboard')}
@@ -145,7 +156,7 @@ export function Sidebar({ onSwitchToSiem }) {
                     ...styles.navItem(isActive),
                     ...(isLocked ? { opacity: 0.4, cursor: 'default' } : {}),
                   }}
-                  onClick={() => !isComingSoon && !isLocked && navigate(tool.route)}
+                  onClick={() => { if (isLocked) { showToast(); return; } if (!isComingSoon) navigate(tool.route); }}
                   onMouseEnter={e => { if (!isActive && !isLocked) { e.currentTarget.style.background = 'var(--bg-surface)'; e.currentTarget.style.color = 'var(--text-primary)'; } }}
                   onMouseLeave={e => { if (!isActive && !isLocked) { e.currentTarget.style.background = isActive ? 'var(--bg-panel)' : ''; e.currentTarget.style.color = isActive ? 'var(--text-primary)' : 'var(--text-muted)'; } }}
                 >
