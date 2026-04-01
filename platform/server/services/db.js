@@ -2,10 +2,18 @@
 import pg from 'pg';
 const { Pool } = pg;
 
-if (!process.env.DATABASE_URL) {
-  throw new Error('DATABASE_URL is not set. Check your .env file.');
+let pool;
+
+function getPool() {
+  if (!pool) {
+    if (!process.env.DATABASE_URL) {
+      throw new Error('DATABASE_URL is not set. Check your .env file.');
+    }
+    pool = new Pool({ connectionString: process.env.DATABASE_URL });
+  }
+  return pool;
 }
 
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-
-export default pool;
+export default {
+  query: (...args) => getPool().query(...args),
+};
