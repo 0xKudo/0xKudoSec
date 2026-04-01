@@ -3,10 +3,9 @@ import { useAuth0 } from '@auth0/auth0-react';
 const s = {
   wrap: {
     display: 'flex',
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    height: '100%',
-    boxSizing: 'border-box',
     padding: '40px 24px',
   },
   card: {
@@ -71,5 +70,5 @@ export function RequireAuth({ children }) {
     );
   }
 
-  return children;
+  return <>{children}</>;
 }
