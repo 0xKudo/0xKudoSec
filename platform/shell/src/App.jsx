@@ -86,6 +86,7 @@ function AppInner() {
               activeView={siemView}
               onNavigate={setSiemView}
               onSwitchToTools={() => switchApp('tools')}
+              isAuthenticated={isAuthenticated}
             />
             <main style={{ flex: 1, overflow: 'auto', background: 'var(--bg-primary)', minWidth: 0 }}>
               <RequireAuth>

@@ -80,24 +80,31 @@ const NAV = [
   ]},
 ];
 
-export function SiemSidebar({ activeView, onNavigate, onSwitchToTools }) {
+export function SiemSidebar({ activeView, onNavigate, onSwitchToTools, isAuthenticated }) {
   return (
     <aside style={styles.sidebar}>
       {NAV.map(group => (
         <div key={group.section}>
           <div style={styles.sectionLabel}>{group.section}</div>
-          {group.items.map(item => (
-            <div
-              key={item.id}
-              style={styles.navItem(activeView === item.id)}
-              onClick={() => onNavigate(item.id)}
-              onMouseEnter={e => { if (activeView !== item.id) { e.currentTarget.style.background = 'var(--bg-surface)'; e.currentTarget.style.color = 'var(--text-primary)'; } }}
-              onMouseLeave={e => { if (activeView !== item.id) { e.currentTarget.style.background = ''; e.currentTarget.style.color = 'var(--text-muted)'; } }}
-            >
-              <span style={{ flex: 1 }}>{item.label}</span>
-              {item.badge && <span style={styles.badge(item.badge)}>&nbsp;</span>}
-            </div>
-          ))}
+          {group.items.map(item => {
+            const locked = !isAuthenticated;
+            return (
+              <div
+                key={item.id}
+                title={locked ? 'Login to access this feature.' : undefined}
+                style={{
+                  ...styles.navItem(activeView === item.id),
+                  ...(locked ? { opacity: 0.4, cursor: 'default' } : {}),
+                }}
+                onClick={() => !locked && onNavigate(item.id)}
+                onMouseEnter={e => { if (!locked && activeView !== item.id) { e.currentTarget.style.background = 'var(--bg-surface)'; e.currentTarget.style.color = 'var(--text-primary)'; } }}
+                onMouseLeave={e => { if (!locked && activeView !== item.id) { e.currentTarget.style.background = ''; e.currentTarget.style.color = 'var(--text-muted)'; } }}
+              >
+                <span style={{ flex: 1 }}>{item.label}</span>
+                {item.badge && <span style={styles.badge(item.badge)}>&nbsp;</span>}
+              </div>
+            );
+          })}
         </div>
       ))}
 
