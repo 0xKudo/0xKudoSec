@@ -1,6 +1,17 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 
+function sevColor(sev) {
+  const map = {
+    critical: '#ef4444',
+    high: '#d97706',
+    medium: '#ca8a04',
+    low: '#16a34a',
+    info: '#60a5fa',
+  };
+  return map[(sev || '').toLowerCase()] || '#888';
+}
+
 const SEV_COLOR = {
   critical: 'var(--severity-critical)',
   high: 'var(--severity-high)',
@@ -48,6 +59,26 @@ const s = {
   eventMsg: { fontSize: '11px', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
   eventMeta: { fontSize: '10px', color: 'var(--text-muted)' },
   muted: { fontSize: '12px', color: 'var(--text-muted)', padding: '8px 0' },
+  eventRowTappable: {
+    display: 'flex', flexDirection: 'column', gap: '2px',
+    padding: '10px 0', borderBottom: '1px solid var(--border-subtle)',
+    cursor: 'pointer', WebkitTapHighlightColor: 'transparent',
+  },
+  legendItemClickable: (color, active) => ({
+    display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px',
+    color: active ? color : 'var(--text-muted)',
+    cursor: 'pointer', fontWeight: active ? 'bold' : 'normal',
+    WebkitTapHighlightColor: 'transparent',
+  }),
+  overlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 1000 },
+  modal: { background: 'var(--bg-primary)', border: '1px solid var(--border)', borderBottom: 'none', width: '100%', maxHeight: '80vh', display: 'flex', flexDirection: 'column' },
+  modalHeader: { padding: '12px 16px', borderBottom: '1px solid var(--border)', background: 'var(--bg-surface)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 },
+  modalTitle: { fontSize: '12px', color: 'var(--text-primary)', letterSpacing: '0.04em' },
+  modalClose: { background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '18px', cursor: 'pointer', fontFamily: 'var(--font)', lineHeight: 1, padding: '0 4px' },
+  modalBody: { padding: '12px 16px', overflowY: 'auto', flex: 1 },
+  fieldRow: { display: 'grid', gridTemplateColumns: '120px 1fr', borderBottom: '1px solid var(--border-subtle)', padding: '7px 0', gap: '8px' },
+  fieldLabel: { fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', paddingTop: '2px' },
+  fieldValue: { fontSize: '12px', color: 'var(--text-primary)', wordBreak: 'break-word', whiteSpace: 'pre-wrap' },
 };
 
 function Donut({ data, size = 120 }) {
@@ -84,6 +115,8 @@ export function SiemDashboardMobile({ onNavigate }) {
   const [bySeverity, setBySeverity] = useState([]);
   const [recentEvents, setRecentEvents] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [sevFilter, setSevFilter] = useState(null);
+  const [selectedEvent, setSelectedEvent] = useState(null);
 
   const load = useCallback(async () => {
     try {
@@ -107,6 +140,7 @@ export function SiemDashboardMobile({ onNavigate }) {
   useEffect(() => { load(); }, [load]);
 
   const activeAlerts = alertCounts.find(r => r.status === 'new')?.count || 0;
+  const filteredEvents = sevFilter ? recentEvents.filter(e => (e.severity || 'info').toLowerCase() === sevFilter) : recentEvents;
 
   if (loading) return <div style={{ padding: '24px', color: 'var(--text-muted)', fontSize: '12px' }}>Loading...</div>;
 
@@ -138,22 +172,41 @@ export function SiemDashboardMobile({ onNavigate }) {
         <div style={s.donutWrap}>
           <Donut data={bySeverity} size={110} />
           <div style={s.legend}>
-            {bySeverity.map(d => (
-              <div key={d.severity} style={s.legendItem(SEV_COLOR_HEX[d.severity])}>
-                <div style={s.legendDot(SEV_COLOR_HEX[d.severity] || '#555')} />
-                {d.severity} ({Number(d.count).toLocaleString()})
-              </div>
-            ))}
+            {bySeverity.map(d => {
+              const active = sevFilter === d.severity;
+              const color = SEV_COLOR_HEX[d.severity] || '#555';
+              return (
+                <div
+                  key={d.severity}
+                  style={s.legendItemClickable(color, active)}
+                  onClick={() => setSevFilter(active ? null : d.severity)}
+                >
+                  <div style={s.legendDot(color)} />
+                  {d.severity} ({Number(d.count).toLocaleString()})
+                  {active && <span style={{ fontSize: '9px', marginLeft: '2px' }}>✕</span>}
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>
 
       {/* Recent events */}
       <div style={s.panel}>
-        <div style={s.panelTitle}>Recent Events</div>
-        {recentEvents.length === 0 && <div style={s.muted}>No events in the last 24h.</div>}
-        {recentEvents.map((e, i) => (
-          <div key={i} style={s.eventRow}>
+        <div style={{ ...s.panelTitle, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span>Recent Events{sevFilter ? ` — ${sevFilter}` : ''}</span>
+          {sevFilter && (
+            <span
+              style={{ fontSize: '10px', color: 'var(--text-muted)', cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.06em' }}
+              onClick={() => setSevFilter(null)}
+            >
+              Clear filter
+            </span>
+          )}
+        </div>
+        {filteredEvents.length === 0 && <div style={s.muted}>No events{sevFilter ? ` for severity: ${sevFilter}` : ' in the last 24h'}.</div>}
+        {filteredEvents.map((e, i) => (
+          <div key={i} style={s.eventRowTappable} onClick={() => setSelectedEvent(e)}>
             <div style={s.eventTop}>
               <span style={s.sevBadge(SEV_COLOR_HEX[e.severity] || '#555')}>{e.severity || 'info'}</span>
               <span style={s.eventMsg}>{e.message || e.event_category || '—'}</span>
@@ -164,6 +217,49 @@ export function SiemDashboardMobile({ onNavigate }) {
           </div>
         ))}
       </div>
+
+      {/* Event Detail Modal */}
+      {selectedEvent && (
+        <div style={s.overlay} onClick={() => setSelectedEvent(null)}>
+          <div style={s.modal} onClick={ev => ev.stopPropagation()}>
+            <div style={s.modalHeader}>
+              <span style={s.modalTitle}>
+                Event {selectedEvent.event_id || '—'} &nbsp;·&nbsp;{' '}
+                <span style={{ color: sevColor(selectedEvent.severity) }}>{selectedEvent.severity || '—'}</span>
+              </span>
+              <button style={s.modalClose} onClick={() => setSelectedEvent(null)}>✕</button>
+            </div>
+            <div style={s.modalBody}>
+              {[
+                ['Time', selectedEvent.timestamp ? new Date(selectedEvent.timestamp).toLocaleString() : null],
+                ['Severity', selectedEvent.severity],
+                ['Event ID', selectedEvent.event_id],
+                ['Category', selectedEvent.event_category],
+                ['Host', selectedEvent.host],
+                ['Source IP', selectedEvent.source_ip],
+                ['Dest IP', selectedEvent.dest_ip],
+                ['Dest Port', selectedEvent.dest_port],
+                ['Protocol', selectedEvent.protocol],
+                ['Username', selectedEvent.username],
+                ['Domain', selectedEvent.domain],
+                ['Logon Type', selectedEvent.logon_type],
+                ['Process', selectedEvent.process_name],
+                ['Process ID', selectedEvent.process_id],
+                ['Parent Process', selectedEvent.parent_process_name],
+                ['File Path', selectedEvent.file_path],
+                ['Registry Key', selectedEvent.registry_key],
+                ['Source', selectedEvent.source],
+                ['Message', selectedEvent.message],
+              ].filter(([, v]) => v != null && v !== '').map(([label, value]) => (
+                <div key={label} style={s.fieldRow}>
+                  <div style={s.fieldLabel}>{label}</div>
+                  <div style={s.fieldValue}>{String(value)}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

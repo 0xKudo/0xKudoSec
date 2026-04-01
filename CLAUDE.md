@@ -191,5 +191,6 @@ Do not reference or write to `public_html` or any other sibling directory.
 | `docs/specs/2026-03-26-cybertools-platform-design.md` | Complete design spec |
 | `docs/plans/2026-03-26-cybertools-platform.md` | Step-by-step implementation plan |
 | `docs/specs/2026-03-30-auth-design.md` | Auth design spec (Auth0 + email/password) |
+| `docs/specs/ui-desktop-mobile.md` | Desktop/mobile UI split rules, feature parity checklist, deferral process |
 | `platform/shared/constants.js` | Severity levels, tag colors — shared by server and shell |
 | `.env.example` | Template for required environment variables |
