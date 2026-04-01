@@ -1,8 +1,6 @@
 import { Router } from 'express';
 import express from 'express';
 import { spawn } from 'child_process';
-import { expressjwt } from 'express-jwt';
-import { expressJwtSecret } from 'jwks-rsa';
 import { requireFields } from '../../../platform/server/middleware/validate.js';
 import { askClaude } from '../../../platform/server/services/claude.js';
 
@@ -63,19 +61,8 @@ router.post('/scan', express.json({ limit: '10kb' }), requireFields(['target']),
   res.json({ scanId, target: target.trim(), scanType, scanLabel: SCAN_PROFILES[scanType].label });
 });
 
-// SSE streams can't send headers, so accept token as query param
-const sseAuth = (req, res, next) => {
-  if (req.query.token) req.headers.authorization = `Bearer ${req.query.token}`;
-  return expressjwt({
-    secret: expressJwtSecret({ cache: true, rateLimit: true, jwksRequestsPerMinute: 5, jwksUri: `https://${process.env.AUTH0_DOMAIN}/.well-known/jwks.json` }),
-    audience: process.env.AUTH0_AUDIENCE,
-    issuer: `https://${process.env.AUTH0_DOMAIN}/`,
-    algorithms: ['RS256'],
-  })(req, res, next);
-};
-
 // GET /scan-stream/:scanId — SSE stream
-router.get('/scan-stream/:scanId', sseAuth, (req, res) => {
+router.get('/scan-stream/:scanId', (req, res) => {
   const { scanId } = req.params;
 
   if (!SCAN_ID_REGEX.test(scanId)) {
