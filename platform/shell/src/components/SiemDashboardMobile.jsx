@@ -208,7 +208,10 @@ export function SiemDashboardMobile({ onNavigate }) {
         {filteredEvents.map((e, i) => (
           <div key={i} style={s.eventRowTappable} onClick={() => setSelectedEvent(e)}>
             <div style={s.eventTop}>
-              <span style={s.sevBadge(SEV_COLOR_HEX[e.severity] || '#555')}>{e.severity || 'info'}</span>
+              <span
+                style={{ ...s.sevBadge(SEV_COLOR_HEX[e.severity] || '#555'), cursor: 'pointer', WebkitTapHighlightColor: 'transparent' }}
+                onClick={ev => { ev.stopPropagation(); const sev = (e.severity || 'info').toLowerCase(); setSevFilter(sevFilter === sev ? null : sev); }}
+              >{e.severity || 'info'}</span>
               <span style={s.eventMsg}>{e.message || e.event_category || '—'}</span>
             </div>
             <div style={s.eventMeta}>
