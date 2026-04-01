@@ -3,9 +3,11 @@
   --bg-surface: #1a1917;
   --bg-sidebar: #0e0d0c;
   --border: #1f1e1c;
+  --border-subtle: #181715;
+  --bg-panel: #161514;
   --text-primary: #e8e6e3;
-  --text-muted: #4a4845;
-  --text-subtle: #333330;
+  --text-muted: #6e6b68;
+  --text-subtle: #4a4845;
   --severity-critical: #ef4444;
   --severity-high: #d97706;
   --severity-medium: #ca8a04;
@@ -13,6 +15,7 @@
   --severity-info: #60a5fa;
   --btn-primary-bg: #e8e6e3;
   --btn-primary-text: #111110;
+  --accent-amber: #d97706;
   --font: 'Source Code Pro', 'Consolas', 'Monaco', monospace;
 }
 
@@ -21,6 +24,8 @@
   --bg-surface: #ffffff;
   --bg-sidebar: #f0ece6;
   --border: #e0d8cc;
+  --border-subtle: #ece4d8;
+  --bg-panel: #f5f2ee;
   --text-primary: #1a1714;
   --text-muted: #8a8078;
   --text-subtle: #c0b8b0;
@@ -40,4 +45,8 @@ body {
   font-family: var(--font);
   font-weight: 500;
   min-height: 100vh;
+}
+
+#root {
+  zoom: 1.15;
 }

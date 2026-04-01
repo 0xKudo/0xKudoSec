@@ -7,8 +7,14 @@ import { Sidebar } from './components/Sidebar';
 import { SiemSidebar } from './components/SiemSidebar';
 import { Dashboard, trackToolVisit } from './components/Dashboard';
 import { SiemDashboard } from './components/SiemDashboard';
+import { LogSources } from './components/LogSources';
+import { AlertQueue } from './components/AlertQueue';
+import { DetectionRules } from './components/DetectionRules';
+import { LogSearch } from './components/LogSearch';
+import { Cases } from './components/Cases';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { RequireAuth } from './components/RequireAuth';
+import { useAuth0 } from '@auth0/auth0-react';
 import './styles/theme.css';
 
 const styles = {
@@ -54,7 +60,12 @@ function ToolLoader({ toolId }) {
 }
 
 function AppInner() {
-  const [activeApp, setActiveApp] = useState('siem');
+  const { isAuthenticated } = useAuth0();
+  const [activeApp, setActiveApp] = useState('tools');
+
+  useEffect(() => {
+    if (isAuthenticated) setActiveApp('siem');
+  }, [isAuthenticated]);
   const [siemView, setSiemView] = useState('dashboard');
   const tools = useTools();
   const navigate = useNavigate();
@@ -82,9 +93,14 @@ function AppInner() {
             <main style={{ flex: 1, overflow: 'auto', background: 'var(--bg-primary)', minWidth: 0 }}>
               <RequireAuth>
                 {siemView === 'dashboard' && <SiemDashboard onNavigate={setSiemView} />}
-                {siemView !== 'dashboard' && (
+                {siemView === 'logsources' && <LogSources />}
+                {siemView === 'alerts' && <AlertQueue onNavigate={setSiemView} />}
+                {siemView === 'rules' && <DetectionRules onNavigate={setSiemView} />}
+                {siemView === 'logsearch' && <LogSearch />}
+                {siemView === 'cases' && <Cases onNavigate={setSiemView} />}
+                {!['dashboard','logsources','alerts','rules','logsearch','cases'].includes(siemView) && (
                   <div style={{ padding: '40px', color: 'var(--text-muted)', fontSize: '13px' }}>
-                    {siemView.charAt(0).toUpperCase() + siemView.slice(1)} — coming in Phase 2
+                    {siemView.charAt(0).toUpperCase() + siemView.slice(1)} — coming soon
                   </div>
                 )}
               </RequireAuth>
