@@ -542,7 +542,7 @@ export function SiemDashboard({ onNavigate }) {
 
   useEffect(() => {
     const proto = window.location.protocol === 'https:' ? 'wss' : 'ws';
-    const ws = new WebSocket(`${proto}://${window.location.hostname}:4000/ws`);
+    const ws = new WebSocket(`${proto}://${window.location.host}/ws`);
     let debounce = null;
     ws.onmessage = (e) => {
       try {
