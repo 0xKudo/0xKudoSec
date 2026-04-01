@@ -65,3 +65,68 @@ CREATE TABLE IF NOT EXISTS ingest_sources (
   last_seen   TIMESTAMPTZ,
   event_count BIGINT DEFAULT 0
 );
+
+-- Detection rules: match conditions that auto-create alerts
+CREATE TABLE IF NOT EXISTS detection_rules (
+  id          SERIAL PRIMARY KEY,
+  user_id     VARCHAR(255) NOT NULL,
+  name        VARCHAR(255) NOT NULL,
+  description TEXT,
+  enabled     BOOLEAN DEFAULT true,
+  severity    VARCHAR(16) DEFAULT 'high',   -- alert severity to assign
+  -- Match conditions (all non-null fields must match — AND logic)
+  match_event_id    INTEGER,
+  match_category    VARCHAR(64),
+  match_severity    VARCHAR(16),
+  match_username    VARCHAR(255),
+  match_host        VARCHAR(255),
+  match_message     TEXT,                   -- ILIKE pattern
+  match_process     VARCHAR(255),
+  match_src_ip      VARCHAR(64),
+  match_dest_ip     VARCHAR(64),
+  created_at  TIMESTAMPTZ DEFAULT NOW(),
+  updated_at  TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS rules_user_idx ON detection_rules (user_id);
+
+-- Alerts: triggered by detection rules or severity threshold
+CREATE TABLE IF NOT EXISTS alerts (
+  id          BIGSERIAL PRIMARY KEY,
+  user_id     VARCHAR(255) NOT NULL,
+  rule_id     INTEGER REFERENCES detection_rules(id) ON DELETE SET NULL,
+  log_id      BIGINT,                        -- source log row
+  title       VARCHAR(255) NOT NULL,
+  severity    VARCHAR(16) NOT NULL,
+  status      VARCHAR(16) DEFAULT 'new',     -- new | acknowledged | resolved
+  host        VARCHAR(255),
+  source_ip   VARCHAR(64),
+  username    VARCHAR(255),
+  event_id    INTEGER,
+  message     TEXT,
+  created_at  TIMESTAMPTZ DEFAULT NOW(),
+  updated_at  TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS alerts_user_idx    ON alerts (user_id);
+CREATE INDEX IF NOT EXISTS alerts_status_idx  ON alerts (status);
+CREATE INDEX IF NOT EXISTS alerts_created_idx ON alerts (created_at DESC);
+
+-- Cases: group related alerts into investigations
+CREATE TABLE IF NOT EXISTS cases (
+  id          SERIAL PRIMARY KEY,
+  user_id     VARCHAR(255) NOT NULL,
+  title       VARCHAR(255) NOT NULL,
+  description TEXT,
+  severity    VARCHAR(16) DEFAULT 'medium',
+  status      VARCHAR(16) DEFAULT 'open',   -- open | investigating | resolved | closed
+  created_at  TIMESTAMPTZ DEFAULT NOW(),
+  updated_at  TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS cases_user_idx ON cases (user_id);
+
+-- Case <-> alert linking
+CREATE TABLE IF NOT EXISTS case_alerts (
+  case_id   INTEGER REFERENCES cases(id) ON DELETE CASCADE,
+  alert_id  BIGINT REFERENCES alerts(id) ON DELETE CASCADE,
+  added_at  TIMESTAMPTZ DEFAULT NOW(),
+  PRIMARY KEY (case_id, alert_id)
+);
