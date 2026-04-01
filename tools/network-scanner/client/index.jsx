@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useWorkspace } from '../../../platform/shell/src/context/WorkspaceContext.jsx';
+import { useIsMobile } from '../../../platform/shell/src/hooks/useIsMobile.js';
 
 const RISK_COLORS = {
   critical: 'var(--severity-critical)',
@@ -183,6 +184,7 @@ const styles = {
 
 export default function NetworkScanner() {
   const { getAccessTokenSilently } = useAuth0();
+  const isMobile = useIsMobile();
   const [target, setTarget] = useState('');
   const [scanType, setScanType] = useState('quick');
   const [result, setResult] = useState(null);
@@ -324,32 +326,34 @@ export default function NetworkScanner() {
         ⚠ Only scan targets you own or have explicit written authorization to test. Unauthorized scanning is illegal in most jurisdictions.
       </div>
 
-      <div style={styles.inputRow}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>
         <input
-          style={styles.input}
+          style={{ ...styles.input, width: '100%', boxSizing: 'border-box' }}
           placeholder="192.168.1.1, 192.168.1.0/24, or hostname"
           value={target}
           onChange={e => setTarget(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && !loading && target.trim() && handleScan()}
           disabled={loading}
         />
-        <select
-          style={styles.select}
-          value={scanType}
-          onChange={e => setScanType(e.target.value)}
-          disabled={loading}
-        >
-          {SCAN_TYPES.map(t => (
-            <option key={t.value} value={t.value}>{t.label}</option>
-          ))}
-        </select>
-        {loading ? (
-          <button style={styles.stopBtn} onClick={handleStop}>Stop</button>
-        ) : (
-          <button style={styles.scanBtn} onClick={handleScan} disabled={!target.trim()}>
-            Scan
-          </button>
-        )}
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <select
+            style={{ ...styles.select, flex: 1 }}
+            value={scanType}
+            onChange={e => setScanType(e.target.value)}
+            disabled={loading}
+          >
+            {SCAN_TYPES.map(t => (
+              <option key={t.value} value={t.value}>{t.label}</option>
+            ))}
+          </select>
+          {loading ? (
+            <button style={styles.stopBtn} onClick={handleStop}>Stop</button>
+          ) : (
+            <button style={styles.scanBtn} onClick={handleScan} disabled={!target.trim()}>
+              Scan
+            </button>
+          )}
+        </div>
       </div>
 
       {error && <p style={styles.error}>{error}</p>}

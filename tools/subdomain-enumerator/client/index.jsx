@@ -210,9 +210,9 @@ export default function SubdomainEnumerator() {
 
       <div style={styles.section}>
         <span style={styles.label}>Target Domain</span>
-        <div style={styles.inputRow}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
           <input
-            style={styles.input}
+            style={{ ...styles.input, minWidth: 0, width: '100%', boxSizing: 'border-box' }}
             placeholder="example.com"
             value={domain}
             onChange={e => setDomain(e.target.value)}
@@ -325,7 +325,7 @@ export default function SubdomainEnumerator() {
           </div>
 
           {/* Full subdomain list */}
-          <div style={styles.resultHeader}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
             <span style={styles.sectionHeader}>
               All Subdomains — {result.totalUnique} unique
             </span>
