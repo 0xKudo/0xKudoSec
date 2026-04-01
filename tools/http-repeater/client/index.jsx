@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useAuth0 } from '@auth0/auth0-react';
 
 const METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'];
 
@@ -171,6 +172,7 @@ const styles = {
 };
 
 export default function HttpRepeater() {
+  const { getAccessTokenSilently } = useAuth0();
   const [method, setMethod] = useState('GET');
   const [url, setUrl] = useState('');
   const [headersText, setHeadersText] = useState('');
@@ -203,9 +205,10 @@ export default function HttpRepeater() {
     setResponse(null);
 
     try {
+      const token = await getAccessTokenSilently();
       const res = await fetch('/api/tools/http-repeater/send', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({
           method,
           url: url.trim(),

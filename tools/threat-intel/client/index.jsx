@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useAuth0 } from '@auth0/auth0-react';
 import { useWorkspace } from '../../../platform/shell/src/context/WorkspaceContext.jsx';
 
 const THREAT_COLORS = {
@@ -238,6 +239,7 @@ function SourceCard({ title, data }) {
 }
 
 export default function ThreatIntelTool() {
+  const { getAccessTokenSilently } = useAuth0();
   const [indicator, setIndicator] = useState('');
   const [indicatorType, setIndicatorType] = useState('auto');
   const [result, setResult] = useState(null);
@@ -263,9 +265,10 @@ export default function ThreatIntelTool() {
     setResult(null);
 
     try {
+      const token = await getAccessTokenSilently();
       const res = await fetch('/api/tools/threat-intel/analyze', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ indicator: indicator.trim(), indicatorType }),
       });
       const data = await res.json();

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useAuth0 } from '@auth0/auth0-react';
 import { useWorkspace } from '../../../platform/shell/src/context/WorkspaceContext.jsx';
 
 const FRAMEWORK_HINTS = [
@@ -124,6 +125,7 @@ const styles = {
 };
 
 export default function SecurityPolicyTranslator() {
+  const { getAccessTokenSilently } = useAuth0();
   const [policyText, setPolicyText] = useState('');
   const [frameworkHint, setFrameworkHint] = useState('auto');
   const [result, setResult] = useState(null);
@@ -145,9 +147,10 @@ export default function SecurityPolicyTranslator() {
     setResult(null);
 
     try {
+      const token = await getAccessTokenSilently();
       const res = await fetch('/api/tools/security-policy-translator/translate', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ policyText, frameworkHint }),
       });
       const data = await res.json();

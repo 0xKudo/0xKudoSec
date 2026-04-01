@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useAuth0 } from '@auth0/auth0-react';
 import { useWorkspace } from '../../../platform/shell/src/context/WorkspaceContext.jsx';
 
 const METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'];
@@ -153,6 +154,7 @@ const styles = {
 };
 
 export default function Intruder() {
+  const { getAccessTokenSilently } = useAuth0();
   const [method, setMethod] = useState('GET');
   const [urlTemplate, setUrlTemplate] = useState('');
   const [headersText, setHeadersText] = useState('');
@@ -192,9 +194,10 @@ export default function Intruder() {
     }
 
     try {
+      const token = await getAccessTokenSilently();
       const res = await fetch('/api/tools/intruder/attack', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({
           method,
           urlTemplate: urlTemplate.trim(),

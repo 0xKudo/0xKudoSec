@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useAuth0 } from '@auth0/auth0-react';
 import { useWorkspace } from '../../../platform/shell/src/context/WorkspaceContext.jsx';
 
 const SOURCE_OPTIONS = [
@@ -125,6 +126,7 @@ const styles = {
 };
 
 export default function SubdomainEnumerator() {
+  const { getAccessTokenSilently } = useAuth0();
   const [domain, setDomain] = useState('');
   const [sources, setSources] = useState(['crtsh', 'hackertarget']);
   const [bruteCustom, setBruteCustom] = useState('');
@@ -158,9 +160,10 @@ export default function SubdomainEnumerator() {
         ? bruteCustom.split('\n').map(w => w.trim()).filter(Boolean)
         : [];
 
+      const token = await getAccessTokenSilently();
       const res = await fetch('/api/tools/subdomain-enumerator/enumerate', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ domain: domain.trim(), sources, bruteWordlist }),
       });
 

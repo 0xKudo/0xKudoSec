@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useAuth0 } from '@auth0/auth0-react';
 import { useWorkspace } from '../../../platform/shell/src/context/WorkspaceContext.jsx';
 
 const SEVERITY_COLORS = {
@@ -151,6 +152,7 @@ function ReportSection({ label, value }) {
 }
 
 export default function IncidentReportTool() {
+  const { getAccessTokenSilently } = useAuth0();
   const [incidentText, setIncidentText] = useState('');
   const [severityOverride, setSeverityOverride] = useState('');
   const [report, setReport] = useState(null);
@@ -181,12 +183,13 @@ export default function IncidentReportTool() {
     setReport(null);
 
     try {
+      const token = await getAccessTokenSilently();
       const body = { incidentText };
       if (severityOverride) body.severity = severityOverride;
 
       const res = await fetch('/api/tools/incident-report/analyze', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify(body),
       });
       const data = await res.json();

@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { useAuth0 } from '@auth0/auth0-react';
 import { useWorkspace } from '../../../platform/shell/src/context/WorkspaceContext.jsx';
 
 const SEVERITY_COLORS = {
@@ -141,6 +142,7 @@ const styles = {
 };
 
 export default function LogAnomalyExplainer() {
+  const { getAccessTokenSilently } = useAuth0();
   const [tab, setTab] = useState('paste');
   const [logText, setLogText] = useState('');
   const [logSource, setLogSource] = useState('auto');
@@ -164,11 +166,12 @@ export default function LogAnomalyExplainer() {
     setResult(null);
 
     try {
+      const token = await getAccessTokenSilently();
       let res;
       if (tab === 'paste') {
         res = await fetch('/api/tools/log-anomaly-explainer/analyze', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
           body: JSON.stringify({ logText, logSource }),
         });
       } else {
@@ -177,6 +180,7 @@ export default function LogAnomalyExplainer() {
         form.append('logSource', logSource);
         res = await fetch('/api/tools/log-anomaly-explainer/analyze-file', {
           method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` },
           body: form,
         });
       }

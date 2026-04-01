@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useAuth0 } from '@auth0/auth0-react';
 import { useWorkspace } from '../../../platform/shell/src/context/WorkspaceContext.jsx';
 
 const SEVERITY_ORDER = ['critical', 'high', 'medium', 'low', 'info'];
@@ -131,6 +132,7 @@ const styles = {
 };
 
 export default function Scanner() {
+  const { getAccessTokenSilently } = useAuth0();
   const [url, setUrl] = useState('');
   const [activeMode, setActiveMode] = useState(false);
   const [authorized, setAuthorized] = useState(false);
@@ -163,9 +165,10 @@ export default function Scanner() {
     setResult(null);
 
     try {
+      const token = await getAccessTokenSilently();
       const res = await fetch('/api/tools/scanner/scan', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ url: url.trim(), activeMode, authorized }),
       });
 

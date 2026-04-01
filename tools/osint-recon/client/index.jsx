@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useAuth0 } from '@auth0/auth0-react';
 import { useWorkspace } from '../../../platform/shell/src/context/WorkspaceContext.jsx';
 
 const RISK_COLORS = {
@@ -215,6 +216,7 @@ function SourceCard({ title, data }) {
 }
 
 export default function OsintReconTool() {
+  const { getAccessTokenSilently } = useAuth0();
   const [target, setTarget] = useState('');
   const [targetType, setTargetType] = useState('auto');
   const [result, setResult] = useState(null);
@@ -240,9 +242,10 @@ export default function OsintReconTool() {
     setResult(null);
 
     try {
+      const token = await getAccessTokenSilently();
       const res = await fetch('/api/tools/osint-recon/analyze', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ target: target.trim(), targetType }),
       });
       const data = await res.json();

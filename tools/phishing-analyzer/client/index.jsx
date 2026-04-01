@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useAuth0 } from '@auth0/auth0-react';
 
 const VERDICT_COLORS = {
   phishing: 'var(--severity-critical)',
@@ -181,6 +182,7 @@ const styles = {
 };
 
 export default function PhishingAnalyzerTool() {
+  const { getAccessTokenSilently } = useAuth0();
   const [tab, setTab] = useState('paste'); // 'paste' | 'upload'
   const [emailText, setEmailText] = useState('');
   const [selectedFile, setSelectedFile] = useState(null);
@@ -206,11 +208,13 @@ export default function PhishingAnalyzerTool() {
     setResult(null);
 
     try {
+      const token = await getAccessTokenSilently();
       const formData = new FormData();
       formData.append('emailFile', selectedFile);
 
       const res = await fetch('/api/tools/phishing-analyzer/analyze-file', {
         method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
         body: formData,
       });
       const data = await res.json();
@@ -233,9 +237,10 @@ export default function PhishingAnalyzerTool() {
     setResult(null);
 
     try {
+      const token = await getAccessTokenSilently();
       const res = await fetch('/api/tools/phishing-analyzer/analyze', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ emailText }),
       });
       const data = await res.json();

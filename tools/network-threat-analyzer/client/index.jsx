@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { useAuth0 } from '@auth0/auth0-react';
 import { useWorkspace } from '../../../platform/shell/src/context/WorkspaceContext.jsx';
 
 const SEVERITY_COLORS = {
@@ -139,6 +140,7 @@ const LOG_TYPES = [
 ];
 
 export default function NetworkThreatAnalyzer() {
+  const { getAccessTokenSilently } = useAuth0();
   const [tab, setTab] = useState('paste');
   const [logData, setLogData] = useState('');
   const [logType, setLogType] = useState('auto');
@@ -162,11 +164,12 @@ export default function NetworkThreatAnalyzer() {
     setResult(null);
 
     try {
+      const token = await getAccessTokenSilently();
       let res;
       if (tab === 'paste') {
         res = await fetch('/api/tools/network-threat-analyzer/analyze', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
           body: JSON.stringify({ logData, logType }),
         });
       } else {
@@ -175,6 +178,7 @@ export default function NetworkThreatAnalyzer() {
         form.append('logType', logType);
         res = await fetch('/api/tools/network-threat-analyzer/analyze-file', {
           method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` },
           body: form,
         });
       }
