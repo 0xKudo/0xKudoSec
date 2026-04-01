@@ -99,7 +99,6 @@ export function TopNav({ activeApp, onSwitchApp, onMenuToggle, menuOpen }) {
           >
             {menuOpen ? '✕' : '☰'}
           </button>
-          <div style={{ ...styles.brand, borderRight: 'none', fontSize: '12px', padding: '0 8px' }}>// 0xKudo</div>
           <div style={{ display: 'flex', alignItems: 'stretch' }}>
             {['siem', 'tools'].map(app => (
               <div key={app} style={{ ...styles.appTab(activeApp === app), padding: '0 12px' }} onClick={() => onSwitchApp(app)}>
