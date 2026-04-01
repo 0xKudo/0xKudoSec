@@ -4,8 +4,8 @@ const allowedOrigin = process.env.ALLOWED_ORIGIN || 'http://localhost:5173';
 
 export const corsMiddleware = corsLib({
   origin: (origin, callback) => {
-    // Allow requests with no origin (curl, Postman) in development
-    if (!origin && process.env.NODE_ENV !== 'production') {
+    // Allow requests with no origin (same-origin browser requests, curl, Postman)
+    if (!origin) {
       return callback(null, true);
     }
     if (origin === allowedOrigin) {
