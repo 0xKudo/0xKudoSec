@@ -3,10 +3,9 @@ import { useAuth0 } from '@auth0/auth0-react';
 const s = {
   wrap: {
     display: 'flex',
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    width: '100%',
-    height: '100vh',
     padding: '40px 24px',
     boxSizing: 'border-box',
   },
