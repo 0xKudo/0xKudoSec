@@ -13,6 +13,9 @@ export const corsMiddleware = corsLib({
     }
     callback(new Error(`Origin ${origin} not allowed by CORS`));
   },
-  methods: ['GET', 'POST'],
+  methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
+  preflightContinue: false,
+  optionsSuccessStatus: 204,
 });
