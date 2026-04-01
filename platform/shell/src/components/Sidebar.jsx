@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTools } from '../context/ToolRegistry';
+import { useAuth0 } from '@auth0/auth0-react';
 
 const PHASES = [
   {
@@ -102,6 +103,7 @@ export function Sidebar({ onSwitchToSiem }) {
   const tools = useTools();
   const navigate = useNavigate();
   const location = useLocation();
+  const { isAuthenticated } = useAuth0();
   const [openSections, setOpenSections] = useState({});
 
   const toggleSection = (id) => setOpenSections(s => ({ ...s, [id]: !s[id] }));
@@ -134,13 +136,18 @@ export function Sidebar({ onSwitchToSiem }) {
             {isOpen && phaseTools.map(tool => {
               const isActive = location.pathname === tool.route;
               const isComingSoon = tool.status === 'coming-soon';
+              const isLocked = tool.requiresAuth && !isAuthenticated;
               return (
                 <div
                   key={tool.id}
-                  style={styles.navItem(isActive)}
-                  onClick={() => !isComingSoon && navigate(tool.route)}
-                  onMouseEnter={e => { if (!isActive) { e.currentTarget.style.background = 'var(--bg-surface)'; e.currentTarget.style.color = 'var(--text-primary)'; } }}
-                  onMouseLeave={e => { if (!isActive) { e.currentTarget.style.background = isActive ? 'var(--bg-panel)' : ''; e.currentTarget.style.color = isActive ? 'var(--text-primary)' : 'var(--text-muted)'; } }}
+                  title={isLocked ? 'Login to access this feature.' : undefined}
+                  style={{
+                    ...styles.navItem(isActive),
+                    ...(isLocked ? { opacity: 0.4, cursor: 'default' } : {}),
+                  }}
+                  onClick={() => !isComingSoon && !isLocked && navigate(tool.route)}
+                  onMouseEnter={e => { if (!isActive && !isLocked) { e.currentTarget.style.background = 'var(--bg-surface)'; e.currentTarget.style.color = 'var(--text-primary)'; } }}
+                  onMouseLeave={e => { if (!isActive && !isLocked) { e.currentTarget.style.background = isActive ? 'var(--bg-panel)' : ''; e.currentTarget.style.color = isActive ? 'var(--text-primary)' : 'var(--text-muted)'; } }}
                 >
                   {tool.name}
                 </div>
