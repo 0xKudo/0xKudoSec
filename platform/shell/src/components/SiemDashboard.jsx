@@ -915,12 +915,22 @@ export function SiemDashboard({ onNavigate }) {
       {/* Recent Events */}
       <div style={s.sectionBar}>
         <span>Recent Events</span>
-        <span style={{ fontSize: '10px' }}>
-          {recent.length} shown
-          {sevFilter ? ` · ${sevFilter}` : ''}
-          {catFilter ? ` · ${catFilter}` : ''}
-          {srcFilter ? ` · ${srcFilter}` : ''}
-          {debouncedSearch.trim() ? ` · "${debouncedSearch.trim()}"` : ''}
+        <span style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '10px' }}>
+          <span>
+            {recent.length} shown
+            {sevFilter ? ` · ${sevFilter}` : ''}
+            {catFilter ? ` · ${catFilter}` : ''}
+            {srcFilter ? ` · ${srcFilter}` : ''}
+            {debouncedSearch.trim() ? ` · "${debouncedSearch.trim()}"` : ''}
+          </span>
+          {(sevFilter || catFilter || srcFilter) && (
+            <button
+              style={{ background: 'none', border: 'none', color: 'var(--text-subtle)', fontFamily: 'var(--font)', fontSize: '10px', cursor: 'pointer', letterSpacing: '0.04em', textTransform: 'uppercase', padding: 0 }}
+              onClick={() => { setSevFilter(null); setCatFilter(null); setSrcFilter(null); }}
+            >
+              Clear filters
+            </button>
+          )}
         </span>
       </div>
 
