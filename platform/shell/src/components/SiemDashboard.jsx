@@ -925,8 +925,10 @@ export function SiemDashboard({ onNavigate }) {
           </span>
           {(sevFilter || catFilter || srcFilter) && (
             <button
-              style={{ background: 'none', border: 'none', color: 'var(--text-subtle)', fontFamily: 'var(--font)', fontSize: '10px', cursor: 'pointer', letterSpacing: '0.04em', textTransform: 'uppercase', padding: 0 }}
+              style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontFamily: 'var(--font)', fontSize: '10px', cursor: 'pointer', letterSpacing: '0.04em', textTransform: 'uppercase', padding: 0 }}
               onClick={() => { setSevFilter(null); setCatFilter(null); setSrcFilter(null); }}
+              onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-primary)'; }}
+              onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; }}
             >
               Clear filters
             </button>
