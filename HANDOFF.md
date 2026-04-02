@@ -17,17 +17,38 @@ Unified cybersecurity tools platform at `tools.laynekudo.com`. Monorepo — shar
 - Fluent Bit migration: replaced node-shipper scheduled task with Fluent Bit Windows service
   - Config at `C:\Program Files\fluent-bit\conf\cybertools.conf` -- Security + Sysmon channels, HTTP output to ingest endpoint
   - `normalizeEvent.js` updated to detect and handle both Fluent Bit flat PascalCase format and Winlogbeat ECS format
-  - Sysmon field extraction placeholder added -- needs confirmation with live Sysmon event sample
-  - Source filter on dashboard now shows `fluent-bit` vs `node-shipper` as distinct sources
-  - Nginx `client_max_body_size 10m` added to handle large flush batches
-  - CybertoolsShipper scheduled task disabled
-  - Fluent Bit registered as Windows service (auto-start on boot)
+  - Security channel (5156/5157/5158) working correctly -- fields extracted from StringInserts
+  - `fluent-bit` added to validSources and FIELD_ALIASES in siem.js so `source:fluent-bit` search works
+  - Source filter on dashboard now shows `fluent-bit` as distinct source
   - node-shipper moved to `_deprecated/node-shipper/` (kept for reference, not deleted)
 
+### Sysmon via Fluent Bit -- In Progress
+- Problem: Fluent Bit `winlog` input does not render Sysmon event messages -- `Message` comes back empty, no structured fields
+- Root cause: Fluent Bit winlog plugin uses older API that can't render provider message DLLs for some channels
+- Solution to try next: switch to `winevtlog` input plugin (newer API, properly renders messages including Sysmon)
+- Config change needed in `C:\Program Files\fluent-bit\conf\cybertools.conf`:
+  - Replace `Name winlog` + `Channels` with two separate `winevtlog` inputs using `ChannelPath`
+  - Use separate `.db` files per input (Security and Sysmon need separate bookmarks)
+  - Example:
+    ```
+    [INPUT]
+        Name         winevtlog
+        ChannelPath  Security
+        Interval_Sec 5
+        DB           C:\Program Files\fluent-bit\conf\cybertools-security.db
+
+    [INPUT]
+        Name         winevtlog
+        ChannelPath  Microsoft-Windows-Sysmon/Operational
+        Interval_Sec 5
+        DB           C:\Program Files\fluent-bit\conf\cybertools-sysmon.db
+    ```
+  - After switching, capture a raw Sysmon Event ID 1 from the DB to confirm field names, then update `fluentBitSysmonFields()` in normalizeEvent.js
+- If `winevtlog` also fails: fallback is Winlogbeat 7 (last version with generic HTTP output) or NXLog CE
+
 ### Next
-- Capture a live Sysmon event from Fluent Bit to confirm field names in normalizeEvent.js Sysmon placeholder
+- Switch Fluent Bit config to `winevtlog` input and verify Sysmon field extraction
 - Log retention cron on VPS (UI + API done, cron not yet implemented)
-- Continue mobile layout fixes for remaining tools
 - Then Phase 4: Electron + Proxy tool
 
 ---
