@@ -292,20 +292,26 @@ router.get('/events/process-tree', wrap(async (req, res) => {
     // GUID-based recursive walk — reliable even across PID recycling
     const { rows } = await pool.query(
       `WITH RECURSIVE
-        ancestors AS (
+        anchor AS (
           SELECT id, process_guid, parent_process_guid, process_name, process_id,
                  parent_process_name, parent_process_id, username, host, timestamp,
-                 event_id, message, 0 AS depth
+                 event_id, message
           FROM logs
           WHERE UPPER(process_guid) = UPPER($1) AND user_id = $2
           LIMIT 1
+        ),
+        ancestors AS (
+          SELECT a.id, a.process_guid, a.parent_process_guid, a.process_name, a.process_id,
+                 a.parent_process_name, a.parent_process_id, a.username, a.host, a.timestamp,
+                 a.event_id, a.message, 0 AS depth
+          FROM anchor a
           UNION ALL
           SELECT l.id, l.process_guid, l.parent_process_guid, l.process_name, l.process_id,
                  l.parent_process_name, l.parent_process_id, l.username, l.host, l.timestamp,
-                 l.event_id, l.message, a.depth - 1
+                 l.event_id, l.message, anc.depth - 1
           FROM logs l
-          JOIN ancestors a ON UPPER(l.process_guid) = UPPER(a.parent_process_guid)
-          WHERE l.user_id = $2 AND a.depth > -20
+          JOIN ancestors anc ON UPPER(l.process_guid) = UPPER(anc.parent_process_guid)
+          WHERE l.user_id = $2 AND anc.depth > -20
         ),
         descendants AS (
           SELECT id, process_guid, parent_process_guid, process_name, process_id,
