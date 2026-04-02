@@ -68,9 +68,10 @@ function ToolLoader({ toolId }) {
 function AppInner() {
   const { isAuthenticated } = useAuth0();
   const isMobile = useIsMobile();
-  const toolRoutes = tools.filter(t => t.status === 'active').map(t => t.route);
-  const isToolRoute = toolRoutes.includes(window.location.pathname) || window.location.pathname === '/dashboard';
-  const [activeApp, setActiveApp] = useState(isToolRoute ? 'tools' : 'siem');
+  const [activeApp, setActiveApp] = useState(() => {
+    const path = window.location.pathname;
+    return (path !== '/' && path !== '/siem') ? 'tools' : 'siem';
+  });
   const [siemView, setSiemView] = useState('dashboard');
   const [menuOpen, setMenuOpen] = useState(false);
   const tools = useTools();
