@@ -27,6 +27,11 @@ Unified cybersecurity tools platform at `tools.laynekudo.com`. Monorepo — shar
   - `fluent-bit` added to validSources and FIELD_ALIASES in siem.js
   - node-shipper moved to `_deprecated/node-shipper/`
 
+### Recently Completed (2026-04-01, continued)
+- Log retention cron: `platform/server/services/retentionCron.js`, node-cron, runs daily at 02:00 VPS time
+- Detection rules / alert queue fixed: `alerts` table was missing `count`, `last_seen`, and `alerts_dedup` unique constraint -- added via ALTER TABLE on VPS and updated schema.sql
+- VPS build fix: `platform/shell` dev dependencies (vite) must be installed directly with `npm install --include=dev` inside `platform/shell/`, not from workspace root
+
 ### Next
 - Phase 4: Electron + Proxy tool
 
