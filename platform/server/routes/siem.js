@@ -116,21 +116,11 @@ router.get('/events/recent', wrap(async (req, res) => {
   const rawQ = typeof req.query.q === 'string' ? req.query.q.replace(/\0/g, '').slice(0, 200) : null;
   const q = rawQ && rawQ.trim() ? rawQ.trim() : null;
 
-  // Load enabled suppress rules and collect matching log IDs to exclude
+  // Load suppress rules once, then inline as NOT EXISTS clauses — single round-trip
   const { rows: suppressRules } = await pool.query(
     `SELECT * FROM detection_rules WHERE user_id = $1 AND enabled = true AND action = 'suppress'`,
     [userId]
   );
-  const suppressedIds = new Set();
-  for (const rule of suppressRules) {
-    const { params: rp, conds: rc } = ruleConditions(rule, userId);
-    rc.push(`l.timestamp > NOW() - INTERVAL '${hours} hours'`);
-    const { rows: matched } = await pool.query(
-      `SELECT l.id FROM logs l WHERE ${rc.join(' AND ')} LIMIT 5000`,
-      rp
-    );
-    matched.forEach(r => suppressedIds.add(r.id));
-  }
 
   const params = [userId];
   const conditions = [`user_id = $1`, `timestamp > NOW() - INTERVAL '${hours} hours'`];
@@ -138,9 +128,20 @@ router.get('/events/recent', wrap(async (req, res) => {
   if (cat) { params.push(cat); conditions.push(`event_category = $${params.length}`); }
   if (src) { params.push(src); conditions.push(`source = $${params.length}`); }
   for (const c of buildSearchConditions(q, params)) conditions.push(c);
-  if (suppressedIds.size) {
-    params.push([...suppressedIds]);
-    conditions.push(`id != ALL($${params.length})`);
+
+  // For each suppress rule, add inline field-level conditions directly on the main query row
+  for (const rule of suppressRules) {
+    const ruleConds = [];
+    if (rule.match_event_id)  { params.push(rule.match_event_id);               ruleConds.push(`event_id = $${params.length}`); }
+    if (rule.match_category)  { params.push(rule.match_category);               ruleConds.push(`event_category = $${params.length}`); }
+    if (rule.match_severity)  { params.push(rule.match_severity);               ruleConds.push(`severity = $${params.length}`); }
+    if (rule.match_username)  { params.push(`%${rule.match_username}%`);        ruleConds.push(`username ILIKE $${params.length}`); }
+    if (rule.match_host)      { params.push(`%${rule.match_host}%`);            ruleConds.push(`host ILIKE $${params.length}`); }
+    if (rule.match_message)   { params.push(`%${rule.match_message}%`);         ruleConds.push(`message ILIKE $${params.length}`); }
+    if (rule.match_process)   { params.push(`%${rule.match_process}%`);         ruleConds.push(`process_name ILIKE $${params.length}`); }
+    if (rule.match_src_ip)    { params.push(`%${rule.match_src_ip}%`);          ruleConds.push(`source_ip::text ILIKE $${params.length}`); }
+    if (rule.match_dest_ip)   { params.push(`%${rule.match_dest_ip}%`);         ruleConds.push(`dest_ip::text ILIKE $${params.length}`); }
+    if (ruleConds.length) conditions.push(`NOT (${ruleConds.join(' AND ')})`);
   }
 
   const { rows } = await pool.query(
