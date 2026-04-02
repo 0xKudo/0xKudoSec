@@ -103,11 +103,12 @@ function buildSearchConditions(q, params) {
   return conditions;
 }
 
-router.get('/events/recent', async (req, res) => {
+router.get('/events/recent', wrap(async (req, res) => {
   const validSeverities = ['critical', 'high', 'medium', 'low', 'info'];
   const validCategories = ['authentication', 'network', 'process', 'file', 'dns', 'registry', 'system', 'firewall', 'account', 'policy'];
   const validSources = ['node-shipper', 'winlogbeat', 'fluent-bit', 'syslog'];
   const hours = hoursParam(req);
+  const userId = uid(req);
   const sev = validSeverities.includes(req.query.severity) ? req.query.severity : null;
   const cat = validCategories.includes(req.query.category) ? req.query.category : null;
   const src = validSources.includes(req.query.source) ? req.query.source : null;
@@ -115,12 +116,32 @@ router.get('/events/recent', async (req, res) => {
   const rawQ = typeof req.query.q === 'string' ? req.query.q.replace(/\0/g, '').slice(0, 200) : null;
   const q = rawQ && rawQ.trim() ? rawQ.trim() : null;
 
-  const params = [uid(req)];
+  // Load enabled suppress rules and collect matching log IDs to exclude
+  const { rows: suppressRules } = await pool.query(
+    `SELECT * FROM detection_rules WHERE user_id = $1 AND enabled = true AND action = 'suppress'`,
+    [userId]
+  );
+  const suppressedIds = new Set();
+  for (const rule of suppressRules) {
+    const { params: rp, conds: rc } = ruleConditions(rule, userId);
+    rc.push(`l.timestamp > NOW() - INTERVAL '${hours} hours'`);
+    const { rows: matched } = await pool.query(
+      `SELECT l.id FROM logs l WHERE ${rc.join(' AND ')} LIMIT 5000`,
+      rp
+    );
+    matched.forEach(r => suppressedIds.add(r.id));
+  }
+
+  const params = [userId];
   const conditions = [`user_id = $1`, `timestamp > NOW() - INTERVAL '${hours} hours'`];
   if (sev) { params.push(sev); conditions.push(`severity = $${params.length}`); }
   if (cat) { params.push(cat); conditions.push(`event_category = $${params.length}`); }
   if (src) { params.push(src); conditions.push(`source = $${params.length}`); }
   for (const c of buildSearchConditions(q, params)) conditions.push(c);
+  if (suppressedIds.size) {
+    params.push([...suppressedIds]);
+    conditions.push(`id != ALL($${params.length})`);
+  }
 
   const { rows } = await pool.query(
     `SELECT id, timestamp, severity, event_id, event_category, message,
@@ -133,7 +154,7 @@ router.get('/events/recent', async (req, res) => {
     params
   );
   res.json(rows);
-});
+}));
 
 router.get('/events/by-severity', async (req, res) => {
   const hours = hoursParam(req);
