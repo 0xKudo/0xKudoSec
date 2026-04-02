@@ -507,7 +507,7 @@ export function SiemDashboard({ onNavigate }) {
       const [statsRes, sevRes, srcRes, recentRes, catRes, srcListRes, alertCountsRes, alertsRes,
              topIdsRes, failedLoginsRes, topUsersRes, alertTrendRes, ruleHitsRes] = await Promise.all([
         fetch(`/api/siem/stats${h}${sup}`, { headers }),
-        fetch(`/api/siem/events/by-severity${h}`, { headers }),
+        fetch(`/api/siem/events/by-severity${h}${sup}`, { headers }),
         fetch(`/api/siem/events/by-source${h}`, { headers }),
         fetch(recentUrl, { headers }),
         fetch(`/api/siem/events/categories${h}`, { headers }),

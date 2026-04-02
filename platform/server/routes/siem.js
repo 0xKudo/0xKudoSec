@@ -167,17 +167,18 @@ router.get('/events/recent', wrap(async (req, res) => {
   res.json(rows);
 }));
 
-router.get('/events/by-severity', async (req, res) => {
+router.get('/events/by-severity', wrap(async (req, res) => {
   const hours = hoursParam(req);
+  const userId = uid(req);
+  const params = [userId];
+  const conditions = [`user_id = $1`, `timestamp > NOW() - INTERVAL '${hours} hours'`];
+  if (req.query.showSuppressed !== '1') await applySuppressFilters(userId, params, conditions);
   const { rows } = await pool.query(
-    `SELECT severity, COUNT(*) AS count
-     FROM logs
-     WHERE user_id = $1 AND timestamp > NOW() - INTERVAL '${hours} hours'
-     GROUP BY severity ORDER BY count DESC`,
-    [uid(req)]
+    `SELECT severity, COUNT(*) AS count FROM logs WHERE ${conditions.join(' AND ')} GROUP BY severity ORDER BY count DESC`,
+    params
   );
   res.json(rows);
-});
+}));
 
 router.get('/events/by-source', async (req, res) => {
   const hours = hoursParam(req);
