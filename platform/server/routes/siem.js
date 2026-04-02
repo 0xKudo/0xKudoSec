@@ -1,6 +1,10 @@
 // platform/server/routes/siem.js
 import { Router } from 'express';
-import { randomBytes } from 'crypto';
+import { randomBytes, createHash } from 'crypto';
+
+function hashKey(key) {
+  return createHash('sha256').update(key).digest('hex');
+}
 import { readFileSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
@@ -327,14 +331,16 @@ router.get('/ingest-key', async (req, res) => {
 
 router.post('/ingest-key', async (req, res) => {
   const key = randomBytes(32).toString('hex');
+  const hashed = hashKey(key);
   const { rows } = await pool.query(
     `INSERT INTO user_ingest_keys (user_id, api_key)
      VALUES ($1, $2)
      ON CONFLICT (user_id) DO UPDATE SET api_key = $2
-     RETURNING api_key, created_at`,
-    [uid(req), key]
+     RETURNING created_at`,
+    [uid(req), hashed]
   );
-  res.json(rows[0]);
+  // Return the plaintext key once — it is never stored or retrievable again
+  res.json({ api_key: key, created_at: rows[0].created_at });
 });
 
 router.get('/shipper-download', wrap(async (req, res) => {

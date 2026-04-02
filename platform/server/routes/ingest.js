@@ -1,5 +1,6 @@
 // platform/server/routes/ingest.js
 import { Router } from 'express';
+import { createHash } from 'crypto';
 import multer from 'multer';
 import pool from '../services/db.js';
 import { normalizeEvent } from '../services/ingest/normalizeEvent.js';
@@ -17,15 +18,19 @@ const upload = multer({
 
 const router = Router();
 
+function hashKey(key) {
+  return createHash('sha256').update(key).digest('hex');
+}
+
 async function requireIngestKey(req, res, next) {
   const header = req.headers.authorization || '';
   const token = header.startsWith('Bearer ') ? header.slice(7) : null;
   if (!token) return res.status(401).json({ error: 'Unauthorized' });
 
-  // Check user_ingest_keys table first, fall back to env key for backwards compat
+  // Hash the incoming token and compare against stored hashes
   try {
     const { rows } = await pool.query(
-      'SELECT user_id FROM user_ingest_keys WHERE api_key = $1', [token]
+      'SELECT user_id FROM user_ingest_keys WHERE api_key = $1', [hashKey(token)]
     );
     if (rows.length) {
       req.ingestUserId = rows[0].user_id;
