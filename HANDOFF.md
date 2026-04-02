@@ -14,17 +14,18 @@ Unified cybersecurity tools platform at `tools.laynekudo.com`. Monorepo — shar
 **All 19 tools complete. Auth complete. SIEM Phase 2 complete.**
 
 ### Recently Completed
-- Mobile layout: hamburger drawer, SiemDashboardMobile, DashboardMobile, useIsMobile hook
-- Mobile nav: X close button in drawer, compact login/theme buttons, brand text retained at smaller size
-- Auth fix: all 15 auth-required tool clients now send Bearer token via getAccessTokenSilently
-- SSE auth fix: requireAuth middleware accepts token from query param (for EventSource streams)
-- nmap installed on VPS
-- Shipper zip download: `GET /api/siem/shipper-download` streams pre-configured zip with user's API key
-- Auth token in query string fix for scan-stream SSE endpoint
-- Mobile-only layout fixes for network-scanner and subdomain-enumerator (isMobile conditionals)
-- Toast on mobile tap of locked tool in Sidebar
+- Fluent Bit migration: replaced node-shipper scheduled task with Fluent Bit Windows service
+  - Config at `C:\Program Files\fluent-bit\conf\cybertools.conf` -- Security + Sysmon channels, HTTP output to ingest endpoint
+  - `normalizeEvent.js` updated to detect and handle both Fluent Bit flat PascalCase format and Winlogbeat ECS format
+  - Sysmon field extraction placeholder added -- needs confirmation with live Sysmon event sample
+  - Source filter on dashboard now shows `fluent-bit` vs `node-shipper` as distinct sources
+  - Nginx `client_max_body_size 10m` added to handle large flush batches
+  - CybertoolsShipper scheduled task disabled
+  - Fluent Bit registered as Windows service (auto-start on boot)
+  - node-shipper moved to `_deprecated/node-shipper/` (kept for reference, not deleted)
 
-### Next: SIEM Phase 3
+### Next
+- Capture a live Sysmon event from Fluent Bit to confirm field names in normalizeEvent.js Sysmon placeholder
 - Log retention cron on VPS (UI + API done, cron not yet implemented)
 - Continue mobile layout fixes for remaining tools
 - Then Phase 4: Electron + Proxy tool

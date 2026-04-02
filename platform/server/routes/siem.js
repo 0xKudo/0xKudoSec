@@ -57,6 +57,7 @@ const FIELD_ALIASES = {
   process: 'process_name', process_name: 'process_name',
   event_id: 'event_id', event: 'event_id', id: 'event_id',
   message: 'message', msg: 'message',
+  source: 'source',
 };
 
 const KEYWORD_TEXT_FIELDS = ['message', 'username', 'host', 'source_ip', 'dest_ip', 'process_name'];
@@ -105,7 +106,7 @@ function buildSearchConditions(q, params) {
 router.get('/events/recent', async (req, res) => {
   const validSeverities = ['critical', 'high', 'medium', 'low', 'info'];
   const validCategories = ['authentication', 'network', 'process', 'file', 'dns', 'registry', 'system', 'firewall', 'account', 'policy'];
-  const validSources = ['node-shipper', 'winlogbeat', 'syslog'];
+  const validSources = ['node-shipper', 'winlogbeat', 'fluent-bit', 'syslog'];
   const hours = hoursParam(req);
   const sev = validSeverities.includes(req.query.severity) ? req.query.severity : null;
   const cat = validCategories.includes(req.query.category) ? req.query.category : null;
