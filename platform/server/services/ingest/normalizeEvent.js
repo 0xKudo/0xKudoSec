@@ -156,12 +156,29 @@ function fluentBitSysmonFields(eventId, inserts) {
     };
   }
 
+  // Event ID 5 (Process Terminate): [0]=RuleName,[1]=UtcTime,[2]=ProcessGuid,[3]=ProcessId,[4]=Image,[5]=User
+  if (id === 5) {
+    const user = inserts[5] || null;
+    const [domain, username] = user ? user.split('\\') : [null, null];
+    return {
+      process_id: inserts[3] ? Number(inserts[3]) : null,
+      process_name: inserts[4] || null,
+      process_guid: inserts[2] || null,
+      username: username || user || null,
+      domain: domain || null,
+      source_ip: null, dest_ip: null, dest_port: null, protocol: null,
+      parent_process_name: null, parent_process_id: null, parent_process_guid: null,
+      file_path: null, registry_key: null,
+    };
+  }
+
   if (id === 3) {
     const user = inserts[5] || null;
     const [domain, username] = user ? user.split('\\') : [null, null];
     return {
       process_id: inserts[3] ? Number(inserts[3]) : null,
       process_name: inserts[4] || null,
+      process_guid: inserts[2] || null,
       username: username || user || null,
       domain: domain || null,
       protocol: inserts[6] || null,

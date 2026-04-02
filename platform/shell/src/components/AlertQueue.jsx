@@ -403,7 +403,7 @@ export function AlertQueue({ onNavigate }) {
                 </div>
               ))}
 
-              <ProcessTreePanel event={{ id: selected.log_id, process_name: selected.process_name, host: selected.host }} />
+              <ProcessTreePanel event={{ id: selected.log_id || selected.id, process_name: selected.process_name, host: selected.host, message: selected.message }} />
 
               <div style={{ marginTop: '16px', borderTop: '1px solid var(--border)', paddingTop: '12px' }}>
                 <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Create Case from Alert</div>

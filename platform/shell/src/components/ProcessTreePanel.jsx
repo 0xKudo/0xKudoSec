@@ -20,6 +20,13 @@ const s = {
   },
 };
 
+// Parse ProcessGuid out of a Sysmon message string (fallback for rows ingested before guid columns existed)
+function extractGuidFromMessage(message) {
+  if (!message) return null;
+  const m = message.match(/ProcessGuid:\s*\{([^}]+)\}/i);
+  return m ? `{${m[1]}}` : null;
+}
+
 // event: the log row object (needs process_guid, process_name, host, id)
 export function ProcessTreePanel({ event }) {
   const { getAccessTokenSilently } = useAuth0();
@@ -29,7 +36,9 @@ export function ProcessTreePanel({ event }) {
 
   useEffect(() => {
     if (!event) { setTree(null); return; }
-    const hasGuid = event.process_guid;
+    // Use stored guid, or parse from message for pre-migration rows
+    const processGuid = event.process_guid || extractGuidFromMessage(event.message);
+    const hasGuid = !!processGuid;
     const hasNameHost = event.process_name && event.host;
     if (!hasGuid && !hasNameHost) { setTree(null); return; }
 
@@ -40,7 +49,7 @@ export function ProcessTreePanel({ event }) {
       try {
         const token = await getAccessTokenSilently();
         const params = hasGuid
-          ? `?process_guid=${encodeURIComponent(event.process_guid)}`
+          ? `?process_guid=${encodeURIComponent(processGuid)}`
           : `?process_name=${encodeURIComponent(event.process_name)}&host=${encodeURIComponent(event.host)}`;
         const res = await fetch(`/api/siem/events/process-tree${params}`, {
           headers: { Authorization: `Bearer ${token}` },
@@ -51,7 +60,7 @@ export function ProcessTreePanel({ event }) {
     }
     fetch_();
     return () => { cancelled = true; };
-  }, [event?.id, getAccessTokenSilently]);
+  }, [event?.id, event?.process_guid, event?.message, getAccessTokenSilently]);
 
   function lookupCve(processName) {
     localStorage.setItem('workspace-restore-cve-exploit-mapper', JSON.stringify({ query: processName }));
