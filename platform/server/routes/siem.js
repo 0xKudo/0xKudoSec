@@ -281,23 +281,6 @@ router.get('/events/failed-logins', wrap(async (req, res) => {
   res.json(rows);
 }));
 
-// GET /api/siem/events/:id — fetch a single log row (used by alert detail to get process_guid)
-router.get('/events/:id', wrap(async (req, res) => {
-  const id = parseInt(req.params.id, 10);
-  if (!id) return res.status(400).json({ error: 'Invalid id' });
-  const { rows } = await pool.query(
-    `SELECT id, timestamp, severity, event_id, event_category, source,
-            message, username, domain, host, source_ip, dest_ip, dest_port, protocol,
-            process_name, process_id, process_guid,
-            parent_process_name, parent_process_id, parent_process_guid,
-            file_path, registry_key
-     FROM logs WHERE id = $1 AND user_id = $2`,
-    [id, uid(req)]
-  );
-  if (!rows.length) return res.status(404).json({ error: 'Not found' });
-  res.json(rows[0]);
-}));
-
 // GET /api/siem/events/process-tree?process_guid=...&host=...&hours=24
 // Walks ancestors (up to root) and all descendants via recursive CTE using process_guid linkage.
 // Falls back to PID-based matching on same host/minute window when guids are unavailable.
@@ -371,6 +354,23 @@ router.get('/events/process-tree', wrap(async (req, res) => {
   }
 
   return res.status(400).json({ error: 'process_guid or (process_name + host) required' });
+}));
+
+// GET /api/siem/events/:id — must be registered AFTER /events/process-tree to avoid route shadowing
+router.get('/events/:id', wrap(async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!id) return res.status(400).json({ error: 'Invalid id' });
+  const { rows } = await pool.query(
+    `SELECT id, timestamp, severity, event_id, event_category, source,
+            message, username, domain, host, source_ip, dest_ip, dest_port, protocol,
+            process_name, process_id, process_guid,
+            parent_process_name, parent_process_id, parent_process_guid,
+            file_path, registry_key
+     FROM logs WHERE id = $1 AND user_id = $2`,
+    [id, uid(req)]
+  );
+  if (!rows.length) return res.status(404).json({ error: 'Not found' });
+  res.json(rows[0]);
 }));
 
 router.get('/alerts/trend', wrap(async (req, res) => {
