@@ -21,10 +21,12 @@ const s = {
 };
 
 // Parse ProcessGuid out of a Sysmon message string (fallback for rows ingested before guid columns existed)
+// Matches ProcessGuid, SourceProcessGuid (EID 8), etc.
 function extractGuidFromMessage(message) {
   if (!message) return null;
-  const m = message.match(/ProcessGuid:\s*\{([^}]+)\}/i);
-  return m ? `{${m[1]}}` : null;
+  // Prefer plain ProcessGuid, fall back to SourceProcessGuid
+  const m = message.match(/(?:^|\n)\s*(?:Source)?ProcessGuid:\s*(\{[^}]+\})/im);
+  return m ? m[1] : null;
 }
 
 // event: the log row object (needs process_guid, process_name, host, id)

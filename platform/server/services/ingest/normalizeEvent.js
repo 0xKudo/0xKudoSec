@@ -156,6 +156,24 @@ function fluentBitSysmonFields(eventId, inserts) {
     };
   }
 
+  // Event ID 8 (CreateRemoteThread): [0]=RuleName,[1]=UtcTime,[2]=SourceProcessGuid,[3]=SourceProcessId,
+  //   [4]=SourceImage,[5]=TargetProcessGuid,[6]=TargetProcessId,[7]=TargetImage,[8]=NewThreadId,
+  //   [9]=StartAddress,[10]=StartModule,[11]=StartFunction,[12]=SourceUser,[13]=TargetUser
+  if (id === 8) {
+    const user = inserts[12] || null;
+    const [domain, username] = user ? user.split('\\') : [null, null];
+    return {
+      process_id: inserts[3] ? Number(inserts[3]) : null,
+      process_name: inserts[4] || null,
+      process_guid: inserts[2] || null,
+      username: username || user || null,
+      domain: domain || null,
+      source_ip: null, dest_ip: null, dest_port: null, protocol: null,
+      parent_process_name: null, parent_process_id: null, parent_process_guid: null,
+      file_path: null, registry_key: null,
+    };
+  }
+
   // Event ID 5 (Process Terminate): [0]=RuleName,[1]=UtcTime,[2]=ProcessGuid,[3]=ProcessId,[4]=Image,[5]=User
   if (id === 5) {
     const user = inserts[5] || null;
