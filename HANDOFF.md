@@ -28,8 +28,7 @@ Unified cybersecurity tools platform at `tools.laynekudo.com`. Monorepo — shar
   - node-shipper moved to `_deprecated/node-shipper/`
 
 ### Next
-- Log retention cron on VPS (UI + API done, cron not yet implemented)
-- Then Phase 4: Electron + Proxy tool
+- Phase 4: Electron + Proxy tool
 
 ---
 
