@@ -12,6 +12,7 @@ import ingestRoutes from './routes/ingest.js';
 import siemRoutes from './routes/siem.js';
 import { loadTools } from './loader.js';
 import { attachWebSocketServer } from './services/wsBroadcast.js';
+import { startRetentionCron } from './services/retentionCron.js';
 
 const app = express();
 
@@ -54,5 +55,6 @@ if (!process.env.VITEST) {
       console.log(`Allowed origin: ${process.env.ALLOWED_ORIGIN}`);
     });
     attachWebSocketServer(server);
+    startRetentionCron();
   });
 }
