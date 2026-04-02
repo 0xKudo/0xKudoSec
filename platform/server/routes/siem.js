@@ -292,14 +292,12 @@ router.get('/events/process-tree', wrap(async (req, res) => {
     // GUID-based recursive walk — reliable even across PID recycling
     const { rows } = await pool.query(
       `WITH RECURSIVE
-        -- Walk ancestors: start at the target process, follow parent_process_guid upward
         ancestors AS (
           SELECT id, process_guid, parent_process_guid, process_name, process_id,
                  parent_process_name, parent_process_id, username, host, timestamp,
                  event_id, message, 0 AS depth
           FROM logs
           WHERE process_guid = $1 AND user_id = $2
-            AND timestamp > NOW() - INTERVAL '${parseInt(hours, 10) || 24} hours'
           LIMIT 1
           UNION ALL
           SELECT l.id, l.process_guid, l.parent_process_guid, l.process_name, l.process_id,
@@ -307,32 +305,28 @@ router.get('/events/process-tree', wrap(async (req, res) => {
                  l.event_id, l.message, a.depth - 1
           FROM logs l
           JOIN ancestors a ON l.process_guid = a.parent_process_guid
-          WHERE l.user_id = $2
-            AND l.timestamp > NOW() - INTERVAL '${parseInt(hours, 10) || 24} hours'
-            AND a.depth > -20
+          WHERE l.user_id = $2 AND a.depth > -20
         ),
-        -- Walk descendants: start at target, follow children downward
         descendants AS (
           SELECT id, process_guid, parent_process_guid, process_name, process_id,
                  parent_process_name, parent_process_id, username, host, timestamp,
                  event_id, message, 1 AS depth
           FROM logs
           WHERE parent_process_guid = $1 AND user_id = $2
-            AND timestamp > NOW() - INTERVAL '${parseInt(hours, 10) || 24} hours'
           UNION ALL
           SELECT l.id, l.process_guid, l.parent_process_guid, l.process_name, l.process_id,
                  l.parent_process_name, l.parent_process_id, l.username, l.host, l.timestamp,
                  l.event_id, l.message, d.depth + 1
           FROM logs l
           JOIN descendants d ON l.parent_process_guid = d.process_guid
-          WHERE l.user_id = $2
-            AND l.timestamp > NOW() - INTERVAL '${parseInt(hours, 10) || 24} hours'
-            AND d.depth < 20
+          WHERE l.user_id = $2 AND d.depth < 20
+        ),
+        combined AS (
+          SELECT * FROM ancestors
+          UNION ALL
+          SELECT * FROM descendants
         )
-        SELECT * FROM ancestors
-        UNION ALL
-        SELECT * FROM descendants
-        ORDER BY depth ASC, timestamp ASC`,
+        SELECT * FROM combined ORDER BY depth ASC, timestamp ASC`,
       [process_guid, userId]
     );
     return res.json({ mode: 'guid', nodes: rows });
