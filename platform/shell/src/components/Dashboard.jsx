@@ -62,6 +62,7 @@ const s = {
     display: 'flex',
     flexDirection: 'column',
     height: '320px',
+    overflow: 'hidden',
   },
   panelScroll: {
     overflowY: 'auto',
