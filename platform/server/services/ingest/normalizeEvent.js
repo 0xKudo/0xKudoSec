@@ -171,20 +171,33 @@ function fluentBitSysmonFields(eventId, inserts) {
   }
 
   if (id === 11) {
+    // [0]=RuleName,[1]=UtcTime,[2]=ProcessGuid,[3]=ProcessId,[4]=Image,[5]=TargetFilename,[6]=CreationUtcTime,[7]=User
+    const user11 = inserts[7] || null;
+    const [domain11, username11] = user11 ? user11.split('\\') : [null, null];
     return {
+      process_id: inserts[3] ? Number(inserts[3]) : null,
       process_name: inserts[4] || null,
       file_path: inserts[5] || null,
+      username: username11 || user11 || null,
+      domain: domain11 || null,
       source_ip: null, dest_ip: null, dest_port: null, protocol: null,
-      username: null, domain: null, process_id: null, parent_process_name: null, registry_key: null,
+      parent_process_name: null, registry_key: null,
     };
   }
 
   if (id === 13) {
+    // [0]=RuleName,[1]=EventType,[2]=UtcTime,[3]=ProcessGuid,[4]=ProcessId,
+    // [5]=Image,[6]=TargetObject,[7]=Details,[8]=User
+    const user13 = inserts[8] || null;
+    const [domain13, username13] = user13 ? user13.split('\\') : [null, null];
     return {
-      process_name: inserts[4] || null,
-      registry_key: inserts[5] || null,
+      process_id: inserts[4] ? Number(inserts[4]) : null,
+      process_name: inserts[5] || null,
+      registry_key: inserts[6] || null,
+      username: username13 || user13 || null,
+      domain: domain13 || null,
       source_ip: null, dest_ip: null, dest_port: null, protocol: null,
-      username: null, domain: null, process_id: null, parent_process_name: null, file_path: null,
+      parent_process_name: null, file_path: null,
     };
   }
 
