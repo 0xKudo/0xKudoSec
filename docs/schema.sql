@@ -121,8 +121,11 @@ CREATE TABLE IF NOT EXISTS alerts (
   username    VARCHAR(255),
   event_id    INTEGER,
   message     TEXT,
+  count       INTEGER NOT NULL DEFAULT 1,
+  last_seen   TIMESTAMPTZ DEFAULT NOW(),
   created_at  TIMESTAMPTZ DEFAULT NOW(),
-  updated_at  TIMESTAMPTZ DEFAULT NOW()
+  updated_at  TIMESTAMPTZ DEFAULT NOW(),
+  CONSTRAINT alerts_dedup UNIQUE (user_id, rule_id, event_id)
 );
 CREATE INDEX IF NOT EXISTS alerts_user_idx    ON alerts (user_id);
 CREATE INDEX IF NOT EXISTS alerts_status_idx  ON alerts (status);
