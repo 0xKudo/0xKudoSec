@@ -91,6 +91,7 @@ CREATE TABLE IF NOT EXISTS detection_rules (
   description TEXT,
   enabled     BOOLEAN DEFAULT true,
   severity    VARCHAR(16) DEFAULT 'high',   -- alert severity to assign
+  action      VARCHAR(32) DEFAULT 'alert',  -- 'alert' or 'suppress'
   -- Match conditions (all non-null fields must match — AND logic)
   match_event_id    INTEGER,
   match_category    VARCHAR(64),

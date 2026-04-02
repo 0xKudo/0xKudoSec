@@ -229,6 +229,8 @@ const s = {
   copied: { fontSize: '11px', color: 'var(--severity-low)', marginLeft: '8px' },
 };
 
+const SHIPPER_TABS = ['Fluent Bit', 'Winlogbeat 7', 'Manual API'];
+
 export function LogSources() {
   const { getAccessTokenSilently } = useAuth0();
   const [keyMeta, setKeyMeta] = useState(undefined);
@@ -237,6 +239,8 @@ export function LogSources() {
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [shipperTab, setShipperTab] = useState(0);
+  const [configCopied, setConfigCopied] = useState(false);
   const [uploadFile, setUploadFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [uploadResult, setUploadResult] = useState(null); // { accepted, total } or { error }
@@ -406,40 +410,169 @@ export function LogSources() {
         )}
       </div>
 
-      {/* Shipper Download — shown whenever a key exists */}
-      {(keyMeta?.exists || newKey) && (
-        <div style={s.section}>
-          <div style={s.sectionTitle}>Windows Log Shipper</div>
-          <div style={s.note} >
-            Download the shipper to forward Windows Event Logs from any machine to your SIEM. Your API key is pre-configured — just unzip, run <code>npm install</code>, then <code>node index.js</code>.
+      {/* Shipper Setup — shown whenever a key exists */}
+      {(keyMeta?.exists || newKey) && (() => {
+        const apiKey = newKey || 'YOUR_API_KEY_HERE';
+        const ingestUrl = 'https://tools.laynekudo.com/api/ingest/beats';
+
+        const fluentBitConfig = `[SERVICE]
+    Flush        10
+    Daemon       Off
+    Log_Level    info
+
+[INPUT]
+    Name         winlog
+    Channels     Security,Microsoft-Windows-Sysmon/Operational
+    Interval_Sec 5
+    DB           C:\\fluent-bit\\cybertools.db
+
+[OUTPUT]
+    Name         http
+    Match        *
+    Host         tools.laynekudo.com
+    Port         443
+    URI          /api/ingest/beats
+    Format       json
+    tls          On
+    tls.verify   On
+    Header       Authorization Bearer ${apiKey}
+    Header       Content-Type application/json`;
+
+        const winlogbeatConfig = `output.elasticsearch:
+  enabled: false
+
+output.http:
+  enabled: true
+  hosts: ["${ingestUrl}"]
+  headers:
+    Authorization: "Bearer ${apiKey}"
+    Content-Type: "application/json"
+
+winlogbeat.event_logs:
+  - name: Security
+  - name: Microsoft-Windows-Sysmon/Operational`;
+
+        const curlExample = `curl -X POST "${ingestUrl}" \\
+  -H "Authorization: Bearer ${apiKey}" \\
+  -H "Content-Type: application/json" \\
+  -d '[{"@timestamp":"2026-01-01T00:00:00.000Z","winlog":{"event_id":4624},"message":"test event","host":{"name":"myhost"}}]'`;
+
+        const configs = [fluentBitConfig, winlogbeatConfig, curlExample];
+        const currentConfig = configs[shipperTab];
+
+        function downloadConfig() {
+          const filenames = ['cybertools.conf', 'winlogbeat.yml', 'ingest-example.sh'];
+          const blob = new Blob([currentConfig], { type: 'text/plain' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = filenames[shipperTab];
+          a.click();
+          URL.revokeObjectURL(url);
+        }
+
+        function copyConfig() {
+          navigator.clipboard.writeText(currentConfig);
+          setConfigCopied(true);
+          setTimeout(() => setConfigCopied(false), 2000);
+        }
+
+        return (
+          <div style={s.section}>
+            <div style={s.sectionTitle}>Connect a Log Source</div>
+            {!newKey && (
+              <div style={{ ...s.warning, marginBottom: '14px' }}>
+                Generate a new API key above to pre-fill your API key into these configs.
+              </div>
+            )}
+
+            {/* Tab selector */}
+            <div style={{ display: 'flex', gap: '0', marginBottom: '14px', borderBottom: '1px solid var(--border)' }}>
+              {SHIPPER_TABS.map((tab, i) => (
+                <button key={tab} onClick={() => { setShipperTab(i); setConfigCopied(false); }} style={{
+                  background: 'none', border: 'none', borderBottom: shipperTab === i ? '2px solid var(--text-primary)' : '2px solid transparent',
+                  color: shipperTab === i ? 'var(--text-primary)' : 'var(--text-muted)',
+                  fontFamily: 'var(--font)', fontSize: '11px', padding: '6px 16px 8px',
+                  cursor: 'pointer', letterSpacing: '0.04em', marginBottom: '-1px',
+                }}>{tab}</button>
+              ))}
+            </div>
+
+            {/* Fluent Bit */}
+            {shipperTab === 0 && (
+              <div>
+                <div style={s.note}>
+                  <strong style={{ color: 'var(--text-primary)' }}>Fluent Bit</strong> — lightweight, production-grade log shipper. Recommended for Windows.<br />
+                  Download from <strong>fluentbit.io</strong>, then save the config below and run as a service.
+                </div>
+                <pre style={{ ...s.keyBox, marginTop: '12px', fontSize: '11px', lineHeight: 1.7, overflowX: 'auto' }}>{fluentBitConfig}</pre>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                  <button style={s.btnPrimary} onClick={downloadConfig}>Download cybertools.conf</button>
+                  <button style={s.btn} onClick={copyConfig}>Copy</button>
+                  {configCopied && <span style={s.copied}>Copied!</span>}
+                </div>
+                <div style={s.note}>
+                  <strong style={{ color: 'var(--text-primary)' }}>Setup (Windows):</strong><br />
+                  1. Install Fluent Bit — <code>winget install Fluent.FluentBit</code> or download from fluentbit.io<br />
+                  2. Save config to <code>C:\Program Files\fluent-bit\conf\cybertools.conf</code><br />
+                  3. Register as a service (run as Administrator):<br />
+                  <code style={{ display: 'block', marginTop: '6px', marginLeft: '12px' }}>
+                    sc.exe create fluent-bit binPath= "C:\Program Files\fluent-bit\bin\fluent-bit.exe -c C:\Program Files\fluent-bit\conf\cybertools.conf" start= auto
+                  </code>
+                  <code style={{ display: 'block', marginTop: '4px', marginLeft: '12px' }}>Start-Service fluent-bit</code>
+                  4. Your machine will appear in Active Sources within 30 seconds.
+                </div>
+              </div>
+            )}
+
+            {/* Winlogbeat 7 */}
+            {shipperTab === 1 && (
+              <div>
+                <div style={s.note}>
+                  <strong style={{ color: 'var(--text-primary)' }}>Winlogbeat 7</strong> — Elastic's Windows event log shipper. Use version 7.x only — v8+ dropped generic HTTP output.<br />
+                  Download from <strong>elastic.co/downloads/past-releases</strong>, search for Winlogbeat 7.17.
+                </div>
+                <pre style={{ ...s.keyBox, marginTop: '12px', fontSize: '11px', lineHeight: 1.7, overflowX: 'auto' }}>{winlogbeatConfig}</pre>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                  <button style={s.btnPrimary} onClick={downloadConfig}>Download winlogbeat.yml</button>
+                  <button style={s.btn} onClick={copyConfig}>Copy</button>
+                  {configCopied && <span style={s.copied}>Copied!</span>}
+                </div>
+                <div style={s.note}>
+                  <strong style={{ color: 'var(--text-primary)' }}>Setup (Windows):</strong><br />
+                  1. Download and extract Winlogbeat 7.17<br />
+                  2. Replace <code>winlogbeat.yml</code> with the config above<br />
+                  3. Run as Administrator: <code>.\install-service-winlogbeat.ps1</code><br />
+                  4. Start the service: <code>Start-Service winlogbeat</code><br />
+                  Your machine will appear in Active Sources within one minute.
+                </div>
+              </div>
+            )}
+
+            {/* Manual API */}
+            {shipperTab === 2 && (
+              <div>
+                <div style={s.note}>
+                  <strong style={{ color: 'var(--text-primary)' }}>Manual API</strong> — POST JSON events directly. Use for custom integrations, scripts, or any platform.<br />
+                  Send a JSON array of event objects to the ingest endpoint with your API key as a Bearer token.
+                </div>
+                <pre style={{ ...s.keyBox, marginTop: '12px', fontSize: '11px', lineHeight: 1.7, overflowX: 'auto' }}>{curlExample}</pre>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                  <button style={s.btn} onClick={copyConfig}>Copy</button>
+                  {configCopied && <span style={s.copied}>Copied!</span>}
+                </div>
+                <div style={s.note}>
+                  <strong style={{ color: 'var(--text-primary)' }}>Event format:</strong><br />
+                  POST a JSON array to <code>{ingestUrl}</code><br />
+                  Required fields: <code>@timestamp</code> (ISO 8601), <code>winlog.event_id</code> (integer), <code>message</code> (string)<br />
+                  Optional: <code>host.name</code>, <code>winlog.event_data.*</code>, <code>network.*</code>, <code>process.*</code>, <code>log.level</code><br />
+                  Max payload: 10 MB per request. Events are accepted as an array or a single object.
+                </div>
+              </div>
+            )}
           </div>
-          <div style={{ marginTop: '12px', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-            <button style={s.btnPrimary} onClick={async () => {
-              const token = await getAccessTokenSilently();
-              const res = await fetch('/api/siem/shipper-download', { headers: { Authorization: `Bearer ${token}` } });
-              if (!res.ok) { alert('Download failed — try again.'); return; }
-              const blob = await res.blob();
-              const url = URL.createObjectURL(blob);
-              const a = document.createElement('a');
-              a.href = url;
-              a.download = '0xkudo-shipper.zip';
-              a.click();
-              URL.revokeObjectURL(url);
-            }}>
-              Download Shipper (.zip)
-            </button>
-          </div>
-          <div style={{ ...s.note, marginTop: '12px' }}>
-            <strong style={{ color: 'var(--text-primary)' }}>Setup:</strong><br />
-            1. Unzip <code>0xkudo-shipper.zip</code><br />
-            2. Open a terminal in the <code>0xkudo-shipper</code> folder<br />
-            3. Run <code>npm install</code><br />
-            4. Run <code>node index.js</code><br />
-            Your machine will appear in Active Sources below within one minute.
-            If you regenerate your API key, download a fresh copy of the shipper.
-          </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Log File Upload */}
       <div style={s.section}>
