@@ -55,16 +55,16 @@ const s = {
   title: { fontSize: '13px', color: 'var(--text-primary)', letterSpacing: '0.02em' },
   titleSub: { color: 'var(--text-muted)', fontSize: '11px' },
   body: { padding: '20px', display: 'flex', flexDirection: 'column', gap: '20px' },
-  row: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' },
+  row: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', alignItems: 'start' },
   panel: {
     background: 'var(--bg-surface)',
     border: '1px solid var(--border)',
     display: 'flex',
     flexDirection: 'column',
+    height: '320px',
   },
   panelScroll: {
     overflowY: 'auto',
-    maxHeight: '320px',
     flex: 1,
   },
   panelHeader: {
