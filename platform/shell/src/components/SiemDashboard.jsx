@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
+import { useNavigate } from 'react-router-dom';
+import { ProcessTreePanel, ContextMenu } from './ProcessTreePanel.jsx';
 
 const SEV_COLOR = {
   critical: 'var(--severity-critical)',
@@ -418,6 +420,7 @@ function FilterPanel({ open, onClose, hours, setHours, sevFilter, setSevFilter, 
 
 export function SiemDashboard({ onNavigate }) {
   const { getAccessTokenSilently } = useAuth0();
+  const navigate = useNavigate();
 
   // Load persisted state
   const persisted = loadPersistedState();
@@ -460,6 +463,7 @@ export function SiemDashboard({ onNavigate }) {
   const [error, setError] = useState(null);
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [selectedAlert, setSelectedAlert] = useState(null);
+  const [contextMenu, setContextMenu] = useState(null); // { x, y, row }
 
   // Debounce search input 300ms
   useEffect(() => {
@@ -960,6 +964,7 @@ export function SiemDashboard({ onNavigate }) {
                 key={row.id}
                 style={{ cursor: 'pointer' }}
                 onClick={() => setSelectedEvent(row)}
+                onContextMenu={e => { e.preventDefault(); setContextMenu({ x: e.clientX, y: e.clientY, row }); }}
                 onMouseEnter={e => { Array.from(e.currentTarget.cells).forEach(c => c.style.background = 'var(--bg-surface)'); }}
                 onMouseLeave={e => { Array.from(e.currentTarget.cells).forEach(c => c.style.background = ''); }}
               >
@@ -1025,9 +1030,32 @@ export function SiemDashboard({ onNavigate }) {
                   <div style={s.fieldValue}>{String(value)}</div>
                 </div>
               ))}
+              <ProcessTreePanel event={selectedEvent} />
             </div>
           </div>
         </div>
+      )}
+
+      {contextMenu && (
+        <ContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          onClose={() => setContextMenu(null)}
+          items={[
+            { label: 'View Event Detail', onClick: () => setSelectedEvent(contextMenu.row) },
+            ...(contextMenu.row.process_name ? [{
+              label: `Process Tree: ${contextMenu.row.process_name}`,
+              onClick: () => setSelectedEvent(contextMenu.row),
+            }] : []),
+            ...(contextMenu.row.process_name ? [{
+              label: `CVE Lookup: ${contextMenu.row.process_name}`,
+              onClick: () => {
+                localStorage.setItem('workspace-restore-cve-exploit-mapper', JSON.stringify({ query: contextMenu.row.process_name }));
+                navigate('/cve-exploit-mapper');
+              },
+            }] : []),
+          ]}
+        />
       )}
 
       {/* Alert Detail Modal */}

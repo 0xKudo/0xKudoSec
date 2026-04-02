@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
+import { useNavigate } from 'react-router-dom';
+import { ProcessTreePanel, ContextMenu } from './ProcessTreePanel.jsx';
 
 const SEV_COLOR = {
   critical: 'var(--severity-critical)',
@@ -93,6 +95,7 @@ function sevColor(sev) { return SEV_COLOR[(sev || '').toLowerCase()] || 'var(--t
 
 export function LogSearch() {
   const { getAccessTokenSilently } = useAuth0();
+  const navigate = useNavigate();
   const [query, setQuery] = useState('');
   const [submittedQuery, setSubmittedQuery] = useState('');
   const [hours, setHours] = useState(24);
@@ -102,6 +105,7 @@ export function LogSearch() {
   const [searched, setSearched] = useState(false);
   const [selected, setSelected] = useState(null);
   const [showRaw, setShowRaw] = useState(false);
+  const [contextMenu, setContextMenu] = useState(null);
   const inputRef = useRef(null);
 
   async function search(q, h, sev) {
@@ -245,6 +249,7 @@ export function LogSearch() {
                 key={row.id}
                 style={{ cursor: 'pointer' }}
                 onClick={() => { setSelected(row); setShowRaw(false); }}
+                onContextMenu={e => { e.preventDefault(); setContextMenu({ x: e.clientX, y: e.clientY, row }); }}
                 onMouseEnter={e => Array.from(e.currentTarget.cells).forEach(c => c.style.background = 'var(--bg-surface)')}
                 onMouseLeave={e => Array.from(e.currentTarget.cells).forEach(c => c.style.background = '')}
               >
@@ -311,9 +316,32 @@ export function LogSearch() {
                   )}
                 </div>
               )}
+              <ProcessTreePanel event={selected} />
             </div>
           </div>
         </div>
+      )}
+
+      {contextMenu && (
+        <ContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          onClose={() => setContextMenu(null)}
+          items={[
+            { label: 'View Event Detail', onClick: () => { setSelected(contextMenu.row); setShowRaw(false); } },
+            ...(contextMenu.row.process_name ? [{
+              label: `Process Tree: ${contextMenu.row.process_name}`,
+              onClick: () => { setSelected(contextMenu.row); setShowRaw(false); },
+            }] : []),
+            ...(contextMenu.row.process_name ? [{
+              label: `CVE Lookup: ${contextMenu.row.process_name}`,
+              onClick: () => {
+                localStorage.setItem('workspace-restore-cve-exploit-mapper', JSON.stringify({ query: contextMenu.row.process_name }));
+                navigate('/cve-exploit-mapper');
+              },
+            }] : []),
+          ]}
+        />
       )}
     </div>
   );
