@@ -21,6 +21,8 @@ Unified cybersecurity tools platform at `tools.laynekudo.com`. Monorepo — shar
   - normalizeEvent.js detects winevtlog format by raw.EventID, extracts fields from StringInserts by position
   - Sysmon Event ID 1: process_name, username, domain, parent_process_name working
   - Sysmon Event ID 3: src/dst IP, port, protocol working
+  - Sysmon Event ID 11: process_name, file_path, username working
+  - Sysmon Event ID 13: process_name, registry_key, username working (positions confirmed from live sample)
   - Security 5156/5157/5158: network fields working
   - `fluent-bit` added to validSources and FIELD_ALIASES in siem.js
   - node-shipper moved to `_deprecated/node-shipper/`
