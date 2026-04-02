@@ -59,6 +59,13 @@ const s = {
   panel: {
     background: 'var(--bg-surface)',
     border: '1px solid var(--border)',
+    display: 'flex',
+    flexDirection: 'column',
+  },
+  panelScroll: {
+    overflowY: 'auto',
+    maxHeight: '320px',
+    flex: 1,
   },
   panelHeader: {
     padding: '8px 14px',
@@ -202,6 +209,7 @@ export function Dashboard() {
           {/* Recently Used */}
           <div style={s.panel}>
             <div style={s.panelHeader}>Recently Used</div>
+            <div style={s.panelScroll}>
             {recentTools.length === 0 ? (
               <div style={s.emptyState}>No recent tools — launch one from the sidebar.</div>
             ) : (
@@ -223,6 +231,7 @@ export function Dashboard() {
                 </div>
               ))
             )}
+            </div>
           </div>
 
           {/* Workspace Items */}
@@ -233,6 +242,7 @@ export function Dashboard() {
                 <button style={s.clearBtn} onClick={clear}>Clear</button>
               )}
             </div>
+            <div style={s.panelScroll}>
             {workspaceItems.length === 0 ? (
               <div style={s.emptyState}>No workspace items — results from tools appear here.</div>
             ) : (
@@ -258,6 +268,7 @@ export function Dashboard() {
                 );
               })
             )}
+            </div>
           </div>
         </div>
 
