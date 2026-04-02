@@ -297,14 +297,14 @@ router.get('/events/process-tree', wrap(async (req, res) => {
                  parent_process_name, parent_process_id, username, host, timestamp,
                  event_id, message, 0 AS depth
           FROM logs
-          WHERE process_guid = $1 AND user_id = $2
+          WHERE UPPER(process_guid) = UPPER($1) AND user_id = $2
           LIMIT 1
           UNION ALL
           SELECT l.id, l.process_guid, l.parent_process_guid, l.process_name, l.process_id,
                  l.parent_process_name, l.parent_process_id, l.username, l.host, l.timestamp,
                  l.event_id, l.message, a.depth - 1
           FROM logs l
-          JOIN ancestors a ON l.process_guid = a.parent_process_guid
+          JOIN ancestors a ON UPPER(l.process_guid) = UPPER(a.parent_process_guid)
           WHERE l.user_id = $2 AND a.depth > -20
         ),
         descendants AS (
@@ -312,13 +312,13 @@ router.get('/events/process-tree', wrap(async (req, res) => {
                  parent_process_name, parent_process_id, username, host, timestamp,
                  event_id, message, 1 AS depth
           FROM logs
-          WHERE parent_process_guid = $1 AND user_id = $2
+          WHERE UPPER(parent_process_guid) = UPPER($1) AND user_id = $2
           UNION ALL
           SELECT l.id, l.process_guid, l.parent_process_guid, l.process_name, l.process_id,
                  l.parent_process_name, l.parent_process_id, l.username, l.host, l.timestamp,
                  l.event_id, l.message, d.depth + 1
           FROM logs l
-          JOIN descendants d ON l.parent_process_guid = d.process_guid
+          JOIN descendants d ON UPPER(l.parent_process_guid) = UPPER(d.process_guid)
           WHERE l.user_id = $2 AND d.depth < 20
         ),
         combined AS (

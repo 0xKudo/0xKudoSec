@@ -145,10 +145,10 @@ function fluentBitSysmonFields(eventId, inserts) {
     return {
       process_id: inserts[3] ? Number(inserts[3]) : null,
       process_name: inserts[4] || null,
-      process_guid: inserts[2] || null,
+      process_guid: inserts[2] ? inserts[2].toLowerCase() : null,
       parent_process_id: inserts[19] ? Number(inserts[19]) : null,
       parent_process_name: inserts[20] || null,
-      parent_process_guid: inserts[18] || null,
+      parent_process_guid: inserts[18] ? inserts[18].toLowerCase() : null,
       username: username || user || null,
       domain: domain || null,
       source_ip: null, dest_ip: null, dest_port: null, protocol: null,
@@ -165,7 +165,7 @@ function fluentBitSysmonFields(eventId, inserts) {
     return {
       process_id: inserts[3] ? Number(inserts[3]) : null,
       process_name: inserts[4] || null,
-      process_guid: inserts[2] || null,
+      process_guid: inserts[2] ? inserts[2].toLowerCase() : null,
       username: username || user || null,
       domain: domain || null,
       source_ip: null, dest_ip: null, dest_port: null, protocol: null,
@@ -181,7 +181,7 @@ function fluentBitSysmonFields(eventId, inserts) {
     return {
       process_id: inserts[3] ? Number(inserts[3]) : null,
       process_name: inserts[4] || null,
-      process_guid: inserts[2] || null,
+      process_guid: inserts[2] ? inserts[2].toLowerCase() : null,
       username: username || user || null,
       domain: domain || null,
       source_ip: null, dest_ip: null, dest_port: null, protocol: null,
@@ -196,7 +196,7 @@ function fluentBitSysmonFields(eventId, inserts) {
     return {
       process_id: inserts[3] ? Number(inserts[3]) : null,
       process_name: inserts[4] || null,
-      process_guid: inserts[2] || null,
+      process_guid: inserts[2] ? inserts[2].toLowerCase() : null,
       username: username || user || null,
       domain: domain || null,
       protocol: inserts[6] || null,
