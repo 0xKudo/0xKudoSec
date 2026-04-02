@@ -27,10 +27,12 @@ function ruleConditions(rule, userId) {
 // If logIds is provided, only evaluate those specific log rows (ingest-time detection).
 // If logIds is null, scans last 24 hours (manual run).
 export async function runDetectionRules(userId, logIds = null) {
+  console.log(`[detection] running for user=${userId} logIds=${logIds ? logIds.length : 'null'}`);
   const { rows: rules } = await pool.query(
     'SELECT * FROM detection_rules WHERE user_id = $1 AND enabled = true',
     [userId]
   );
+  console.log(`[detection] ${rules.length} rules loaded`);
   if (!rules.length) return { created: 0, deduped: 0 };
 
   const suppressRules = rules.filter(r => r.action === 'suppress');
@@ -57,6 +59,7 @@ export async function runDetectionRules(userId, logIds = null) {
        FROM logs l WHERE ${conds.join(' AND ')} LIMIT 500`,
       params
     );
+    console.log(`[detection] rule "${rule.name}" matched ${matches.length} logs`);
 
     for (const log of matches) {
       const result = await pool.query(
