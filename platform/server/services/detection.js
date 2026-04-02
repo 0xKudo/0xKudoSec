@@ -1,5 +1,9 @@
 // detection.js — shared detection rule runner
 // Called at ingest time (scoped to new log IDs) and from the manual /rules/run endpoint.
+//
+// Order of operations:
+//   1. Run alert rules first — collect alerted log IDs
+//   2. Run suppress rules — but never suppress a log that already triggered an alert
 
 import pool from './db.js';
 
@@ -32,25 +36,10 @@ export async function runDetectionRules(userId, logIds = null) {
   const suppressRules = rules.filter(r => r.action === 'suppress');
   const alertRules    = rules.filter(r => r.action !== 'suppress');
 
-  // Build suppressed log ID set
-  const suppressedLogIds = new Set();
-  for (const rule of suppressRules) {
-    const { params, conds } = ruleConditions(rule, userId);
-    if (logIds) {
-      params.push(logIds);
-      conds.push(`l.id = ANY($${params.length})`);
-    } else {
-      conds.push(`l.timestamp > NOW() - INTERVAL '24 hours'`);
-    }
-    const { rows } = await pool.query(
-      `SELECT l.id FROM logs l WHERE ${conds.join(' AND ')} LIMIT 10000`,
-      params
-    );
-    rows.forEach(r => suppressedLogIds.add(r.id));
-  }
-
+  // Step 1: Run alert rules first, track which log IDs triggered alerts
   let created = 0;
   let deduped = 0;
+  const alertedLogIds = new Set();
 
   for (const rule of alertRules) {
     const { params, conds } = ruleConditions(rule, userId);
@@ -70,8 +59,6 @@ export async function runDetectionRules(userId, logIds = null) {
     );
 
     for (const log of matches) {
-      if (suppressedLogIds.has(log.id)) continue;
-
       const result = await pool.query(
         `INSERT INTO alerts (user_id, rule_id, log_id, title, severity, host, source_ip, username, event_id, message, count, last_seen)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 1, NOW())
@@ -82,10 +69,30 @@ export async function runDetectionRules(userId, logIds = null) {
          log.host, log.source_ip, log.username, log.event_id,
          log.message ? log.message.slice(0, 500) : null]
       );
+      alertedLogIds.add(log.id);
       if (result.rows[0]?.inserted) created++;
       else deduped++;
     }
   }
 
-  return { created, deduped };
+  // Step 2: Build suppressed log ID set — never suppress a log that triggered an alert
+  const suppressedLogIds = new Set();
+  for (const rule of suppressRules) {
+    const { params, conds } = ruleConditions(rule, userId);
+    if (logIds) {
+      params.push(logIds);
+      conds.push(`l.id = ANY($${params.length})`);
+    } else {
+      conds.push(`l.timestamp > NOW() - INTERVAL '24 hours'`);
+    }
+    const { rows } = await pool.query(
+      `SELECT l.id FROM logs l WHERE ${conds.join(' AND ')} LIMIT 10000`,
+      params
+    );
+    rows.forEach(r => {
+      if (!alertedLogIds.has(r.id)) suppressedLogIds.add(r.id);
+    });
+  }
+
+  return { created, deduped, suppressed: suppressedLogIds.size };
 }
