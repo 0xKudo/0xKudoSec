@@ -462,6 +462,7 @@ export function SiemDashboard({ onNavigate }) {
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [selectedAlert, setSelectedAlert] = useState(null);
   const [contextMenu, setContextMenu] = useState(null); // { x, y, row }
+  const loadingRef = useRef(false);
 
   // Debounce search input 300ms
   useEffect(() => {
@@ -471,6 +472,8 @@ export function SiemDashboard({ onNavigate }) {
   const { widths, onMouseDown } = useResizableColumns(COL_DEFAULTS_W);
 
   const load = useCallback(async () => {
+    if (loadingRef.current) return;
+    loadingRef.current = true;
     setLoading(true);
     setError(null);
     try {
@@ -533,12 +536,13 @@ export function SiemDashboard({ onNavigate }) {
       setError(e.message);
     } finally {
       setLoading(false);
+      loadingRef.current = false;
     }
   }, [hours, sevFilter, catFilter, srcFilter, debouncedSearch, getAccessTokenSilently]);
 
   useEffect(() => {
     load();
-    const interval = setInterval(load, 30000);
+    const interval = setInterval(load, 60000);
     return () => clearInterval(interval);
   }, [load]);
 
