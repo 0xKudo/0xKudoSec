@@ -332,7 +332,7 @@ router.get('/events/process-tree', wrap(async (req, res) => {
           UNION ALL
           SELECT * FROM descendants
         )
-        SELECT * FROM combined ORDER BY depth ASC, timestamp ASC`,
+        SELECT * FROM combined ORDER BY depth ASC, timestamp DESC`,
       [process_guid, userId]
     );
     return res.json({ mode: 'guid', nodes: rows });
