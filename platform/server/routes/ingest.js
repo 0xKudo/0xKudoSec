@@ -6,6 +6,7 @@ import pool from '../services/db.js';
 import { normalizeEvent } from '../services/ingest/normalizeEvent.js';
 import { broadcast } from '../services/wsBroadcast.js';
 import { requireAuth } from '../middleware/requireAuth.js';
+import { runDetectionRules } from '../services/detection.js';
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -61,10 +62,11 @@ router.post('/beats', requireIngestKey, async (req, res) => {
 
 async function insertEvents(events, userId) {
   let accepted = 0;
+  const insertedIds = [];
   for (const raw of events) {
     try {
       const e = normalizeEvent(raw);
-      await pool.query(
+      const { rows } = await pool.query(
         `INSERT INTO logs (
           source, host, source_ip, dest_ip, dest_port, protocol,
           timestamp, level, severity, event_id, event_category,
@@ -75,7 +77,7 @@ async function insertEvents(events, userId) {
         ) VALUES (
           $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,
           $12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25
-        )`,
+        ) RETURNING id`,
         [
           e.source, e.host, e.source_ip, e.dest_ip, e.dest_port, e.protocol,
           e.timestamp, e.level, e.severity, e.event_id, e.event_category,
@@ -85,6 +87,7 @@ async function insertEvents(events, userId) {
           e.file_path, e.registry_key, JSON.stringify(e.raw), userId,
         ]
       );
+      insertedIds.push(rows[0].id);
       await pool.query(
         `INSERT INTO ingest_sources (name, type, last_seen, event_count, user_id)
          VALUES ($1, $2, NOW(), 1, $3)
@@ -97,6 +100,14 @@ async function insertEvents(events, userId) {
       console.error('Failed to insert event:', err.message);
     }
   }
+
+  // Run detection rules against only the newly inserted log IDs — fire and forget
+  if (insertedIds.length && userId) {
+    runDetectionRules(userId, insertedIds).then(({ created }) => {
+      if (created > 0) broadcast('new_alerts', { count: created });
+    }).catch(err => console.error('Detection error:', err.message));
+  }
+
   return accepted;
 }
 
