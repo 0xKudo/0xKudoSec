@@ -278,6 +278,18 @@ function DonutChart({ severities, sevFilter, onSliceClick, size = 88 }) {
     angle += sweep;
   }
 
+  // Single slice — SVG arc can't draw a full circle, render as two rings instead
+  if (slices.length === 1) {
+    const { sev, count, share } = slices[0];
+    return (
+      <svg width={size} height={size} style={{ flexShrink: 0, cursor: 'pointer' }} onClick={() => onSliceClick(sev)}>
+        <circle cx={cx} cy={cy} r={R} fill={sevColorHex(sev)} opacity={0.8} stroke="var(--bg-surface)" strokeWidth="1.5" />
+        <circle cx={cx} cy={cy} r={r} fill="var(--bg-surface)" />
+        <title>{sev}: {count.toLocaleString()} ({Math.round(share * 100)}%)</title>
+      </svg>
+    );
+  }
+
   return (
     <svg width={size} height={size} style={{ flexShrink: 0, cursor: 'pointer' }}>
       {slices.map(({ sev, d, count, share }) => {
