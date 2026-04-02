@@ -55,7 +55,7 @@ const s = {
   title: { fontSize: '13px', color: 'var(--text-primary)', letterSpacing: '0.02em' },
   titleSub: { color: 'var(--text-muted)', fontSize: '11px' },
   body: { padding: '20px', display: 'flex', flexDirection: 'column', gap: '20px' },
-  row: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', alignItems: 'start' },
+  row: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' },
   panel: {
     background: 'var(--bg-surface)',
     border: '1px solid var(--border)',
@@ -142,7 +142,7 @@ const s = {
       flexShrink: 0,
     };
   },
-  workspaceLabel: { fontSize: '12px', color: 'var(--text-primary)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
+  workspaceLabel: { fontSize: '12px', color: 'var(--text-primary)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 },
   workspaceMeta: { fontSize: '11px', color: 'var(--text-muted)', whiteSpace: 'nowrap' },
   fullWidthPanel: {
     background: 'var(--bg-surface)',
