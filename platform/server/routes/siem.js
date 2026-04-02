@@ -33,8 +33,32 @@ function uid(req) {
   return req.auth.sub;
 }
 
-router.get('/stats', async (req, res) => {
+router.get('/stats', wrap(async (req, res) => {
   const hours = hoursParam(req);
+  const userId = uid(req);
+
+  const { rows: suppressRules } = await pool.query(
+    `SELECT * FROM detection_rules WHERE user_id = $1 AND enabled = true AND action = 'suppress'`,
+    [userId]
+  );
+
+  const params = [userId];
+  const conditions = [`user_id = $1`, `timestamp > NOW() - INTERVAL '${hours} hours'`];
+  for (const rule of suppressRules) {
+    const ruleConds = [];
+    if (rule.match_event_id)  { params.push(rule.match_event_id);        ruleConds.push(`event_id = $${params.length}`); }
+    if (rule.match_category)  { params.push(rule.match_category);        ruleConds.push(`event_category = $${params.length}`); }
+    if (rule.match_severity)  { params.push(rule.match_severity);        ruleConds.push(`severity = $${params.length}`); }
+    if (rule.match_username)  { params.push(`%${rule.match_username}%`); ruleConds.push(`username ILIKE $${params.length}`); }
+    if (rule.match_host)      { params.push(`%${rule.match_host}%`);     ruleConds.push(`host ILIKE $${params.length}`); }
+    if (rule.match_message)   { params.push(`%${rule.match_message}%`);  ruleConds.push(`message ILIKE $${params.length}`); }
+    if (rule.match_process)   { params.push(`%${rule.match_process}%`);  ruleConds.push(`process_name ILIKE $${params.length}`); }
+    if (rule.match_src_ip)    { params.push(`%${rule.match_src_ip}%`);   ruleConds.push(`source_ip::text ILIKE $${params.length}`); }
+    if (rule.match_dest_ip)   { params.push(`%${rule.match_dest_ip}%`);  ruleConds.push(`dest_ip::text ILIKE $${params.length}`); }
+    if (rule.match_dest_port) { params.push(rule.match_dest_port);       ruleConds.push(`dest_port = $${params.length}`); }
+    if (ruleConds.length) conditions.push(`NOT (${ruleConds.join(' AND ')})`);
+  }
+
   const { rows } = await pool.query(
     `SELECT
       COUNT(*)                                          AS total,
@@ -42,11 +66,11 @@ router.get('/stats', async (req, res) => {
       COUNT(*) FILTER (WHERE severity = 'high')        AS high,
       COUNT(*) FILTER (WHERE event_id = 4625)          AS failed_logins
      FROM logs
-     WHERE user_id = $1 AND timestamp > NOW() - INTERVAL '${hours} hours'`,
-    [uid(req)]
+     WHERE ${conditions.join(' AND ')}`,
+    params
   );
   res.json(rows[0]);
-});
+}));
 
 // Field aliases for field:value search syntax
 const FIELD_ALIASES = {
