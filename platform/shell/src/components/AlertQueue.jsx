@@ -104,7 +104,6 @@ function sevColor(sev) { return SEV_COLOR[(sev || '').toLowerCase()] || 'var(--t
 
 export function AlertQueue({ onNavigate }) {
   const { getAccessTokenSilently } = useAuth0();
-  const navigate = useNavigate();
   const [alerts, setAlerts] = useState([]);
   const [counts, setCounts] = useState({});
   const [statusFilter, setStatusFilter] = useState(null);
