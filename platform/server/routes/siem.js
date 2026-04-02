@@ -33,31 +33,36 @@ function uid(req) {
   return req.auth.sub;
 }
 
+// Fetch active suppress rules and return inline NOT(...) conditions + params to append to any query.
+// Pass params array (already containing [$1=userId, ...]) and conditions array to mutate in place.
+async function applySuppressFilters(userId, params, conditions) {
+  const { rows: rules } = await pool.query(
+    `SELECT * FROM detection_rules WHERE user_id = $1 AND enabled = true AND action = 'suppress'`,
+    [userId]
+  );
+  for (const rule of rules) {
+    const rc = [];
+    if (rule.match_event_id)  { params.push(rule.match_event_id);        rc.push(`event_id = $${params.length}`); }
+    if (rule.match_category)  { params.push(rule.match_category);        rc.push(`event_category = $${params.length}`); }
+    if (rule.match_severity)  { params.push(rule.match_severity);        rc.push(`severity = $${params.length}`); }
+    if (rule.match_username)  { params.push(`%${rule.match_username}%`); rc.push(`username ILIKE $${params.length}`); }
+    if (rule.match_host)      { params.push(`%${rule.match_host}%`);     rc.push(`host ILIKE $${params.length}`); }
+    if (rule.match_message)   { params.push(`%${rule.match_message}%`);  rc.push(`message ILIKE $${params.length}`); }
+    if (rule.match_process)   { params.push(`%${rule.match_process}%`);  rc.push(`process_name ILIKE $${params.length}`); }
+    if (rule.match_src_ip)    { params.push(`%${rule.match_src_ip}%`);   rc.push(`source_ip::text ILIKE $${params.length}`); }
+    if (rule.match_dest_ip)   { params.push(`%${rule.match_dest_ip}%`);  rc.push(`dest_ip::text ILIKE $${params.length}`); }
+    if (rule.match_dest_port) { params.push(rule.match_dest_port);       rc.push(`dest_port = $${params.length}`); }
+    if (rc.length) conditions.push(`NOT (${rc.join(' AND ')})`);
+  }
+}
+
 router.get('/stats', wrap(async (req, res) => {
   const hours = hoursParam(req);
   const userId = uid(req);
 
-  const { rows: suppressRules } = await pool.query(
-    `SELECT * FROM detection_rules WHERE user_id = $1 AND enabled = true AND action = 'suppress'`,
-    [userId]
-  );
-
   const params = [userId];
   const conditions = [`user_id = $1`, `timestamp > NOW() - INTERVAL '${hours} hours'`];
-  for (const rule of suppressRules) {
-    const ruleConds = [];
-    if (rule.match_event_id)  { params.push(rule.match_event_id);        ruleConds.push(`event_id = $${params.length}`); }
-    if (rule.match_category)  { params.push(rule.match_category);        ruleConds.push(`event_category = $${params.length}`); }
-    if (rule.match_severity)  { params.push(rule.match_severity);        ruleConds.push(`severity = $${params.length}`); }
-    if (rule.match_username)  { params.push(`%${rule.match_username}%`); ruleConds.push(`username ILIKE $${params.length}`); }
-    if (rule.match_host)      { params.push(`%${rule.match_host}%`);     ruleConds.push(`host ILIKE $${params.length}`); }
-    if (rule.match_message)   { params.push(`%${rule.match_message}%`);  ruleConds.push(`message ILIKE $${params.length}`); }
-    if (rule.match_process)   { params.push(`%${rule.match_process}%`);  ruleConds.push(`process_name ILIKE $${params.length}`); }
-    if (rule.match_src_ip)    { params.push(`%${rule.match_src_ip}%`);   ruleConds.push(`source_ip::text ILIKE $${params.length}`); }
-    if (rule.match_dest_ip)   { params.push(`%${rule.match_dest_ip}%`);  ruleConds.push(`dest_ip::text ILIKE $${params.length}`); }
-    if (rule.match_dest_port) { params.push(rule.match_dest_port);       ruleConds.push(`dest_port = $${params.length}`); }
-    if (ruleConds.length) conditions.push(`NOT (${ruleConds.join(' AND ')})`);
-  }
+  if (req.query.showSuppressed !== '1') await applySuppressFilters(userId, params, conditions);
 
   const { rows } = await pool.query(
     `SELECT
@@ -140,34 +145,13 @@ router.get('/events/recent', wrap(async (req, res) => {
   const rawQ = typeof req.query.q === 'string' ? req.query.q.replace(/\0/g, '').slice(0, 200) : null;
   const q = rawQ && rawQ.trim() ? rawQ.trim() : null;
 
-  // Load suppress rules once, then inline as NOT EXISTS clauses — single round-trip
-  const { rows: suppressRules } = await pool.query(
-    `SELECT * FROM detection_rules WHERE user_id = $1 AND enabled = true AND action = 'suppress'`,
-    [userId]
-  );
-
   const params = [userId];
   const conditions = [`user_id = $1`, `timestamp > NOW() - INTERVAL '${hours} hours'`];
   if (sev) { params.push(sev); conditions.push(`severity = $${params.length}`); }
   if (cat) { params.push(cat); conditions.push(`event_category = $${params.length}`); }
   if (src) { params.push(src); conditions.push(`source = $${params.length}`); }
   for (const c of buildSearchConditions(q, params)) conditions.push(c);
-
-  // For each suppress rule, add inline field-level conditions directly on the main query row
-  for (const rule of suppressRules) {
-    const ruleConds = [];
-    if (rule.match_event_id)  { params.push(rule.match_event_id);               ruleConds.push(`event_id = $${params.length}`); }
-    if (rule.match_category)  { params.push(rule.match_category);               ruleConds.push(`event_category = $${params.length}`); }
-    if (rule.match_severity)  { params.push(rule.match_severity);               ruleConds.push(`severity = $${params.length}`); }
-    if (rule.match_username)  { params.push(`%${rule.match_username}%`);        ruleConds.push(`username ILIKE $${params.length}`); }
-    if (rule.match_host)      { params.push(`%${rule.match_host}%`);            ruleConds.push(`host ILIKE $${params.length}`); }
-    if (rule.match_message)   { params.push(`%${rule.match_message}%`);         ruleConds.push(`message ILIKE $${params.length}`); }
-    if (rule.match_process)   { params.push(`%${rule.match_process}%`);         ruleConds.push(`process_name ILIKE $${params.length}`); }
-    if (rule.match_src_ip)    { params.push(`%${rule.match_src_ip}%`);          ruleConds.push(`source_ip::text ILIKE $${params.length}`); }
-    if (rule.match_dest_ip)   { params.push(`%${rule.match_dest_ip}%`);         ruleConds.push(`dest_ip::text ILIKE $${params.length}`); }
-    if (rule.match_dest_port) { params.push(rule.match_dest_port);              ruleConds.push(`dest_port = $${params.length}`); }
-    if (ruleConds.length) conditions.push(`NOT (${ruleConds.join(' AND ')})`);
-  }
+  if (req.query.showSuppressed !== '1') await applySuppressFilters(userId, params, conditions);
 
   const { rows } = await pool.query(
     `SELECT id, timestamp, severity, event_id, event_category, message,
@@ -206,18 +190,18 @@ router.get('/events/by-source', async (req, res) => {
   res.json(rows);
 });
 
-router.get('/events/top-event-ids', async (req, res) => {
+router.get('/events/top-event-ids', wrap(async (req, res) => {
   const hours = hoursParam(req);
+  const userId = uid(req);
+  const params = [userId];
+  const conditions = [`user_id = $1`, `timestamp > NOW() - INTERVAL '${hours} hours'`, `event_id IS NOT NULL`];
+  if (req.query.showSuppressed !== '1') await applySuppressFilters(userId, params, conditions);
   const { rows } = await pool.query(
-    `SELECT event_id, COUNT(*) AS count
-     FROM logs
-     WHERE user_id = $1 AND timestamp > NOW() - INTERVAL '${hours} hours'
-       AND event_id IS NOT NULL
-     GROUP BY event_id ORDER BY count DESC LIMIT 10`,
-    [uid(req)]
+    `SELECT event_id, COUNT(*) AS count FROM logs WHERE ${conditions.join(' AND ')} GROUP BY event_id ORDER BY count DESC LIMIT 10`,
+    params
   );
   res.json(rows);
-});
+}));
 
 router.get('/events/top-usernames', async (req, res) => {
   const hours = hoursParam(req);

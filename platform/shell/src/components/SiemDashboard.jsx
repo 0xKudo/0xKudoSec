@@ -318,7 +318,7 @@ function DonutChart({ severities, sevFilter, onSliceClick, size = 88 }) {
 }
 
 // Slide-in filter panel
-function FilterPanel({ open, onClose, hours, setHours, sevFilter, setSevFilter, catFilter, setCatFilter, srcFilter, setSrcFilter, categories, sourcesList, visibleCols, setVisibleCols }) {
+function FilterPanel({ open, onClose, hours, setHours, sevFilter, setSevFilter, catFilter, setCatFilter, srcFilter, setSrcFilter, categories, sourcesList, visibleCols, setVisibleCols, showSuppressed, setShowSuppressed }) {
   if (!open) return null;
   // Show categories present in data; fall back to full list if data not loaded yet
   const catOptions = categories.length ? categories : ALL_CATEGORIES;
@@ -388,6 +388,20 @@ function FilterPanel({ open, onClose, hours, setHours, sevFilter, setSevFilter, 
             </div>
           </div>
         )}
+
+        {/* Suppressed Events */}
+        <div style={s.panelSection}>
+          <div style={s.panelSectionTitle}>Suppressed Events</div>
+          <label style={{ ...s.checkRow, cursor: 'pointer' }}>
+            <input
+              type="checkbox"
+              checked={showSuppressed}
+              onChange={() => setShowSuppressed(v => !v)}
+              style={{ accentColor: 'var(--text-muted)', cursor: 'pointer' }}
+            />
+            Show suppressed events
+          </label>
+        </div>
 
         {/* Columns */}
         <div style={s.panelSection}>
@@ -463,6 +477,7 @@ export function SiemDashboard({ onNavigate }) {
   const [selectedAlert, setSelectedAlert] = useState(null);
   const [contextMenu, setContextMenu] = useState(null); // { x, y, row }
   const loadingRef = useRef(false);
+  const [showSuppressed, setShowSuppressed] = useState(false);
 
   // Debounce search input 300ms
   useEffect(() => {
@@ -479,17 +494,19 @@ export function SiemDashboard({ onNavigate }) {
     try {
       const token = await getAccessTokenSilently();
       const headers = { Authorization: `Bearer ${token}` };
+      const sup = showSuppressed ? '&showSuppressed=1' : '';
       const h = `?hours=${hours}`;
       const recentParams = new URLSearchParams({ hours });
       if (sevFilter) recentParams.set('severity', sevFilter);
       if (catFilter) recentParams.set('category', catFilter);
       if (srcFilter) recentParams.set('source', srcFilter);
       if (debouncedSearch.trim()) recentParams.set('q', debouncedSearch.trim());
+      if (showSuppressed) recentParams.set('showSuppressed', '1');
       const recentUrl = `/api/siem/events/recent?${recentParams}`;
 
       const [statsRes, sevRes, srcRes, recentRes, catRes, srcListRes, alertCountsRes, alertsRes,
              topIdsRes, failedLoginsRes, topUsersRes, alertTrendRes, ruleHitsRes] = await Promise.all([
-        fetch(`/api/siem/stats${h}`, { headers }),
+        fetch(`/api/siem/stats${h}${sup}`, { headers }),
         fetch(`/api/siem/events/by-severity${h}`, { headers }),
         fetch(`/api/siem/events/by-source${h}`, { headers }),
         fetch(recentUrl, { headers }),
@@ -497,7 +514,7 @@ export function SiemDashboard({ onNavigate }) {
         fetch(`/api/siem/events/sources-list${h}`, { headers }),
         fetch('/api/siem/alerts/counts', { headers }),
         fetch('/api/siem/alerts?status=new', { headers }),
-        fetch(`/api/siem/events/top-event-ids${h}`, { headers }),
+        fetch(`/api/siem/events/top-event-ids${h}${sup}`, { headers }),
         fetch(`/api/siem/events/failed-logins${h}`, { headers }),
         fetch(`/api/siem/events/top-usernames${h}`, { headers }),
         fetch('/api/siem/alerts/trend', { headers }),
@@ -538,7 +555,7 @@ export function SiemDashboard({ onNavigate }) {
       setLoading(false);
       loadingRef.current = false;
     }
-  }, [hours, sevFilter, catFilter, srcFilter, debouncedSearch, getAccessTokenSilently]);
+  }, [hours, sevFilter, catFilter, srcFilter, debouncedSearch, showSuppressed, getAccessTokenSilently]);
 
   useEffect(() => {
     load();
@@ -608,6 +625,7 @@ export function SiemDashboard({ onNavigate }) {
         srcFilter={srcFilter} setSrcFilter={setSrcFilter}
         categories={categories} sourcesList={sourcesList}
         visibleCols={visibleCols} setVisibleCols={setVisibleCols}
+        showSuppressed={showSuppressed} setShowSuppressed={setShowSuppressed}
       />
 
       {error && <div style={s.error}>Error loading data: {error}</div>}
