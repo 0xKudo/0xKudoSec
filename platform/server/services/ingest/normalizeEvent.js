@@ -115,69 +115,129 @@ const FLUENT_BIT_EVENTTYPE_MAP = {
   verbose: 'info',
 };
 
-function normalizeSeverityFluentBit(eventType, eventId) {
-  if (eventId && HIGH_SEVERITY_EVENT_IDS.has(Number(eventId))) return 'high';
-  return FLUENT_BIT_EVENTTYPE_MAP[String(eventType || '').toLowerCase()] || 'info';
-}
+// Sysmon events via Fluent Bit winevtlog input.
+// All structured data is in StringInserts at fixed positions per event ID.
+// Confirmed from live winevtlog Event ID 1 sample.
+//
+// Event ID 1 (Process Create) StringInserts positions:
+//   [0]=RuleName, [1]=UtcTime, [2]=ProcessGuid, [3]=ProcessId, [4]=Image,
+//   [5]=FileVersion, [6]=Description, [7]=Product, [8]=Company, [9]=OriginalFileName,
+//   [10]=CommandLine, [11]=CurrentDirectory, [12]=User, [13]=LogonGuid,
+//   [14]=LogonId, [15]=TerminalSessionId, [16]=IntegrityLevel, [17]=Hashes,
+//   [18]=ParentProcessGuid, [19]=ParentProcessId, [20]=ParentImage,
+//   [21]=ParentCommandLine, [22]=ParentUser
+//
+// Event ID 3 (Network Connect) StringInserts positions (confirmed from Sysmon docs):
+//   [0]=RuleName, [1]=UtcTime, [2]=ProcessGuid, [3]=ProcessId, [4]=Image,
+//   [5]=User, [6]=Protocol, [7]=Initiated, [8]=SourceIsIpv6, [9]=SourceIp,
+//   [10]=SourceHostname, [11]=SourcePort, [12]=SourcePortName, [13]=DestIsIpv6,
+//   [14]=DestinationIp, [15]=DestinationHostname, [16]=DestinationPort, [17]=DestinationPortName
+//
+// Event ID 11 (File Create): [4]=Image, [5]=TargetFilename, [12]=User (approx)
+// Event ID 13 (Registry Set): [4]=Image, [5]=TargetObject, [6]=Details
+function fluentBitSysmonFields(eventId, inserts) {
+  if (!Array.isArray(inserts)) return {};
+  const id = Number(eventId);
 
-// Sysmon events from Fluent Bit winlog input expose structured fields directly on the record.
-// Field names vary by Sysmon event ID. This will be expanded once we have a live sample.
-// Known Sysmon field names (from Fluent Bit winlog XML parsing):
-//   Event ID 1 (Process Create): Image, CommandLine, ParentImage, ParentCommandLine, User
-//   Event ID 3 (Network Connect): SourceIp, SourcePort, DestinationIp, DestinationPort, Image, Protocol
-//   Event ID 11 (File Create): TargetFilename, Image
-//   Event ID 13 (Registry): TargetObject, Details, Image
-// TODO: expand with confirmed field names once Sysmon channel is added to Fluent Bit config.
-function fluentBitSysmonFields(raw) {
-  return {
-    source_ip: raw.SourceIp || raw.SourceAddress || null,
-    dest_ip: raw.DestinationIp || raw.DestinationAddress || null,
-    dest_port: raw.DestinationPort ? Number(raw.DestinationPort) : null,
-    protocol: raw.Protocol || null,
-    process_name: raw.Image || null,
-    process_id: raw.ProcessId ? Number(raw.ProcessId) : null,
-    parent_process_name: raw.ParentImage || null,
-    username: raw.User || null,
-    file_path: raw.TargetFilename || raw.ObjectName || null,
-    registry_key: raw.TargetObject || null,
-  };
+  if (id === 1) {
+    const user = inserts[12] || null;
+    const [domain, username] = user ? user.split('\\') : [null, null];
+    return {
+      process_id: inserts[3] ? Number(inserts[3]) : null,
+      process_name: inserts[4] || null,
+      parent_process_id: inserts[19] ? Number(inserts[19]) : null,
+      parent_process_name: inserts[20] || null,
+      username: username || user || null,
+      domain: domain || null,
+      source_ip: null, dest_ip: null, dest_port: null, protocol: null,
+      file_path: null, registry_key: null,
+    };
+  }
+
+  if (id === 3) {
+    const user = inserts[5] || null;
+    const [domain, username] = user ? user.split('\\') : [null, null];
+    return {
+      process_id: inserts[3] ? Number(inserts[3]) : null,
+      process_name: inserts[4] || null,
+      username: username || user || null,
+      domain: domain || null,
+      protocol: inserts[6] || null,
+      source_ip: inserts[9] || null,
+      dest_ip: inserts[14] || null,
+      dest_port: inserts[16] ? Number(inserts[16]) : null,
+      parent_process_name: null, file_path: null, registry_key: null,
+    };
+  }
+
+  if (id === 11) {
+    return {
+      process_name: inserts[4] || null,
+      file_path: inserts[5] || null,
+      source_ip: null, dest_ip: null, dest_port: null, protocol: null,
+      username: null, domain: null, process_id: null, parent_process_name: null, registry_key: null,
+    };
+  }
+
+  if (id === 13) {
+    return {
+      process_name: inserts[4] || null,
+      registry_key: inserts[5] || null,
+      source_ip: null, dest_ip: null, dest_port: null, protocol: null,
+      username: null, domain: null, process_id: null, parent_process_name: null, file_path: null,
+    };
+  }
+
+  return {};
 }
 
 function normalizeFluentBit(raw) {
   const eventId = raw.EventID;
-  const eventType = raw.EventType;
   const channel = raw.Channel || '';
-  const isSysmon = channel.toLowerCase().includes('sysmon');
+  const isSysmon = channel.toLowerCase().includes('sysmon') && raw.ProviderName === 'Microsoft-Windows-Sysmon';
+
+  // winevtlog uses Level (number) instead of EventType (string)
+  // Level: 1=critical, 2=error, 3=warning, 4=information, 5=verbose
+  const levelNum = raw.Level;
+  const eventType = raw.EventType; // winlog plugin (fallback)
+  let severityLevel;
+  if (levelNum !== undefined) {
+    const LEVEL_MAP = { 1: 'critical', 2: 'high', 3: 'medium', 4: 'info', 5: 'info' };
+    severityLevel = LEVEL_MAP[levelNum] || 'info';
+  } else {
+    severityLevel = FLUENT_BIT_EVENTTYPE_MAP[String(eventType || '').toLowerCase()] || 'info';
+  }
+  if (eventId && HIGH_SEVERITY_EVENT_IDS.has(Number(eventId))) severityLevel = 'high';
 
   let fields = {};
   if (isSysmon) {
-    fields = fluentBitSysmonFields(raw);
+    fields = fluentBitSysmonFields(eventId, raw.StringInserts);
   } else {
     fields = fluentBitNetworkFields(eventId, raw.StringInserts);
   }
 
-  // Parse username from Security auth events (4624, 4625, etc.) out of StringInserts.
-  // For auth events: SubjectUserName = inserts[1], TargetUserName = inserts[5] (approx).
-  // Message text is authoritative but large — use StringInserts heuristically for now.
-  // TODO: expand with confirmed positions once we have auth event samples.
-  let username = fields.username || null;
-  let domain = null;
+  // winevtlog uses Computer, TimeCreated; winlog uses ComputerName, TimeGenerated
+  const host = raw.Computer || raw.ComputerName || null;
+  const timestamp = raw.TimeCreated || raw.TimeGenerated || null;
+  const levelStr = levelNum !== undefined
+    ? ({ 1: 'critical', 2: 'error', 3: 'warning', 4: 'information', 5: 'verbose' }[levelNum] || 'info')
+    : String(eventType || '').toLowerCase();
 
   return {
     source: 'fluent-bit',
-    host: raw.ComputerName || null,
+    host,
     source_ip: fields.source_ip || null,
     dest_ip: fields.dest_ip || null,
     dest_port: fields.dest_port || null,
     protocol: fields.protocol || null,
-    timestamp: raw.TimeGenerated || null,
-    level: String(eventType || '').toLowerCase() || null,
-    severity: normalizeSeverityFluentBit(eventType, eventId),
+    timestamp,
+    level: levelStr,
+    severity: severityLevel,
     event_id: eventId ? Number(eventId) : null,
     event_category: categoryFromEventId(eventId) || null,
     message: raw.Message || null,
-    username,
-    domain,
+    username: fields.username || null,
+    domain: fields.domain || null,
     logon_type: null,
     process_name: fields.process_name || null,
     process_id: fields.process_id || null,
