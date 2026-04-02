@@ -503,23 +503,26 @@ router.get('/rules', wrap(async (req, res) => {
 }));
 
 router.post('/rules', wrap(async (req, res) => {
-  const { name, description, enabled, severity, match_event_id, match_category,
+  const { name, description, enabled, severity, action, match_event_id, match_category,
           match_severity, match_username, match_host, match_message,
           match_process, match_src_ip, match_dest_ip } = req.body;
   if (!name || typeof name !== 'string' || !name.trim()) return res.status(400).json({ error: 'name required' });
   const validSev = ['critical', 'high', 'medium', 'low', 'info'];
+  const validActions = ['alert', 'suppress'];
   const ruleSev = validSev.includes(severity) ? severity : 'high';
+  const ruleAction = validActions.includes(action) ? action : 'alert';
   const { rows } = await pool.query(
     `INSERT INTO detection_rules
-      (user_id, name, description, enabled, severity,
+      (user_id, name, description, enabled, severity, action,
        match_event_id, match_category, match_severity, match_username,
        match_host, match_message, match_process, match_src_ip, match_dest_ip)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
      RETURNING *`,
     [uid(req), name.trim().slice(0, 255),
      description ? String(description).slice(0, 1000) : null,
      enabled !== false,
      ruleSev,
+     ruleAction,
      match_event_id ? parseInt(match_event_id, 10) || null : null,
      match_category ? String(match_category).slice(0, 64) : null,
      validSev.includes(match_severity) ? match_severity : null,
