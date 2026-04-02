@@ -292,13 +292,19 @@ router.get('/events/process-tree', wrap(async (req, res) => {
     // GUID-based recursive walk — reliable even across PID recycling
     const { rows } = await pool.query(
       `WITH RECURSIVE
-        anchor AS (
-          SELECT id, process_guid, parent_process_guid, process_name, process_id,
-                 parent_process_name, parent_process_id, username, host, timestamp,
-                 event_id, message
+        -- One representative row per process_guid: prefer EID 1 (process create), else earliest row
+        best_rows AS (
+          SELECT DISTINCT ON (UPPER(process_guid))
+                 id, process_guid, parent_process_guid, process_name, process_id,
+                 parent_process_name, parent_process_id, username, host, timestamp, event_id, message
           FROM logs
-          WHERE UPPER(process_guid) = UPPER($1) AND user_id = $2
-          LIMIT 1
+          WHERE user_id = $2 AND process_guid IS NOT NULL
+          ORDER BY UPPER(process_guid),
+                   CASE WHEN event_id = 1 THEN 0 ELSE 1 END,
+                   timestamp ASC
+        ),
+        anchor AS (
+          SELECT * FROM best_rows WHERE UPPER(process_guid) = UPPER($1)
         ),
         ancestors AS (
           SELECT a.id, a.process_guid, a.parent_process_guid, a.process_name, a.process_id,
@@ -306,26 +312,26 @@ router.get('/events/process-tree', wrap(async (req, res) => {
                  a.event_id, a.message, 0 AS depth
           FROM anchor a
           UNION ALL
-          SELECT l.id, l.process_guid, l.parent_process_guid, l.process_name, l.process_id,
-                 l.parent_process_name, l.parent_process_id, l.username, l.host, l.timestamp,
-                 l.event_id, l.message, anc.depth - 1
-          FROM logs l
-          JOIN ancestors anc ON UPPER(l.process_guid) = UPPER(anc.parent_process_guid)
-          WHERE l.user_id = $2 AND anc.depth > -20
+          SELECT b.id, b.process_guid, b.parent_process_guid, b.process_name, b.process_id,
+                 b.parent_process_name, b.parent_process_id, b.username, b.host, b.timestamp,
+                 b.event_id, b.message, anc.depth - 1
+          FROM best_rows b
+          JOIN ancestors anc ON UPPER(b.process_guid) = UPPER(anc.parent_process_guid)
+          WHERE anc.depth > -20
         ),
         descendants AS (
-          SELECT id, process_guid, parent_process_guid, process_name, process_id,
-                 parent_process_name, parent_process_id, username, host, timestamp,
-                 event_id, message, 1 AS depth
-          FROM logs
-          WHERE UPPER(parent_process_guid) = UPPER($1) AND user_id = $2
+          SELECT b.id, b.process_guid, b.parent_process_guid, b.process_name, b.process_id,
+                 b.parent_process_name, b.parent_process_id, b.username, b.host, b.timestamp,
+                 b.event_id, b.message, 1 AS depth
+          FROM best_rows b
+          WHERE UPPER(b.parent_process_guid) = UPPER($1)
           UNION ALL
-          SELECT l.id, l.process_guid, l.parent_process_guid, l.process_name, l.process_id,
-                 l.parent_process_name, l.parent_process_id, l.username, l.host, l.timestamp,
-                 l.event_id, l.message, d.depth + 1
-          FROM logs l
-          JOIN descendants d ON UPPER(l.parent_process_guid) = UPPER(d.process_guid)
-          WHERE l.user_id = $2 AND d.depth < 20
+          SELECT b.id, b.process_guid, b.parent_process_guid, b.process_name, b.process_id,
+                 b.parent_process_name, b.parent_process_id, b.username, b.host, b.timestamp,
+                 b.event_id, b.message, d.depth + 1
+          FROM best_rows b
+          JOIN descendants d ON UPPER(b.parent_process_guid) = UPPER(d.process_guid)
+          WHERE d.depth < 20
         ),
         combined AS (
           SELECT * FROM ancestors
