@@ -64,6 +64,11 @@ CREATE INDEX IF NOT EXISTS logs_parent_guid_idx  ON logs (parent_process_guid);
 - **ingest_sources cleanup** — deleted stale node-shipper row from `ingest_sources` table on VPS; fluent-bit and winlogbeat are now the only active sources
 - **AlertQueue blank screen fix** — removed stray `useNavigate()` call left over from process tree refactor
 
+### Recently Completed (2026-04-02, continued)
+- **CVE Lookup from process tree** — navigates to CVE Exploit Mapper, switches app to tools mode, auto-triggers search; fix required path-based `activeApp` init in App.jsx (tools registry not available at init time)
+- **Tools dashboard equal panels** — fixed height 320px + `overflow: hidden` on panel; content scrolls inside, panels never grow unequally
+- **Dashboard panel key** — `overflow: hidden` is what enforces the height; `height` alone is not enough in flex children
+
 ### Next
 - Phase 4: Electron + Proxy tool
 
