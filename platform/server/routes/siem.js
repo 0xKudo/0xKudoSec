@@ -281,6 +281,98 @@ router.get('/events/failed-logins', wrap(async (req, res) => {
   res.json(rows);
 }));
 
+// GET /api/siem/events/:id — fetch a single log row (used by alert detail to get process_guid)
+router.get('/events/:id', wrap(async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!id) return res.status(400).json({ error: 'Invalid id' });
+  const { rows } = await pool.query(
+    `SELECT id, timestamp, severity, event_id, event_category, source,
+            message, username, domain, host, source_ip, dest_ip, dest_port, protocol,
+            process_name, process_id, process_guid,
+            parent_process_name, parent_process_id, parent_process_guid,
+            file_path, registry_key
+     FROM logs WHERE id = $1 AND user_id = $2`,
+    [id, uid(req)]
+  );
+  if (!rows.length) return res.status(404).json({ error: 'Not found' });
+  res.json(rows[0]);
+}));
+
+// GET /api/siem/events/process-tree?process_guid=...&host=...&hours=24
+// Walks ancestors (up to root) and all descendants via recursive CTE using process_guid linkage.
+// Falls back to PID-based matching on same host/minute window when guids are unavailable.
+router.get('/events/process-tree', wrap(async (req, res) => {
+  const { process_guid, host, process_name, hours = 24 } = req.query;
+  const userId = uid(req);
+
+  if (process_guid) {
+    // GUID-based recursive walk — reliable even across PID recycling
+    const { rows } = await pool.query(
+      `WITH RECURSIVE
+        -- Walk ancestors: start at the target process, follow parent_process_guid upward
+        ancestors AS (
+          SELECT id, process_guid, parent_process_guid, process_name, process_id,
+                 parent_process_name, parent_process_id, username, host, timestamp,
+                 event_id, message, 0 AS depth
+          FROM logs
+          WHERE process_guid = $1 AND user_id = $2
+            AND timestamp > NOW() - INTERVAL '${parseInt(hours, 10) || 24} hours'
+          LIMIT 1
+          UNION ALL
+          SELECT l.id, l.process_guid, l.parent_process_guid, l.process_name, l.process_id,
+                 l.parent_process_name, l.parent_process_id, l.username, l.host, l.timestamp,
+                 l.event_id, l.message, a.depth - 1
+          FROM logs l
+          JOIN ancestors a ON l.process_guid = a.parent_process_guid
+          WHERE l.user_id = $2
+            AND l.timestamp > NOW() - INTERVAL '${parseInt(hours, 10) || 24} hours'
+            AND a.depth > -20
+        ),
+        -- Walk descendants: start at target, follow children downward
+        descendants AS (
+          SELECT id, process_guid, parent_process_guid, process_name, process_id,
+                 parent_process_name, parent_process_id, username, host, timestamp,
+                 event_id, message, 1 AS depth
+          FROM logs
+          WHERE parent_process_guid = $1 AND user_id = $2
+            AND timestamp > NOW() - INTERVAL '${parseInt(hours, 10) || 24} hours'
+          UNION ALL
+          SELECT l.id, l.process_guid, l.parent_process_guid, l.process_name, l.process_id,
+                 l.parent_process_name, l.parent_process_id, l.username, l.host, l.timestamp,
+                 l.event_id, l.message, d.depth + 1
+          FROM logs l
+          JOIN descendants d ON l.parent_process_guid = d.process_guid
+          WHERE l.user_id = $2
+            AND l.timestamp > NOW() - INTERVAL '${parseInt(hours, 10) || 24} hours'
+            AND d.depth < 20
+        )
+        SELECT * FROM ancestors
+        UNION ALL
+        SELECT * FROM descendants
+        ORDER BY depth ASC, timestamp ASC`,
+      [process_guid, userId]
+    );
+    return res.json({ mode: 'guid', nodes: rows });
+  }
+
+  // Fallback: no guid available — find events with same process_name on same host in time window
+  if (process_name && host) {
+    const { rows } = await pool.query(
+      `SELECT id, process_guid, parent_process_guid, process_name, process_id,
+              parent_process_name, parent_process_id, username, host, timestamp,
+              event_id, message, 0 AS depth
+       FROM logs
+       WHERE user_id = $1 AND host = $2 AND process_name ILIKE $3
+         AND timestamp > NOW() - INTERVAL '${parseInt(hours, 10) || 24} hours'
+       ORDER BY timestamp ASC LIMIT 50`,
+      [userId, host, process_name]
+    );
+    return res.json({ mode: 'name_fallback', nodes: rows });
+  }
+
+  return res.status(400).json({ error: 'process_guid or (process_name + host) required' });
+}));
+
 router.get('/alerts/trend', wrap(async (req, res) => {
   const { rows } = await pool.query(
     `SELECT date_trunc('day', created_at) AS day, COUNT(*) AS count

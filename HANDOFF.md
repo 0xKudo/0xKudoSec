@@ -32,6 +32,27 @@ Unified cybersecurity tools platform at `tools.laynekudo.com`. Monorepo — shar
 - Detection rules / alert queue fixed: `alerts` table was missing `count`, `last_seen`, and `alerts_dedup` unique constraint -- added via ALTER TABLE on VPS and updated schema.sql
 - VPS build fix: `platform/shell` dev dependencies (vite) must be installed directly with `npm install --include=dev` inside `platform/shell/`, not from workspace root
 
+### Recently Completed (2026-04-01, continued)
+- Process tree + CVE lookup in alert detail modal
+  - `logs` table: added `parent_process_id`, `process_guid`, `parent_process_guid` columns + indexes
+  - `normalizeEvent.js`: Sysmon EID 1 now extracts `process_guid` (inserts[2]), `parent_process_guid` (inserts[18]), `parent_process_id` (inserts[19]); winlogbeat normalizer extracts same from `proc.entity_id` / `ed.ProcessGuid`
+  - `ingest.js`: INSERT updated to include all three new fields
+  - `siem.js`: two new endpoints:
+    - `GET /api/siem/events/:id` -- fetch a single log row (used to get process_guid from alert's log_id)
+    - `GET /api/siem/events/process-tree?process_guid=...` -- recursive CTE walking ancestors (depth < 0) and descendants (depth > 0); falls back to name+host match if no GUID
+  - `AlertQueue.jsx`: alert detail modal now shows process tree panel -- indented by depth, ancestor/root/child markers, timestamp, PID, username; each node has "CVE Lookup" button that writes process name to localStorage and navigates to `/cve-exploit-mapper`
+  - **VPS migration required**: run ALTER TABLE on VPS before deploying (see below)
+
+### VPS Migration — Process Tree Columns
+```sql
+ALTER TABLE logs
+  ADD COLUMN IF NOT EXISTS parent_process_id   INTEGER,
+  ADD COLUMN IF NOT EXISTS process_guid        VARCHAR(64),
+  ADD COLUMN IF NOT EXISTS parent_process_guid VARCHAR(64);
+CREATE INDEX IF NOT EXISTS logs_process_guid_idx ON logs (process_guid);
+CREATE INDEX IF NOT EXISTS logs_parent_guid_idx  ON logs (parent_process_guid);
+```
+
 ### Next
 - Phase 4: Electron + Proxy tool
 

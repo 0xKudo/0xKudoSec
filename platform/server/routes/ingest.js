@@ -69,17 +69,19 @@ async function insertEvents(events, userId) {
           source, host, source_ip, dest_ip, dest_port, protocol,
           timestamp, level, severity, event_id, event_category,
           message, username, domain, logon_type,
-          process_name, process_id, parent_process_name,
+          process_name, process_id, process_guid,
+          parent_process_name, parent_process_id, parent_process_guid,
           file_path, registry_key, raw, user_id
         ) VALUES (
           $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,
-          $12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22
+          $12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25
         )`,
         [
           e.source, e.host, e.source_ip, e.dest_ip, e.dest_port, e.protocol,
           e.timestamp, e.level, e.severity, e.event_id, e.event_category,
           e.message, e.username, e.domain, e.logon_type,
-          e.process_name, e.process_id, e.parent_process_name,
+          e.process_name, e.process_id, e.process_guid || null,
+          e.parent_process_name, e.parent_process_id || null, e.parent_process_guid || null,
           e.file_path, e.registry_key, JSON.stringify(e.raw), userId,
         ]
       );

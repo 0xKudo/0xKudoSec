@@ -22,6 +22,9 @@ CREATE TABLE IF NOT EXISTS logs (
   process_name     VARCHAR(255),
   process_id       INTEGER,
   parent_process_name VARCHAR(255),
+  parent_process_id   INTEGER,
+  process_guid        VARCHAR(64),
+  parent_process_guid VARCHAR(64),
   file_path        TEXT,
   registry_key     TEXT,
   raw              JSONB,
@@ -38,6 +41,8 @@ CREATE INDEX IF NOT EXISTS logs_host_idx             ON logs (host);
 CREATE INDEX IF NOT EXISTS logs_dest_ip_idx          ON logs (dest_ip);
 CREATE INDEX IF NOT EXISTS logs_dest_port_idx        ON logs (dest_port);
 CREATE INDEX IF NOT EXISTS logs_process_name_idx     ON logs (process_name);
+CREATE INDEX IF NOT EXISTS logs_process_guid_idx     ON logs (process_guid);
+CREATE INDEX IF NOT EXISTS logs_parent_guid_idx      ON logs (parent_process_guid);
 CREATE INDEX IF NOT EXISTS logs_search_vector_idx    ON logs USING GIN (search_vector);
 CREATE INDEX IF NOT EXISTS logs_raw_idx              ON logs USING GIN (raw);
 

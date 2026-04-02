@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth0 } from '@auth0/auth0-react';
 
 const SEV_COLOR = {
@@ -103,6 +104,7 @@ function sevColor(sev) { return SEV_COLOR[(sev || '').toLowerCase()] || 'var(--t
 
 export function AlertQueue({ onNavigate }) {
   const { getAccessTokenSilently } = useAuth0();
+  const navigate = useNavigate();
   const [alerts, setAlerts] = useState([]);
   const [counts, setCounts] = useState({});
   const [statusFilter, setStatusFilter] = useState(null);
@@ -116,6 +118,8 @@ export function AlertQueue({ onNavigate }) {
   const [creating, setCreating] = useState(false);
   const [toast, setToast] = useState(null);
   const toastTimer = useRef(null);
+  const [processTree, setProcessTree] = useState(null);
+  const [treeLoading, setTreeLoading] = useState(false);
 
   function showToast(msg) {
     clearTimeout(toastTimer.current);
@@ -124,6 +128,58 @@ export function AlertQueue({ onNavigate }) {
   }
 
   useEffect(() => () => clearTimeout(toastTimer.current), []);
+
+  // When an alert is selected, fetch its source log to get process_guid, then fetch the process tree
+  useEffect(() => {
+    if (!selected) { setProcessTree(null); return; }
+    if (!selected.log_id && !selected.process_name) return;
+    let cancelled = false;
+    async function fetchTree() {
+      setTreeLoading(true);
+      setProcessTree(null);
+      try {
+        const token = await getAccessTokenSilently();
+        const headers = { Authorization: `Bearer ${token}` };
+
+        let processGuid = null;
+        let processName = selected.process_name || null;
+        let host = selected.host || null;
+
+        // Fetch the source log row to get process_guid
+        if (selected.log_id) {
+          const logRes = await fetch(`/api/siem/events/${selected.log_id}`, { headers });
+          if (logRes.ok) {
+            const log = await logRes.json();
+            processGuid = log.process_guid || null;
+            processName = processName || log.process_name;
+            host = host || log.host;
+          }
+        }
+
+        const params = processGuid
+          ? `?process_guid=${encodeURIComponent(processGuid)}`
+          : processName && host
+            ? `?process_name=${encodeURIComponent(processName)}&host=${encodeURIComponent(host)}`
+            : null;
+
+        if (!params) { setTreeLoading(false); return; }
+
+        const treeRes = await fetch(`/api/siem/events/process-tree${params}`, { headers });
+        if (!cancelled && treeRes.ok) {
+          const data = await treeRes.json();
+          setProcessTree(data);
+        }
+      } catch {}
+      if (!cancelled) setTreeLoading(false);
+    }
+    fetchTree();
+    return () => { cancelled = true; };
+  }, [selected, getAccessTokenSilently]);
+
+  function lookupCve(processName) {
+    localStorage.setItem('workspace-restore-cve-exploit-mapper', JSON.stringify({ query: processName }));
+    navigate('/cve-exploit-mapper');
+  }
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -401,6 +457,66 @@ export function AlertQueue({ onNavigate }) {
                   <div style={s.fieldValue}>{String(value)}</div>
                 </div>
               ))}
+
+              {/* Process Tree */}
+              <div style={{ marginTop: '16px', borderTop: '1px solid var(--border)', paddingTop: '12px' }}>
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Process Tree</div>
+                {treeLoading && <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Loading...</div>}
+                {!treeLoading && !processTree && (selected.process_name || selected.log_id) && (
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>No process lineage found for this alert.</div>
+                )}
+                {!treeLoading && !processTree && !selected.process_name && !selected.log_id && (
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>No process data on this alert.</div>
+                )}
+                {!treeLoading && processTree?.nodes?.length > 0 && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                    {processTree.mode === 'name_fallback' && (
+                      <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginBottom: '6px', fontStyle: 'italic' }}>
+                        No process GUIDs available — showing events by process name on this host.
+                      </div>
+                    )}
+                    {processTree.nodes.map((node, i) => {
+                      const indent = Math.max(0, (node.depth || 0)) * 16;
+                      const isAncestor = (node.depth || 0) < 0;
+                      const isRoot = (node.depth || 0) === 0;
+                      return (
+                        <div key={i} style={{ paddingLeft: `${indent}px`, display: 'flex', alignItems: 'flex-start', gap: '8px', padding: '5px 0 5px ' + indent + 'px', borderBottom: '1px solid var(--border-subtle)' }}>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                              <span style={{
+                                fontSize: '11px',
+                                color: isRoot ? 'var(--text-primary)' : isAncestor ? 'var(--text-muted)' : 'var(--text-primary)',
+                                fontWeight: isRoot ? 'bold' : 'normal',
+                                wordBreak: 'break-all',
+                              }}>
+                                {isAncestor ? '↑ ' : isRoot ? '● ' : '└ '}{node.process_name || '(unknown)'}
+                              </span>
+                              {node.process_id && (
+                                <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>PID {node.process_id}</span>
+                              )}
+                              {node.username && (
+                                <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{node.username}</span>
+                              )}
+                              {node.timestamp && (
+                                <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{new Date(node.timestamp).toLocaleTimeString()}</span>
+                              )}
+                            </div>
+                          </div>
+                          {node.process_name && (
+                            <button
+                              style={{ ...s.btn, whiteSpace: 'nowrap', flexShrink: 0, fontSize: '10px', padding: '2px 8px' }}
+                              onClick={() => lookupCve(node.process_name)}
+                              title={`Look up CVEs for ${node.process_name}`}
+                            >
+                              CVE Lookup
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
 
               <div style={{ marginTop: '16px', borderTop: '1px solid var(--border)', paddingTop: '12px' }}>
                 <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Create Case from Alert</div>
