@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
-import { useNavigate } from 'react-router-dom';
 import { ProcessTreePanel, ContextMenu } from './ProcessTreePanel.jsx';
 
 const SEV_COLOR = {
@@ -95,7 +94,6 @@ function sevColor(sev) { return SEV_COLOR[(sev || '').toLowerCase()] || 'var(--t
 
 export function LogSearch() {
   const { getAccessTokenSilently } = useAuth0();
-  const navigate = useNavigate();
   const [query, setQuery] = useState('');
   const [submittedQuery, setSubmittedQuery] = useState('');
   const [hours, setHours] = useState(24);
@@ -337,7 +335,7 @@ export function LogSearch() {
               label: `CVE Lookup: ${contextMenu.row.process_name}`,
               onClick: () => {
                 localStorage.setItem('workspace-restore-cve-exploit-mapper', JSON.stringify({ query: contextMenu.row.process_name }));
-                navigate('/cve-exploit-mapper');
+                window.location.href = '/cve-exploit-mapper';
               },
             }] : []),
           ]}

@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
-import { useNavigate } from 'react-router-dom';
 import { ProcessTreePanel, ContextMenu } from './ProcessTreePanel.jsx';
 
 const SEV_COLOR = {
@@ -420,7 +419,6 @@ function FilterPanel({ open, onClose, hours, setHours, sevFilter, setSevFilter, 
 
 export function SiemDashboard({ onNavigate }) {
   const { getAccessTokenSilently } = useAuth0();
-  const navigate = useNavigate();
 
   // Load persisted state
   const persisted = loadPersistedState();
@@ -1051,7 +1049,7 @@ export function SiemDashboard({ onNavigate }) {
               label: `CVE Lookup: ${contextMenu.row.process_name}`,
               onClick: () => {
                 localStorage.setItem('workspace-restore-cve-exploit-mapper', JSON.stringify({ query: contextMenu.row.process_name }));
-                navigate('/cve-exploit-mapper');
+                window.location.href = '/cve-exploit-mapper';
               },
             }] : []),
           ]}
