@@ -69,6 +69,10 @@ CREATE INDEX IF NOT EXISTS logs_parent_guid_idx  ON logs (parent_process_guid);
 - **Tools dashboard equal panels** — fixed height 320px + `overflow: hidden` on panel; content scrolls inside, panels never grow unequally
 - **Dashboard panel key** — `overflow: hidden` is what enforces the height; `height` alone is not enough in flex children
 
+### Recently Completed (2026-04-02, continued)
+- **Severity donut single-slice fix** — SVG arc can't draw a full circle (0-degree arc); when only one severity exists, render two concentric circles instead
+- **by-severity suppress filter** — `/events/by-severity` now applies suppress rules so donut reflects suppressed event exclusions; passes `showSuppressed` param from dashboard
+
 ### Next
 - Phase 4: Electron + Proxy tool
 
