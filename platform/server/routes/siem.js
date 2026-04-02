@@ -141,6 +141,7 @@ router.get('/events/recent', wrap(async (req, res) => {
     if (rule.match_process)   { params.push(`%${rule.match_process}%`);         ruleConds.push(`process_name ILIKE $${params.length}`); }
     if (rule.match_src_ip)    { params.push(`%${rule.match_src_ip}%`);          ruleConds.push(`source_ip::text ILIKE $${params.length}`); }
     if (rule.match_dest_ip)   { params.push(`%${rule.match_dest_ip}%`);         ruleConds.push(`dest_ip::text ILIKE $${params.length}`); }
+    if (rule.match_dest_port) { params.push(rule.match_dest_port);              ruleConds.push(`dest_port = $${params.length}`); }
     if (ruleConds.length) conditions.push(`NOT (${ruleConds.join(' AND ')})`);
   }
 
@@ -506,7 +507,7 @@ router.get('/rules', wrap(async (req, res) => {
 router.post('/rules', wrap(async (req, res) => {
   const { name, description, enabled, severity, action, match_event_id, match_category,
           match_severity, match_username, match_host, match_message,
-          match_process, match_src_ip, match_dest_ip } = req.body;
+          match_process, match_src_ip, match_dest_ip, match_dest_port } = req.body;
   if (!name || typeof name !== 'string' || !name.trim()) return res.status(400).json({ error: 'name required' });
   const validSev = ['critical', 'high', 'medium', 'low', 'info'];
   const validActions = ['alert', 'suppress'];
@@ -516,8 +517,8 @@ router.post('/rules', wrap(async (req, res) => {
     `INSERT INTO detection_rules
       (user_id, name, description, enabled, severity, action,
        match_event_id, match_category, match_severity, match_username,
-       match_host, match_message, match_process, match_src_ip, match_dest_ip)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
+       match_host, match_message, match_process, match_src_ip, match_dest_ip, match_dest_port)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
      RETURNING *`,
     [uid(req), name.trim().slice(0, 255),
      description ? String(description).slice(0, 1000) : null,
@@ -533,6 +534,7 @@ router.post('/rules', wrap(async (req, res) => {
      match_process ? String(match_process).slice(0, 255) : null,
      match_src_ip ? String(match_src_ip).slice(0, 64) : null,
      match_dest_ip ? String(match_dest_ip).slice(0, 64) : null,
+     match_dest_port ? parseInt(match_dest_port, 10) || null : null,
     ]
   );
   res.json(rows[0]);
@@ -544,7 +546,7 @@ router.patch('/rules/:id', wrap(async (req, res) => {
   // Only allow toggling enabled or updating name/description/severity/conditions
   const allowed = ['name','description','enabled','severity','action',
     'match_event_id','match_category','match_severity','match_username',
-    'match_host','match_message','match_process','match_src_ip','match_dest_ip'];
+    'match_host','match_message','match_process','match_src_ip','match_dest_ip','match_dest_port'];
   const updates = [];
   const params = [uid(req), id];
   for (const key of allowed) {
@@ -585,6 +587,7 @@ function ruleConditions(rule, userId) {
   if (rule.match_process)  { params.push(`%${rule.match_process}%`);  conds.push(`l.process_name ILIKE $${params.length}`); }
   if (rule.match_src_ip)   { params.push(`%${rule.match_src_ip}%`);   conds.push(`l.source_ip::text ILIKE $${params.length}`); }
   if (rule.match_dest_ip)  { params.push(`%${rule.match_dest_ip}%`);  conds.push(`l.dest_ip::text ILIKE $${params.length}`); }
+  if (rule.match_dest_port){ params.push(rule.match_dest_port);        conds.push(`l.dest_port = $${params.length}`); }
   return { params, conds };
 }
 

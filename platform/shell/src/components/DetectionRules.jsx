@@ -13,7 +13,7 @@ const EMPTY_FORM = {
   name: '', description: '', severity: 'high', enabled: true, action: 'alert',
   match_event_id: '', match_category: '', match_severity: '',
   match_username: '', match_host: '', match_message: '',
-  match_process: '', match_src_ip: '', match_dest_ip: '',
+  match_process: '', match_src_ip: '', match_dest_ip: '', match_dest_port: '',
 };
 
 const CATEGORIES = ['', 'authentication', 'network', 'process', 'file', 'dns', 'registry', 'system', 'firewall', 'account', 'policy'];
@@ -87,6 +87,7 @@ function conditionSummary(rule) {
   if (rule.match_process) parts.push(`process~${rule.match_process}`);
   if (rule.match_src_ip) parts.push(`src~${rule.match_src_ip}`);
   if (rule.match_dest_ip) parts.push(`dst~${rule.match_dest_ip}`);
+  if (rule.match_dest_port) parts.push(`port=${rule.match_dest_port}`);
   return parts.length ? parts.join(' AND ') : 'no conditions';
 }
 
@@ -129,7 +130,7 @@ export function DetectionRules({ onNavigate }) {
       match_severity: rule.match_severity ?? '', match_username: rule.match_username ?? '',
       match_host: rule.match_host ?? '', match_message: rule.match_message ?? '',
       match_process: rule.match_process ?? '', match_src_ip: rule.match_src_ip ?? '',
-      match_dest_ip: rule.match_dest_ip ?? '',
+      match_dest_ip: rule.match_dest_ip ?? '', match_dest_port: rule.match_dest_port ?? '',
     });
     setFormOpen(true);
   }
@@ -145,6 +146,8 @@ export function DetectionRules({ onNavigate }) {
       // Convert empty strings to null for numeric/enum fields
       if (body.match_event_id === '' || body.match_event_id === null) body.match_event_id = null;
       else body.match_event_id = parseInt(body.match_event_id, 10) || null;
+      if (body.match_dest_port === '' || body.match_dest_port === null) body.match_dest_port = null;
+      else body.match_dest_port = parseInt(body.match_dest_port, 10) || null;
       ['match_category','match_severity','match_username','match_host',
        'match_message','match_process','match_src_ip','match_dest_ip'].forEach(k => {
         if (body[k] === '') body[k] = null;
@@ -332,6 +335,10 @@ export function DetectionRules({ onNavigate }) {
               <div style={s.formRow}>
                 <span style={s.label}>Dest IP contains</span>
                 <input style={s.input} value={form.match_dest_ip} onChange={e => set('match_dest_ip', e.target.value)} placeholder="e.g. 8.8.8" />
+              </div>
+              <div style={s.formRow}>
+                <span style={s.label}>Dest Port</span>
+                <input style={s.input} type="number" min="1" max="65535" value={form.match_dest_port} onChange={e => set('match_dest_port', e.target.value)} placeholder="e.g. 4444" />
               </div>
             </div>
             <div style={s.modalActions}>

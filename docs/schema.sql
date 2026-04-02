@@ -107,6 +107,7 @@ CREATE TABLE IF NOT EXISTS detection_rules (
   match_process     VARCHAR(255),
   match_src_ip      VARCHAR(64),
   match_dest_ip     VARCHAR(64),
+  match_dest_port   INTEGER,
   created_at  TIMESTAMPTZ DEFAULT NOW(),
   updated_at  TIMESTAMPTZ DEFAULT NOW()
 );
