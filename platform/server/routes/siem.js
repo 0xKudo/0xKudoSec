@@ -811,8 +811,8 @@ router.post('/change-password', wrap(async (req, res) => {
     return res.status(400).json({ error: `Password is managed by ${provider}. Change it there.` });
   }
 
-  const domain   = process.env.AUTH0_DOMAIN;
-  const clientId = process.env.AUTH0_MGMT_CLIENT_ID;
+  const domain      = process.env.AUTH0_DOMAIN;
+  const clientId    = process.env.AUTH0_MGMT_CLIENT_ID;
   const clientSecret = process.env.AUTH0_MGMT_CLIENT_SECRET;
 
   // Get M2M token
@@ -823,7 +823,7 @@ router.post('/change-password', wrap(async (req, res) => {
       grant_type: 'client_credentials',
       client_id: clientId,
       client_secret: clientSecret,
-      audience: `https://${domain}/api/v2/`,
+      audience: `https://${process.env.AUTH0_TENANT_DOMAIN}/api/v2/`,
     }),
   });
   if (!tokenRes.ok) {
