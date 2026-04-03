@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { ProcessTreePanel } from './ProcessTreePanel.jsx';
+import { useIsMobile } from '../hooks/useIsMobile.js';
 
 const SEV_COLOR = {
   critical: 'var(--severity-critical)',
@@ -103,6 +104,7 @@ const s = {
 function sevColor(sev) { return SEV_COLOR[(sev || '').toLowerCase()] || 'var(--text-muted)'; }
 
 export function AlertQueue({ onNavigate }) {
+  const isMobile = useIsMobile();
   const { getAccessTokenSilently } = useAuth0();
   const [alerts, setAlerts] = useState([]);
   const [counts, setCounts] = useState({});
@@ -255,9 +257,9 @@ export function AlertQueue({ onNavigate }) {
 
   return (
     <div style={s.container}>
-      <div style={s.header}>
+      <div style={isMobile ? { ...s.header, flexWrap: 'wrap', gap: '8px' } : s.header}>
         <span style={s.title}>SIEM &nbsp;<span style={s.sub}>/ Alert Queue</span></span>
-        <div style={s.actions}>
+        <div style={isMobile ? { display: 'flex', gap: '8px', flexWrap: 'wrap' } : s.actions}>
           <button style={s.btn} onClick={load} disabled={loading}>{loading ? '...' : 'Refresh'}</button>
           <button style={s.btn} onClick={runRules} disabled={running}>
             {running ? 'Running...' : 'Run Rules'}
@@ -284,7 +286,7 @@ export function AlertQueue({ onNavigate }) {
         </div>
       </div>
 
-      <div style={s.filterBar}>
+      <div style={isMobile ? { ...s.filterBar, flexWrap: 'wrap' } : s.filterBar}>
         {[null, ...STATUS_OPTIONS].map(st => (
           <button key={st ?? 'all'} style={statusFilter === st ? s.btnActive : s.btn} onClick={() => setStatusFilter(st)}>
             {st ?? 'All'}{st && counts[st] ? ` (${counts[st]})` : ''}
@@ -293,17 +295,17 @@ export function AlertQueue({ onNavigate }) {
       </div>
 
       {selectedIds.size > 0 && (
-        <div style={s.bulkBar}>
+        <div style={isMobile ? { ...s.bulkBar, flexWrap: 'wrap' } : s.bulkBar}>
           <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginRight: '4px' }}>
             {selectedIds.size} selected
           </span>
-          <button style={s.btn} onClick={() => bulkAction('status', 'acknowledged')}>Mark Acknowledged</button>
+          <button style={s.btn} onClick={() => bulkAction('status', 'acknowledged')}>Mark Ack</button>
           <button style={s.btn} onClick={() => bulkAction('status', 'resolved')}>Mark Resolved</button>
           <button
             style={{ ...s.btn, color: 'var(--severity-critical)', borderColor: 'var(--severity-critical)' }}
             onClick={() => setConfirmBulkDelete(true)}
-          >Delete Selected</button>
-          <button style={{ ...s.btn, marginLeft: 'auto' }} onClick={() => setSelectedIds(new Set())}>Clear Selection</button>
+          >Delete</button>
+          <button style={s.btn} onClick={() => setSelectedIds(new Set())}>Clear</button>
         </div>
       )}
 
@@ -312,67 +314,104 @@ export function AlertQueue({ onNavigate }) {
         <span style={{ fontSize: '10px' }}>{alerts.length} shown{statusFilter ? ` · ${statusFilter}` : ''}</span>
       </div>
 
-      <div style={{ overflowX: 'auto' }}>
-        <table style={s.table}>
-          <thead>
-            <tr>
-              <th style={{ ...s.th, width: '40px', textAlign: 'center' }}>
-                <input
-                  type="checkbox"
-                  style={s.checkbox}
-                  checked={allChecked}
-                  ref={el => { if (el) el.indeterminate = someChecked; }}
-                  onChange={toggleAll}
-                />
-              </th>
-              {['Time', 'Severity', 'Title', 'Rule', 'Host', 'User', 'Event ID', 'Status', ''].map(h => (
-                <th key={h} style={s.th}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {!loading && !alerts.length && (
-              <tr><td colSpan={10} style={s.muted}>No alerts. Click "Run Rules" to scan logs against detection rules.</td></tr>
-            )}
-            {alerts.map(a => {
-              const isChecked = selectedIds.has(a.id);
-              return (
-                <tr
-                  key={a.id}
-                  style={{ cursor: 'pointer', background: isChecked ? 'var(--bg-surface)' : '' }}
-                  onClick={() => setSelected(a)}
-                  onMouseEnter={e => { if (!isChecked) Array.from(e.currentTarget.cells).forEach(c => c.style.background = 'var(--bg-surface)'); }}
-                  onMouseLeave={e => { if (!isChecked) Array.from(e.currentTarget.cells).forEach(c => c.style.background = ''); }}
-                >
-                  <td style={{ ...s.td, textAlign: 'center' }} onClick={e => { e.stopPropagation(); toggleOne(a.id); }}>
-                    <input type="checkbox" style={s.checkbox} checked={isChecked} onChange={() => toggleOne(a.id)} />
-                  </td>
-                  <td style={s.td}>{new Date(a.created_at).toLocaleString()}</td>
-                  <td style={s.td}><span style={s.sevBadge(sevColor(a.severity))}>{a.severity}</span></td>
-                  <td style={{ ...s.td, color: 'var(--text-primary)', maxWidth: '220px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {a.title}
-                    {a.count > 1 && <span style={{ marginLeft: '6px', fontSize: '10px', padding: '1px 5px', border: '1px solid var(--text-muted)', color: 'var(--text-muted)' }}>{a.count}×</span>}
-                  </td>
-                  <td style={s.td}>{a.rule_name || '—'}</td>
-                  <td style={s.td}>{a.host || '—'}</td>
-                  <td style={s.td}>{a.username || '—'}</td>
-                  <td style={s.td}>{a.event_id || '—'}</td>
-                  <td style={s.td}><span style={s.statusBadge(a.status)}>{a.status}</span></td>
-                  <td style={s.td} onClick={e => e.stopPropagation()}>
-                    <select
-                      style={{ ...s.btn, padding: '2px 6px', cursor: 'pointer' }}
-                      value={a.status}
-                      onChange={e => setStatus(a, e.target.value)}
-                    >
-                      {STATUS_OPTIONS.map(st => <option key={st} value={st}>{st}</option>)}
-                    </select>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+      {isMobile ? (
+        <div>
+          {!loading && !alerts.length && (
+            <div style={s.muted}>No alerts. Tap "Run Rules" to scan logs.</div>
+          )}
+          {alerts.map(a => {
+            const isChecked = selectedIds.has(a.id);
+            return (
+              <div
+                key={a.id}
+                style={{
+                  borderBottom: '1px solid var(--border-subtle)',
+                  padding: '12px 16px',
+                  background: isChecked ? 'var(--bg-surface)' : 'transparent',
+                  cursor: 'pointer',
+                }}
+                onClick={() => setSelected(a)}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                  <input type="checkbox" style={s.checkbox} checked={isChecked}
+                    onChange={() => toggleOne(a.id)} onClick={e => e.stopPropagation()} />
+                  <span style={s.sevBadge(sevColor(a.severity))}>{a.severity}</span>
+                  <span style={s.statusBadge(a.status)}>{a.status}</span>
+                  {a.count > 1 && <span style={{ fontSize: '10px', padding: '1px 5px', border: '1px solid var(--text-muted)', color: 'var(--text-muted)' }}>{a.count}×</span>}
+                </div>
+                <div style={{ fontSize: '12px', color: 'var(--text-primary)', marginBottom: '4px' }}>{a.title}</div>
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                  {new Date(a.created_at).toLocaleString()}
+                  {a.host ? ` · ${a.host}` : ''}
+                  {a.rule_name ? ` · ${a.rule_name}` : ''}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div style={{ overflowX: 'auto' }}>
+          <table style={s.table}>
+            <thead>
+              <tr>
+                <th style={{ ...s.th, width: '40px', textAlign: 'center' }}>
+                  <input
+                    type="checkbox"
+                    style={s.checkbox}
+                    checked={allChecked}
+                    ref={el => { if (el) el.indeterminate = someChecked; }}
+                    onChange={toggleAll}
+                  />
+                </th>
+                {['Time', 'Severity', 'Title', 'Rule', 'Host', 'User', 'Event ID', 'Status', ''].map(h => (
+                  <th key={h} style={s.th}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {!loading && !alerts.length && (
+                <tr><td colSpan={10} style={s.muted}>No alerts. Click "Run Rules" to scan logs against detection rules.</td></tr>
+              )}
+              {alerts.map(a => {
+                const isChecked = selectedIds.has(a.id);
+                return (
+                  <tr
+                    key={a.id}
+                    style={{ cursor: 'pointer', background: isChecked ? 'var(--bg-surface)' : '' }}
+                    onClick={() => setSelected(a)}
+                    onMouseEnter={e => { if (!isChecked) Array.from(e.currentTarget.cells).forEach(c => c.style.background = 'var(--bg-surface)'); }}
+                    onMouseLeave={e => { if (!isChecked) Array.from(e.currentTarget.cells).forEach(c => c.style.background = ''); }}
+                  >
+                    <td style={{ ...s.td, textAlign: 'center' }} onClick={e => { e.stopPropagation(); toggleOne(a.id); }}>
+                      <input type="checkbox" style={s.checkbox} checked={isChecked} onChange={() => toggleOne(a.id)} />
+                    </td>
+                    <td style={s.td}>{new Date(a.created_at).toLocaleString()}</td>
+                    <td style={s.td}><span style={s.sevBadge(sevColor(a.severity))}>{a.severity}</span></td>
+                    <td style={{ ...s.td, color: 'var(--text-primary)', maxWidth: '220px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {a.title}
+                      {a.count > 1 && <span style={{ marginLeft: '6px', fontSize: '10px', padding: '1px 5px', border: '1px solid var(--text-muted)', color: 'var(--text-muted)' }}>{a.count}×</span>}
+                    </td>
+                    <td style={s.td}>{a.rule_name || '—'}</td>
+                    <td style={s.td}>{a.host || '—'}</td>
+                    <td style={s.td}>{a.username || '—'}</td>
+                    <td style={s.td}>{a.event_id || '—'}</td>
+                    <td style={s.td}><span style={s.statusBadge(a.status)}>{a.status}</span></td>
+                    <td style={s.td} onClick={e => e.stopPropagation()}>
+                      <select
+                        style={{ ...s.btn, padding: '2px 6px', cursor: 'pointer' }}
+                        value={a.status}
+                        onChange={e => setStatus(a, e.target.value)}
+                      >
+                        {STATUS_OPTIONS.map(st => <option key={st} value={st}>{st}</option>)}
+                      </select>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {selected && (
         <div style={s.overlay} onClick={() => setSelected(null)}>
