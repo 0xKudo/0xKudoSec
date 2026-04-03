@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useIsMobile } from '../hooks/useIsMobile';
 
@@ -408,6 +408,8 @@ function SiemPreview() {
 }
 
 function DesktopLanding({ onLogin }) {
+  const toolsRef = useRef(null);
+  const scrollToTools = () => toolsRef.current?.scrollIntoView({ behavior: 'smooth' });
   return (
     <div style={s.page}>
       <LandingNav onLogin={onLogin} isMobile={false} />
@@ -424,7 +426,7 @@ function DesktopLanding({ onLogin }) {
         </p>
         <div style={s.heroCtas}>
           <button style={s.btnPrimary} onClick={onLogin}>Create Free Account</button>
-          <button style={s.btnSecondary}>Browse Tools</button>
+          <button style={s.btnSecondary} onClick={scrollToTools}>Browse Tools</button>
         </div>
         <p style={s.heroNote}>
           <span style={{ color: 'var(--severity-low)' }}>✓</span>
@@ -491,7 +493,7 @@ function DesktopLanding({ onLogin }) {
       </div>
 
       {/* Security Tools */}
-      <div style={{ ...s.editorial, borderTop: '1px solid var(--border)' }}>
+      <div ref={toolsRef} style={{ ...s.editorial, borderTop: '1px solid var(--border)' }}>
         <div style={s.editorialLabelCol}>
           <div style={s.editorialTag}>// Tools</div>
           <div style={s.editorialTitle}>Security Tools</div>
@@ -542,6 +544,8 @@ function DesktopLanding({ onLogin }) {
 }
 
 function MobileLanding({ onLogin }) {
+  const toolsRef = useRef(null);
+  const scrollToTools = () => toolsRef.current?.scrollIntoView({ behavior: 'smooth' });
   return (
     <div style={s.page}>
       <LandingNav onLogin={onLogin} isMobile={true} />
@@ -558,7 +562,7 @@ function MobileLanding({ onLogin }) {
         </p>
         <div style={s.heroCtasMobile}>
           <button style={s.btnPrimaryFull} onClick={onLogin}>Create Free Account</button>
-          <button style={s.btnSecondaryFull}>Browse Tools</button>
+          <button style={s.btnSecondaryFull} onClick={scrollToTools}>Browse Tools</button>
         </div>
         <p style={{ ...s.heroNote, position: 'relative' }}>
           <span style={{ color: 'var(--severity-low)' }}>✓</span>
@@ -621,7 +625,7 @@ function MobileLanding({ onLogin }) {
       </div>
 
       {/* Security Tools — mobile */}
-      <div style={s.editorialMobile}>
+      <div ref={toolsRef} style={s.editorialMobile}>
         <div style={s.editorialMobileHeader}>
           <span style={{ fontSize: '10px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--accent-amber)' }}>// Tools</span>
           <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>Security Tools</span>
