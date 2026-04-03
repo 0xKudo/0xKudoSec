@@ -440,7 +440,7 @@ function DesktopLanding({ onLogin }) {
           <span style={s.heroHeadlineAccent}>unified.</span>
         </h1>
         <p style={s.heroSub}>
-          Real-time SIEM and 19 security tools covering detection, investigation, response, and simulation. Built for SOC analysts, pen testers, and security engineers.
+          Real-time SIEM and 19 security tools covering detection, investigation, reporting, compliance, and simulation. Built for SOC analysts, pen testers, and security engineers.
         </p>
         <div style={s.heroCtas}>
           <button style={s.btnPrimary} onClick={onLogin}>Create Free Account</button>
@@ -448,7 +448,7 @@ function DesktopLanding({ onLogin }) {
         </div>
         <p style={s.heroNote}>
           <span style={{ color: 'var(--severity-low)' }}>✓</span>
-          {' '}Free to use &nbsp;·&nbsp; No credit card &nbsp;·&nbsp; 
+          {' '}No credit card required
         </p>
       </section>
 
@@ -547,7 +547,7 @@ function DesktopLanding({ onLogin }) {
 
       {/* Free strip */}
       <div style={s.freeStrip}>
-        <span style={s.freeText}>Free to use. No credit card required. </span>
+        <span style={s.freeText}>No credit card required.</span>
         <button style={s.btnPrimary} onClick={onLogin}>Create Account</button>
       </div>
 
@@ -586,7 +586,7 @@ function MobileLanding({ onLogin }) {
           <span style={s.heroHeadlineAccent}>unified.</span>
         </h1>
         <p style={s.heroSubMobile}>
-          Real-time SIEM and 19 security tools covering detection, investigation, response, and simulation.
+          Real-time SIEM and 19 security tools covering detection, investigation, reporting, compliance, and simulation.
         </p>
         <div style={s.heroCtasMobile}>
           <button style={s.btnPrimaryFull} onClick={onLogin}>Create Free Account</button>
@@ -594,7 +594,7 @@ function MobileLanding({ onLogin }) {
         </div>
         <p style={{ ...s.heroNote, position: 'relative' }}>
           <span style={{ color: 'var(--severity-low)' }}>✓</span>
-          {' '}Free to use · No credit card
+          {' '}No credit card required
         </p>
       </section>
 
@@ -689,7 +689,7 @@ function MobileLanding({ onLogin }) {
 
       {/* Free strip */}
       <div style={s.freeStripMobile}>
-        <span style={s.freeText}>Free to use. No credit card required. </span>
+        <span style={s.freeText}>No credit card required.</span>
         <button style={s.btnPrimaryFull} onClick={onLogin}>Create Account</button>
       </div>
 
