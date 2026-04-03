@@ -100,9 +100,23 @@ function AppInner() {
     setMenuOpen(false);
   };
 
+  const layoutStyle = isMobile
+    ? { display: 'flex', flexDirection: 'column', minHeight: '100vh' }
+    : styles.layout;
+
+  const bodyStyle = isMobile
+    ? { display: 'flex', flex: 1, flexDirection: 'column' }
+    : styles.body;
+
+  const navStyle = isMobile
+    ? { position: 'sticky', top: 0, zIndex: 100 }
+    : {};
+
   return (
-    <div style={styles.layout}>
-      <TopNav activeApp={activeApp} onSwitchApp={switchApp} onMenuToggle={() => setMenuOpen(o => !o)} menuOpen={menuOpen} />
+    <div style={layoutStyle}>
+      <div style={navStyle}>
+        <TopNav activeApp={activeApp} onSwitchApp={switchApp} onMenuToggle={() => setMenuOpen(o => !o)} menuOpen={menuOpen} />
+      </div>
 
       {/* Mobile slide-out drawer */}
       {isMobile && menuOpen && (
@@ -129,7 +143,7 @@ function AppInner() {
         </>
       )}
 
-      <div style={styles.body}>
+      <div style={bodyStyle}>
 
         {activeApp === 'siem' && (
           <>
@@ -141,7 +155,7 @@ function AppInner() {
                 isAuthenticated={isAuthenticated}
               />
             )}
-            <main style={{ flex: 1, overflow: 'auto', background: 'var(--bg-primary)', minWidth: 0 }}>
+            <main style={isMobile ? { flex: 1, background: 'var(--bg-primary)' } : { flex: 1, overflow: 'auto', background: 'var(--bg-primary)', minWidth: 0 }}>
               <RequireAuth>
                 {siemView === 'dashboard' && (isMobile ? <SiemDashboardMobile onNavigate={setSiemView} /> : <SiemDashboard onNavigate={setSiemView} />)}
                 {siemView === 'logsources' && <LogSources />}
@@ -163,7 +177,7 @@ function AppInner() {
         {activeApp === 'tools' && (
           <>
             {!isMobile && <Sidebar onSwitchToSiem={switchToSiem} />}
-            <main style={styles.content}>
+            <main style={isMobile ? { flex: 1 } : styles.content}>
               <Routes>
                 {tools.filter(t => t.status === 'active').map(t => (
                   <Route
