@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
+import { useIsMobile } from '../hooks/useIsMobile.js';
 
 const SEV_COLOR = {
   critical: 'var(--severity-critical)',
@@ -90,6 +91,7 @@ const s = {
 function sevColor(sev) { return SEV_COLOR[(sev || '').toLowerCase()] || 'var(--text-muted)'; }
 
 export function Cases({ onNavigate }) {
+  const isMobile = useIsMobile();
   const { getAccessTokenSilently } = useAuth0();
   const [cases, setCases] = useState([]);
   const [statusFilter, setStatusFilter] = useState(null);
@@ -174,15 +176,15 @@ export function Cases({ onNavigate }) {
 
   return (
     <div style={s.container}>
-      <div style={s.header}>
+      <div style={isMobile ? { ...s.header, flexWrap: 'wrap', gap: '8px' } : s.header}>
         <span style={s.title}>SIEM &nbsp;<span style={s.sub}>/ Cases</span></span>
-        <div style={s.actions}>
+        <div style={isMobile ? { display: 'flex', gap: '8px' } : s.actions}>
           <button style={s.btn} onClick={() => onNavigate('alerts')}>Alert Queue</button>
           <button style={s.btnActive} onClick={() => setNewFormOpen(true)}>+ New Case</button>
         </div>
       </div>
 
-      <div style={s.filterBar}>
+      <div style={isMobile ? { ...s.filterBar, flexWrap: 'wrap' } : s.filterBar}>
         {[null, ...STATUS_OPTIONS].map(st => (
           <button key={st ?? 'all'} style={statusFilter === st ? s.btnActive : s.btn} onClick={() => setStatusFilter(st)}>
             {st ?? 'All'}{st && statusCounts[st] ? ` (${statusCounts[st]})` : ''}
@@ -190,40 +192,65 @@ export function Cases({ onNavigate }) {
         ))}
       </div>
 
-      <div style={{ overflowX: 'auto' }}>
-        <table style={s.table}>
-          <thead>
-            <tr>
-              {['Title', 'Severity', 'Status', 'Alerts', 'Created', 'Updated'].map(h => (
-                <th key={h} style={s.th}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {!loading && !filtered.length && (
-              <tr><td colSpan={6} style={s.muted}>
-                {statusFilter ? `No ${statusFilter} cases.` : 'No cases yet. Cases are created from the Alert Queue or manually.'}
-              </td></tr>
-            )}
-            {filtered.map(c => (
-              <tr
-                key={c.id}
-                style={{ cursor: 'pointer' }}
-                onClick={() => openCase(c)}
-                onMouseEnter={e => Array.from(e.currentTarget.cells).forEach(td => td.style.background = 'var(--bg-surface)')}
-                onMouseLeave={e => Array.from(e.currentTarget.cells).forEach(td => td.style.background = '')}
-              >
-                <td style={{ ...s.td, color: 'var(--text-primary)', fontWeight: 500 }}>{c.title}</td>
-                <td style={s.td}><span style={s.sevBadge(sevColor(c.severity))}>{c.severity}</span></td>
-                <td style={s.td}><span style={s.statusBadge(c.status)}>{c.status}</span></td>
-                <td style={s.td}>{c.alert_count || 0}</td>
-                <td style={s.td}>{new Date(c.created_at).toLocaleDateString()}</td>
-                <td style={s.td}>{new Date(c.updated_at).toLocaleDateString()}</td>
+      {isMobile ? (
+        <div>
+          {!loading && !filtered.length && (
+            <div style={s.muted}>
+              {statusFilter ? `No ${statusFilter} cases.` : 'No cases yet. Cases are created from the Alert Queue or manually.'}
+            </div>
+          )}
+          {filtered.map(c => (
+            <div
+              key={c.id}
+              style={{ borderBottom: '1px solid var(--border-subtle)', padding: '12px 16px', cursor: 'pointer' }}
+              onClick={() => openCase(c)}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                <span style={s.sevBadge(sevColor(c.severity))}>{c.severity}</span>
+                <span style={s.statusBadge(c.status)}>{c.status}</span>
+                <span style={{ marginLeft: 'auto', fontSize: '11px', color: 'var(--text-muted)' }}>{c.alert_count || 0} alerts</span>
+              </div>
+              <div style={{ fontSize: '12px', color: 'var(--text-primary)', fontWeight: 500, marginBottom: '4px' }}>{c.title}</div>
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{new Date(c.created_at).toLocaleDateString()}</div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div style={{ overflowX: 'auto' }}>
+          <table style={s.table}>
+            <thead>
+              <tr>
+                {['Title', 'Severity', 'Status', 'Alerts', 'Created', 'Updated'].map(h => (
+                  <th key={h} style={s.th}>{h}</th>
+                ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {!loading && !filtered.length && (
+                <tr><td colSpan={6} style={s.muted}>
+                  {statusFilter ? `No ${statusFilter} cases.` : 'No cases yet. Cases are created from the Alert Queue or manually.'}
+                </td></tr>
+              )}
+              {filtered.map(c => (
+                <tr
+                  key={c.id}
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => openCase(c)}
+                  onMouseEnter={e => Array.from(e.currentTarget.cells).forEach(td => td.style.background = 'var(--bg-surface)')}
+                  onMouseLeave={e => Array.from(e.currentTarget.cells).forEach(td => td.style.background = '')}
+                >
+                  <td style={{ ...s.td, color: 'var(--text-primary)', fontWeight: 500 }}>{c.title}</td>
+                  <td style={s.td}><span style={s.sevBadge(sevColor(c.severity))}>{c.severity}</span></td>
+                  <td style={s.td}><span style={s.statusBadge(c.status)}>{c.status}</span></td>
+                  <td style={s.td}>{c.alert_count || 0}</td>
+                  <td style={s.td}>{new Date(c.created_at).toLocaleDateString()}</td>
+                  <td style={s.td}>{new Date(c.updated_at).toLocaleDateString()}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {/* Case detail modal */}
       {selected && (
@@ -339,15 +366,15 @@ export function Cases({ onNavigate }) {
               <button style={s.modalClose} onClick={() => setNewFormOpen(false)}>✕</button>
             </div>
             <div style={s.newForm}>
-              <div style={s.fieldRow}>
+              <div style={isMobile ? { display: 'flex', flexDirection: 'column', gap: '4px' } : s.fieldRow}>
                 <span style={s.label}>Title *</span>
                 <input style={s.input} value={form.title} onChange={e => setForm(p => ({ ...p, title: e.target.value }))} placeholder="e.g. Suspicious Lateral Movement" autoFocus />
               </div>
-              <div style={s.fieldRow}>
+              <div style={isMobile ? { display: 'flex', flexDirection: 'column', gap: '4px' } : s.fieldRow}>
                 <span style={s.label}>Description</span>
                 <textarea style={s.textarea} value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} placeholder="Optional" />
               </div>
-              <div style={s.fieldRow}>
+              <div style={isMobile ? { display: 'flex', flexDirection: 'column', gap: '4px' } : s.fieldRow}>
                 <span style={s.label}>Severity</span>
                 <select style={{ ...s.select, width: 'auto' }} value={form.severity} onChange={e => setForm(p => ({ ...p, severity: e.target.value }))}>
                   {SEVERITY_OPTIONS.map(sv => <option key={sv} value={sv}>{sv}</option>)}
