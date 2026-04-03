@@ -562,7 +562,7 @@ function MobileLanding({ onLogin }) {
         </div>
         <p style={{ ...s.heroNote, position: 'relative' }}>
           <span style={{ color: 'var(--severity-low)' }}>✓</span>
-          {' '}Free to use · No credit card · Google or email
+          {' '}Free to use · No credit card · Google or email login
         </p>
       </section>
 
