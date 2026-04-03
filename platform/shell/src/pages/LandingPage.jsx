@@ -73,19 +73,25 @@ const PHASES = [
     key: 'investigate',
     label: 'Investigate',
     color: 'var(--severity-high)',
-    tools: ['OSINT Recon Dashboard', 'CVE Exploit Mapper', 'Payload Obfuscation Explainer', 'Decoder', 'Subdomain Enumerator'],
+    tools: ['OSINT Recon Dashboard', 'CVE Exploit Mapper', 'Payload Obfuscation Explainer', 'Decoder', 'Subdomain Enumerator', 'Network Scanner'],
   },
   {
-    key: 'respond',
-    label: 'Respond',
+    key: 'report',
+    label: 'Report',
     color: 'var(--severity-low)',
-    tools: ['Incident Report Generator', 'Security Policy Translator'],
+    tools: ['Incident Report Generator'],
+  },
+  {
+    key: 'compliance',
+    label: 'Compliance',
+    color: 'var(--severity-info)',
+    tools: ['Security Policy Translator'],
   },
   {
     key: 'simulate',
     label: 'Simulate / Test',
     color: '#a855f7',
-    tools: ['Reverse Shell Generator', 'Intruder', 'Vulnerability Scanner', 'Wordlist / Password Generator', 'HTTP Repeater', 'Network Scanner', 'Payload Generator'],
+    tools: ['Reverse Shell Generator', 'Intruder', 'Vulnerability Scanner', 'Wordlist / Password Generator', 'HTTP Repeater', 'Payload Generator'],
   },
 ];
 

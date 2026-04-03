@@ -8,7 +8,7 @@ const QUICK_LAUNCH = [
   { id: 'threat-intel', phase: 'Detect' },
   { id: 'osint-recon', phase: 'Investigate' },
   { id: 'decoder', phase: 'Investigate' },
-  { id: 'incident-report', phase: 'Respond' },
+  { id: 'incident-report', phase: 'Report' },
   { id: 'intruder', phase: 'Simulate' },
   { id: 'network-scanner', phase: 'Investigate' },
   { id: 'subdomain-enumerator', phase: 'Investigate' },

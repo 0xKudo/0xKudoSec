@@ -15,9 +15,14 @@ const PHASES = [
     routes: ['/osint-recon', '/cve-exploit-mapper', '/payload-obfuscation-explainer', '/decoder', '/subdomain-enumerator', '/network-scanner'],
   },
   {
-    id: 'respond',
-    label: 'Respond',
-    routes: ['/incident-report', '/security-policy-translator'],
+    id: 'report',
+    label: 'Report',
+    routes: ['/incident-report'],
+  },
+  {
+    id: 'compliance',
+    label: 'Compliance',
+    routes: ['/security-policy-translator'],
   },
   {
     id: 'simulate',

@@ -172,7 +172,7 @@ const QUICK_LAUNCH = [
   { id: 'threat-intel', phase: 'Detect', route: '/threat-intel' },
   { id: 'osint-recon', phase: 'Investigate', route: '/osint-recon' },
   { id: 'decoder', phase: 'Investigate', route: '/decoder' },
-  { id: 'incident-report', phase: 'Respond', route: '/incident-report' },
+  { id: 'incident-report', phase: 'Report', route: '/incident-report' },
   { id: 'intruder', phase: 'Simulate', route: '/intruder' },
   { id: 'network-scanner', phase: 'Investigate', route: '/network-scanner' },
   { id: 'subdomain-enumerator', phase: 'Investigate', route: '/subdomain-enumerator' },
