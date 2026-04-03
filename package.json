@@ -8,8 +8,16 @@
     "platform/shared"
   ],
   "scripts": {
+    "dev": "concurrently -n server,shell,shipper -c cyan,magenta,yellow \"npm run dev:server\" \"npm run dev:shell\" \"npm run dev:shipper\"",
     "dev:server": "npm run dev --workspace=platform/server",
     "dev:shell": "npm run dev --workspace=platform/shell",
+    "dev:shipper": "node shipper/index.js",
     "test": "npm run test --workspace=platform/server"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  },
+  "dependencies": {
+    "archiver": "^7.0.1"
   }
 }

@@ -448,7 +448,7 @@ function DesktopLanding({ onLogin }) {
         </div>
         <p style={s.heroNote}>
           <span style={{ color: 'var(--severity-low)' }}>✓</span>
-          {' '}Free to use &nbsp;·&nbsp; No credit card &nbsp;·&nbsp; Google or email login
+          {' '}Free to use &nbsp;·&nbsp; No credit card &nbsp;·&nbsp; 
         </p>
       </section>
 
@@ -547,7 +547,7 @@ function DesktopLanding({ onLogin }) {
 
       {/* Free strip */}
       <div style={s.freeStrip}>
-        <span style={s.freeText}>Free to use. No credit card required. Sign in with Google or email to get started.</span>
+        <span style={s.freeText}>Free to use. No credit card required. </span>
         <button style={s.btnPrimary} onClick={onLogin}>Create Account</button>
       </div>
 
@@ -594,7 +594,7 @@ function MobileLanding({ onLogin }) {
         </div>
         <p style={{ ...s.heroNote, position: 'relative' }}>
           <span style={{ color: 'var(--severity-low)' }}>✓</span>
-          {' '}Free to use · No credit card · Google or email login
+          {' '}Free to use · No credit card
         </p>
       </section>
 
@@ -689,7 +689,7 @@ function MobileLanding({ onLogin }) {
 
       {/* Free strip */}
       <div style={s.freeStripMobile}>
-        <span style={s.freeText}>Free to use. No credit card required. Sign in with Google or email.</span>
+        <span style={s.freeText}>Free to use. No credit card required. </span>
         <button style={s.btnPrimaryFull} onClick={onLogin}>Create Account</button>
       </div>
 
