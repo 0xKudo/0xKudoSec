@@ -421,10 +421,16 @@ export function LogSources() {
     Log_Level    info
 
 [INPUT]
-    Name         winlog
-    Channels     Security,Microsoft-Windows-Sysmon/Operational
+    Name         winevtlog
+    Channels     Security
     Interval_Sec 5
     DB           C:\\fluent-bit\\cybertools.db
+
+[INPUT]
+    Name         winevtlog
+    Channels     Microsoft-Windows-Sysmon/Operational
+    Interval_Sec 5
+    DB           C:\\fluent-bit\\cybertools-sysmon.db
 
 [OUTPUT]
     Name         http

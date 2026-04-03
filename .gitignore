@@ -3,3 +3,9 @@ dist/
 .env
 *.local
 .DS_Store
+.claude/
+mockups/
+_deprecated/
+docs/
+2026-03-26-cybertools-platform.md
+platform/server/tests/
