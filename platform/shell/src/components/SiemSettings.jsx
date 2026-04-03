@@ -170,7 +170,7 @@ export function SiemSettings() {
           </>
         ) : (
           <div style={s.sectionDesc}>
-            You signed in with {socialProvider ?? 'a social provider'}. Password management is handled by {socialProvider ?? 'your provider'} — change it there.
+            You signed in with {socialProvider ?? 'a social provider'}. Password management is handled by {socialProvider ?? 'your provider'}, change it there.
           </div>
         )}
       </div>
