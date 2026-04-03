@@ -17,6 +17,7 @@ import { Cases } from './components/Cases';
 import { SiemSettings } from './components/SiemSettings';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { RequireAuth } from './components/RequireAuth';
+import { LandingPage } from './pages/LandingPage';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useIsMobile } from './hooks/useIsMobile';
 import './styles/theme.css';
@@ -66,7 +67,11 @@ function ToolLoader({ toolId }) {
 }
 
 function AppInner() {
-  const { isAuthenticated } = useAuth0();
+  const { isAuthenticated, isLoading } = useAuth0();
+
+  if (!isLoading && !isAuthenticated) {
+    return <LandingPage />;
+  }
   const isMobile = useIsMobile();
   const [activeApp, setActiveApp] = useState(() => {
     const path = window.location.pathname;

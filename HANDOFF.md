@@ -27,6 +27,15 @@ Unified cybersecurity tools platform at `tools.laynekudo.com`. Monorepo — shar
   - `fluent-bit` added to validSources and FIELD_ALIASES in siem.js
   - node-shipper moved to `_deprecated/node-shipper/`
 
+### Recently Completed (2026-04-03)
+- Landing page mockup finalized: `mockups/landing-mockup-d.html`
+  - Centered hero, stat bar, editorial SIEM section with real dashboard preview, How it works (3 deep-dive cards), tools by SOC phase, free strip
+  - Nav matches TopNav.jsx exactly (brand, SIEM/Tools tabs, [ login ] + sun/moon toggle)
+  - Network Scanner moved from Respond to Simulate/Test in all copy
+  - GitHub login removed from copy (not implemented yet)
+  - SIEM dashboard preview built from SiemDashboard.jsx source (correct KPI order, alerts mid-row, tabs, search bar, event table)
+- Next step: implement as React component `platform/shell/src/pages/LandingPage.jsx` with mobile layout per `docs/specs/ui-desktop-mobile.md`
+
 ### Recently Completed (2026-04-01, continued)
 - Log retention cron: `platform/server/services/retentionCron.js`, node-cron, runs daily at 02:00 VPS time
 - Detection rules / alert queue fixed: `alerts` table was missing `count`, `last_seen`, and `alerts_dedup` unique constraint -- added via ALTER TABLE on VPS and updated schema.sql
@@ -72,6 +81,14 @@ CREATE INDEX IF NOT EXISTS logs_parent_guid_idx  ON logs (parent_process_guid);
 ### Recently Completed (2026-04-02, continued)
 - **Severity donut single-slice fix** — SVG arc can't draw a full circle (0-degree arc); when only one severity exists, render two concentric circles instead
 - **by-severity suppress filter** — `/events/by-severity` now applies suppress rules so donut reflects suppressed event exclusions; passes `showSuppressed` param from dashboard
+
+### Recently Completed (2026-04-02, continued)
+- **Fluent Bit config fix** — in-app config was using `winlog` input; fixed to `winevtlog` (two separate INPUT blocks for Security and Sysmon, each with own DB file). External doc `docs/log-shipping-setup.md` rewritten to reflect Fluent Bit as primary shipper (node-shipper deprecated).
+- **Change password in Settings** — `SiemSettings.jsx` detects `auth0|` vs social login from JWT sub; email/password users get a "Send Password Reset Email" button that calls `POST /api/siem/change-password`; social users see a message directing them to their provider.
+  - Server endpoint gets M2M token using `AUTH0_MGMT_CLIENT_ID` + `AUTH0_MGMT_CLIENT_SECRET`, looks up user email via Management API, sends reset via `/dbconnections/change_password`
+  - M2M app: "0xKudo API (Test Application)" in Auth0, needs `read:users` + `update:users` permissions on Auth0 Management API
+  - Audience for M2M token must use raw tenant domain (`AUTH0_TENANT_DOMAIN=dev-dk318hthn8qe0k7s.us.auth0.com`), not custom domain -- added to ecosystem.config.cjs on VPS
+  - `.gitignore` updated: `.claude/`, `mockups/`, `_deprecated/`, `docs/`, `platform/server/tests/` all excluded
 
 ### Next
 - Phase 4: Electron + Proxy tool
