@@ -643,7 +643,7 @@ export function SiemDashboard({ onNavigate }) {
       <div style={s.pageHeader}>
         <span style={s.pageTitle}>SIEM &nbsp;<span style={s.pageSub}>/ Dashboard</span></span>
         <div style={s.actions}>
-          <button style={s.btn} onClick={load} disabled={loading}>{loading ? '...' : 'Refresh'}</button>
+          <button style={s.btn} onClick={() => { loadLive(); loadCharts(); }} disabled={loading}>{loading ? '...' : 'Refresh'}</button>
           <button
             style={panelOpen ? s.btnActive : { ...s.btn, ...(activeFilterCount > 0 ? { borderColor: 'var(--text-primary)', color: 'var(--text-primary)' } : {}) }}
             onClick={() => setPanelOpen(v => !v)}
