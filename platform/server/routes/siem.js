@@ -826,14 +826,22 @@ router.post('/change-password', wrap(async (req, res) => {
       audience: `https://${domain}/api/v2/`,
     }),
   });
-  if (!tokenRes.ok) return res.status(500).json({ error: 'Failed to obtain management token.' });
+  if (!tokenRes.ok) {
+    const body = await tokenRes.text();
+    console.error('[change-password] M2M token failed:', tokenRes.status, body);
+    return res.status(500).json({ error: 'Failed to obtain management token.' });
+  }
   const { access_token } = await tokenRes.json();
 
   // Look up user's email via Management API
   const userRes = await fetch(`https://${domain}/api/v2/users/${encodeURIComponent(sub)}`, {
     headers: { Authorization: `Bearer ${access_token}` },
   });
-  if (!userRes.ok) return res.status(500).json({ error: 'Failed to look up user.' });
+  if (!userRes.ok) {
+    const body = await userRes.text();
+    console.error('[change-password] User lookup failed:', userRes.status, body);
+    return res.status(500).json({ error: 'Failed to look up user.' });
+  }
   const { email } = await userRes.json();
 
   // Send password change email
@@ -846,7 +854,11 @@ router.post('/change-password', wrap(async (req, res) => {
       connection: 'Username-Password-Authentication',
     }),
   });
-  if (!changeRes.ok) return res.status(500).json({ error: 'Failed to send password reset email.' });
+  if (!changeRes.ok) {
+    const body = await changeRes.text();
+    console.error('[change-password] Password reset email failed:', changeRes.status, body);
+    return res.status(500).json({ error: 'Failed to send password reset email.' });
+  }
 
   res.json({ ok: true });
 }));
