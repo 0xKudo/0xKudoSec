@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useIsMobile } from '../../../platform/shell/src/hooks/useIsMobile.js';
 
 const OPERATION_GROUPS = [
   {
@@ -148,6 +149,7 @@ const styles = {
 };
 
 export default function Decoder() {
+  const isMobile = useIsMobile();
   const [operation, setOperation] = useState('base64-decode');
   const [input, setInput] = useState('');
   const [output, setOutput] = useState('');
@@ -204,23 +206,44 @@ export default function Decoder() {
         <p style={styles.subtitle}>Encode and decode across URL, HTML, Base64, Hex, Binary, ROT13, Unicode, and JWT formats.</p>
       </div>
 
-      <div style={styles.layout}>
+      <div style={{ ...styles.layout, gridTemplateColumns: isMobile ? '1fr' : '200px 1fr' }}>
         {/* Operation selector */}
         <div style={styles.opPanel}>
-          {OPERATION_GROUPS.map(group => (
-            <div key={group.label}>
-              <div style={styles.groupLabel}>{group.label}</div>
-              {group.ops.map(op => (
+          {isMobile ? (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+              {OPERATION_GROUPS.map(group => group.ops.map(op => (
                 <button
                   key={op.value}
-                  style={styles.opBtn(operation === op.value)}
+                  style={{
+                    ...styles.opBtn(operation === op.value),
+                    width: 'auto',
+                    display: 'inline-block',
+                    border: '1px solid var(--border)',
+                    borderRadius: '3px',
+                    padding: '5px 10px',
+                  }}
                   onClick={() => { setOperation(op.value); setOutput(''); setError(null); }}
                 >
-                  {op.label}
+                  {group.label} {op.label}
                 </button>
-              ))}
+              )))}
             </div>
-          ))}
+          ) : (
+            OPERATION_GROUPS.map(group => (
+              <div key={group.label}>
+                <div style={styles.groupLabel}>{group.label}</div>
+                {group.ops.map(op => (
+                  <button
+                    key={op.value}
+                    style={styles.opBtn(operation === op.value)}
+                    onClick={() => { setOperation(op.value); setOutput(''); setError(null); }}
+                  >
+                    {op.label}
+                  </button>
+                ))}
+              </div>
+            ))
+          )}
         </div>
 
         {/* Main panel */}
