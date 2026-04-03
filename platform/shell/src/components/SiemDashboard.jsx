@@ -498,7 +498,8 @@ export function SiemDashboard({ onNavigate }) {
   }, [search]);
   const { widths, onMouseDown } = useResizableColumns(COL_DEFAULTS_W);
 
-  const load = useCallback(async () => {
+  // Fast refresh: stats + alerts + recent events — triggered by WebSocket and filter changes
+  const loadLive = useCallback(async () => {
     if (loadingRef.current) return;
     loadingRef.current = true;
     setLoading(true);
@@ -516,51 +517,25 @@ export function SiemDashboard({ onNavigate }) {
       if (showSuppressed) recentParams.set('showSuppressed', '1');
       const recentUrl = `/api/siem/events/recent?${recentParams}`;
 
-      const [statsRes, sevRes, srcRes, recentRes, catRes, srcListRes, alertCountsRes, alertsRes,
-             topIdsRes, failedLoginsRes, topUsersRes, alertTrendRes, ruleHitsRes] = await Promise.all([
+      const [statsRes, recentRes, alertCountsRes, alertsRes] = await Promise.all([
         fetch(`/api/siem/stats${h}${sup}`, { headers }),
-        fetch(`/api/siem/events/by-severity${h}${sup}`, { headers }),
-        fetch(`/api/siem/events/by-source${h}`, { headers }),
         fetch(recentUrl, { headers }),
-        fetch(`/api/siem/events/categories${h}`, { headers }),
-        fetch(`/api/siem/events/sources-list${h}`, { headers }),
         fetch('/api/siem/alerts/counts', { headers }),
         fetch('/api/siem/alerts?status=new', { headers }),
-        fetch(`/api/siem/events/top-event-ids${h}${sup}`, { headers }),
-        fetch(`/api/siem/events/failed-logins${h}`, { headers }),
-        fetch(`/api/siem/events/top-usernames${h}`, { headers }),
-        fetch('/api/siem/alerts/trend', { headers }),
-        fetch(`/api/siem/rules/hit-counts${h}`, { headers }),
       ]);
 
       if (!statsRes.ok) throw new Error(`Stats ${statsRes.status}`);
 
-      const [st, sev, src, rec, cats, srcs, alertCounts, alertsNew,
-             topIds, failedLoginsData, topUsers, trendData, hitsData] = await Promise.all([
-        statsRes.json(), sevRes.json(), srcRes.json(), recentRes.json(),
-        catRes.json(), srcListRes.json(),
+      const [st, rec, alertCounts, alertsNew] = await Promise.all([
+        statsRes.json(), recentRes.json(),
         alertCountsRes.ok ? alertCountsRes.json() : Promise.resolve([]),
         alertsRes.ok ? alertsRes.json() : Promise.resolve([]),
-        topIdsRes.ok ? topIdsRes.json() : Promise.resolve([]),
-        failedLoginsRes.ok ? failedLoginsRes.json() : Promise.resolve([]),
-        topUsersRes.ok ? topUsersRes.json() : Promise.resolve([]),
-        alertTrendRes.ok ? alertTrendRes.json() : Promise.resolve([]),
-        ruleHitsRes.ok ? ruleHitsRes.json() : Promise.resolve([]),
       ]);
 
       setStats(st);
-      setSeverities(Array.isArray(sev) ? sev : []);
-      setSources(Array.isArray(src) ? src : []);
       setRecent(Array.isArray(rec) ? rec : []);
-      setCategories(Array.isArray(cats) ? cats.map(r => r.category) : []);
-      setSourcesList(Array.isArray(srcs) ? srcs.map(r => r.source) : []);
       setAlertSummary(Array.isArray(alertCounts) ? alertCounts : []);
       setRecentAlerts(Array.isArray(alertsNew) ? alertsNew.slice(0, 5) : []);
-      setTopEventIds(Array.isArray(topIds) ? topIds : []);
-      setFailedLogins(Array.isArray(failedLoginsData) ? failedLoginsData : []);
-      setTopUsernames(Array.isArray(topUsers) ? topUsers : []);
-      setAlertTrend(Array.isArray(trendData) ? trendData : []);
-      setRuleHits(Array.isArray(hitsData) ? hitsData : []);
     } catch (e) {
       setError(e.message);
     } finally {
@@ -569,11 +544,58 @@ export function SiemDashboard({ onNavigate }) {
     }
   }, [hours, sevFilter, catFilter, srcFilter, debouncedSearch, showSuppressed, getAccessTokenSilently]);
 
+  // Slow refresh: charts + insights — triggered on mount and every 5 minutes
+  const loadCharts = useCallback(async () => {
+    try {
+      const token = await getAccessTokenSilently();
+      const headers = { Authorization: `Bearer ${token}` };
+      const sup = showSuppressed ? '&showSuppressed=1' : '';
+      const h = `?hours=${hours}`;
+
+      const [sevRes, srcRes, catRes, srcListRes, topIdsRes, failedLoginsRes, topUsersRes, alertTrendRes, ruleHitsRes] = await Promise.all([
+        fetch(`/api/siem/events/by-severity${h}${sup}`, { headers }),
+        fetch(`/api/siem/events/by-source${h}`, { headers }),
+        fetch(`/api/siem/events/categories${h}`, { headers }),
+        fetch(`/api/siem/events/sources-list${h}`, { headers }),
+        fetch(`/api/siem/events/top-event-ids${h}${sup}`, { headers }),
+        fetch(`/api/siem/events/failed-logins${h}`, { headers }),
+        fetch(`/api/siem/events/top-usernames${h}`, { headers }),
+        fetch('/api/siem/alerts/trend', { headers }),
+        fetch(`/api/siem/rules/hit-counts${h}`, { headers }),
+      ]);
+
+      const [sev, src, cats, srcs, topIds, failedLoginsData, topUsers, trendData, hitsData] = await Promise.all([
+        sevRes.ok ? sevRes.json() : Promise.resolve([]),
+        srcRes.ok ? srcRes.json() : Promise.resolve([]),
+        catRes.ok ? catRes.json() : Promise.resolve([]),
+        srcListRes.ok ? srcListRes.json() : Promise.resolve([]),
+        topIdsRes.ok ? topIdsRes.json() : Promise.resolve([]),
+        failedLoginsRes.ok ? failedLoginsRes.json() : Promise.resolve([]),
+        topUsersRes.ok ? topUsersRes.json() : Promise.resolve([]),
+        alertTrendRes.ok ? alertTrendRes.json() : Promise.resolve([]),
+        ruleHitsRes.ok ? ruleHitsRes.json() : Promise.resolve([]),
+      ]);
+
+      setSeverities(Array.isArray(sev) ? sev : []);
+      setSources(Array.isArray(src) ? src : []);
+      setCategories(Array.isArray(cats) ? cats.map(r => r.category) : []);
+      setSourcesList(Array.isArray(srcs) ? srcs.map(r => r.source) : []);
+      setTopEventIds(Array.isArray(topIds) ? topIds : []);
+      setFailedLogins(Array.isArray(failedLoginsData) ? failedLoginsData : []);
+      setTopUsernames(Array.isArray(topUsers) ? topUsers : []);
+      setAlertTrend(Array.isArray(trendData) ? trendData : []);
+      setRuleHits(Array.isArray(hitsData) ? hitsData : []);
+    } catch {}
+  }, [hours, showSuppressed, getAccessTokenSilently]);
+
+  // On mount and filter changes: load both
   useEffect(() => {
-    load();
-    const interval = setInterval(load, 60000);
-    return () => clearInterval(interval);
-  }, [load]);
+    loadLive();
+    loadCharts();
+    const liveInterval = setInterval(loadLive, 15000);
+    const chartsInterval = setInterval(loadCharts, 300000);
+    return () => { clearInterval(liveInterval); clearInterval(chartsInterval); };
+  }, [loadLive, loadCharts]);
 
   useEffect(() => {
     const proto = window.location.protocol === 'https:' ? 'wss' : 'ws';
@@ -582,11 +604,14 @@ export function SiemDashboard({ onNavigate }) {
     ws.onmessage = (e) => {
       try {
         const msg = JSON.parse(e.data);
-        if (msg.type === 'new_events') { clearTimeout(debounce); debounce = setTimeout(load, 1000); }
+        if (msg.type === 'new_events' || msg.type === 'new_alerts') {
+          clearTimeout(debounce);
+          debounce = setTimeout(loadLive, 500);
+        }
       } catch {}
     };
     return () => { clearTimeout(debounce); if (ws.readyState !== WebSocket.CONNECTING) ws.close(); else ws.onopen = () => ws.close(); };
-  }, [load]);
+  }, [loadLive]);
 
   const totalSev = severities.reduce((sum, r) => sum + Number(r.count), 0);
   const hasAlerts = recentAlerts.length > 0 || alertSummary.some(r => Number(r.count) > 0);
