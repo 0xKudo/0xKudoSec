@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useWorkspace } from '../../../platform/shell/src/context/WorkspaceContext.jsx';
+import { useIsMobile } from '../../../platform/shell/src/hooks/useIsMobile.js';
 
 const THREAT_COLORS = {
   critical: 'var(--severity-critical)',
@@ -239,6 +240,7 @@ function SourceCard({ title, data }) {
 }
 
 export default function ThreatIntelTool() {
+  const isMobile = useIsMobile();
   const { getAccessTokenSilently } = useAuth0();
   const [indicator, setIndicator] = useState('');
   const [indicatorType, setIndicatorType] = useState('auto');
@@ -294,7 +296,7 @@ export default function ThreatIntelTool() {
         </p>
       </div>
 
-      <div style={styles.inputRow}>
+      <div style={{ ...styles.inputRow, flexDirection: isMobile ? 'column' : 'row' }}>
         <input
           style={styles.input}
           placeholder="1.2.3.4, example.com, https://..., or md5/sha256 hash"
@@ -304,7 +306,7 @@ export default function ThreatIntelTool() {
           disabled={loading}
         />
         <select
-          style={styles.select}
+          style={isMobile ? { ...styles.select, width: '100%' } : styles.select}
           value={indicatorType}
           onChange={e => setIndicatorType(e.target.value)}
           disabled={loading}
@@ -359,7 +361,7 @@ export default function ThreatIntelTool() {
             )}
           </div>
 
-          <div style={styles.sourcesGrid}>
+          <div style={{ ...styles.sourcesGrid, gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr' }}>
             <SourceCard title="AbuseIPDB" data={result.sources?.abuseipdb} />
             <SourceCard title="VirusTotal" data={result.sources?.virusTotal} />
             <SourceCard title="Shodan" data={result.sources?.shodan} />
