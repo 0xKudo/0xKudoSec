@@ -150,6 +150,8 @@ Flag any security concern before proceeding, even if it slows implementation dow
 - Scanner: active mode requires explicit "I have authorization" checkbox before any scan fires
 - Network Scanner: server-side nmap subprocess, strict argument whitelist
 - Wordlist Generator: `NODE_ENV=development` removes all entry limits and raises max length to 32. Production caps at 1M entries. Use this pattern for any future tool that should behave differently locally vs deployed.
+- No-auth tools (requiresAuth: false): Decoder, Reverse Shell Generator, Wordlist Generator, Payload Generator. These are accessible without login via `NO_AUTH_ROUTES` in `App.jsx`. Landing page shows them as clickable `↗` links.
+- Tool sidebar categories: Detect | Investigate | Report | Compliance | Simulate/Test. Defined in `Sidebar.jsx` PHASES array. Dashboard.jsx + DashboardMobile.jsx also carry phase labels per tool.
 
 ---
 

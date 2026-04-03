@@ -38,6 +38,18 @@ Unified cybersecurity tools platform at `tools.laynekudo.com`. Monorepo — shar
   - Root cause: `#root { zoom: 1.15 }` inflated everything on mobile causing horizontal overflow
   - Fix: `@media (max-width: 767px)` disables zoom, adds `overflow-x: hidden` — committed and deployed
 
+### Recently Completed (2026-04-03, continued)
+- Tool category reorganization:
+  - Network Scanner moved from Respond → Investigate
+  - Respond renamed to Report (Incident Report Generator only)
+  - Security Policy Translator moved to new Compliance category
+  - Updated: Sidebar.jsx, Dashboard.jsx, DashboardMobile.jsx, LandingPage.jsx
+- Landing page Tools nav + no-auth tool access:
+  - Tools button in header/footer now scrolls to tools section
+  - 4 no-auth tools (Decoder, Reverse Shell Generator, Wordlist Generator, Payload Generator) shown as clickable `↗` links on landing page
+  - App.jsx: `NO_AUTH_ROUTES` array — unauthenticated users on these routes bypass landing page gate
+  - All other routes still redirect unauthenticated users to landing page
+
 ### Mobile Fix Queue — COMPLETE (2026-04-03)
 
 All components done:
