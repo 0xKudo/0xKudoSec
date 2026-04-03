@@ -28,13 +28,35 @@ Unified cybersecurity tools platform at `tools.laynekudo.com`. Monorepo — shar
   - node-shipper moved to `_deprecated/node-shipper/`
 
 ### Recently Completed (2026-04-03)
-- Landing page mockup finalized: `mockups/landing-mockup-d.html`
-  - Centered hero, stat bar, editorial SIEM section with real dashboard preview, How it works (3 deep-dive cards), tools by SOC phase, free strip
-  - Nav matches TopNav.jsx exactly (brand, SIEM/Tools tabs, [ login ] + sun/moon toggle)
-  - Network Scanner moved from Respond to Simulate/Test in all copy
-  - GitHub login removed from copy (not implemented yet)
-  - SIEM dashboard preview built from SiemDashboard.jsx source (correct KPI order, alerts mid-row, tabs, search bar, event table)
-- Next step: implement as React component `platform/shell/src/pages/LandingPage.jsx` with mobile layout per `docs/specs/ui-desktop-mobile.md`
+- Landing page complete: `platform/shell/src/pages/LandingPage.jsx`
+  - Centered hero, stat bar, SIEM editorial + real dashboard preview, How it works (3 cards), tools by SOC phase, free strip, footer
+  - LandingNav matches TopNav.jsx exactly (brand, SIEM/Tools tabs, login button, theme toggle)
+  - Mobile branch: stacked sections, no dashboard preview, isMobile per ui-desktop-mobile.md spec
+  - Browse Tools scrolls to tools section via ref
+  - App.jsx shows LandingPage when `!isAuthenticated && !isLoading`
+- Mobile layout pass started:
+  - Root cause: `#root { zoom: 1.15 }` inflated everything on mobile causing horizontal overflow
+  - Fix: `@media (max-width: 767px)` disables zoom, adds `overflow-x: hidden` — committed and deployed
+
+### Mobile Fix Queue (in progress 2026-04-03)
+
+Fix one component per commit, test on device between each:
+
+| # | Component | File | Status |
+|---|-----------|------|--------|
+| 1 | theme.css zoom fix | `platform/shell/src/styles/theme.css` | done |
+| 2 | Intruder | `tools/intruder/client/index.jsx` | next |
+| 3 | HTTP Repeater | `tools/http-repeater/client/index.jsx` | |
+| 4 | Decoder | `tools/decoder/client/index.jsx` | |
+| 5 | AlertQueue | `platform/shell/src/components/AlertQueue.jsx` | |
+| 6 | DetectionRules | `platform/shell/src/components/DetectionRules.jsx` | |
+| 7 | Cases | `platform/shell/src/components/Cases.jsx` | |
+| 8 | LogSearch | `platform/shell/src/components/LogSearch.jsx` | |
+| 9 | LogSources | `platform/shell/src/components/LogSources.jsx` | |
+| 10 | OSINT Recon | `tools/osint-recon/client/index.jsx` | |
+| 11 | Threat Intel | `tools/threat-intel/client/index.jsx` | |
+| 12 | Wordlist Generator | `tools/wordlist-generator/client/index.jsx` | |
+| 13 | Remaining 13 tools | various | |
 
 ### Recently Completed (2026-04-01, continued)
 - Log retention cron: `platform/server/services/retentionCron.js`, node-cron, runs daily at 02:00 VPS time
@@ -91,7 +113,8 @@ CREATE INDEX IF NOT EXISTS logs_parent_guid_idx  ON logs (parent_process_guid);
   - `.gitignore` updated: `.claude/`, `mockups/`, `_deprecated/`, `docs/`, `platform/server/tests/` all excluded
 
 ### Next
-- Phase 4: Electron + Proxy tool
+- Complete mobile layout pass (see Mobile Fix Queue above)
+- Phase 4: Electron + Proxy tool (after mobile pass complete)
 
 ---
 
