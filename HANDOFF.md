@@ -38,25 +38,17 @@ Unified cybersecurity tools platform at `tools.laynekudo.com`. Monorepo — shar
   - Root cause: `#root { zoom: 1.15 }` inflated everything on mobile causing horizontal overflow
   - Fix: `@media (max-width: 767px)` disables zoom, adds `overflow-x: hidden` — committed and deployed
 
-### Mobile Fix Queue (in progress 2026-04-03)
+### Mobile Fix Queue — COMPLETE (2026-04-03)
 
-Fix one component per commit, test on device between each:
+All components done:
+- theme.css zoom fix, App.jsx scroll/sticky TopNav
+- Intruder, HTTP Repeater, Decoder
+- AlertQueue, DetectionRules, Cases, LogSearch, LogSources (all SIEM tables -> cards)
+- OSINT Recon, Threat Intel, Wordlist Generator
+- Reverse Shell, CVE Mapper, Incident Report, Log Anomaly, Network Threat, Phishing Analyzer, Scanner, Security Policy Translator, Payload Obfuscation Explainer
+- Network Scanner + Subdomain Enumerator were already done
 
-| # | Component | File | Status |
-|---|-----------|------|--------|
-| 1 | theme.css zoom fix | `platform/shell/src/styles/theme.css` | done |
-| 2 | Intruder | `tools/intruder/client/index.jsx` | next |
-| 3 | HTTP Repeater | `tools/http-repeater/client/index.jsx` | |
-| 4 | Decoder | `tools/decoder/client/index.jsx` | |
-| 5 | AlertQueue | `platform/shell/src/components/AlertQueue.jsx` | |
-| 6 | DetectionRules | `platform/shell/src/components/DetectionRules.jsx` | |
-| 7 | Cases | `platform/shell/src/components/Cases.jsx` | |
-| 8 | LogSearch | `platform/shell/src/components/LogSearch.jsx` | |
-| 9 | LogSources | `platform/shell/src/components/LogSources.jsx` | |
-| 10 | OSINT Recon | `tools/osint-recon/client/index.jsx` | |
-| 11 | Threat Intel | `tools/threat-intel/client/index.jsx` | |
-| 12 | Wordlist Generator | `tools/wordlist-generator/client/index.jsx` | |
-| 13 | Remaining 13 tools | various | |
+Pattern used: `isMobile ? <mobile JSX> : <desktop JSX>`, never media queries in tool components. Tables replaced with card rows on SIEM components.
 
 ### Recently Completed (2026-04-01, continued)
 - Log retention cron: `platform/server/services/retentionCron.js`, node-cron, runs daily at 02:00 VPS time
@@ -113,8 +105,7 @@ CREATE INDEX IF NOT EXISTS logs_parent_guid_idx  ON logs (parent_process_guid);
   - `.gitignore` updated: `.claude/`, `mockups/`, `_deprecated/`, `docs/`, `platform/server/tests/` all excluded
 
 ### Next
-- Complete mobile layout pass (see Mobile Fix Queue above)
-- Phase 4: Electron + Proxy tool (after mobile pass complete)
+- Phase 4: Electron + Proxy tool
 
 ---
 
