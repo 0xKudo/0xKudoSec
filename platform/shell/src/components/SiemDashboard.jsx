@@ -588,14 +588,19 @@ export function SiemDashboard({ onNavigate }) {
     } catch {}
   }, [hours, showSuppressed, getAccessTokenSilently]);
 
-  // On mount and filter changes: load both
+  // Live data: re-runs on any filter change
   useEffect(() => {
     loadLive();
-    loadCharts();
     const liveInterval = setInterval(loadLive, 15000);
+    return () => clearInterval(liveInterval);
+  }, [loadLive]);
+
+  // Charts: only re-runs when hours or showSuppressed changes, not on filter changes
+  useEffect(() => {
+    loadCharts();
     const chartsInterval = setInterval(loadCharts, 300000);
-    return () => { clearInterval(liveInterval); clearInterval(chartsInterval); };
-  }, [loadLive, loadCharts]);
+    return () => clearInterval(chartsInterval);
+  }, [loadCharts]);
 
   useEffect(() => {
     const proto = window.location.protocol === 'https:' ? 'wss' : 'ws';
