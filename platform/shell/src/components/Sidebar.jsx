@@ -12,12 +12,12 @@ const PHASES = [
   {
     id: 'investigate',
     label: 'Investigate',
-    routes: ['/osint-recon', '/cve-exploit-mapper', '/payload-obfuscation-explainer', '/decoder', '/subdomain-enumerator'],
+    routes: ['/osint-recon', '/cve-exploit-mapper', '/payload-obfuscation-explainer', '/decoder', '/subdomain-enumerator', '/network-scanner'],
   },
   {
     id: 'respond',
     label: 'Respond',
-    routes: ['/incident-report', '/security-policy-translator', '/network-scanner'],
+    routes: ['/incident-report', '/security-policy-translator'],
   },
   {
     id: 'simulate',

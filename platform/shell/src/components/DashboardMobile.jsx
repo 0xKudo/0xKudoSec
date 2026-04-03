@@ -10,7 +10,7 @@ const QUICK_LAUNCH = [
   { id: 'decoder', phase: 'Investigate' },
   { id: 'incident-report', phase: 'Respond' },
   { id: 'intruder', phase: 'Simulate' },
-  { id: 'network-scanner', phase: 'Respond' },
+  { id: 'network-scanner', phase: 'Investigate' },
   { id: 'subdomain-enumerator', phase: 'Investigate' },
 ];
 
