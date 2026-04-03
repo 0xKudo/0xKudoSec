@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useWorkspace } from '../../../platform/shell/src/context/WorkspaceContext.jsx';
+import { useIsMobile } from '../../../platform/shell/src/hooks/useIsMobile.js';
 
 const RISK_COLORS = {
   critical: 'var(--severity-critical)',
@@ -216,6 +217,7 @@ function SourceCard({ title, data }) {
 }
 
 export default function OsintReconTool() {
+  const isMobile = useIsMobile();
   const { getAccessTokenSilently } = useAuth0();
   const [target, setTarget] = useState('');
   const [targetType, setTargetType] = useState('auto');
@@ -271,7 +273,7 @@ export default function OsintReconTool() {
         </p>
       </div>
 
-      <div style={styles.inputRow}>
+      <div style={{ ...styles.inputRow, flexDirection: isMobile ? 'column' : 'row' }}>
         <input
           style={styles.input}
           placeholder="example.com, 192.168.1.1, or user@example.com"
@@ -281,7 +283,7 @@ export default function OsintReconTool() {
           disabled={loading}
         />
         <select
-          style={styles.select}
+          style={isMobile ? { ...styles.select, width: '100%' } : styles.select}
           value={targetType}
           onChange={e => setTargetType(e.target.value)}
           disabled={loading}
@@ -335,7 +337,7 @@ export default function OsintReconTool() {
             )}
           </div>
 
-          <div style={styles.sourcesGrid}>
+          <div style={{ ...styles.sourcesGrid, gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr' }}>
             <SourceCard title="IPInfo" data={result.sources?.ipInfo} />
             <SourceCard title="VirusTotal" data={result.sources?.virusTotal} />
             <SourceCard title="WHOIS" data={result.sources?.whois} />
