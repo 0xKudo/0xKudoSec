@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useIsMobile } from '../hooks/useIsMobile';
 
@@ -213,6 +214,16 @@ const s = {
   eTd: { padding: '6px 10px', borderBottom: '1px solid var(--border-subtle)', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 0 },
   eTdSev: (color) => ({ fontSize: '8px', padding: '1px 5px', border: `1px solid ${color}`, color, letterSpacing: '0.04em', textTransform: 'uppercase', fontWeight: 600, whiteSpace: 'nowrap' }),
 
+  // nav
+  nav: { background: 'var(--bg-sidebar)', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'stretch', flexShrink: 0, height: '44px', zIndex: 100 },
+  navBrand: { display: 'flex', alignItems: 'center', padding: '0 20px', fontSize: '14px', fontWeight: 'bold', color: 'var(--text-primary)', letterSpacing: '0.04em', borderRight: '1px solid var(--border)', whiteSpace: 'nowrap', flexShrink: 0 },
+  navTab: (active) => ({ display: 'flex', alignItems: 'center', padding: '0 24px', fontSize: '12px', letterSpacing: '0.06em', textTransform: 'uppercase', color: active ? 'var(--accent-amber)' : 'var(--text-muted)', cursor: 'pointer', borderRight: '1px solid var(--border)', borderBottom: active ? '2px solid var(--accent-amber)' : '2px solid transparent', background: active ? 'var(--bg-primary)' : 'transparent', userSelect: 'none' }),
+  navRight: { marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '16px', padding: '0 16px' },
+  navBtn: { background: 'none', border: '1px solid var(--border)', color: 'var(--text-muted)', fontFamily: 'var(--font)', fontSize: '11px', padding: '4px 10px', cursor: 'pointer' },
+  // nav mobile
+  navMobile: { background: 'var(--bg-sidebar)', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'stretch', flexShrink: 0, height: '44px', zIndex: 100 },
+  navMobileRight: { marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '6px', padding: '0 8px', flexShrink: 0 },
+
   // free strip
   freeStrip: { borderTop: '1px solid var(--border)', background: 'var(--bg-surface)', padding: '20px 64px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '32px' },
   freeStripMobile: { borderTop: '1px solid var(--border)', background: 'var(--bg-surface)', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px', alignItems: 'center', textAlign: 'center' },
@@ -225,6 +236,45 @@ const s = {
   footerLinks: { display: 'flex', gap: '24px' },
   footerLink: { fontSize: '11px', color: 'var(--text-subtle)', textDecoration: 'none' },
 };
+
+function LandingNav({ onLogin, isMobile }) {
+  const [theme, setTheme] = useState(() => localStorage.getItem('cybertools_theme') || 'dark');
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('cybertools_theme', theme);
+  }, [theme]);
+  const toggleTheme = () => setTheme(t => t === 'dark' ? 'light' : 'dark');
+
+  if (isMobile) {
+    return (
+      <nav style={s.navMobile}>
+        <div style={{ ...s.navBrand, borderRight: 'none', fontSize: '10px', padding: '0 14px', letterSpacing: '0.02em' }}>// 0xKudo</div>
+        <div style={{ display: 'flex', alignItems: 'stretch' }}>
+          <div style={{ ...s.navTab(true), padding: '0 12px' }}>SIEM</div>
+          <div style={{ ...s.navTab(false), padding: '0 12px' }}>Tools</div>
+        </div>
+        <div style={s.navMobileRight}>
+          <button style={{ ...s.navBtn, padding: '4px 8px', fontSize: '10px' }} onClick={onLogin}>login</button>
+          <button style={{ ...s.navBtn, padding: '4px 8px' }} onClick={toggleTheme}>{theme === 'dark' ? '☀' : '☾'}</button>
+        </div>
+      </nav>
+    );
+  }
+
+  return (
+    <nav style={s.nav}>
+      <div style={s.navBrand}>// 0xKudo Security Platform</div>
+      <div style={{ display: 'flex', alignItems: 'stretch' }}>
+        <div style={s.navTab(true)}>SIEM</div>
+        <div style={s.navTab(false)}>Tools</div>
+      </div>
+      <div style={s.navRight}>
+        <button style={s.navBtn} onClick={onLogin}>[ login ]</button>
+        <button style={s.navBtn} onClick={toggleTheme}>{theme === 'dark' ? '☀' : '☾'}</button>
+      </div>
+    </nav>
+  );
+}
 
 function SiemPreview() {
   return (
@@ -356,6 +406,7 @@ function SiemPreview() {
 function DesktopLanding({ onLogin }) {
   return (
     <div style={s.page}>
+      <LandingNav onLogin={onLogin} isMobile={false} />
       {/* Hero */}
       <section style={s.hero}>
         <div style={s.heroGrid} />
@@ -482,6 +533,7 @@ function DesktopLanding({ onLogin }) {
 function MobileLanding({ onLogin }) {
   return (
     <div style={s.page}>
+      <LandingNav onLogin={onLogin} isMobile={true} />
       {/* Hero */}
       <section style={s.heroMobile}>
         <div style={s.heroGrid} />
