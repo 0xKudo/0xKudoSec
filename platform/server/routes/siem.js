@@ -799,4 +799,56 @@ router.get('/logs/export', wrap(async (req, res) => {
   res.json(rows);
 }));
 
+// ── Change password (email/password accounts only) ────────────────────────────
+router.post('/change-password', wrap(async (req, res) => {
+  const sub = uid(req);
+
+  // Only auth0 database connection users can change password
+  if (!sub.startsWith('auth0|')) {
+    const provider = sub.startsWith('google-oauth2|') ? 'Google'
+                   : sub.startsWith('github|') ? 'GitHub'
+                   : 'your social provider';
+    return res.status(400).json({ error: `Password is managed by ${provider}. Change it there.` });
+  }
+
+  const domain   = process.env.AUTH0_DOMAIN;
+  const clientId = process.env.AUTH0_MGMT_CLIENT_ID;
+  const clientSecret = process.env.AUTH0_MGMT_CLIENT_SECRET;
+
+  // Get M2M token
+  const tokenRes = await fetch(`https://${domain}/oauth/token`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      grant_type: 'client_credentials',
+      client_id: clientId,
+      client_secret: clientSecret,
+      audience: `https://${domain}/api/v2/`,
+    }),
+  });
+  if (!tokenRes.ok) return res.status(500).json({ error: 'Failed to obtain management token.' });
+  const { access_token } = await tokenRes.json();
+
+  // Look up user's email via Management API
+  const userRes = await fetch(`https://${domain}/api/v2/users/${encodeURIComponent(sub)}`, {
+    headers: { Authorization: `Bearer ${access_token}` },
+  });
+  if (!userRes.ok) return res.status(500).json({ error: 'Failed to look up user.' });
+  const { email } = await userRes.json();
+
+  // Send password change email
+  const changeRes = await fetch(`https://${domain}/dbconnections/change_password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      client_id: process.env.AUTH0_CLIENT_ID,
+      email,
+      connection: 'Username-Password-Authentication',
+    }),
+  });
+  if (!changeRes.ok) return res.status(500).json({ error: 'Failed to send password reset email.' });
+
+  res.json({ ok: true });
+}));
+
 export default router;

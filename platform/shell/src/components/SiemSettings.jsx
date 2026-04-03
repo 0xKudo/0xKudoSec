@@ -57,10 +57,18 @@ const s = {
 };
 
 export function SiemSettings() {
-  const { getAccessTokenSilently } = useAuth0();
+  const { getAccessTokenSilently, user } = useAuth0();
   const [retentionDays, setRetentionDays] = useState('');
   const [saved, setSaved] = useState(null); // null | 'ok' | 'error'
   const [loading, setLoading] = useState(true);
+  const [pwStatus, setPwStatus] = useState(null); // null | 'sending' | 'ok' | 'error'
+  const [pwError, setPwError] = useState('');
+
+  const sub = user?.sub ?? '';
+  const isEmailUser = sub.startsWith('auth0|');
+  const socialProvider = sub.startsWith('google-oauth2|') ? 'Google'
+                       : sub.startsWith('github|') ? 'GitHub'
+                       : null;
 
   useEffect(() => {
     (async () => {
@@ -94,6 +102,24 @@ export function SiemSettings() {
     }
   }
 
+  async function sendPasswordReset() {
+    setPwStatus('sending');
+    setPwError('');
+    try {
+      const token = await getAccessTokenSilently();
+      const res = await fetch('/api/siem/change-password', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (!res.ok) { setPwStatus('error'); setPwError(data.error || 'Failed.'); }
+      else setPwStatus('ok');
+    } catch {
+      setPwStatus('error');
+      setPwError('Request failed.');
+    }
+  }
+
   return (
     <div style={s.container}>
       <div style={s.header}>Settings</div>
@@ -123,6 +149,29 @@ export function SiemSettings() {
             {saved === 'ok' && <div style={s.status(true)}>Saved.</div>}
             {saved === 'error' && <div style={s.status(false)}>Failed to save. Check value and try again.</div>}
           </>
+        )}
+      </div>
+      <div style={s.section}>
+        <div style={s.sectionTitle}>Password</div>
+        {isEmailUser ? (
+          <>
+            <div style={s.sectionDesc}>
+              A password reset link will be sent to <strong>{user.email}</strong>.
+            </div>
+            <button
+              style={s.btn}
+              onClick={sendPasswordReset}
+              disabled={pwStatus === 'sending' || pwStatus === 'ok'}
+            >
+              {pwStatus === 'sending' ? 'Sending...' : 'Send Password Reset Email'}
+            </button>
+            {pwStatus === 'ok' && <div style={s.status(true)}>Email sent. Check your inbox.</div>}
+            {pwStatus === 'error' && <div style={s.status(false)}>{pwError}</div>}
+          </>
+        ) : (
+          <div style={s.sectionDesc}>
+            You signed in with {socialProvider ?? 'a social provider'}. Password management is handled by {socialProvider ?? 'your provider'} — change it there.
+          </div>
         )}
       </div>
     </div>
