@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useWorkspace } from '../../../platform/shell/src/context/WorkspaceContext.jsx';
+import { useIsMobile } from '../../../platform/shell/src/hooks/useIsMobile.js';
 
 const METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'];
 
@@ -154,6 +155,7 @@ const styles = {
 };
 
 export default function Intruder() {
+  const isMobile = useIsMobile();
   const { getAccessTokenSilently } = useAuth0();
   const [method, setMethod] = useState('GET');
   const [urlTemplate, setUrlTemplate] = useState('');
@@ -245,12 +247,12 @@ export default function Intruder() {
         Only use against systems you own or have explicit written authorization to test.
       </div>
 
-      <div style={styles.layout}>
+      <div style={{ ...styles.layout, gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr' }}>
         {/* Request template */}
         <div style={styles.panel}>
           <div style={styles.panelTitle}>Request Template</div>
 
-          <div style={styles.row}>
+          <div style={{ ...styles.row, flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'stretch' : 'flex-end' }}>
             <div>
               <span style={styles.label}>Method</span>
               <select style={styles.select} value={method} onChange={e => setMethod(e.target.value)} disabled={loading}>
