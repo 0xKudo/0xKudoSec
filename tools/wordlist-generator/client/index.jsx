@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useWorkspace } from '../../../platform/shell/src/context/WorkspaceContext.jsx';
+import { useIsMobile } from '../../../platform/shell/src/hooks/useIsMobile.js';
 
 const CHARSET_OPTIONS = [
   { value: 'lowercase', label: 'Lowercase (a-z)' },
@@ -123,6 +124,7 @@ const styles = {
 };
 
 export default function WordlistGenerator() {
+  const isMobile = useIsMobile();
   const [activeTab, setActiveTab] = useState('charset');
 
   // Charset tab state
@@ -277,7 +279,7 @@ export default function WordlistGenerator() {
             )}
           </div>
 
-          <div style={styles.row}>
+          <div style={{ ...styles.row, flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-start' : 'center' }}>
             <div>
               <span style={styles.label}>Min Length</span>
               <input style={styles.input} type="number" min="1" max="16" value={minLength} onChange={e => setMinLength(e.target.value)} disabled={loading} />
@@ -286,7 +288,7 @@ export default function WordlistGenerator() {
               <span style={styles.label}>Max Length</span>
               <input style={styles.input} type="number" min="1" max="16" value={maxLength} onChange={e => setMaxLength(e.target.value)} disabled={loading} />
             </div>
-            <button style={{ ...styles.button(!canGenerate), marginTop: '18px' }} onClick={handleGenerate} disabled={!canGenerate}>
+            <button style={{ ...styles.button(!canGenerate), marginTop: isMobile ? '4px' : '18px' }} onClick={handleGenerate} disabled={!canGenerate}>
               {loading ? 'Generating...' : 'Generate'}
             </button>
           </div>
@@ -357,7 +359,7 @@ export default function WordlistGenerator() {
 
       {result && result.mode === 'charset' && (
         <div style={styles.results}>
-          <div style={styles.resultHeader}>
+          <div style={{ ...styles.resultHeader, flexWrap: 'wrap', gap: '8px' }}>
             <span style={styles.resultMeta}>
               ~{result.estimated.toLocaleString()} entries
               {result.capped
@@ -386,7 +388,7 @@ export default function WordlistGenerator() {
 
       {result && result.mode === 'pattern' && (
         <div style={styles.results}>
-          <div style={styles.resultHeader}>
+          <div style={{ ...styles.resultHeader, flexWrap: 'wrap', gap: '8px' }}>
             <span style={styles.resultMeta}>{result.count.toLocaleString()} entries generated</span>
             <div style={styles.actionRow}>
               <button style={styles.secondaryBtn} onClick={handleCopyAll}>Copy All</button>
