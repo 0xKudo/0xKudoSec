@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
+import { useIsMobile } from '../hooks/useIsMobile.js';
 
 const SEV_COLOR = {
   critical: 'var(--severity-critical)',
@@ -92,6 +93,7 @@ function conditionSummary(rule) {
 }
 
 export function DetectionRules({ onNavigate }) {
+  const isMobile = useIsMobile();
   const { getAccessTokenSilently } = useAuth0();
   const [rules, setRules] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -194,60 +196,92 @@ export function DetectionRules({ onNavigate }) {
 
   return (
     <div style={s.container}>
-      <div style={s.header}>
+      <div style={isMobile ? { ...s.header, flexWrap: 'wrap', gap: '8px' } : s.header}>
         <span style={s.title}>SIEM &nbsp;<span style={s.sub}>/ Detection Rules</span></span>
-        <div style={s.actions}>
+        <div style={isMobile ? { display: 'flex', gap: '8px' } : s.actions}>
           <button style={s.btn} onClick={() => onNavigate('alerts')}>Alert Queue</button>
           <button style={s.btnPrimary} onClick={openNew}>+ New Rule</button>
         </div>
       </div>
 
-      <div style={{ overflowX: 'auto' }}>
-        <table style={s.table}>
-          <thead>
-            <tr>
-              {['Name', 'Action', 'Severity', 'Conditions', 'Enabled', ''].map(h => (
-                <th key={h} style={s.th}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {!loading && !rules.length && (
-              <tr><td colSpan={6} style={s.muted}>No rules yet. Create a rule to auto-generate alerts when logs match.</td></tr>
-            )}
-            {rules.map(rule => (
-              <tr
-                key={rule.id}
-                style={{ cursor: 'pointer', opacity: rule.enabled ? 1 : 0.5 }}
-                onClick={() => openEdit(rule)}
-                onMouseEnter={e => Array.from(e.currentTarget.cells).forEach(c => c.style.background = 'var(--bg-surface)')}
-                onMouseLeave={e => Array.from(e.currentTarget.cells).forEach(c => c.style.background = '')}
-              >
-                <td style={{ ...s.td, color: 'var(--text-primary)' }}>{rule.name}</td>
-                <td style={s.td}>
-                  <span style={{
-                    fontSize: '10px', padding: '2px 7px', letterSpacing: '0.06em', textTransform: 'uppercase',
-                    border: `1px solid ${rule.action === 'suppress' ? 'var(--text-muted)' : 'var(--severity-info)'}`,
-                    color: rule.action === 'suppress' ? 'var(--text-muted)' : 'var(--severity-info)',
-                  }}>{rule.action || 'alert'}</span>
-                </td>
-                <td style={s.td}><span style={s.sevBadge(sevColor(rule.severity))}>{rule.severity}</span></td>
-                <td style={{ ...s.td, fontFamily: 'var(--font)', fontSize: '11px', maxWidth: '340px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {conditionSummary(rule)}
-                </td>
-                <td style={s.td} onClick={e => { e.stopPropagation(); toggleEnabled(rule); }}>
-                  <span style={{ cursor: 'pointer', color: rule.enabled ? 'var(--severity-low)' : 'var(--text-muted)' }}>
-                    {rule.enabled ? 'enabled' : 'disabled'}
-                  </span>
-                </td>
-                <td style={s.td}>
-                  <button style={{ ...s.btn, padding: '2px 8px' }} onClick={e => { e.stopPropagation(); openEdit(rule); }}>Edit</button>
-                </td>
+      {isMobile ? (
+        <div>
+          {!loading && !rules.length && (
+            <div style={s.muted}>No rules yet. Tap "+ New Rule" to create one.</div>
+          )}
+          {rules.map(rule => (
+            <div
+              key={rule.id}
+              style={{ borderBottom: '1px solid var(--border-subtle)', padding: '12px 16px', opacity: rule.enabled ? 1 : 0.5, cursor: 'pointer' }}
+              onClick={() => openEdit(rule)}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                <span style={s.sevBadge(sevColor(rule.severity))}>{rule.severity}</span>
+                <span style={{
+                  fontSize: '10px', padding: '2px 7px', letterSpacing: '0.06em', textTransform: 'uppercase',
+                  border: `1px solid ${rule.action === 'suppress' ? 'var(--text-muted)' : 'var(--severity-info)'}`,
+                  color: rule.action === 'suppress' ? 'var(--text-muted)' : 'var(--severity-info)',
+                }}>{rule.action || 'alert'}</span>
+                <span
+                  style={{ marginLeft: 'auto', fontSize: '11px', cursor: 'pointer', color: rule.enabled ? 'var(--severity-low)' : 'var(--text-muted)' }}
+                  onClick={e => { e.stopPropagation(); toggleEnabled(rule); }}
+                >{rule.enabled ? 'enabled' : 'disabled'}</span>
+              </div>
+              <div style={{ fontSize: '12px', color: 'var(--text-primary)', marginBottom: '4px' }}>{rule.name}</div>
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {conditionSummary(rule)}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div style={{ overflowX: 'auto' }}>
+          <table style={s.table}>
+            <thead>
+              <tr>
+                {['Name', 'Action', 'Severity', 'Conditions', 'Enabled', ''].map(h => (
+                  <th key={h} style={s.th}>{h}</th>
+                ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {!loading && !rules.length && (
+                <tr><td colSpan={6} style={s.muted}>No rules yet. Create a rule to auto-generate alerts when logs match.</td></tr>
+              )}
+              {rules.map(rule => (
+                <tr
+                  key={rule.id}
+                  style={{ cursor: 'pointer', opacity: rule.enabled ? 1 : 0.5 }}
+                  onClick={() => openEdit(rule)}
+                  onMouseEnter={e => Array.from(e.currentTarget.cells).forEach(c => c.style.background = 'var(--bg-surface)')}
+                  onMouseLeave={e => Array.from(e.currentTarget.cells).forEach(c => c.style.background = '')}
+                >
+                  <td style={{ ...s.td, color: 'var(--text-primary)' }}>{rule.name}</td>
+                  <td style={s.td}>
+                    <span style={{
+                      fontSize: '10px', padding: '2px 7px', letterSpacing: '0.06em', textTransform: 'uppercase',
+                      border: `1px solid ${rule.action === 'suppress' ? 'var(--text-muted)' : 'var(--severity-info)'}`,
+                      color: rule.action === 'suppress' ? 'var(--text-muted)' : 'var(--severity-info)',
+                    }}>{rule.action || 'alert'}</span>
+                  </td>
+                  <td style={s.td}><span style={s.sevBadge(sevColor(rule.severity))}>{rule.severity}</span></td>
+                  <td style={{ ...s.td, fontFamily: 'var(--font)', fontSize: '11px', maxWidth: '340px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {conditionSummary(rule)}
+                  </td>
+                  <td style={s.td} onClick={e => { e.stopPropagation(); toggleEnabled(rule); }}>
+                    <span style={{ cursor: 'pointer', color: rule.enabled ? 'var(--severity-low)' : 'var(--text-muted)' }}>
+                      {rule.enabled ? 'enabled' : 'disabled'}
+                    </span>
+                  </td>
+                  <td style={s.td}>
+                    <button style={{ ...s.btn, padding: '2px 8px' }} onClick={e => { e.stopPropagation(); openEdit(rule); }}>Edit</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {formOpen && (
         <div style={s.overlay} onClick={() => setFormOpen(false)}>
@@ -257,15 +291,15 @@ export function DetectionRules({ onNavigate }) {
               <button style={s.modalClose} onClick={() => setFormOpen(false)}>✕</button>
             </div>
             <div style={s.modalBody}>
-              <div style={s.formRow}>
+              <div style={isMobile ? { display: 'flex', flexDirection: 'column', gap: '4px' } : s.formRow}>
                 <span style={s.label}>Name *</span>
                 <input style={s.input} value={form.name} onChange={e => set('name', e.target.value)} placeholder="e.g. Failed Login Spike" />
               </div>
-              <div style={s.formRow}>
+              <div style={isMobile ? { display: 'flex', flexDirection: 'column', gap: '4px' } : s.formRow}>
                 <span style={s.label}>Description</span>
                 <input style={s.input} value={form.description} onChange={e => set('description', e.target.value)} placeholder="Optional" />
               </div>
-              <div style={s.formRow}>
+              <div style={isMobile ? { display: 'flex', flexDirection: 'column', gap: '4px' } : s.formRow}>
                 <span style={s.label}>Action</span>
                 <div style={{ display: 'flex', gap: '8px' }}>
                   {['alert', 'suppress'].map(a => (
@@ -279,13 +313,13 @@ export function DetectionRules({ onNavigate }) {
                   ))}
                 </div>
               </div>
-              <div style={s.formRow}>
+              <div style={isMobile ? { display: 'flex', flexDirection: 'column', gap: '4px' } : s.formRow}>
                 <span style={s.label}>Severity</span>
                 <select style={s.select} value={form.severity} onChange={e => set('severity', e.target.value)}>
                   {['critical','high','medium','low','info'].map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
               </div>
-              <div style={s.formRow}>
+              <div style={isMobile ? { display: 'flex', flexDirection: 'column', gap: '4px' } : s.formRow}>
                 <span style={s.label}>Enabled</span>
                 <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
                   <input type="checkbox" checked={form.enabled} onChange={e => set('enabled', e.target.checked)} />
@@ -296,47 +330,47 @@ export function DetectionRules({ onNavigate }) {
               <div style={s.sectionDivider}>Match Conditions (all filled fields must match)</div>
               <div style={s.hint}>Leave a field blank to ignore it. All non-blank conditions use AND logic.</div>
 
-              <div style={s.formRow}>
+              <div style={isMobile ? { display: 'flex', flexDirection: 'column', gap: '4px' } : s.formRow}>
                 <span style={s.label}>Event ID</span>
                 <input style={s.input} value={form.match_event_id} onChange={e => set('match_event_id', e.target.value)} placeholder="e.g. 4625" type="number" />
               </div>
-              <div style={s.formRow}>
+              <div style={isMobile ? { display: 'flex', flexDirection: 'column', gap: '4px' } : s.formRow}>
                 <span style={s.label}>Category</span>
                 <select style={s.select} value={form.match_category} onChange={e => set('match_category', e.target.value)}>
                   {CATEGORIES.map(c => <option key={c} value={c}>{c || '— any —'}</option>)}
                 </select>
               </div>
-              <div style={s.formRow}>
+              <div style={isMobile ? { display: 'flex', flexDirection: 'column', gap: '4px' } : s.formRow}>
                 <span style={s.label}>Log Severity</span>
                 <select style={s.select} value={form.match_severity} onChange={e => set('match_severity', e.target.value)}>
                   {SEVERITIES.map(sv => <option key={sv} value={sv}>{sv || '— any —'}</option>)}
                 </select>
               </div>
-              <div style={s.formRow}>
+              <div style={isMobile ? { display: 'flex', flexDirection: 'column', gap: '4px' } : s.formRow}>
                 <span style={s.label}>Username contains</span>
                 <input style={s.input} value={form.match_username} onChange={e => set('match_username', e.target.value)} placeholder="e.g. SYSTEM" />
               </div>
-              <div style={s.formRow}>
+              <div style={isMobile ? { display: 'flex', flexDirection: 'column', gap: '4px' } : s.formRow}>
                 <span style={s.label}>Host contains</span>
                 <input style={s.input} value={form.match_host} onChange={e => set('match_host', e.target.value)} placeholder="e.g. DESKTOP-" />
               </div>
-              <div style={s.formRow}>
+              <div style={isMobile ? { display: 'flex', flexDirection: 'column', gap: '4px' } : s.formRow}>
                 <span style={s.label}>Message contains</span>
                 <input style={s.input} value={form.match_message} onChange={e => set('match_message', e.target.value)} placeholder="e.g. failed" />
               </div>
-              <div style={s.formRow}>
+              <div style={isMobile ? { display: 'flex', flexDirection: 'column', gap: '4px' } : s.formRow}>
                 <span style={s.label}>Process contains</span>
                 <input style={s.input} value={form.match_process} onChange={e => set('match_process', e.target.value)} placeholder="e.g. powershell" />
               </div>
-              <div style={s.formRow}>
+              <div style={isMobile ? { display: 'flex', flexDirection: 'column', gap: '4px' } : s.formRow}>
                 <span style={s.label}>Source IP contains</span>
                 <input style={s.input} value={form.match_src_ip} onChange={e => set('match_src_ip', e.target.value)} placeholder="e.g. 192.168." />
               </div>
-              <div style={s.formRow}>
+              <div style={isMobile ? { display: 'flex', flexDirection: 'column', gap: '4px' } : s.formRow}>
                 <span style={s.label}>Dest IP contains</span>
                 <input style={s.input} value={form.match_dest_ip} onChange={e => set('match_dest_ip', e.target.value)} placeholder="e.g. 8.8.8" />
               </div>
-              <div style={s.formRow}>
+              <div style={isMobile ? { display: 'flex', flexDirection: 'column', gap: '4px' } : s.formRow}>
                 <span style={s.label}>Dest Port</span>
                 <input style={s.input} type="number" min="1" max="65535" value={form.match_dest_port} onChange={e => set('match_dest_port', e.target.value)} placeholder="e.g. 4444" />
               </div>
