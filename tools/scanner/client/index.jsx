@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useWorkspace } from '../../../platform/shell/src/context/WorkspaceContext.jsx';
+import { useIsMobile } from '../../../platform/shell/src/hooks/useIsMobile.js';
 
 const SEVERITY_ORDER = ['critical', 'high', 'medium', 'low', 'info'];
 const SEVERITY_COLOR = {
@@ -132,6 +133,7 @@ const styles = {
 };
 
 export default function Scanner() {
+  const isMobile = useIsMobile();
   const { getAccessTokenSilently } = useAuth0();
   const [url, setUrl] = useState('');
   const [activeMode, setActiveMode] = useState(false);
@@ -220,9 +222,9 @@ export default function Scanner() {
 
       <div style={styles.section}>
         <span style={styles.label}>Target URL</span>
-        <div style={styles.inputRow}>
+        <div style={{ ...styles.inputRow, flexDirection: isMobile ? 'column' : 'row' }}>
           <input
-            style={styles.input}
+            style={isMobile ? { ...styles.input, minWidth: 0 } : styles.input}
             placeholder="https://example.com"
             value={url}
             onChange={e => setUrl(e.target.value)}
@@ -237,7 +239,7 @@ export default function Scanner() {
 
       <div style={styles.section}>
         <span style={styles.label}>Scan Mode</span>
-        <div style={styles.modeRow}>
+        <div style={{ ...styles.modeRow, flexDirection: isMobile ? 'column' : 'row' }}>
           <div style={styles.modeCard(!activeMode)} onClick={() => { setActiveMode(false); setAuthorized(false); }}>
             <div style={styles.modeTitle}>Passive</div>
             <div style={styles.modeDesc}>Headers, cookies, forms, info leakage. No attack traffic sent.</div>

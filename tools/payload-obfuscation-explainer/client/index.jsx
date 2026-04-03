@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useWorkspace } from '../../../platform/shell/src/context/WorkspaceContext.jsx';
+import { useIsMobile } from '../../../platform/shell/src/hooks/useIsMobile.js';
 
 const THREAT_COLORS = {
   critical: 'var(--severity-critical)',
@@ -135,6 +136,7 @@ const styles = {
 };
 
 export default function PayloadObfuscationExplainer() {
+  const isMobile = useIsMobile();
   const { getAccessTokenSilently } = useAuth0();
   const [payload, setPayload] = useState('');
   const [encodingHint, setEncodingHint] = useState('auto');
@@ -203,8 +205,8 @@ export default function PayloadObfuscationExplainer() {
         disabled={loading}
       />
 
-      <div style={styles.controlRow}>
-        <select style={styles.select} value={encodingHint} onChange={e => setEncodingHint(e.target.value)} disabled={loading}>
+      <div style={{ ...styles.controlRow, flexWrap: isMobile ? 'wrap' : 'nowrap' }}>
+        <select style={isMobile ? { ...styles.select, width: '100%' } : styles.select} value={encodingHint} onChange={e => setEncodingHint(e.target.value)} disabled={loading}>
           {ENCODING_HINTS.map(h => <option key={h.value} value={h.value}>{h.label}</option>)}
         </select>
         <button style={styles.button(loading)} onClick={handleAnalyze} disabled={loading || !payload.trim()}>

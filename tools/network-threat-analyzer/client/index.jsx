@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useWorkspace } from '../../../platform/shell/src/context/WorkspaceContext.jsx';
+import { useIsMobile } from '../../../platform/shell/src/hooks/useIsMobile.js';
 
 const SEVERITY_COLORS = {
   critical: 'var(--severity-critical)',
@@ -140,6 +141,7 @@ const LOG_TYPES = [
 ];
 
 export default function NetworkThreatAnalyzer() {
+  const isMobile = useIsMobile();
   const { getAccessTokenSilently } = useAuth0();
   const [tab, setTab] = useState('paste');
   const [logData, setLogData] = useState('');
@@ -212,8 +214,8 @@ export default function NetworkThreatAnalyzer() {
         <button style={styles.tab(tab === 'upload')} onClick={() => setTab('upload')}>Upload File</button>
       </div>
 
-      <div style={styles.controlRow}>
-        <select style={styles.select} value={logType} onChange={e => setLogType(e.target.value)} disabled={loading}>
+      <div style={{ ...styles.controlRow, flexWrap: isMobile ? 'wrap' : 'nowrap' }}>
+        <select style={isMobile ? { ...styles.select, width: '100%' } : styles.select} value={logType} onChange={e => setLogType(e.target.value)} disabled={loading}>
           {LOG_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
         </select>
         <button style={styles.button(loading)} onClick={handleAnalyze} disabled={!canAnalyze}>

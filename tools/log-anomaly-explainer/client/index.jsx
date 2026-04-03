@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useWorkspace } from '../../../platform/shell/src/context/WorkspaceContext.jsx';
+import { useIsMobile } from '../../../platform/shell/src/hooks/useIsMobile.js';
 
 const SEVERITY_COLORS = {
   critical: 'var(--severity-critical)',
@@ -142,6 +143,7 @@ const styles = {
 };
 
 export default function LogAnomalyExplainer() {
+  const isMobile = useIsMobile();
   const { getAccessTokenSilently } = useAuth0();
   const [tab, setTab] = useState('paste');
   const [logText, setLogText] = useState('');
@@ -214,8 +216,8 @@ export default function LogAnomalyExplainer() {
         <button style={styles.tab(tab === 'upload')} onClick={() => setTab('upload')}>Upload File</button>
       </div>
 
-      <div style={styles.controlRow}>
-        <select style={styles.select} value={logSource} onChange={e => setLogSource(e.target.value)} disabled={loading}>
+      <div style={{ ...styles.controlRow, flexWrap: isMobile ? 'wrap' : 'nowrap' }}>
+        <select style={isMobile ? { ...styles.select, width: '100%' } : styles.select} value={logSource} onChange={e => setLogSource(e.target.value)} disabled={loading}>
           {LOG_SOURCES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
         </select>
         <button style={styles.button(loading)} onClick={handleAnalyze} disabled={!canAnalyze}>

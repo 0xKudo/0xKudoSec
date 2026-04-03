@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useWorkspace } from '../../../platform/shell/src/context/WorkspaceContext.jsx';
+import { useIsMobile } from '../../../platform/shell/src/hooks/useIsMobile.js';
 
 const SEVERITY_COLORS = {
   critical: 'var(--severity-critical)',
@@ -152,6 +153,7 @@ function ReportSection({ label, value }) {
 }
 
 export default function IncidentReportTool() {
+  const isMobile = useIsMobile();
   const { getAccessTokenSilently } = useAuth0();
   const [incidentText, setIncidentText] = useState('');
   const [severityOverride, setSeverityOverride] = useState('');
@@ -268,7 +270,7 @@ export default function IncidentReportTool() {
         disabled={loading}
       />
 
-      <div style={styles.controlsRow}>
+      <div style={{ ...styles.controlsRow, flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'stretch' : 'center' }}>
         <select
           style={styles.select}
           value={severityOverride}
@@ -299,7 +301,7 @@ export default function IncidentReportTool() {
             <div style={styles.reportClassification}>{report.classification}</div>
           </div>
 
-          <div style={styles.timelineRow}>
+          <div style={{ ...styles.timelineRow, flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? '12px' : '24px' }}>
             <div>
               <div style={styles.label}>Detected At</div>
               <div style={{ ...styles.value, marginBottom: 0 }}>{report.detectedAt || '—'}</div>

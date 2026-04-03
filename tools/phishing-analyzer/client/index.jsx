@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
+import { useIsMobile } from '../../../platform/shell/src/hooks/useIsMobile.js';
 
 const VERDICT_COLORS = {
   phishing: 'var(--severity-critical)',
@@ -182,6 +183,7 @@ const styles = {
 };
 
 export default function PhishingAnalyzerTool() {
+  const isMobile = useIsMobile();
   const { getAccessTokenSilently } = useAuth0();
   const [tab, setTab] = useState('paste'); // 'paste' | 'upload'
   const [emailText, setEmailText] = useState('');
@@ -339,8 +341,8 @@ export default function PhishingAnalyzerTool() {
               <div style={styles.label}>Indicators ({result.indicators.length})</div>
               <div style={styles.indicatorList}>
                 {result.indicators.map((ind, i) => (
-                  <div key={i} style={styles.indicatorItem}>
-                    <span style={styles.indicatorType}>
+                  <div key={i} style={{ ...styles.indicatorItem, flexDirection: isMobile ? 'column' : 'row' }}>
+                    <span style={{ ...styles.indicatorType, minWidth: isMobile ? 0 : '160px' }}>
                       {INDICATOR_LABELS[ind.type] || ind.type}
                     </span>
                     <span style={styles.indicatorDetail}>{ind.detail}</span>

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useWorkspace } from '../../../platform/shell/src/context/WorkspaceContext.jsx';
+import { useIsMobile } from '../../../platform/shell/src/hooks/useIsMobile.js';
 
 const FRAMEWORK_HINTS = [
   { value: 'auto',      label: 'Auto-detect' },
@@ -125,6 +126,7 @@ const styles = {
 };
 
 export default function SecurityPolicyTranslator() {
+  const isMobile = useIsMobile();
   const { getAccessTokenSilently } = useAuth0();
   const [policyText, setPolicyText] = useState('');
   const [frameworkHint, setFrameworkHint] = useState('auto');
@@ -184,8 +186,8 @@ export default function SecurityPolicyTranslator() {
         disabled={loading}
       />
 
-      <div style={styles.controlRow}>
-        <select style={styles.select} value={frameworkHint} onChange={e => setFrameworkHint(e.target.value)} disabled={loading}>
+      <div style={{ ...styles.controlRow, flexWrap: isMobile ? 'wrap' : 'nowrap' }}>
+        <select style={isMobile ? { ...styles.select, width: '100%' } : styles.select} value={frameworkHint} onChange={e => setFrameworkHint(e.target.value)} disabled={loading}>
           {FRAMEWORK_HINTS.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
         </select>
         <button style={styles.button(loading)} onClick={handleTranslate} disabled={loading || !policyText.trim()}>
