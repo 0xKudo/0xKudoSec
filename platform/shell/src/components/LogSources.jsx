@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
+import { useIsMobile } from '../hooks/useIsMobile.js';
 
 // ── Custom DateTimePicker ─────────────────────────────────────────────────────
 const DAYS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
@@ -232,6 +233,7 @@ const s = {
 const SHIPPER_TABS = ['Fluent Bit', 'Winlogbeat 7', 'Manual API'];
 
 export function LogSources() {
+  const isMobile = useIsMobile();
   const { getAccessTokenSilently } = useAuth0();
   const [keyMeta, setKeyMeta] = useState(undefined);
   const [newKey, setNewKey] = useState(null);
@@ -627,7 +629,7 @@ winlogbeat.event_logs:
       <div style={s.section}>
         <div style={s.sectionTitle}>Download Log Data</div>
         <div style={s.note}>Export stored logs for any date range as a JSON file. No event or range limits.</div>
-        <div style={{ marginTop: '12px', display: 'flex', alignItems: 'flex-end', gap: '16px', flexWrap: 'wrap' }}>
+        <div style={{ marginTop: '12px', display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-start' : 'flex-end', gap: '16px', flexWrap: 'wrap' }}>
           <DateTimePicker label="From" value={exportFrom} onChange={d => { setExportFrom(d); setExportError(null); }} />
           <DateTimePicker label="To"   value={exportTo}   onChange={d => { setExportTo(d);   setExportError(null); }} />
           <button style={{ ...s.btnPrimary, marginBottom: 0 }} onClick={downloadLogs} disabled={exporting}>
@@ -644,30 +646,51 @@ winlogbeat.event_logs:
       {/* Active Sources */}
       <div style={{ padding: '0 0 8px 0' }}>
         <div style={{ ...s.sectionTitle, padding: '8px 20px 0' }}>Active Sources</div>
-        <table style={s.table}>
-          <thead>
-            <tr>
-              {['Host', 'Type', 'Last Seen', 'Total Events'].map(h => (
-                <th key={h} style={s.th}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
+        {isMobile ? (
+          <div>
             {sources.length === 0 && (
-              <tr><td colSpan={4} style={{ ...s.td, color: 'var(--text-muted)' }}>
+              <div style={{ padding: '20px', fontSize: '12px', color: 'var(--text-muted)' }}>
                 No sources yet — start the shipper to begin ingesting logs.
-              </td></tr>
+              </div>
             )}
             {sources.map(src => (
-              <tr key={src.id}>
-                <td style={{ ...s.td, color: 'var(--text-primary)' }}>{src.name}</td>
-                <td style={s.td}>{src.type}</td>
-                <td style={s.td}>{src.last_seen ? new Date(src.last_seen).toLocaleString() : '—'}</td>
-                <td style={s.td}>{Number(src.event_count).toLocaleString()}</td>
-              </tr>
+              <div key={src.id} style={{ borderBottom: '1px solid var(--border-subtle)', padding: '10px 20px' }}>
+                <div style={{ fontSize: '12px', color: 'var(--text-primary)', marginBottom: '4px' }}>{src.name}</div>
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                  {src.type} · {Number(src.event_count).toLocaleString()} events
+                </div>
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                  Last seen: {src.last_seen ? new Date(src.last_seen).toLocaleString() : '—'}
+                </div>
+              </div>
             ))}
-          </tbody>
-        </table>
+          </div>
+        ) : (
+          <table style={s.table}>
+            <thead>
+              <tr>
+                {['Host', 'Type', 'Last Seen', 'Total Events'].map(h => (
+                  <th key={h} style={s.th}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {sources.length === 0 && (
+                <tr><td colSpan={4} style={{ ...s.td, color: 'var(--text-muted)' }}>
+                  No sources yet — start the shipper to begin ingesting logs.
+                </td></tr>
+              )}
+              {sources.map(src => (
+                <tr key={src.id}>
+                  <td style={{ ...s.td, color: 'var(--text-primary)' }}>{src.name}</td>
+                  <td style={s.td}>{src.type}</td>
+                  <td style={s.td}>{src.last_seen ? new Date(src.last_seen).toLocaleString() : '—'}</td>
+                  <td style={s.td}>{Number(src.event_count).toLocaleString()}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
   );
