@@ -655,13 +655,12 @@ winlogbeat.event_logs:
             )}
             {sources.map(src => (
               <div key={src.id} style={{ borderBottom: '1px solid var(--border-subtle)', padding: '10px 20px' }}>
-                <div style={{ fontSize: '12px', color: 'var(--text-primary)', marginBottom: '4px' }}>{src.name}</div>
-                <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                  {src.type} · {Number(src.event_count).toLocaleString()} events
-                </div>
-                <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                  Last seen: {src.last_seen ? new Date(src.last_seen).toLocaleString() : '—'}
-                </div>
+                <div style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '2px' }}>Host</div>
+                <div style={{ fontSize: '12px', color: 'var(--text-primary)', marginBottom: '6px' }}>{src.name}</div>
+                <div style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '2px' }}>Type</div>
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '6px' }}>{src.type} · {Number(src.event_count).toLocaleString()} events</div>
+                <div style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '2px' }}>Last Seen</div>
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{src.last_seen ? new Date(src.last_seen).toLocaleString() : '—'}</div>
               </div>
             ))}
           </div>
