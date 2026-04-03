@@ -266,7 +266,11 @@ function LandingNav({ onLogin, isMobile }) {
       <div style={s.navBrand}>// 0xKudo Security Platform</div>
       <div style={{ display: 'flex', alignItems: 'stretch' }}>
         <div style={s.navTab(true)}>SIEM</div>
-        <div style={s.navTab(false)}>Tools</div>
+        <div
+          style={s.navTab(false)}
+          onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-primary)'; }}
+          onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; }}
+        >Tools</div>
       </div>
       <div style={s.navRight}>
         <button style={s.navBtn} onClick={onLogin}>[ login ]</button>
@@ -521,9 +525,16 @@ function DesktopLanding({ onLogin }) {
       <footer style={s.footer}>
         <span style={s.footerBrand}>// 0xKudo Security Platform</span>
         <div style={s.footerLinks}>
-          <a href="#" style={s.footerLink}>Tools</a>
-          <a href="#" style={s.footerLink}>SIEM</a>
-          <a href="#" style={s.footerLink} onClick={e => { e.preventDefault(); onLogin(); }}>Sign In</a>
+          {[['Tools', null], ['SIEM', null], ['Sign In', e => { e.preventDefault(); onLogin(); }]].map(([label, handler]) => (
+            <a
+              key={label}
+              href="#"
+              style={s.footerLink}
+              onClick={handler || undefined}
+              onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-primary)'; }}
+              onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-subtle)'; }}
+            >{label}</a>
+          ))}
         </div>
       </footer>
     </div>
@@ -644,9 +655,16 @@ function MobileLanding({ onLogin }) {
       <footer style={s.footerMobile}>
         <span style={s.footerBrand}>// 0xKudo Security Platform</span>
         <div style={s.footerLinks}>
-          <a href="#" style={s.footerLink}>Tools</a>
-          <a href="#" style={s.footerLink}>SIEM</a>
-          <a href="#" style={s.footerLink} onClick={e => { e.preventDefault(); onLogin(); }}>Sign In</a>
+          {[['Tools', null], ['SIEM', null], ['Sign In', e => { e.preventDefault(); onLogin(); }]].map(([label, handler]) => (
+            <a
+              key={label}
+              href="#"
+              style={s.footerLink}
+              onClick={handler || undefined}
+              onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-primary)'; }}
+              onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-subtle)'; }}
+            >{label}</a>
+          ))}
         </div>
       </footer>
     </div>
