@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
+import { useIsMobile } from '../../../platform/shell/src/hooks/useIsMobile.js';
 
 const METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'];
 
@@ -172,6 +173,7 @@ const styles = {
 };
 
 export default function HttpRepeater() {
+  const isMobile = useIsMobile();
   const { getAccessTokenSilently } = useAuth0();
   const [method, setMethod] = useState('GET');
   const [url, setUrl] = useState('');
@@ -266,24 +268,28 @@ export default function HttpRepeater() {
         <p style={styles.subtitle}>Craft and replay HTTP requests. Inspect the full response.</p>
       </div>
 
-      <div style={styles.layout}>
+      <div style={{ ...styles.layout, gridTemplateColumns: isMobile ? '1fr' : '220px 1fr' }}>
         {/* History sidebar */}
-        <div style={styles.sidebar}>
+        <div style={isMobile ? { ...styles.sidebar, minHeight: 'unset', marginBottom: '12px' } : styles.sidebar}>
           <div style={styles.sidebarTitle}>History</div>
           {history.length === 0 && (
             <div style={{ color: 'var(--text-muted)', fontSize: '12px' }}>No requests yet.</div>
           )}
-          {history.map((entry, idx) => (
-            <button
-              key={idx}
-              style={styles.historyItem(idx === activeHistoryIdx)}
-              onClick={() => loadHistoryEntry(idx)}
-              title={entry.url}
-            >
-              <span style={styles.historyMethod(entry.method)}>{entry.method}</span>
-              {entry.url.replace(/^https?:\/\//, '')}
-            </button>
-          ))}
+          <div style={isMobile ? { display: 'flex', flexWrap: 'wrap', gap: '4px' } : {}}>
+            {history.map((entry, idx) => (
+              <button
+                key={idx}
+                style={isMobile
+                  ? { ...styles.historyItem(idx === activeHistoryIdx), width: 'auto', maxWidth: '160px' }
+                  : styles.historyItem(idx === activeHistoryIdx)}
+                onClick={() => loadHistoryEntry(idx)}
+                title={entry.url}
+              >
+                <span style={styles.historyMethod(entry.method)}>{entry.method}</span>
+                {entry.url.replace(/^https?:\/\//, '')}
+              </button>
+            ))}
+          </div>
           {history.length > 0 && (
             <button style={styles.clearBtn} onClick={clearHistory}>Clear history</button>
           )}
@@ -293,7 +299,7 @@ export default function HttpRepeater() {
         <div style={styles.main}>
           {/* Request bar */}
           <div style={styles.section}>
-            <div style={styles.requestBar}>
+            <div style={{ ...styles.requestBar, flexWrap: isMobile ? 'wrap' : 'nowrap' }}>
               <select
                 style={styles.select}
                 value={method}
@@ -303,7 +309,7 @@ export default function HttpRepeater() {
                 {METHODS.map(m => <option key={m} value={m}>{m}</option>)}
               </select>
               <input
-                style={styles.urlInput}
+                style={{ ...styles.urlInput, minWidth: 0 }}
                 placeholder="https://example.com/api/endpoint"
                 value={url}
                 onChange={e => setUrl(e.target.value)}
