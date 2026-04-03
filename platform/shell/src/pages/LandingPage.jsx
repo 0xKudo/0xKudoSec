@@ -62,6 +62,7 @@ const SIEM_DEEP = [
   },
 ];
 
+// Tools with a route can be used without login
 const PHASES = [
   {
     key: 'detect',
@@ -73,7 +74,11 @@ const PHASES = [
     key: 'investigate',
     label: 'Investigate',
     color: 'var(--severity-high)',
-    tools: ['OSINT Recon Dashboard', 'CVE Exploit Mapper', 'Payload Obfuscation Explainer', 'Decoder', 'Subdomain Enumerator', 'Network Scanner'],
+    tools: [
+      'OSINT Recon Dashboard', 'CVE Exploit Mapper', 'Payload Obfuscation Explainer',
+      { name: 'Decoder', route: '/decoder' },
+      'Subdomain Enumerator', 'Network Scanner',
+    ],
   },
   {
     key: 'report',
@@ -91,7 +96,13 @@ const PHASES = [
     key: 'simulate',
     label: 'Simulate / Test',
     color: '#a855f7',
-    tools: ['Reverse Shell Generator', 'Intruder', 'Vulnerability Scanner', 'Wordlist / Password Generator', 'HTTP Repeater', 'Payload Generator'],
+    tools: [
+      { name: 'Reverse Shell Generator', route: '/reverse-shell-generator' },
+      'Intruder', 'Vulnerability Scanner',
+      { name: 'Wordlist / Password Generator', route: '/wordlist-generator' },
+      'HTTP Repeater',
+      { name: 'Payload Generator', route: '/payload-generator' },
+    ],
   },
 ];
 
@@ -243,7 +254,7 @@ const s = {
   footerLink: { fontSize: '11px', color: 'var(--text-subtle)', textDecoration: 'none' },
 };
 
-function LandingNav({ onLogin, isMobile }) {
+function LandingNav({ onLogin, onScrollToTools, isMobile }) {
   const [theme, setTheme] = useState(() => localStorage.getItem('cybertools_theme') || 'dark');
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -257,7 +268,7 @@ function LandingNav({ onLogin, isMobile }) {
         <div style={{ ...s.navBrand, borderRight: 'none', fontSize: '10px', padding: '0 14px', letterSpacing: '0.02em' }}>// 0xKudo</div>
         <div style={{ display: 'flex', alignItems: 'stretch' }}>
           <div style={{ ...s.navTab(true), padding: '0 12px' }}>SIEM</div>
-          <div style={{ ...s.navTab(false), padding: '0 12px' }}>Tools</div>
+          <div style={{ ...s.navTab(false), padding: '0 12px' }} onClick={onScrollToTools}>Tools</div>
         </div>
         <div style={s.navMobileRight}>
           <button style={{ ...s.navBtn, padding: '4px 8px', fontSize: '10px' }} onClick={onLogin}>login</button>
@@ -273,7 +284,8 @@ function LandingNav({ onLogin, isMobile }) {
       <div style={{ display: 'flex', alignItems: 'stretch' }}>
         <div style={s.navTab(true)}>SIEM</div>
         <div
-          style={s.navTab(false)}
+          style={{ ...s.navTab(false), cursor: 'pointer' }}
+          onClick={onScrollToTools}
           onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-primary)'; }}
           onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; }}
         >Tools</div>
@@ -418,7 +430,7 @@ function DesktopLanding({ onLogin }) {
   const scrollToTools = () => toolsRef.current?.scrollIntoView({ behavior: 'smooth' });
   return (
     <div style={s.page}>
-      <LandingNav onLogin={onLogin} isMobile={false} />
+      <LandingNav onLogin={onLogin} onScrollToTools={scrollToTools} isMobile={false} />
       {/* Hero */}
       <section style={s.hero}>
         <div style={s.heroGrid} />
@@ -516,7 +528,17 @@ function DesktopLanding({ onLogin }) {
                 <span style={s.phaseCount}>{phase.tools.length} tools</span>
               </div>
               <div style={s.toolTags}>
-                {phase.tools.map(t => <span key={t} style={s.toolTag}>{t}</span>)}
+                {phase.tools.map(t => {
+                  const name = typeof t === 'string' ? t : t.name;
+                  const route = typeof t === 'object' ? t.route : null;
+                  return route ? (
+                    <a key={name} href={route} style={{ ...s.toolTag, color: 'var(--text-primary)', textDecoration: 'none', borderColor: 'var(--text-muted)' }}>
+                      {name} ↗
+                    </a>
+                  ) : (
+                    <span key={name} style={s.toolTag}>{name}</span>
+                  );
+                })}
               </div>
             </div>
           ))}
@@ -533,7 +555,7 @@ function DesktopLanding({ onLogin }) {
       <footer style={s.footer}>
         <span style={s.footerBrand}>// 0xKudo Security Platform</span>
         <div style={s.footerLinks}>
-          {[['Tools', null], ['SIEM', null], ['Sign In', e => { e.preventDefault(); onLogin(); }]].map(([label, handler]) => (
+          {[['Tools', e => { e.preventDefault(); scrollToTools(); }], ['SIEM', null], ['Sign In', e => { e.preventDefault(); onLogin(); }]].map(([label, handler]) => (
             <a
               key={label}
               href="#"
@@ -554,7 +576,7 @@ function MobileLanding({ onLogin }) {
   const scrollToTools = () => toolsRef.current?.scrollIntoView({ behavior: 'smooth' });
   return (
     <div style={s.page}>
-      <LandingNav onLogin={onLogin} isMobile={true} />
+      <LandingNav onLogin={onLogin} onScrollToTools={scrollToTools} isMobile={true} />
       {/* Hero */}
       <section style={s.heroMobile}>
         <div style={s.heroGrid} />
@@ -648,7 +670,17 @@ function MobileLanding({ onLogin }) {
                 <span style={s.phaseCount}>{phase.tools.length} tools</span>
               </div>
               <div style={s.toolTags}>
-                {phase.tools.map(t => <span key={t} style={s.toolTag}>{t}</span>)}
+                {phase.tools.map(t => {
+                  const name = typeof t === 'string' ? t : t.name;
+                  const route = typeof t === 'object' ? t.route : null;
+                  return route ? (
+                    <a key={name} href={route} style={{ ...s.toolTag, color: 'var(--text-primary)', textDecoration: 'none', borderColor: 'var(--text-muted)' }}>
+                      {name} ↗
+                    </a>
+                  ) : (
+                    <span key={name} style={s.toolTag}>{name}</span>
+                  );
+                })}
               </div>
             </div>
           ))}
@@ -665,7 +697,7 @@ function MobileLanding({ onLogin }) {
       <footer style={s.footerMobile}>
         <span style={s.footerBrand}>// 0xKudo Security Platform</span>
         <div style={s.footerLinks}>
-          {[['Tools', null], ['SIEM', null], ['Sign In', e => { e.preventDefault(); onLogin(); }]].map(([label, handler]) => (
+          {[['Tools', e => { e.preventDefault(); scrollToTools(); }], ['SIEM', null], ['Sign In', e => { e.preventDefault(); onLogin(); }]].map(([label, handler]) => (
             <a
               key={label}
               href="#"

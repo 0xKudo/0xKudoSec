@@ -66,11 +66,14 @@ function ToolLoader({ toolId }) {
   return <Component />;
 }
 
+const NO_AUTH_ROUTES = ['/decoder', '/reverse-shell-generator', '/wordlist-generator', '/payload-generator'];
+
 function AppInner() {
   const { isAuthenticated, isLoading } = useAuth0();
 
   if (!isLoading && !isAuthenticated) {
-    return <LandingPage />;
+    const path = window.location.pathname;
+    if (!NO_AUTH_ROUTES.includes(path)) return <LandingPage />;
   }
   const isMobile = useIsMobile();
   const [activeApp, setActiveApp] = useState(() => {
