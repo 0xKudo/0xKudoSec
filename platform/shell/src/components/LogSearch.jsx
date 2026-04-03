@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { ProcessTreePanel, ContextMenu } from './ProcessTreePanel.jsx';
+import { useIsMobile } from '../hooks/useIsMobile.js';
 
 const SEV_COLOR = {
   critical: 'var(--severity-critical)',
@@ -93,6 +94,7 @@ const s = {
 function sevColor(sev) { return SEV_COLOR[(sev || '').toLowerCase()] || 'var(--text-muted)'; }
 
 export function LogSearch() {
+  const isMobile = useIsMobile();
   const { getAccessTokenSilently } = useAuth0();
   const [query, setQuery] = useState('');
   const [submittedQuery, setSubmittedQuery] = useState('');
@@ -164,16 +166,16 @@ export function LogSearch() {
         <span style={s.title}>SIEM &nbsp;<span style={s.sub}>/ Log Search</span></span>
       </div>
 
-      <div style={s.searchRow}>
+      <div style={isMobile ? { ...s.searchRow, flexWrap: 'wrap' } : s.searchRow}>
         <input
           ref={inputRef}
           style={s.searchInput}
           value={query}
           onChange={e => setQuery(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Search logs… or use field:value syntax (username:SYSTEM, event_id:4625, src:192.168, process:powershell)"
+          placeholder="Search logs… field:value (username:SYSTEM, event_id:4625)"
           spellCheck={false}
-          autoFocus
+          autoFocus={!isMobile}
         />
         <button style={s.btnActive} onClick={() => search(query, hours, sevFilter)} disabled={loading}>
           {loading ? 'Searching...' : 'Search'}
@@ -183,14 +185,14 @@ export function LogSearch() {
         )}
       </div>
 
-      <div style={s.filterRow}>
+      <div style={{ ...s.filterRow, flexWrap: 'wrap' }}>
         <span style={s.filterLabel}>Time</span>
         {HOURS_OPTIONS.map(h => (
           <button key={h} style={hours === h ? s.btnActive : s.btn} onClick={() => { setHours(h); if (searched) search(query, h, sevFilter); }}>
             {h < 24 ? `${h}h` : h === 24 ? '24h' : h === 48 ? '48h' : '7d'}
           </button>
         ))}
-        <span style={{ ...s.filterLabel, marginLeft: '12px' }}>Severity</span>
+        <span style={{ ...s.filterLabel, marginLeft: isMobile ? 0 : '12px' }}>Severity</span>
         {[null, 'critical', 'high', 'medium', 'low', 'info'].map(sev => (
           <button
             key={sev ?? 'all'}
@@ -202,7 +204,7 @@ export function LogSearch() {
         ))}
       </div>
 
-      <div style={s.hintsRow}>
+      <div style={{ ...s.hintsRow, flexWrap: 'wrap' }}>
         <span style={{ ...s.filterLabel, flexShrink: 0 }}>Field syntax</span>
         {FIELD_HINTS.map(hint => (
           <button key={hint} style={s.hintChip} onClick={() => appendHint(hint)}>{hint}</button>
@@ -214,58 +216,86 @@ export function LogSearch() {
         {searched && <span style={{ fontSize: '10px' }}>{results.length} events · last {hours < 24 ? `${hours}h` : hours === 24 ? '24h' : hours === 48 ? '48h' : '7d'}</span>}
       </div>
 
-      <div style={s.tableWrap}>
-        <table style={s.table}>
-          <colgroup>
-            <col style={{ width: '130px' }} />
-            <col style={{ width: '90px' }} />
-            <col style={{ width: '75px' }} />
-            <col style={{ width: '110px' }} />
-            <col style={{ width: '120px' }} />
-            <col style={{ width: '120px' }} />
-            <col style={{ width: '120px' }} />
-            <col style={{ width: '110px' }} />
-            <col style={{ width: '160px' }} />
-            <col />
-          </colgroup>
-          <thead>
-            <tr>
-              {['Time','Severity','Event ID','Category','Host','Src IP','Dest IP','User','Process','Message'].map(h => (
-                <th key={h} style={s.th}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {!searched && (
-              <tr><td colSpan={10} style={s.muted}>Enter a search query and press Search or Enter.</td></tr>
-            )}
-            {searched && !loading && !results.length && (
-              <tr><td colSpan={10} style={s.muted}>No results found.</td></tr>
-            )}
-            {results.map(row => (
-              <tr
-                key={row.id}
-                style={{ cursor: 'pointer' }}
-                onClick={() => { setSelected(row); setShowRaw(false); }}
-                onContextMenu={e => { e.preventDefault(); setContextMenu({ x: e.clientX, y: e.clientY, row }); }}
-                onMouseEnter={e => Array.from(e.currentTarget.cells).forEach(c => c.style.background = 'var(--bg-surface)')}
-                onMouseLeave={e => Array.from(e.currentTarget.cells).forEach(c => c.style.background = '')}
-              >
-                <td style={s.td}>{row.timestamp ? new Date(row.timestamp).toLocaleString() : '—'}</td>
-                <td style={s.td}><span style={s.sevBadge(sevColor(row.severity))}>{row.severity || '—'}</span></td>
-                <td style={s.td}>{row.event_id || '—'}</td>
-                <td style={s.td}>{row.event_category || '—'}</td>
-                <td style={s.td}>{row.host || '—'}</td>
-                <td style={s.td}>{row.source_ip || '—'}</td>
-                <td style={s.td}>{row.dest_ip || '—'}</td>
-                <td style={s.td}>{row.username || '—'}</td>
-                <td style={s.td}>{row.process_name || '—'}</td>
-                <td style={s.td}>{row.message || '—'}</td>
+      {isMobile ? (
+        <div style={{ flex: 1, overflow: 'auto' }}>
+          {!searched && <div style={s.muted}>Enter a search query and tap Search.</div>}
+          {searched && !loading && !results.length && <div style={s.muted}>No results found.</div>}
+          {results.map(row => (
+            <div
+              key={row.id}
+              style={{ borderBottom: '1px solid var(--border-subtle)', padding: '10px 16px', cursor: 'pointer' }}
+              onClick={() => { setSelected(row); setShowRaw(false); }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                <span style={s.sevBadge(sevColor(row.severity))}>{row.severity || '—'}</span>
+                {row.event_id && <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>ID {row.event_id}</span>}
+                {row.event_category && <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{row.event_category}</span>}
+              </div>
+              <div style={{ fontSize: '12px', color: 'var(--text-primary)', marginBottom: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {row.message || '—'}
+              </div>
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                {row.timestamp ? new Date(row.timestamp).toLocaleString() : ''}
+                {row.host ? ` · ${row.host}` : ''}
+                {row.username ? ` · ${row.username}` : ''}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div style={s.tableWrap}>
+          <table style={s.table}>
+            <colgroup>
+              <col style={{ width: '130px' }} />
+              <col style={{ width: '90px' }} />
+              <col style={{ width: '75px' }} />
+              <col style={{ width: '110px' }} />
+              <col style={{ width: '120px' }} />
+              <col style={{ width: '120px' }} />
+              <col style={{ width: '120px' }} />
+              <col style={{ width: '110px' }} />
+              <col style={{ width: '160px' }} />
+              <col />
+            </colgroup>
+            <thead>
+              <tr>
+                {['Time','Severity','Event ID','Category','Host','Src IP','Dest IP','User','Process','Message'].map(h => (
+                  <th key={h} style={s.th}>{h}</th>
+                ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {!searched && (
+                <tr><td colSpan={10} style={s.muted}>Enter a search query and press Search or Enter.</td></tr>
+              )}
+              {searched && !loading && !results.length && (
+                <tr><td colSpan={10} style={s.muted}>No results found.</td></tr>
+              )}
+              {results.map(row => (
+                <tr
+                  key={row.id}
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => { setSelected(row); setShowRaw(false); }}
+                  onContextMenu={e => { e.preventDefault(); setContextMenu({ x: e.clientX, y: e.clientY, row }); }}
+                  onMouseEnter={e => Array.from(e.currentTarget.cells).forEach(c => c.style.background = 'var(--bg-surface)')}
+                  onMouseLeave={e => Array.from(e.currentTarget.cells).forEach(c => c.style.background = '')}
+                >
+                  <td style={s.td}>{row.timestamp ? new Date(row.timestamp).toLocaleString() : '—'}</td>
+                  <td style={s.td}><span style={s.sevBadge(sevColor(row.severity))}>{row.severity || '—'}</span></td>
+                  <td style={s.td}>{row.event_id || '—'}</td>
+                  <td style={s.td}>{row.event_category || '—'}</td>
+                  <td style={s.td}>{row.host || '—'}</td>
+                  <td style={s.td}>{row.source_ip || '—'}</td>
+                  <td style={s.td}>{row.dest_ip || '—'}</td>
+                  <td style={s.td}>{row.username || '—'}</td>
+                  <td style={s.td}>{row.process_name || '—'}</td>
+                  <td style={s.td}>{row.message || '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {selected && (
         <div style={s.overlay} onClick={() => setSelected(null)}>
