@@ -63,30 +63,26 @@ const OPERATION_GROUPS = [
 
 const styles = {
   container: { maxWidth: '960px' },
-  header: { marginBottom: '20px' },
+  header: { marginBottom: '16px' },
   title: { color: 'var(--text-primary)', fontSize: '18px', marginBottom: '6px' },
   subtitle: { color: 'var(--text-muted)', fontSize: '13px' },
-  layout: { display: 'grid', gridTemplateColumns: '200px 1fr', gap: '16px' },
   opPanel: {
-    background: 'var(--bg-surface)',
-    border: '1px solid var(--border)',
-    borderRadius: '6px',
-    padding: '12px',
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: '6px',
+    marginBottom: '16px',
   },
   groupLabel: { color: 'var(--text-muted)', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: '12px', marginBottom: '4px', paddingLeft: '4px' },
   opBtn: (active) => ({
-    display: 'block',
-    width: '100%',
-    background: active ? 'var(--border)' : 'none',
-    border: 'none',
+    background: active ? 'var(--btn-primary-bg)' : 'var(--bg-surface)',
+    border: '1px solid var(--border)',
     borderRadius: '3px',
-    color: active ? 'var(--text-primary)' : 'var(--text-muted)',
+    color: active ? 'var(--btn-primary-text)' : 'var(--text-muted)',
     fontFamily: 'var(--font)',
-    fontSize: '12px',
-    padding: '5px 8px',
+    fontSize: '11px',
+    padding: '4px 10px',
     cursor: 'pointer',
-    textAlign: 'left',
-    marginBottom: '1px',
+    whiteSpace: 'nowrap',
   }),
   mainPanel: {},
   label: { color: 'var(--text-muted)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '6px', display: 'block' },
@@ -206,46 +202,44 @@ export default function Decoder() {
         <p style={styles.subtitle}>Encode and decode across URL, HTML, Base64, Hex, Binary, ROT13, Unicode, and JWT formats.</p>
       </div>
 
-      <div style={{ ...styles.layout, gridTemplateColumns: isMobile ? '1fr' : '200px 1fr' }}>
-        {/* Operation selector */}
-        <div style={styles.opPanel}>
-          {isMobile ? (
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-              {OPERATION_GROUPS.map(group => group.ops.map(op => (
-                <button
-                  key={op.value}
-                  style={{
-                    ...styles.opBtn(operation === op.value),
-                    width: 'auto',
-                    display: 'inline-block',
-                    border: '1px solid var(--border)',
-                    borderRadius: '3px',
-                    padding: '5px 10px',
-                  }}
-                  onClick={() => { setOperation(op.value); setOutput(''); setError(null); }}
-                >
-                  {group.label} {op.label}
-                </button>
-              )))}
-            </div>
-          ) : (
-            OPERATION_GROUPS.map(group => (
-              <div key={group.label}>
-                <div style={styles.groupLabel}>{group.label}</div>
-                {group.ops.map(op => (
-                  <button
-                    key={op.value}
-                    style={styles.opBtn(operation === op.value)}
-                    onClick={() => { setOperation(op.value); setOutput(''); setError(null); }}
-                  >
-                    {op.label}
-                  </button>
-                ))}
-              </div>
-            ))
-          )}
+      {isMobile ? (
+        /* Mobile: original chip layout */
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: '6px', padding: '12px', marginBottom: '16px' }}>
+          {OPERATION_GROUPS.map(group => group.ops.map(op => (
+            <button
+              key={op.value}
+              style={{
+                background: operation === op.value ? 'var(--border)' : 'none',
+                border: '1px solid var(--border)',
+                borderRadius: '3px',
+                color: operation === op.value ? 'var(--text-primary)' : 'var(--text-muted)',
+                fontFamily: 'var(--font)',
+                fontSize: '12px',
+                padding: '5px 10px',
+                cursor: 'pointer',
+              }}
+              onClick={() => { setOperation(op.value); setOutput(''); setError(null); }}
+            >
+              {group.label} {op.label}
+            </button>
+          )))}
         </div>
+      ) : (
+        /* Desktop: flat chips across the top */
+        <div style={styles.opPanel}>
+          {OPERATION_GROUPS.map(group => group.ops.map(op => (
+            <button
+              key={op.value}
+              style={styles.opBtn(operation === op.value)}
+              onClick={() => { setOperation(op.value); setOutput(''); setError(null); }}
+            >
+              {group.label} {op.label}
+            </button>
+          )))}
+        </div>
+      )}
 
+      <div>
         {/* Main panel */}
         <div style={styles.mainPanel}>
           <span style={styles.label}>Input — {opLabel}</span>
