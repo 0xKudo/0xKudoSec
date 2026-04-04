@@ -19,7 +19,7 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     padding: '0 20px',
-    fontSize: '14px',
+    fontSize: '16px',
     fontWeight: 'bold',
     color: 'var(--text-primary)',
     letterSpacing: '0.04em',
@@ -191,7 +191,7 @@ export function TopNav({ activeApp, onSwitchApp, onMenuToggle, menuOpen }) {
           >
             {menuOpen ? '✕' : '☰'}
           </button>
-          <div style={{ ...styles.brand, borderRight: 'none', fontSize: '10px', padding: '0 6px', letterSpacing: '0.02em' }}>[ 0xKudoSec ]</div>
+          <div style={{ ...styles.brand, borderRight: 'none', fontSize: '12px', padding: '0 6px', letterSpacing: '0.02em' }}>[ 0xKudoSec ]</div>
           <div style={{ display: 'flex', alignItems: 'stretch' }}>
             {['siem', 'tools'].map(app => (
               <div key={app} style={{ ...styles.appTab(activeApp === app), padding: '0 12px' }} onClick={() => onSwitchApp(app)}>
