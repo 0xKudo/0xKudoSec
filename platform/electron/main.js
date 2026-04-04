@@ -9,6 +9,7 @@ const store = new Store();
 const SHELL_PORT = 5173;
 const SERVER_PORT = 4000;
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
+const PRODUCTION_URL = 'https://tools.laynekudo.com';
 
 let mainWindow = null;
 let splashWindow = null;
@@ -82,7 +83,7 @@ function createMainWindow() {
 
   const url = isDev
     ? `http://localhost:${SHELL_PORT}`
-    : `http://localhost:${SHELL_PORT}`;
+    : PRODUCTION_URL;
 
   mainWindow.loadURL(url);
 
@@ -106,25 +107,25 @@ function createMainWindow() {
 // ── Express server ────────────────────────────────────────────────────────
 function startServer() {
   return new Promise((resolve, reject) => {
-    // In dev mode, always assume server is already running via npm run dev
-    // Poll until it responds rather than forking a second instance
-    if (isDev) {
-      const deadline = Date.now() + 15000;
-      function poll() {
-        http.get(`http://localhost:${SERVER_PORT}/health`, (res) => {
-          if (res.statusCode === 200) resolve();
-          else retry();
-        }).on('error', retry);
-      }
-      function retry() {
-        if (Date.now() > deadline) { reject(new Error('Server failed to start')); return; }
-        setTimeout(poll, 300);
-      }
-      poll();
+    // Production mode: app loads the live VPS -- no local server needed
+    if (!isDev) {
+      resolve();
       return;
     }
 
-    forkServer(resolve, reject);
+    // Dev mode: poll until the already-running npm run dev server responds
+    const deadline = Date.now() + 15000;
+    function poll() {
+      http.get(`http://localhost:${SERVER_PORT}/health`, (res) => {
+        if (res.statusCode === 200) resolve();
+        else retry();
+      }).on('error', retry);
+    }
+    function retry() {
+      if (Date.now() > deadline) { reject(new Error('Server failed to start')); return; }
+      setTimeout(poll, 300);
+    }
+    poll();
   });
 }
 
@@ -263,10 +264,11 @@ app.on('web-contents-created', (_event, contents) => {
     return { action: 'deny' };
   });
 
-  // Intercept top-level navigations away from localhost (e.g. Auth0 login redirect)
+  // Intercept top-level navigations away from the app (e.g. Auth0 login redirect)
   contents.on('will-navigate', (e, url) => {
     const isLocal = url.startsWith('http://localhost:') || url.startsWith('http://127.0.0.1:');
-    if (!isLocal) {
+    const isProductionApp = url.startsWith(PRODUCTION_URL);
+    if (!isLocal && !isProductionApp) {
       e.preventDefault();
       shell.openExternal(url);
     }
