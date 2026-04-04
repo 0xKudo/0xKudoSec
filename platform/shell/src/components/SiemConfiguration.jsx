@@ -302,6 +302,23 @@ export function SiemConfiguration() {
   const [shipperTab, setShipperTab] = useState(0);
   const [configCopied, setConfigCopied] = useState(false);
 
+  // Electron agent status state
+  const isElectron = typeof window !== 'undefined' && window.electron?.isElectron === true;
+  const [agentStatus, setAgentStatus] = useState('UNKNOWN');
+  const [agentAction, setAgentAction] = useState(null);
+  const [trayOnClose, setTrayOnClose] = useState(true);
+
+  useEffect(() => {
+    if (!isElectron) return;
+    window.electron.settings.getTrayOnClose().then(val => setTrayOnClose(val));
+    function pollAgent() {
+      window.electron.fluentBit.getStatus().then(s => setAgentStatus(s));
+    }
+    pollAgent();
+    const t = setInterval(pollAgent, 10000);
+    return () => clearInterval(t);
+  }, [isElectron]);
+
   // Log Retention state
   const [retentionDays, setRetentionDays] = useState('');
   const [retentionLoading, setRetentionLoading] = useState(true);
@@ -476,6 +493,28 @@ winlogbeat.event_logs:
     URL.revokeObjectURL(url);
   }
 
+  async function handleAgentAction(action) {
+    setAgentAction(action);
+    try {
+      if (action === 'start') await window.electron.fluentBit.start();
+      else if (action === 'stop') await window.electron.fluentBit.stop();
+      else if (action === 'restart') await window.electron.fluentBit.restart();
+      // Re-poll after action
+      setTimeout(async () => {
+        const s = await window.electron.fluentBit.getStatus();
+        setAgentStatus(s);
+        setAgentAction(null);
+      }, 2500);
+    } catch (e) {
+      setAgentAction(null);
+    }
+  }
+
+  async function handleTrayOnCloseToggle(val) {
+    setTrayOnClose(val);
+    await window.electron.settings.setTrayOnClose(val);
+  }
+
   function copyConfig() {
     navigator.clipboard.writeText(currentConfig);
     setConfigCopied(true);
@@ -558,6 +597,27 @@ winlogbeat.event_logs:
             <div style={s.sectionDesc}>
               Signed in as <strong>{user?.email}</strong>.
             </div>
+
+            {isElectron && (
+              <div style={{ borderTop: '1px solid var(--border)', marginTop: '20px', paddingTop: '20px' }}>
+                <div style={s.sectionTitle}>Desktop App</div>
+                <div style={s.sectionDesc}>Settings for the 0xKudo desktop application.</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '12px' }}>
+                  <label style={{ fontSize: '12px', color: 'var(--text-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <input
+                      type="checkbox"
+                      checked={trayOnClose}
+                      onChange={e => handleTrayOnCloseToggle(e.target.checked)}
+                      style={{ cursor: 'pointer' }}
+                    />
+                    Minimize to tray when window is closed
+                  </label>
+                </div>
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px' }}>
+                  When enabled, closing the window keeps the app running in the system tray. Right-click the tray icon to quit.
+                </div>
+              </div>
+            )}
 
             <div style={{ borderTop: '1px solid var(--border)', marginTop: '20px', paddingTop: '20px' }}>
               <div style={s.sectionTitle}>Password</div>
@@ -651,6 +711,45 @@ winlogbeat.event_logs:
                   Download from <strong>fluentbit.io</strong>, then save the config below and run as a Windows service.<br /><br />
                   This config ships 10 Windows event channels: Security, Sysmon, System, Application, PowerShell, WMI, Task Scheduler, Defender, Firewall, and RDP.
                 </div>
+
+                {isElectron && (
+                  <div style={{ marginTop: '14px', padding: '12px 16px', border: '1px solid var(--border)', background: 'var(--bg-surface)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Agent Status</span>
+                      <span style={{
+                        fontSize: '11px',
+                        fontWeight: 'bold',
+                        color: agentStatus === 'RUNNING' ? '#16a34a' : agentStatus === 'STOPPED' ? '#d97706' : agentStatus === 'NOT_INSTALLED' ? '#ef4444' : 'var(--text-muted)',
+                        letterSpacing: '0.04em',
+                      }}>
+                        {agentStatus === 'RUNNING' ? '● Running' : agentStatus === 'STOPPED' ? '○ Stopped' : agentStatus === 'STARTING' ? '◌ Starting...' : agentStatus === 'STOPPING' ? '◌ Stopping...' : agentStatus === 'NOT_INSTALLED' ? '✕ Not Installed' : '? Unknown'}
+                      </span>
+                      <div style={{ display: 'flex', gap: '6px', marginLeft: 'auto' }}>
+                        <button
+                          style={s.btn}
+                          disabled={agentStatus !== 'STOPPED' || agentAction}
+                          onClick={() => handleAgentAction('start')}
+                        >{agentAction === 'start' ? 'Starting...' : 'Start'}</button>
+                        <button
+                          style={s.btn}
+                          disabled={agentStatus !== 'RUNNING' || agentAction}
+                          onClick={() => handleAgentAction('stop')}
+                        >{agentAction === 'stop' ? 'Stopping...' : 'Stop'}</button>
+                        <button
+                          style={s.btn}
+                          disabled={agentStatus !== 'RUNNING' || agentAction}
+                          onClick={() => handleAgentAction('restart')}
+                        >{agentAction === 'restart' ? 'Restarting...' : 'Restart'}</button>
+                      </div>
+                    </div>
+                    {agentStatus === 'NOT_INSTALLED' && (
+                      <div style={{ marginTop: '8px', fontSize: '11px', color: 'var(--text-muted)' }}>
+                        Fluent Bit is not installed. Follow the setup instructions below to install it as a Windows service.
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 <pre style={{ ...s.keyBox, marginTop: '12px', fontSize: '11px', lineHeight: 1.7, overflowX: 'auto' }}>{fluentBitConfig}</pre>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
                   <button style={s.btnPrimary} onClick={downloadConfig}>Download cybertools.conf</button>

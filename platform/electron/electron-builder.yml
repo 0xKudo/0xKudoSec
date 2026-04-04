@@ -1,0 +1,46 @@
+appId: com.laynekudo.0xkudo
+productName: 0xKudo Security Toolkit
+copyright: Copyright © 2025 Layne Kudo
+
+directories:
+  output: ../../../dist-electron
+  buildResources: assets
+
+win:
+  target:
+    - target: nsis
+      arch: x64
+  icon: assets/icon.ico
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  installerIcon: assets/icon.ico
+  uninstallerIcon: assets/icon.ico
+  shortcutName: 0xKudo Security Toolkit
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+
+# Files to include in the package
+files:
+  - "**/*"
+  - "!**/*.map"
+  - "!**/*.md"
+  - "!**/.git"
+
+# Extra resources bundled alongside the app (accessible via process.resourcesPath)
+extraResources:
+  - from: "../../server"
+    to: "server"
+    filter:
+      - "**/*"
+      - "!tests/**"
+      - "!**/*.test.js"
+  - from: "../../../tools"
+    to: "tools"
+    filter:
+      - "**/*"
+      - "!**/*.test.js"
+
+# The shell's built output is served via the Express static middleware in production
+# Build shell first: npm run build --workspace=platform/shell

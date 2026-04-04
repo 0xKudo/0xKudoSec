@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useIsMobile } from '../hooks/useIsMobile';
 
+const isElectron = typeof window !== 'undefined' && window.electron?.isElectron === true;
+
 const styles = {
   nav: {
     background: 'var(--bg-sidebar)',
@@ -11,6 +13,7 @@ const styles = {
     flexShrink: 0,
     height: '44px',
     zIndex: 100,
+    WebkitAppRegion: isElectron ? 'drag' : 'auto',
   },
   brand: {
     display: 'flex',
@@ -73,12 +76,35 @@ const styles = {
     color: 'var(--text-muted)',
     textDecoration: 'none',
   },
+  noDrag: {
+    WebkitAppRegion: 'no-drag',
+  },
+  winControls: {
+    display: 'flex',
+    alignItems: 'stretch',
+    marginLeft: '8px',
+    WebkitAppRegion: 'no-drag',
+  },
+  winBtn: (hover) => ({
+    background: hover || 'none',
+    border: 'none',
+    color: 'var(--text-muted)',
+    fontFamily: 'var(--font)',
+    fontSize: '12px',
+    width: '40px',
+    height: '100%',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  }),
 };
 
 export function TopNav({ activeApp, onSwitchApp, onMenuToggle, menuOpen }) {
   const [theme, setTheme] = useState(() => {
     return localStorage.getItem('cybertools_theme') || 'dark';
   });
+  const [closeHover, setCloseHover] = useState(false);
   const { isAuthenticated, user, loginWithRedirect, logout } = useAuth0();
   const isMobile = useIsMobile();
 
@@ -119,7 +145,7 @@ export function TopNav({ activeApp, onSwitchApp, onMenuToggle, menuOpen }) {
       ) : (
         <>
           <div style={styles.brand}>// 0xKudo Security Platform</div>
-          <div style={{ display: 'flex', alignItems: 'stretch' }}>
+          <div style={{ display: 'flex', alignItems: 'stretch', WebkitAppRegion: 'no-drag' }}>
             {['siem', 'tools'].map(app => (
               <div
                 key={app}
@@ -132,7 +158,7 @@ export function TopNav({ activeApp, onSwitchApp, onMenuToggle, menuOpen }) {
               </div>
             ))}
           </div>
-          <div style={styles.right}>
+          <div style={{ ...styles.right, WebkitAppRegion: 'no-drag' }}>
             {isAuthenticated ? (
               <>
                 <span style={styles.userName}>{user.name || user.email}</span>
@@ -143,6 +169,27 @@ export function TopNav({ activeApp, onSwitchApp, onMenuToggle, menuOpen }) {
             )}
             <button style={styles.themeToggle} onClick={toggleTheme}>{theme === 'dark' ? '☀' : '☾'}</button>
           </div>
+          {isElectron && (
+            <div style={styles.winControls}>
+              <button
+                style={styles.winBtn()}
+                title="Minimize"
+                onClick={() => window.electron.window.minimize()}
+              >─</button>
+              <button
+                style={styles.winBtn()}
+                title="Maximize"
+                onClick={() => window.electron.window.maximize()}
+              >□</button>
+              <button
+                style={styles.winBtn(closeHover ? '#c42b1c' : undefined)}
+                title="Close"
+                onMouseEnter={() => setCloseHover(true)}
+                onMouseLeave={() => setCloseHover(false)}
+                onClick={() => window.electron.window.close()}
+              >✕</button>
+            </div>
+          )}
         </>
       )}
     </nav>

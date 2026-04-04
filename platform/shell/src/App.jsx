@@ -91,6 +91,16 @@ function AppInner() {
   const switchToSiem = () => switchApp('siem');
   const switchToSiemView = (view) => { setActiveApp('siem'); setSiemView(view); setMenuOpen(false); };
 
+  // Handle tray/Electron navigation events
+  useEffect(() => {
+    function onElectronNavigate(e) {
+      const target = e.detail;
+      if (target === '/siem/configuration') switchToSiemView('configuration');
+    }
+    window.addEventListener('electron:navigate', onElectronNavigate);
+    return () => window.removeEventListener('electron:navigate', onElectronNavigate);
+  }, []);
+
   const handleSiemNavigate = (view) => {
     setSiemView(view);
     setMenuOpen(false);
