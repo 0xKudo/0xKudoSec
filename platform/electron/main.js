@@ -4,6 +4,7 @@ const { fork } = require('child_process');
 const { exec } = require('child_process');
 const http = require('http');
 const Store = require('electron-store');
+const { autoUpdater } = require('electron-updater');
 
 const store = new Store();
 const SHELL_PORT = 5173;
@@ -86,6 +87,13 @@ function createMainWindow() {
     : PRODUCTION_URL;
 
   mainWindow.loadURL(url);
+
+  // F12 opens DevTools for debugging
+  mainWindow.webContents.on('before-input-event', (_e, input) => {
+    if (input.key === 'F12' && input.type === 'keyDown') {
+      mainWindow.webContents.toggleDevTools();
+    }
+  });
 
   mainWindow.once('ready-to-show', () => {
     if (splashWindow && !splashWindow.isDestroyed()) {
@@ -219,6 +227,63 @@ ipcMain.on('window:maximize', () => {
 });
 ipcMain.on('window:close', () => mainWindow?.close());
 
+// ── Auto-updater ──────────────────────────────────────────────────────────
+autoUpdater.autoDownload = false;
+autoUpdater.autoInstallOnAppQuit = false;
+
+function setupAutoUpdater() {
+  // Only run in packaged app -- not during dev
+  if (!app.isPackaged) return;
+
+  autoUpdater.on('update-available', (info) => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('update:available', { version: info.version });
+    }
+  });
+
+  autoUpdater.on('download-progress', (progress) => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('update:progress', { percent: Math.round(progress.percent) });
+    }
+  });
+
+  autoUpdater.on('update-downloaded', () => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('update:ready');
+    }
+  });
+
+  autoUpdater.on('error', (err) => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('update:error', { message: err.message });
+    }
+  });
+
+  // Check for updates 5 seconds after launch, then every 4 hours
+  setTimeout(() => autoUpdater.checkForUpdates(), 5000);
+  setInterval(() => autoUpdater.checkForUpdates(), 4 * 60 * 60 * 1000);
+}
+
+ipcMain.handle('update:download', () => autoUpdater.downloadUpdate());
+ipcMain.handle('update:install', () => {
+  // Clear Electron cache before install so the new version loads fresh
+  const session = mainWindow?.webContents?.session;
+  if (session) {
+    session.clearCache().then(() => {
+      mainWindow._forceClose = true;
+      autoUpdater.quitAndInstall(false, true);
+    });
+  } else {
+    mainWindow._forceClose = true;
+    autoUpdater.quitAndInstall(false, true);
+  }
+});
+ipcMain.handle('update:dismiss', () => {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('update:dismissed');
+  }
+});
+
 // ── App lifecycle ─────────────────────────────────────────────────────────
 app.whenReady().then(async () => {
   startCallbackServer();
@@ -235,6 +300,8 @@ app.whenReady().then(async () => {
   // Tray is set up after main window exists
   const { createTray } = require('./tray');
   tray = createTray(mainWindow, store);
+
+  setupAutoUpdater();
 });
 
 app.on('window-all-closed', () => {

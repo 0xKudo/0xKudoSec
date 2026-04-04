@@ -100,6 +100,70 @@ const styles = {
   }),
 };
 
+function UpdateBanner() {
+  const [state, setState] = useState(null); // null | 'available' | 'downloading' | 'ready' | 'error'
+  const [version, setVersion] = useState('');
+  const [percent, setPercent] = useState(0);
+  const [dismissed, setDismissed] = useState(false);
+
+  useEffect(() => {
+    if (!isElectron || !window.electron.updater) return;
+    window.electron.updater.onUpdateAvailable((info) => { setVersion(info.version); setState('available'); });
+    window.electron.updater.onProgress((info) => { setPercent(info.percent); setState('downloading'); });
+    window.electron.updater.onReady(() => setState('ready'));
+    window.electron.updater.onError(() => setState('error'));
+    window.electron.updater.onDismissed(() => setDismissed(true));
+  }, []);
+
+  if (!isElectron || dismissed || !state) return null;
+
+  const bannerStyle = {
+    background: 'var(--bg-surface)',
+    borderBottom: '1px solid var(--border)',
+    padding: '6px 16px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+    fontSize: '11px',
+    color: 'var(--text-muted)',
+    flexShrink: 0,
+  };
+
+  if (state === 'available') return (
+    <div style={bannerStyle}>
+      <span>Update available — v{version}</span>
+      <button style={{ ...styles.authBtn, padding: '3px 10px' }} onClick={() => window.electron.updater.download()}>Download</button>
+      <button style={{ background: 'none', border: 'none', color: 'var(--text-subtle)', fontFamily: 'var(--font)', fontSize: '11px', cursor: 'pointer' }} onClick={() => { setDismissed(true); window.electron.updater.dismiss(); }}>✕</button>
+    </div>
+  );
+
+  if (state === 'downloading') return (
+    <div style={bannerStyle}>
+      <span>Downloading update... {percent}%</span>
+      <div style={{ flex: 1, maxWidth: '120px', height: '3px', background: 'var(--border)', borderRadius: '2px' }}>
+        <div style={{ width: `${percent}%`, height: '100%', background: 'var(--text-muted)', borderRadius: '2px', transition: 'width 0.2s' }} />
+      </div>
+    </div>
+  );
+
+  if (state === 'ready') return (
+    <div style={bannerStyle}>
+      <span>Update ready to install</span>
+      <button style={{ ...styles.authBtn, padding: '3px 10px' }} onClick={() => window.electron.updater.install()}>Restart & Install</button>
+      <button style={{ background: 'none', border: 'none', color: 'var(--text-subtle)', fontFamily: 'var(--font)', fontSize: '11px', cursor: 'pointer' }} onClick={() => setDismissed(true)}>later</button>
+    </div>
+  );
+
+  if (state === 'error') return (
+    <div style={bannerStyle}>
+      <span>Update check failed</span>
+      <button style={{ background: 'none', border: 'none', color: 'var(--text-subtle)', fontFamily: 'var(--font)', fontSize: '11px', cursor: 'pointer' }} onClick={() => setDismissed(true)}>✕</button>
+    </div>
+  );
+
+  return null;
+}
+
 export function TopNav({ activeApp, onSwitchApp, onMenuToggle, menuOpen }) {
   const [theme, setTheme] = useState(() => {
     return localStorage.getItem('cybertools_theme') || 'dark';
@@ -116,6 +180,8 @@ export function TopNav({ activeApp, onSwitchApp, onMenuToggle, menuOpen }) {
   const toggleTheme = () => setTheme(t => t === 'dark' ? 'light' : 'dark');
 
   return (
+    <>
+    <UpdateBanner />
     <nav style={styles.nav}>
       {isMobile ? (
         <>
@@ -193,5 +259,6 @@ export function TopNav({ activeApp, onSwitchApp, onMenuToggle, menuOpen }) {
         </>
       )}
     </nav>
+    </>
   );
 }

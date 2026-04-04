@@ -38,4 +38,15 @@ contextBridge.exposeInMainWorld('electron', {
     maximize: () => ipcRenderer.send('window:maximize'),
     close: () => ipcRenderer.send('window:close'),
   },
+
+  updater: {
+    onUpdateAvailable: (cb) => ipcRenderer.on('update:available', (_e, info) => cb(info)),
+    onProgress: (cb) => ipcRenderer.on('update:progress', (_e, info) => cb(info)),
+    onReady: (cb) => ipcRenderer.on('update:ready', () => cb()),
+    onError: (cb) => ipcRenderer.on('update:error', (_e, info) => cb(info)),
+    onDismissed: (cb) => ipcRenderer.on('update:dismissed', () => cb()),
+    download: () => ipcRenderer.invoke('update:download'),
+    install: () => ipcRenderer.invoke('update:install'),
+    dismiss: () => ipcRenderer.invoke('update:dismiss'),
+  },
 });

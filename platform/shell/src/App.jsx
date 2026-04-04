@@ -93,6 +93,15 @@ function AppInner() {
     return () => window.removeEventListener('electron:navigate', onElectronNavigate);
   }, []);
 
+  if (isElectron && isLoading) {
+    return (
+      <div style={{ ...styles.layout, background: 'var(--bg-primary)' }}>
+        <TopNav activeApp={activeApp} onSwitchApp={() => {}} onMenuToggle={() => {}} menuOpen={false} />
+        <div style={{ flex: 1 }} />
+      </div>
+    );
+  }
+
   if (!isLoading && !isAuthenticated) {
     const path = window.location.pathname;
     if (isElectron && !NO_AUTH_ROUTES.includes(path)) {
