@@ -331,9 +331,10 @@ export default function SubdomainEnumerator() {
               { key: 'hackertarget', label: 'HackerTarget' },
               { key: 'brute', label: 'Brute-force DNS' },
             ].map(({ key, label }) => {
-              const src = result.sources[key];
-              const skipped = !!src?.skipped;
-              const hasError = !!src?.error;
+              const src = result.sources?.[key];
+              if (!src) return null;
+              const skipped = !!src.skipped;
+              const hasError = !!src.error;
               return (
                 <div key={key} style={styles.sourceCard(hasError, skipped)}>
                   <div style={styles.sourceTitle}>{label}</div>
