@@ -86,21 +86,20 @@ function ElectronLoadingScreen() {
 
 function CollapsibleSidebar({ children, collapsed, onToggle }) {
   return (
-    <div style={{ position: 'relative', flexShrink: 0, width: collapsed ? '16px' : 'auto', height: '100%' }}>
+    <div style={{ display: 'flex', flexShrink: 0, height: '100%' }}>
       {!collapsed && children}
       <button
         onClick={onToggle}
         title={collapsed ? 'Show sidebar' : 'Hide sidebar'}
         style={{
-          position: 'absolute',
-          top: '8px',
-          right: collapsed ? undefined : '-16px',
-          left: collapsed ? '0' : undefined,
           width: '16px',
+          flexShrink: 0,
+          alignSelf: 'flex-start',
+          marginTop: '8px',
           height: '48px',
           background: 'var(--accent-amber)',
           border: 'none',
-          borderRadius: collapsed ? '0 4px 4px 0' : '0 4px 4px 0',
+          borderRadius: collapsed ? '0 4px 4px 0' : '4px 0 0 4px',
           color: 'var(--bg-primary)',
           cursor: 'pointer',
           fontSize: '11px',
@@ -109,7 +108,6 @@ function CollapsibleSidebar({ children, collapsed, onToggle }) {
           alignItems: 'center',
           justifyContent: 'center',
           padding: 0,
-          zIndex: 20,
         }}
       >{collapsed ? '›' : '‹'}</button>
     </div>
@@ -180,8 +178,8 @@ function AppInner() {
             <TopNav activeApp="siem" onSwitchApp={setActiveApp} onMenuToggle={() => {}} menuOpen={false} />
             <div style={styles.body}>
               <ElectronCollapsibleSiemSidebar siemView={siemView} setSiemView={setSiemView} onSwitchToTools={() => setActiveApp('tools')} />
-              <main style={{ flex: 1, minHeight: 0, overflow: 'auto', background: 'var(--bg-primary)', minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                <RequireAuth />
+              <main style={{ flex: 1, minHeight: 0, overflow: 'auto', background: 'var(--bg-primary)', minWidth: 0, ...(siemView !== 'configuration' ? { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' } : {}) }}>
+                {siemView === 'configuration' ? <SiemConfiguration /> : <RequireAuth />}
               </main>
             </div>
           </div>
