@@ -8,16 +8,18 @@ const clientId = import.meta.env.VITE_AUTH0_CLIENT_ID;
 const audience = import.meta.env.VITE_AUTH0_AUDIENCE;
 
 const isElectron = typeof window !== 'undefined' && window.electron?.isElectron === true;
-const redirectUri = isElectron ? '0xkudo://callback' : window.location.origin;
+// Auth0 doesn't accept custom protocols -- use a localhost callback server
+// that Electron intercepts and forwards to the Auth0 SDK
+const redirectUri = isElectron ? 'http://localhost:8765/callback' : window.location.origin;
 
-// In Electron, handle the custom protocol callback by forwarding to Auth0 SDK
+// In Electron, handle the localhost callback forwarded from main process
 function Auth0CallbackHandler({ children }) {
   const { handleRedirectCallback } = useAuth0();
   useEffect(() => {
     if (!isElectron) return;
     function onCallback(e) {
       const url = e.detail;
-      if (url && url.startsWith('0xkudo://callback')) {
+      if (url && url.includes('localhost:8765/callback')) {
         handleRedirectCallback(url).catch(() => {});
       }
     }

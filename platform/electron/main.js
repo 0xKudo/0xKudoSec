@@ -15,38 +15,34 @@ let splashWindow = null;
 let serverProcess = null;
 let tray = null;
 
-// ── Auth0 custom protocol ──────────────────────────────────────────────────
-if (process.defaultApp) {
-  if (process.argv.length >= 2) {
-    app.setAsDefaultProtocolClient('0xkudo', process.execPath, [path.resolve(process.argv[1])]);
-  }
-} else {
-  app.setAsDefaultProtocolClient('0xkudo');
-}
+// ── Auth0 localhost callback interceptor ──────────────────────────────────
+// Auth0 does not accept custom protocol URIs. We use http://localhost:8765/callback
+// and spin up a tiny HTTP server that catches the redirect and forwards the
+// full URL to the renderer so the Auth0 SDK can complete the exchange.
+const AUTH0_CALLBACK_PORT = 8765;
+let callbackServer = null;
 
-// Windows: handle second-instance for protocol callback
-const gotLock = app.requestSingleInstanceLock();
-if (!gotLock) {
-  app.quit();
-} else {
-  app.on('second-instance', (_event, commandLine) => {
-    const url = commandLine.find(arg => arg.startsWith('0xkudo://'));
-    if (url && mainWindow) {
-      handleProtocolUrl(url);
-      if (mainWindow.isMinimized()) mainWindow.restore();
+function startCallbackServer() {
+  if (callbackServer) return;
+  callbackServer = http.createServer((req, res) => {
+    res.writeHead(200, { 'Content-Type': 'text/html' });
+    res.end('<html><body><script>window.close();</script><p>Login complete. You can close this tab.</p></body></html>');
+
+    const fullUrl = `http://localhost:${AUTH0_CALLBACK_PORT}${req.url}`;
+    if (mainWindow) {
+      mainWindow.webContents.executeJavaScript(
+        `window.dispatchEvent(new CustomEvent('auth0-callback', { detail: ${JSON.stringify(fullUrl)} }))`
+      );
       mainWindow.show();
       mainWindow.focus();
     }
   });
+  callbackServer.listen(AUTH0_CALLBACK_PORT);
 }
 
-function handleProtocolUrl(url) {
-  if (!mainWindow) return;
-  // Forward the callback URL to the renderer so Auth0 SDK can process it
-  mainWindow.webContents.executeJavaScript(
-    `window.dispatchEvent(new CustomEvent('auth0-callback', { detail: ${JSON.stringify(url)} }))`
-  );
-}
+app.on('before-quit', () => {
+  if (callbackServer) { callbackServer.close(); callbackServer = null; }
+});
 
 // ── Splash window ─────────────────────────────────────────────────────────
 function createSplash() {
@@ -199,6 +195,7 @@ ipcMain.on('window:close', () => mainWindow?.close());
 
 // ── App lifecycle ─────────────────────────────────────────────────────────
 app.whenReady().then(async () => {
+  startCallbackServer();
   createSplash();
 
   try {
