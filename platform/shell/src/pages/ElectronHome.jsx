@@ -10,7 +10,7 @@ const NO_AUTH_TOOLS = [
 
 const styles = {
   page: {
-    minHeight: '100%',
+    flex: 1,
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',

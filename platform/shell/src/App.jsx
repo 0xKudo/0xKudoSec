@@ -158,7 +158,7 @@ function AppInner() {
             <TopNav activeApp="siem" onSwitchApp={setActiveApp} onMenuToggle={() => {}} menuOpen={false} />
             <div style={styles.body}>
               <ElectronCollapsibleSiemSidebar siemView={siemView} setSiemView={setSiemView} onSwitchToTools={() => setActiveApp('tools')} />
-              <main style={{ flex: 1, overflow: 'auto', background: 'var(--bg-primary)', minWidth: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <main style={{ flex: 1, overflow: 'auto', background: 'var(--bg-primary)', minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
                 <RequireAuth />
               </main>
             </div>
@@ -168,7 +168,7 @@ function AppInner() {
       return (
         <div style={styles.layout}>
           <TopNav activeApp="tools" onSwitchApp={setActiveApp} onMenuToggle={() => {}} menuOpen={false} />
-          <div style={{ flex: 1, overflow: 'auto' }}>
+          <div style={{ flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
             <ElectronHome onNavigate={(route) => { setActiveApp('tools'); navigate(route); }} />
           </div>
         </div>
