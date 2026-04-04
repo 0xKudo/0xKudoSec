@@ -383,7 +383,7 @@ export function AlertQueue({ onNavigate }) {
                     onMouseLeave={e => { if (!isChecked) Array.from(e.currentTarget.cells).forEach(c => c.style.background = ''); }}
                   >
                     <td style={{ ...s.td, textAlign: 'center' }} onClick={e => { e.stopPropagation(); toggleOne(a.id); }}>
-                      <input type="checkbox" style={s.checkbox} checked={isChecked} onChange={() => toggleOne(a.id)} />
+                      <input type="checkbox" style={s.checkbox} checked={isChecked} readOnly />
                     </td>
                     <td style={s.td}>{new Date(a.created_at).toLocaleString()}</td>
                     <td style={s.td}><span style={s.sevBadge(sevColor(a.severity))}>{a.severity}</span></td>
