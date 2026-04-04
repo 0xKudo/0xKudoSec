@@ -42,7 +42,32 @@ Unified cybersecurity tools platform at `tools.laynekudo.com`. Monorepo — shar
 - Preload works on remote URLs (tools.laynekudo.com) -- `window.electron` is available in production mode
 - After any shell changes: push to GitHub, then on VPS: `cd /var/www/cybertools && npm install --include=dev --workspace=platform/shell && npm run build --workspace=platform/shell && pm2 restart all`
 
-**Next:** Proxy tool Phase 2 (Electron intercepting proxy) or packaging/installer.
+**Electron installer (2026-04-04):**
+- `electron-builder.yml` updated -- only bundles `main.js`, `preload.js`, `tray.js`, `splash.html`, `assets/`, `node_modules/`, `package.json` (no server/shell dist -- production loads remote VPS)
+- `platform/electron/package.json` updated: added `description`, `author`, pinned `electron` to `29.4.6` (not `^29.4.6` -- electron-builder requires fixed version), added `app-builder-bin` dependency
+- Build must be run from an **Administrator terminal** -- winCodeSign extraction requires symlink privileges
+- Build command: `cd platform/electron && npx electron-builder --win --x64`
+- Output: `dist-electron/0xKudo Security Toolkit Setup 1.0.0.exe` (NSIS installer) + `dist-electron/win-unpacked/` (portable)
+- Installer contains zero credentials -- no `.env`, no API keys, no Auth0 secrets, no ingest keys
+- Placeholder `icon.ico` is 256x256 (minimum required). Replace with proper multi-size ICO (256/128/64/48/32/16px) -- create 1024x1024 PNG, convert at icoconvert.com, drop into `platform/electron/assets/icon.ico`, rebuild
+
+**Electron UI fixes + auto-update (2026-04-04):**
+- Web double scrollbar fixed: `theme.css` -- `html/body` now `height:100% overflow:hidden`, removed `min-height:100vh`
+- Electron unauthenticated launch: shows `ElectronHome` (4 no-auth tool cards + login button) instead of LandingPage
+- Auth0 loading flash fixed: blank nav shown during `isLoading` state in Electron instead of SIEM shell
+- F12 opens DevTools in Electron for debugging
+- Auto-update system: `electron-updater` checks GitHub Releases on launch + every 4h, shows banner in TopNav with Download/progress/Install states, clears cache on install
+- Publish config: `0xKudoX/0xKudoSec-releases` (public repo, separate from private source repo)
+- `GH_TOKEN` saved in `.env` (never committed)
+- v1.0.0 published to `github.com/0xKudoX/0xKudoSec-releases`
+
+**Release process for future versions:**
+1. Bump version in `platform/electron/package.json`
+2. From Admin PowerShell: `$env:GH_TOKEN="..."; cd platform/electron; npx electron-builder --win --x64 --publish always`
+3. Go to `github.com/0xKudoX/0xKudoSec-releases/releases`, edit the draft, add title, click Publish release
+4. Installed apps will show update banner within 5 seconds of next launch
+
+**Next:** Replace icon.ico with real branded icon, then Proxy tool Phase 2 (Electron intercepting proxy).
 
 ### Recently Completed
 - Fluent Bit migration complete -- replaced node-shipper with Fluent Bit `winevtlog` input
