@@ -199,7 +199,7 @@ const s = {
   }),
 };
 
-const TABS = ['API Key', 'Connect a Source', 'Log Retention', 'Active Sources'];
+const TABS = ['API Key', 'Connect a Source', 'Log Retention', 'Active Sources', 'Account'];
 const SHIPPER_TABS = ['Fluent Bit', 'Winlogbeat 7', 'Manual API'];
 
 const FLUENT_BIT_CONFIG = (apiKey) => `[SERVICE]
@@ -533,7 +533,18 @@ winlogbeat.event_logs:
               </>
             )}
 
-            <div style={{ borderTop: '1px solid var(--border)', marginTop: '28px', paddingTop: '20px' }}>
+          </div>
+        )}
+
+        {/* ── Tab 4: Account ── */}
+        {tab === 4 && (
+          <div style={s.section}>
+            <div style={s.sectionTitle}>Account</div>
+            <div style={s.sectionDesc}>
+              Signed in as <strong>{user?.email}</strong>.
+            </div>
+
+            <div style={{ borderTop: '1px solid var(--border)', marginTop: '20px', paddingTop: '20px' }}>
               <div style={s.sectionTitle}>Password</div>
               {isEmailUser ? (
                 <>
