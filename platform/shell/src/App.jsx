@@ -68,6 +68,22 @@ function ToolLoader({ toolId }) {
 const NO_AUTH_ROUTES = ['/decoder', '/reverse-shell-generator', '/wordlist-generator', '/payload-generator'];
 const isElectron = typeof window !== 'undefined' && window.electron?.isElectron === true;
 
+function ElectronLoadingScreen() {
+  const [dots, setDots] = useState(1);
+  useEffect(() => {
+    const t = setInterval(() => setDots(d => d === 3 ? 1 : d + 1), 500);
+    return () => clearInterval(t);
+  }, []);
+  return (
+    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '16px', background: 'var(--bg-primary)' }}>
+      <div style={{ fontSize: '13px', color: 'var(--text-muted)', letterSpacing: '0.08em' }}>[ 0xKudoSec ]</div>
+      <div style={{ fontSize: '11px', color: 'var(--text-subtle)', letterSpacing: '0.06em', width: '80px' }}>
+        Connecting{'.'.repeat(dots)}
+      </div>
+    </div>
+  );
+}
+
 function AppInner() {
   const { isAuthenticated, isLoading } = useAuth0();
   const isMobile = useIsMobile();
@@ -95,15 +111,7 @@ function AppInner() {
   }, []);
 
   if (isElectron && isLoading) {
-    return (
-      <div style={{ ...styles.layout, background: 'var(--bg-primary)' }}>
-        <TopNav activeApp="tools" onSwitchApp={() => {}} onMenuToggle={() => {}} menuOpen={false} />
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '16px', background: 'var(--bg-primary)' }}>
-          <div style={{ fontSize: '13px', color: 'var(--text-muted)', letterSpacing: '0.08em' }}>[ 0xKudoSec ]</div>
-          <div style={{ fontSize: '11px', color: 'var(--text-subtle)', letterSpacing: '0.06em' }}>Connecting...</div>
-        </div>
-      </div>
-    );
+    return <ElectronLoadingScreen />;
   }
 
   if (!isLoading && !isAuthenticated) {
