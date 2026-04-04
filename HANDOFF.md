@@ -27,6 +27,25 @@ Unified cybersecurity tools platform at `tools.laynekudo.com`. Monorepo — shar
   - `fluent-bit` added to validSources and FIELD_ALIASES in siem.js
   - node-shipper moved to `_deprecated/node-shipper/`
 
+### Recently Completed (2026-04-04)
+- Detection Rules UI overhaul:
+  - Alert / Suppression tabs — each tab shows only its rule type with count badge
+  - New Rule defaults to whichever tab is active
+  - Export JSON button — downloads all rules as `detection-rules.json`
+  - Import JSON button — bulk inserts rules from file, skips duplicates by name, shows toast with result count
+  - Server: `GET /api/siem/rules/export` and `POST /api/siem/rules/import` (max 500 rules, validates all fields)
+- CSV export fix: LogSearch export was breaking on messages containing newlines -- now always quotes all fields and collapses newlines to space
+- LogSearch endpoint fix: was calling `/api/siem/events/recent` (correct) but had briefly been changed to `/api/siem/logs` (404) -- reverted
+- Suppress filter NULL bug: `applySuppressFilters` in siem.js was silently dropping events with NULL nullable fields (process_name, source_ip, dest_ip) because PostgreSQL `NOT (NULL ILIKE '%x%')` = NULL. Fixed with `IS NOT NULL AND` guard on all ILIKE conditions. This was hiding all PowerShell, WMI, Defender, System, Application events.
+- Fluent Bit expanded to 10 channels -- added System, Application, PowerShell/Operational, WMI-Activity/Operational, TaskScheduler/Operational, Windows Defender/Operational, Firewall, TerminalServices-RemoteConnectionManager/Operational
+- PowerShell Script Block Logging enabled via registry (Event ID 4104 now fires)
+- normalizeEvent.js: new HIGH_SEVERITY_EVENT_IDS, EVENT_ID_CATEGORY entries (powershell, wmi, scheduled-task, defender, rdp), `fluentBitSecurityUserFields()` for logon/account event user extraction
+- Detection rules built up via CSV log analysis -- `detection-rules.json` in repo root is the master file
+  - Suppress rules: jcmd.exe, Sophos, Claude, postgres, svchost, reg.exe, VS Code, Zoom, Discord, WUDFHost, EdgeUpdate, git.exe, bash.exe, BraveUpdate, BraveCrashHandler, OneDrive, AnthropicClaude updater, dllhost.exe, GoogleUpdater, node.exe, ossdbtoolsservice, AppInstallerPythonRedirector
+  - Suppress EIDs: 4798, 4799, 5061, 5154, 5157, 5158, 5379, 5382, 5857, 5858, 7040, 16384, 16394
+  - Alert rules: timestomping (EID 2) via powershell/cmd/wscript/rundll32/regsvr32 -- all critical severity
+  - Import via Detection Rules > Import JSON. Duplicates skipped by name.
+
 ### Recently Completed (2026-04-03)
 - Landing page complete: `platform/shell/src/pages/LandingPage.jsx`
   - Centered hero, stat bar, SIEM editorial + real dashboard preview, How it works (3 cards), tools by SOC phase, free strip, footer
@@ -39,6 +58,22 @@ Unified cybersecurity tools platform at `tools.laynekudo.com`. Monorepo — shar
   - Fix: `@media (max-width: 767px)` disables zoom, adds `overflow-x: hidden` — committed and deployed
 
 ### Recently Completed (2026-04-03, continued)
+- Fluent Bit expanded to 10 channels (was 2):
+  - Added: System, Application, PowerShell/Operational, WMI-Activity/Operational, TaskScheduler/Operational, Windows Defender/Operational, Firewall, TerminalServices-RemoteConnectionManager/Operational
+  - Config: `C:\Program Files\fluent-bit\conf\cybertools.conf` -- each channel has its own .db file for position tracking
+  - PowerShell Script Block Logging enabled via registry (Event ID 4104 now fires)
+  - normalizeEvent.js: added HIGH_SEVERITY_EVENT_IDS for 4104, 5857/5858/5861 (WMI), 4698/4702 (task scheduler), 1116-1120 (Defender), 7045/4697 (service install), 4778/4779/1149 (RDP)
+  - EVENT_ID_CATEGORY extended: powershell, wmi, scheduled-task, defender, rdp categories added
+  - Added `fluentBitSecurityUserFields()` extractor for Security channel logon/account events (4624/4625/4648/4720/4726/4738) -- merges into fields alongside network fields
+  - Server-side only change -- no rebuild needed on VPS, pull + pm2 restart sufficient
+
+- Bug fixes (2026-04-03):
+  - LogSearch was calling `/api/siem/events/recent` instead of the correct endpoint (reverted -- events/recent is correct, it does support q= search)
+  - **Critical suppress filter bug**: `applySuppressFilters` was dropping all events with NULL nullable fields (process_name, source_ip, dest_ip, etc.) because PostgreSQL `NOT (NULL ILIKE '%x%')` evaluates to NULL not TRUE, filtering the row. Fixed by adding `IS NOT NULL AND` guard before each ILIKE condition in siem.js. This was silently suppressing all PowerShell, WMI, Defender, System, and Application events (any event without a process_name).
+- Landing page copy updates:
+  - Removed all "Free to use" text, kept only "No credit card required"
+  - Hero description updated: "response" replaced with "reporting, compliance" to match actual tool categories
+
 - Tool category reorganization:
   - Network Scanner moved from Respond → Investigate
   - Respond renamed to Report (Incident Report Generator only)

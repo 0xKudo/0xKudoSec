@@ -9,12 +9,11 @@ import { Dashboard, trackToolVisit } from './components/Dashboard';
 import { DashboardMobile } from './components/DashboardMobile';
 import { SiemDashboard } from './components/SiemDashboard';
 import { SiemDashboardMobile } from './components/SiemDashboardMobile';
-import { LogSources } from './components/LogSources';
 import { AlertQueue } from './components/AlertQueue';
 import { DetectionRules } from './components/DetectionRules';
 import { LogSearch } from './components/LogSearch';
 import { Cases } from './components/Cases';
-import { SiemSettings } from './components/SiemSettings';
+import { SiemConfiguration } from './components/SiemConfiguration';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { RequireAuth } from './components/RequireAuth';
 import { LandingPage } from './pages/LandingPage';
@@ -161,13 +160,12 @@ function AppInner() {
             <main style={isMobile ? { flex: 1, background: 'var(--bg-primary)' } : { flex: 1, overflow: 'auto', background: 'var(--bg-primary)', minWidth: 0 }}>
               <RequireAuth>
                 {siemView === 'dashboard' && (isMobile ? <SiemDashboardMobile onNavigate={setSiemView} /> : <SiemDashboard onNavigate={setSiemView} />)}
-                {siemView === 'logsources' && <LogSources />}
                 {siemView === 'alerts' && <AlertQueue onNavigate={setSiemView} />}
                 {siemView === 'rules' && <DetectionRules onNavigate={setSiemView} />}
                 {siemView === 'logsearch' && <LogSearch />}
                 {siemView === 'cases' && <Cases onNavigate={setSiemView} />}
-                {siemView === 'settings' && <SiemSettings />}
-                {!['dashboard','logsources','alerts','rules','logsearch','cases','settings'].includes(siemView) && (
+                {siemView === 'configuration' && <SiemConfiguration />}
+                {!['dashboard','alerts','rules','logsearch','cases','configuration'].includes(siemView) && (
                   <div style={{ padding: '40px', color: 'var(--text-muted)', fontSize: '13px' }}>
                     {siemView.charAt(0).toUpperCase() + siemView.slice(1)} — coming soon
                   </div>

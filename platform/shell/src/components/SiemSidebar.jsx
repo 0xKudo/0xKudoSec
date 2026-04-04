@@ -61,7 +61,6 @@ const styles = {
 const NAV = [
   { section: 'Overview', items: [
     { id: 'dashboard', label: 'Dashboard' },
-    { id: 'logsources', label: 'Log Sources', badge: null },
   ]},
   { section: 'Detection', items: [
     { id: 'alerts', label: 'Alert Queue' },
@@ -76,7 +75,7 @@ const NAV = [
     { id: 'timeline', label: 'Timeline' },
   ]},
   { section: 'System', items: [
-    { id: 'settings', label: 'Settings' },
+    { id: 'configuration', label: 'Configuration' },
   ]},
 ];
 
