@@ -92,29 +92,39 @@ const FIELD_ALIASES = {
 
 const KEYWORD_TEXT_FIELDS = ['message', 'username', 'host', 'source_ip', 'dest_ip', 'process_name'];
 
-function buildSearchConditions(q, params) {
-  if (!q || !q.trim()) return [];
-  const conditions = [];
-  const token = q.trim();
-
-  // Check for field:value syntax
+// Parse a single search token into SQL condition(s). Mutates params in place.
+function buildTokenCondition(token, params) {
+  // field:value syntax — supports comma-separated values for OR within a field
   const colonIdx = token.indexOf(':');
   if (colonIdx > 0) {
     const alias = token.slice(0, colonIdx).toLowerCase();
-    const value = token.slice(colonIdx + 1).trim();
+    const rawValue = token.slice(colonIdx + 1).trim();
     const field = FIELD_ALIASES[alias];
-    if (field && value) {
+    if (field && rawValue) {
+      // Comma-separated values produce OR within that field
+      const values = rawValue.split(',').map(v => v.trim()).filter(Boolean);
       if (field === 'event_id') {
-        const num = parseInt(value, 10);
-        if (!isNaN(num)) {
-          params.push(num);
-          conditions.push(`event_id = $${params.length}`);
-          return conditions;
+        const nums = values.map(v => parseInt(v, 10)).filter(n => !isNaN(n));
+        if (nums.length === 1) {
+          params.push(nums[0]);
+          return `event_id = $${params.length}`;
+        } else if (nums.length > 1) {
+          // Use = ANY($n) with an array param
+          params.push(nums);
+          return `event_id = ANY($${params.length})`;
         }
+        return null;
       }
-      params.push(`%${value}%`);
-      conditions.push(`${field}::text ILIKE $${params.length}`);
-      return conditions;
+      if (values.length === 1) {
+        params.push(`%${values[0]}%`);
+        return `${field}::text ILIKE $${params.length}`;
+      } else {
+        const parts = values.map(v => {
+          params.push(`%${v}%`);
+          return `${field}::text ILIKE $${params.length}`;
+        });
+        return `(${parts.join(' OR ')})`;
+      }
     }
   }
 
@@ -129,7 +139,28 @@ function buildSearchConditions(q, params) {
     params.push(num);
     orParts.push(`event_id = $${params.length}`);
   }
-  conditions.push(`(${orParts.join(' OR ')})`);
+  return `(${orParts.join(' OR ')})`;
+}
+
+// Split query into tokens (space-separated), each AND'd together.
+// Quoted phrases ("foo bar") are kept as single tokens.
+function buildSearchConditions(q, params) {
+  if (!q || !q.trim()) return [];
+
+  // Tokenize: quoted strings stay together, otherwise split on whitespace
+  const tokens = [];
+  const tokenRe = /"([^"]+)"|(\S+)/g;
+  let m;
+  while ((m = tokenRe.exec(q)) !== null) {
+    tokens.push((m[1] || m[2]).trim());
+  }
+  if (!tokens.length) return [];
+
+  const conditions = [];
+  for (const token of tokens.slice(0, 10)) { // cap at 10 terms
+    const cond = buildTokenCondition(token, params);
+    if (cond) conditions.push(cond);
+  }
   return conditions;
 }
 
@@ -599,6 +630,8 @@ router.get('/rules/export', wrap(async (req, res) => {
 }));
 
 router.post('/rules/import', wrap(async (req, res) => {
+  // Reject anything that isn't application/json — prevents multipart/file-based attacks
+  if (!req.is('application/json')) return res.status(415).json({ error: 'content-type must be application/json' });
   const rules = req.body;
   if (!Array.isArray(rules) || !rules.length) return res.status(400).json({ error: 'expected non-empty array' });
   if (rules.length > 500) return res.status(400).json({ error: 'max 500 rules per import' });

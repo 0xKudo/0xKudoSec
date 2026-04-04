@@ -172,7 +172,7 @@ export function LogSearch() {
           value={query}
           onChange={e => setQuery(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Search logs… field:value (username:SYSTEM, event_id:4625)"
+          placeholder="Search logs… field:value, multi-term: event_id:4625,4688 username:SYSTEM process:cmd.exe"
           spellCheck={false}
           autoFocus={!isMobile}
         />
