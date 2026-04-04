@@ -35,12 +35,14 @@ const PHASES = [
 const styles = {
   sidebar: {
     width: '240px',
+    height: '100%',
     background: 'var(--bg-sidebar)',
     borderRight: '1px solid var(--border)',
     display: 'flex',
     flexDirection: 'column',
     flexShrink: 0,
     overflowY: 'auto',
+    boxSizing: 'border-box',
   },
   sectionLabel: {
     display: 'flex',

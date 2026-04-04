@@ -85,27 +85,26 @@ function ElectronLoadingScreen() {
 }
 
 const toggleBtnStyle = (collapsed) => ({
-  width: '12px',
+  width: '16px',
   alignSelf: 'stretch',
   flexShrink: 0,
-  background: 'var(--bg-sidebar)',
+  background: 'var(--accent-amber)',
   border: 'none',
-  borderRight: collapsed ? 'none' : '1px solid var(--border)',
-  borderLeft: collapsed ? '1px solid var(--border)' : 'none',
-  color: 'var(--accent-amber)',
+  borderRight: '1px solid var(--border)',
+  color: 'var(--bg-primary)',
   cursor: 'pointer',
-  fontSize: '10px',
+  fontSize: '11px',
+  fontWeight: 'bold',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
   padding: 0,
-  position: 'relative',
 });
 
 function ElectronCollapsibleSiemSidebar({ siemView, setSiemView, onSwitchToTools }) {
   const [collapsed, setCollapsed] = useState(true);
   return (
-    <div style={{ display: 'flex', flexShrink: 0, alignSelf: 'stretch' }}>
+    <div style={{ display: 'flex', flexShrink: 0, height: '100%' }}>
       {!collapsed && (
         <SiemSidebar
           activeView={siemView}
@@ -126,7 +125,7 @@ function ElectronCollapsibleSiemSidebar({ siemView, setSiemView, onSwitchToTools
 function ElectronCollapsibleToolsSidebar({ onSwitchToSiem, onSwitchToSiemView }) {
   const [collapsed, setCollapsed] = useState(true);
   return (
-    <div style={{ display: 'flex', flexShrink: 0, alignSelf: 'stretch' }}>
+    <div style={{ display: 'flex', flexShrink: 0, height: '100%' }}>
       {!collapsed && (
         <Sidebar onSwitchToSiem={onSwitchToSiem} onSwitchToSiemView={onSwitchToSiemView} />
       )}
