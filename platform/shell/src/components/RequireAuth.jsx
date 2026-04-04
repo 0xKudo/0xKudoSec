@@ -2,10 +2,14 @@ import { useAuth0 } from '@auth0/auth0-react';
 
 const s = {
   wrap: {
+    position: 'fixed',
+    top: '44px',
+    left: 0,
+    right: 0,
+    bottom: 0,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 'calc(100vh / 1.15 - 44px)',
     padding: '40px 24px',
     boxSizing: 'border-box',
   },
