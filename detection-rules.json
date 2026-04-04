@@ -1581,23 +1581,6 @@
     "match_dest_port": null
   },
   {
-    "name": "Network Logon Type 3",
-    "description": "EID 4624 network logon — common in pass-the-hash / lateral movement (T1550.002)",
-    "enabled": true,
-    "severity": "medium",
-    "action": "alert",
-    "match_event_id": 4624,
-    "match_category": null,
-    "match_severity": null,
-    "match_username": null,
-    "match_host": null,
-    "match_message": "Logon Type:",
-    "match_process": null,
-    "match_src_ip": null,
-    "match_dest_ip": null,
-    "match_dest_port": null
-  },
-  {
     "name": "nmap Execution",
     "description": "nmap process start on endpoint — internal network scanning (T1046)",
     "enabled": true,
@@ -1678,6 +1661,23 @@
     "match_host": null,
     "match_message": "net localgroup",
     "match_process": null,
+    "match_src_ip": null,
+    "match_dest_ip": null,
+    "match_dest_port": null
+  },
+  {
+    "name": "jcmd suppress",
+    "description": "Java JVM diagnostic tool — internal thread creation between JVM processes, fired by VS Code Java extension",
+    "enabled": true,
+    "severity": "high",
+    "action": "suppress",
+    "match_event_id": null,
+    "match_category": null,
+    "match_severity": null,
+    "match_username": null,
+    "match_host": null,
+    "match_message": null,
+    "match_process": "jcmd",
     "match_src_ip": null,
     "match_dest_ip": null,
     "match_dest_port": null
