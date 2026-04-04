@@ -29,6 +29,7 @@ function buildMenu(mainWindow, store, status) {
     {
       label: 'Open',
       click: () => {
+        if (!mainWindow || mainWindow.isDestroyed()) return;
         mainWindow.show();
         mainWindow.focus();
       },
@@ -36,9 +37,9 @@ function buildMenu(mainWindow, store, status) {
     {
       label: 'Configure Agent',
       click: () => {
+        if (!mainWindow || mainWindow.isDestroyed()) return;
         mainWindow.show();
         mainWindow.focus();
-        // Navigate to SIEM configuration tab
         mainWindow.webContents.executeJavaScript(
           `window.dispatchEvent(new CustomEvent('electron:navigate', { detail: '/siem/configuration' }))`
         );
@@ -86,6 +87,7 @@ function createTray(mainWindow, store) {
   }
 
   tray.on('click', () => {
+    if (!mainWindow || mainWindow.isDestroyed()) return;
     mainWindow.show();
     mainWindow.focus();
   });
