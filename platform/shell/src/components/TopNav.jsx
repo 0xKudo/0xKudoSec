@@ -210,7 +210,7 @@ export function TopNav({ activeApp, onSwitchApp, onMenuToggle, menuOpen }) {
         </>
       ) : (
         <>
-          <div style={styles.brand>[ 0xKudoSec ]</div>
+          <div style={styles.brand}>[ 0xKudoSec ]</div>
           <div style={{ display: 'flex', alignItems: 'stretch', WebkitAppRegion: 'no-drag' }}>
             {['siem', 'tools'].map(app => (
               <div
