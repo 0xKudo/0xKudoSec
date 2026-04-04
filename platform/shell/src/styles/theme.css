@@ -39,16 +39,20 @@
   padding: 0;
 }
 
+html, body {
+  height: 100%;
+  overflow: hidden;
+}
+
 body {
   background: var(--bg-primary);
   color: var(--text-primary);
   font-family: var(--font);
   font-weight: 500;
-  min-height: 100vh;
-  overflow-x: hidden;
 }
 
 #root {
+  height: 100%;
   zoom: 1.15;
 }
 

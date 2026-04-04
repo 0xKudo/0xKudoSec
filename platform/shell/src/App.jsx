@@ -17,6 +17,7 @@ import { SiemConfiguration } from './components/SiemConfiguration';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { RequireAuth } from './components/RequireAuth';
 import { LandingPage } from './pages/LandingPage';
+import { ElectronHome } from './pages/ElectronHome';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useIsMobile } from './hooks/useIsMobile';
 import './styles/theme.css';
@@ -64,14 +65,10 @@ function ToolLoader({ toolId }) {
 }
 
 const NO_AUTH_ROUTES = ['/decoder', '/reverse-shell-generator', '/wordlist-generator', '/payload-generator'];
+const isElectron = typeof window !== 'undefined' && window.electron?.isElectron === true;
 
 function AppInner() {
   const { isAuthenticated, isLoading } = useAuth0();
-
-  if (!isLoading && !isAuthenticated) {
-    const path = window.location.pathname;
-    if (!NO_AUTH_ROUTES.includes(path)) return <LandingPage />;
-  }
   const isMobile = useIsMobile();
   const [activeApp, setActiveApp] = useState(() => {
     const path = window.location.pathname;
@@ -82,6 +79,35 @@ function AppInner() {
   const tools = useTools();
   const navigate = useNavigate();
 
+  // Must be above any conditional returns to satisfy rules of hooks
+  useEffect(() => {
+    function onElectronNavigate(e) {
+      const target = e.detail;
+      if (target === '/siem/configuration') {
+        setActiveApp('siem');
+        setSiemView('configuration');
+        setMenuOpen(false);
+      }
+    }
+    window.addEventListener('electron:navigate', onElectronNavigate);
+    return () => window.removeEventListener('electron:navigate', onElectronNavigate);
+  }, []);
+
+  if (!isLoading && !isAuthenticated) {
+    const path = window.location.pathname;
+    if (isElectron && !NO_AUTH_ROUTES.includes(path)) {
+      return (
+        <div style={styles.layout}>
+          <TopNav activeApp={activeApp} onSwitchApp={() => {}} onMenuToggle={() => {}} menuOpen={false} />
+          <div style={{ flex: 1, overflow: 'auto' }}>
+            <ElectronHome onNavigate={(route) => { setActiveApp('tools'); navigate(route); }} />
+          </div>
+        </div>
+      );
+    }
+    if (!isElectron && !NO_AUTH_ROUTES.includes(path)) return <LandingPage />;
+  }
+
   const switchApp = (app) => {
     setActiveApp(app);
     setMenuOpen(false);
@@ -90,16 +116,6 @@ function AppInner() {
 
   const switchToSiem = () => switchApp('siem');
   const switchToSiemView = (view) => { setActiveApp('siem'); setSiemView(view); setMenuOpen(false); };
-
-  // Handle tray/Electron navigation events
-  useEffect(() => {
-    function onElectronNavigate(e) {
-      const target = e.detail;
-      if (target === '/siem/configuration') switchToSiemView('configuration');
-    }
-    window.addEventListener('electron:navigate', onElectronNavigate);
-    return () => window.removeEventListener('electron:navigate', onElectronNavigate);
-  }, []);
 
   const handleSiemNavigate = (view) => {
     setSiemView(view);
@@ -112,7 +128,7 @@ function AppInner() {
   };
 
   const layoutStyle = isMobile
-    ? { display: 'flex', flexDirection: 'column', minHeight: '100vh' }
+    ? { display: 'flex', flexDirection: 'column', height: '100%' }
     : styles.layout;
 
   const bodyStyle = isMobile

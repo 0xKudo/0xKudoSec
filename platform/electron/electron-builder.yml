@@ -23,24 +23,10 @@ nsis:
 
 # Files to include in the package
 files:
-  - "**/*"
-  - "!**/*.map"
-  - "!**/*.md"
-  - "!**/.git"
-
-# Extra resources bundled alongside the app (accessible via process.resourcesPath)
-extraResources:
-  - from: "../../server"
-    to: "server"
-    filter:
-      - "**/*"
-      - "!tests/**"
-      - "!**/*.test.js"
-  - from: "../../../tools"
-    to: "tools"
-    filter:
-      - "**/*"
-      - "!**/*.test.js"
-
-# The shell's built output is served via the Express static middleware in production
-# Build shell first: npm run build --workspace=platform/shell
+  - "main.js"
+  - "preload.js"
+  - "tray.js"
+  - "splash.html"
+  - "assets/**"
+  - "node_modules/**"
+  - "package.json"

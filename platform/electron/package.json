@@ -1,6 +1,8 @@
 {
   "name": "@cybertools/electron",
   "version": "1.0.0",
+  "description": "0xKudo Security Toolkit desktop app",
+  "author": "Layne Kudo",
   "private": true,
   "main": "main.js",
   "scripts": {
@@ -8,10 +10,11 @@
     "build": "electron-builder"
   },
   "dependencies": {
+    "app-builder-bin": "^4.2.0",
     "electron-store": "^8.2.0"
   },
   "devDependencies": {
-    "electron": "^29.4.6",
+    "electron": "29.4.6",
     "electron-builder": "^24.13.3"
   }
 }
