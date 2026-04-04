@@ -60,6 +60,11 @@ Unified cybersecurity tools platform at `tools.laynekudo.com`. Monorepo — shar
 - **Tools sidebar**: "Configuration ↗" link added above "SIEM ↗". Clicking switches to SIEM app and navigates directly to configuration view. `onSwitchToSiemView` prop added to `Sidebar`.
 - **Mobile sidebar drawer gap fix**: `overlay` div resized to match inner `<aside>` width (240px), removed double `borderRight`.
 
+### Recently Completed (2026-04-03, session 2, continued)
+- **Subdomain Enumerator WorkspaceContext crash fix**: when restored from workspace context, the saved data shape is `{ domain, subdomains }` but the component expected the full result shape with `sources`, `totalUnique`, `allSubdomains`, `analysis`. Two fixes:
+  1. Normalize restored data in `useEffect`: set `allSubdomains: restore.allSubdomains || restore.subdomains || []`, `totalUnique`, `sources: restore.sources || {}`, `analysis: restore.analysis || null`
+  2. Source cards: added `if (!src) return null` guard -- when `sources` is `{}`, any key lookup returns `undefined` and `src.count` was throwing
+
 ### Recently Completed (2026-04-04)
 - Detection Rules UI overhaul:
   - Alert / Suppression tabs — each tab shows only its rule type with count badge
