@@ -233,7 +233,7 @@ const s = {
 
   // nav
   nav: { background: 'var(--bg-sidebar)', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'stretch', flexShrink: 0, height: '44px', zIndex: 100 },
-  navBrand: { display: 'flex', alignItems: 'center', padding: '0 20px', fontSize: '14px', fontWeight: 'bold', color: 'var(--text-primary)', letterSpacing: '0.04em', borderRight: '1px solid var(--border)', whiteSpace: 'nowrap', flexShrink: 0 },
+  navBrand: { display: 'flex', alignItems: 'center', padding: '0 20px', fontSize: '16px', fontWeight: 'bold', color: 'var(--text-primary)', letterSpacing: '0.04em', borderRight: '1px solid var(--border)', whiteSpace: 'nowrap', flexShrink: 0 },
   navTab: (active) => ({ display: 'flex', alignItems: 'center', padding: '0 24px', fontSize: '12px', letterSpacing: '0.06em', textTransform: 'uppercase', color: active ? 'var(--accent-amber)' : 'var(--text-muted)', cursor: 'pointer', borderRight: '1px solid var(--border)', borderBottom: active ? '2px solid var(--accent-amber)' : '2px solid transparent', background: active ? 'var(--bg-primary)' : 'transparent', userSelect: 'none' }),
   navRight: { marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '16px', padding: '0 16px' },
   navBtn: { background: 'none', border: '1px solid var(--border)', color: 'var(--text-muted)', fontFamily: 'var(--font)', fontSize: '11px', padding: '4px 10px', cursor: 'pointer' },

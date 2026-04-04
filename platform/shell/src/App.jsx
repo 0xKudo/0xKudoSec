@@ -96,7 +96,7 @@ function AppInner() {
   if (isElectron && isLoading) {
     return (
       <div style={{ ...styles.layout, background: 'var(--bg-primary)' }}>
-        <TopNav activeApp={activeApp} onSwitchApp={() => {}} onMenuToggle={() => {}} menuOpen={false} />
+        <TopNav activeApp="tools" onSwitchApp={() => {}} onMenuToggle={() => {}} menuOpen={false} />
         <div style={{ flex: 1 }} />
       </div>
     );
@@ -107,7 +107,7 @@ function AppInner() {
     if (isElectron && !NO_AUTH_ROUTES.includes(path)) {
       return (
         <div style={styles.layout}>
-          <TopNav activeApp={activeApp} onSwitchApp={() => {}} onMenuToggle={() => {}} menuOpen={false} />
+          <TopNav activeApp="tools" onSwitchApp={() => {}} onMenuToggle={() => {}} menuOpen={false} />
           <div style={{ flex: 1, overflow: 'auto' }}>
             <ElectronHome onNavigate={(route) => { setActiveApp('tools'); navigate(route); }} />
           </div>
