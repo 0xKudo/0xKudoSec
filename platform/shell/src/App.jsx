@@ -14,6 +14,7 @@ import { DetectionRules } from './components/DetectionRules';
 import { LogSearch } from './components/LogSearch';
 import { Cases } from './components/Cases';
 import { SiemConfiguration } from './components/SiemConfiguration';
+import { AuditLog } from './components/AuditLog';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { RequireAuth } from './components/RequireAuth';
 import { LandingPage } from './pages/LandingPage';
@@ -201,7 +202,8 @@ function AppInner() {
                 {siemView === 'logsearch' && <LogSearch />}
                 {siemView === 'cases' && <Cases onNavigate={setSiemView} />}
                 {siemView === 'configuration' && <SiemConfiguration />}
-                {!['dashboard','alerts','rules','logsearch','cases','configuration'].includes(siemView) && (
+                {siemView === 'auditlog' && <AuditLog />}
+                {!['dashboard','alerts','rules','logsearch','cases','configuration','auditlog'].includes(siemView) && (
                   <div style={{ padding: '40px', color: 'var(--text-muted)', fontSize: '13px' }}>
                     {siemView.charAt(0).toUpperCase() + siemView.slice(1)} — coming soon
                   </div>

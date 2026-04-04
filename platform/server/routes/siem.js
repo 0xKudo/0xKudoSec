@@ -955,4 +955,31 @@ router.post('/change-password', wrap(async (req, res) => {
   res.json({ ok: true });
 }));
 
+// ── AUDIT LOG ─────────────────────────────────────────────────────────────────
+router.get('/audit-log', wrap(async (req, res) => {
+  const limit = Math.min(parseInt(req.query.limit, 10) || 100, 500);
+  const validActions = Object.keys({
+    'ingest_key.rotate': 1, 'rule.create': 1, 'rule.delete': 1, 'rules.import': 1,
+    'alerts.bulk_delete': 1, 'alerts.bulk_status': 1, 'case.create': 1, 'case.delete': 1,
+  });
+  const action = validActions.includes(req.query.action) ? req.query.action : null;
+
+  const params = [uid(req), limit];
+  const conds = ['user_id = $1'];
+  if (action) { params.splice(2, 0, action); conds.push(`action = $2`); params[params.length - 1] = limit; }
+
+  // Build query safely
+  const whereAction = action ? `AND action = $2` : '';
+  const limitParam = action ? '$3' : '$2';
+  const { rows } = await pool.query(
+    `SELECT id, action, meta, ip, created_at
+     FROM audit_log
+     WHERE user_id = $1 ${whereAction}
+     ORDER BY created_at DESC
+     LIMIT ${limitParam}`,
+    action ? [uid(req), action, limit] : [uid(req), limit]
+  );
+  res.json(rows);
+}));
+
 export default router;
