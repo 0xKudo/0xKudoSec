@@ -31,11 +31,16 @@ Unified cybersecurity tools platform at `tools.laynekudo.com`. Monorepo — shar
 - Placeholder `icon.ico` in `platform/electron/assets/`
 
 **Key gotchas:**
-- `npx electron` must run from the project root with `npm run dev` already running
+- Production mode: `$env:NODE_ENV="production"; npx electron platform/electron/main.js` -- loads `tools.laynekudo.com` directly, no local server needed
+- Dev mode: `npx electron platform/electron/main.js` with `npm run dev` already running
 - Auth0 requires `http://localhost:5173` in both Allowed Web Origins AND Allowed Origins (CORS)
 - Auth0 Non-Verifiable Callback URI End-User Confirmation should be enabled (security)
 - `window-all-closed` must not call `app.quit()` -- tray keeps app alive
 - `webSecurity: true` -- CORS fix belongs in Auth0 dashboard, not Electron
+- `isDev = process.env.NODE_ENV !== 'production' && !app.isPackaged` -- must use `!== 'production'` not `=== 'development'`
+- Preload injects CSS to remove outer scrollbars (`overflow: hidden` on html/body/#root), thin styled inner scrollbars via `::-webkit-scrollbar`
+- Preload works on remote URLs (tools.laynekudo.com) -- `window.electron` is available in production mode
+- After any shell changes: push to GitHub, then on VPS: `cd /var/www/cybertools && npm install --include=dev --workspace=platform/shell && npm run build --workspace=platform/shell && pm2 restart all`
 
 **Next:** Proxy tool Phase 2 (Electron intercepting proxy) or packaging/installer.
 
