@@ -24,6 +24,27 @@ const HIGH_SEVERITY_EVENT_IDS = new Set([
   4776, // Credential validation
   4946, // Firewall rule added
   1102, // Audit log cleared
+  // PowerShell
+  4104, // Script block logging (suspicious scripts)
+  // WMI
+  5857, // WMI activity
+  5858, // WMI error
+  5861, // WMI subscription created (persistence)
+  // Task Scheduler
+  4698, // Scheduled task created
+  4702, // Scheduled task updated
+  // Defender
+  1116, // Malware detected
+  1117, // Malware action taken
+  1119, // Malware remediation succeeded
+  1120, // Malware remediation failed
+  // System / service install
+  7045, // New service installed
+  4697, // Service installed via SCM
+  // RDP
+  4778, // RDP session reconnected
+  4779, // RDP session disconnected
+  1149, // RDP user auth succeeded
 ]);
 
 function normalizeSeverity(level, eventId) {
@@ -59,11 +80,22 @@ const EVENT_ID_CATEGORY = {
   4657: 'registry', 12: 'registry', 13: 'registry', 14: 'registry',
   // Firewall
   2004: 'firewall', 2005: 'firewall', 2006: 'firewall',
-  // System
+  // System / service
   7045: 'system', 7036: 'system', 7040: 'system', 4697: 'system',
   19: 'system', 20: 'system', 21: 'system',
   // DNS
   22: 'dns',
+  // PowerShell
+  4103: 'powershell', 4104: 'powershell', 4105: 'powershell', 4106: 'powershell',
+  // WMI
+  5857: 'wmi', 5858: 'wmi', 5859: 'wmi', 5860: 'wmi', 5861: 'wmi',
+  // Task Scheduler
+  4698: 'scheduled-task', 4699: 'scheduled-task', 4700: 'scheduled-task',
+  4701: 'scheduled-task', 4702: 'scheduled-task',
+  // Defender
+  1116: 'defender', 1117: 'defender', 1118: 'defender', 1119: 'defender', 1120: 'defender',
+  // RDP
+  4778: 'rdp', 4779: 'rdp', 1149: 'rdp',
 };
 
 function categoryFromEventId(eventId) {
@@ -241,6 +273,23 @@ function fluentBitSysmonFields(eventId, inserts) {
   return {};
 }
 
+// Extract username from Security channel StringInserts for account/logon events.
+// 4624/4625/4648: SubjectUserName=[1], TargetUserName=[5], SubjectDomainName=[2], TargetDomainName=[6]
+function fluentBitSecurityUserFields(eventId, inserts) {
+  if (!Array.isArray(inserts)) return {};
+  const id = Number(eventId);
+  if (id === 4624 || id === 4625 || id === 4648) {
+    const username = inserts[5] || inserts[1] || null;
+    const domain = inserts[6] || inserts[2] || null;
+    return { username, domain };
+  }
+  if (id === 4720 || id === 4726 || id === 4738) {
+    // TargetUserName=[0], SubjectUserName=[4]
+    return { username: inserts[0] || null, domain: inserts[1] || null };
+  }
+  return {};
+}
+
 function normalizeFluentBit(raw) {
   const eventId = raw.EventID;
   const channel = raw.Channel || '';
@@ -263,7 +312,10 @@ function normalizeFluentBit(raw) {
   if (isSysmon) {
     fields = fluentBitSysmonFields(eventId, raw.StringInserts);
   } else {
-    fields = fluentBitNetworkFields(eventId, raw.StringInserts);
+    fields = {
+      ...fluentBitNetworkFields(eventId, raw.StringInserts),
+      ...fluentBitSecurityUserFields(eventId, raw.StringInserts),
+    };
   }
 
   // winevtlog uses Computer, TimeCreated; winlog uses ComputerName, TimeGenerated
