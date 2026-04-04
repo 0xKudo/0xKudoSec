@@ -8,7 +8,7 @@ const Store = require('electron-store');
 const store = new Store();
 const SHELL_PORT = 5173;
 const SERVER_PORT = 4000;
-const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
+const isDev = process.env.NODE_ENV !== 'production' && !app.isPackaged;
 const PRODUCTION_URL = 'https://tools.laynekudo.com';
 
 let mainWindow = null;
