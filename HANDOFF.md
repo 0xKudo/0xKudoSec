@@ -27,6 +27,39 @@ Unified cybersecurity tools platform at `tools.laynekudo.com`. Monorepo — shar
   - `fluent-bit` added to validSources and FIELD_ALIASES in siem.js
   - node-shipper moved to `_deprecated/node-shipper/`
 
+### Recently Completed (2026-04-03, session 2)
+
+**SIEM UI overhaul — multi-term search, alert tuning, detection rules search, Configuration page, sidebar fixes:**
+
+- **Multi-term log search**: LogSearch and server `buildSearchConditions` rewritten to support space-separated AND terms, `field:value` syntax, comma-separated OR within a field (`event_id:4625,4688`). Parameterized queries throughout -- no SQL injection surface. Import endpoint (`/rules/import`) now enforces `Content-Type: application/json` to block multipart attacks.
+- **35 new detection alert rules** added to `detection-rules.json` covering MITRE ATT&CK: Execution, PrivEsc, Persistence, DefenseEvasion, CredAccess, LateralMovement, Discovery. Total: 101 rules (52 alerts, 49 suppressions).
+- **6 new suppressions** from CSV8 log analysis: Sendevsvc, sihost, sdbinst, rs2client, SYSTEM 4624, SYSTEM 4672.
+- **False positive fixes**:
+  - arp rule: added `match_process: 'arp'` so only arp.exe triggers (was firing on CefSharp paths containing "arp")
+  - net user/localgroup rules: split into targeted rules with `match_process: 'net'`; bash running Claude shell scripts was triggering message-text match
+  - rundll32 Defender false positive: added `match_message: 'Startupscan.dll'` suppression
+  - RtkAud (Realtek audio driver): suppression added
+  - jcmd: suppression added
+  - Network Logon Type 3 alert: removed entirely -- message text matching too imprecise, was catching all SYSTEM service logons
+- **Alert queue checkbox bug fixed**: `toggleOne` was firing from both `<td onClick>` and `<input onChange>`. Fixed by removing `onChange`, making input `readOnly`.
+- **Alert queue resizable columns**: matches dashboard recent events pattern -- `colgroup` + `tableLayout: fixed`, `mousedown/mousemove/mouseup` on window, `DEFAULT_WIDTHS` per column, `resizeHandle` div with `borderRight: 2px solid var(--border)`. th padding `8px 18px 8px 14px`, td `maxWidth: 0, overflow: hidden, textOverflow: ellipsis`.
+- **Dashboard severity filter**: changed from single-select string to multi-select Set (`sevFilters`). Persisted as array, initialized as `new Set()`. Colored chip buttons -- filled solid when active, colored border+text when inactive. Multi-select supported. `toggleSevFilter()` toggles Set membership. "All" clears Set. API passes single severity param when size===1, client-side filters when size>1.
+- **Detection Rules search bar**: multi-term AND search with term chips (click to remove), severity filter chips (multi-select Set), shows "X of Y rules" count. Chips styled same as alert queue severity chips.
+- **SiemConfiguration** (`platform/shell/src/components/SiemConfiguration.jsx`): new component merging SiemSettings + LogSources into a single tabbed page.
+  - 5 tabs: API Key | Connect a Source | Log Retention | Active Sources | Account
+  - API Key: ingest key generate/regenerate/copy, one-time display warning
+  - Connect a Source: Fluent Bit / Winlogbeat 7 / Manual API sub-tabs, pre-filled configs with actual key, download + copy buttons, setup instructions
+  - Log Retention: retention days setting + Download Log Data (custom DateTimePicker)
+  - Active Sources: sources table + Upload Log File + Refresh button
+  - Account: signed-in email display + password reset (email users get reset link, social users see provider message)
+  - Fluent Bit config: all 10 channels, `Flush 2`, individual `.db` files at `C:\Program Files\fluent-bit\conf\`
+  - Mobile: tabs wrap to two rows using `flex-wrap`, each tab `flex: 0 0 33.333%` so second row centers
+  - Long code blocks (`sc.exe create`, `reg add` registry command): `whiteSpace: pre-wrap, wordBreak: break-all`
+  - Tab hover effect matches sidebar (onMouseEnter/Leave color change)
+- **App.jsx + SiemSidebar.jsx wired**: replaced `LogSources` + `SiemSettings` with `SiemConfiguration`. Sidebar "Settings" renamed to "Configuration", "Log Sources" nav item removed.
+- **Tools sidebar**: "Configuration ↗" link added above "SIEM ↗". Clicking switches to SIEM app and navigates directly to configuration view. `onSwitchToSiemView` prop added to `Sidebar`.
+- **Mobile sidebar drawer gap fix**: `overlay` div resized to match inner `<aside>` width (240px), removed double `borderRight`.
+
 ### Recently Completed (2026-04-04)
 - Detection Rules UI overhaul:
   - Alert / Suppression tabs — each tab shows only its rule type with count badge
