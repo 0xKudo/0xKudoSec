@@ -120,7 +120,7 @@ export function LogSearch() {
       const params = new URLSearchParams({ hours: hToUse });
       if (qToUse.trim()) params.set('q', qToUse.trim());
       if (sevToUse) params.set('severity', sevToUse);
-      const res = await fetch(`/api/siem/logs?${params}`, {
+      const res = await fetch(`/api/siem/events/recent?${params}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();

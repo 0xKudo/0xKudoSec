@@ -46,12 +46,12 @@ async function applySuppressFilters(userId, params, conditions) {
     if (rule.match_event_id)  { params.push(rule.match_event_id);        rc.push(`event_id = $${params.length}`); }
     if (rule.match_category)  { params.push(rule.match_category);        rc.push(`event_category = $${params.length}`); }
     if (rule.match_severity)  { params.push(rule.match_severity);        rc.push(`severity = $${params.length}`); }
-    if (rule.match_username)  { params.push(`%${rule.match_username}%`); rc.push(`username ILIKE $${params.length}`); }
-    if (rule.match_host)      { params.push(`%${rule.match_host}%`);     rc.push(`host ILIKE $${params.length}`); }
-    if (rule.match_message)   { params.push(`%${rule.match_message}%`);  rc.push(`message ILIKE $${params.length}`); }
-    if (rule.match_process)   { params.push(`%${rule.match_process}%`);  rc.push(`process_name ILIKE $${params.length}`); }
-    if (rule.match_src_ip)    { params.push(`%${rule.match_src_ip}%`);   rc.push(`source_ip::text ILIKE $${params.length}`); }
-    if (rule.match_dest_ip)   { params.push(`%${rule.match_dest_ip}%`);  rc.push(`dest_ip::text ILIKE $${params.length}`); }
+    if (rule.match_username)  { params.push(`%${rule.match_username}%`); rc.push(`(username ILIKE $${params.length})`); }
+    if (rule.match_host)      { params.push(`%${rule.match_host}%`);     rc.push(`(host ILIKE $${params.length})`); }
+    if (rule.match_message)   { params.push(`%${rule.match_message}%`);  rc.push(`(message ILIKE $${params.length})`); }
+    if (rule.match_process)   { params.push(`%${rule.match_process}%`);  rc.push(`(process_name IS NOT NULL AND process_name ILIKE $${params.length})`); }
+    if (rule.match_src_ip)    { params.push(`%${rule.match_src_ip}%`);   rc.push(`(source_ip IS NOT NULL AND source_ip::text ILIKE $${params.length})`); }
+    if (rule.match_dest_ip)   { params.push(`%${rule.match_dest_ip}%`);  rc.push(`(dest_ip IS NOT NULL AND dest_ip::text ILIKE $${params.length})`); }
     if (rule.match_dest_port) { params.push(rule.match_dest_port);       rc.push(`dest_port = $${params.length}`); }
     if (rc.length) conditions.push(`NOT (${rc.join(' AND ')})`);
   }
