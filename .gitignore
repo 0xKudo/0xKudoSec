@@ -1,6 +1,7 @@
 .worktrees/
 node_modules/
 dist/
+dist-electron/
 .env
 *.local
 .DS_Store
@@ -8,5 +9,7 @@ dist/
 mockups/
 _deprecated/
 docs/
-2026-03-26-cybertools-platform.md
+*.md
+detection-rules.json
+*.csv
 platform/server/tests/
