@@ -255,6 +255,40 @@ export function DetectionRules({ onNavigate }) {
   const alertCount = rules.filter(r => (r.action || 'alert') === 'alert').length;
   const suppressCount = rules.filter(r => r.action === 'suppress').length;
 
+  // Search + filter state
+  const [searchInput, setSearchInput] = useState('');
+  const [searchTerms, setSearchTerms] = useState([]); // committed terms
+  const [sevFilters, setSevFilters] = useState(new Set()); // active severity filters
+
+  function commitSearch() {
+    const term = searchInput.trim();
+    if (term && !searchTerms.includes(term)) {
+      setSearchTerms(prev => [...prev, term]);
+    }
+    setSearchInput('');
+  }
+
+  function removeTerm(term) { setSearchTerms(prev => prev.filter(t => t !== term)); }
+
+  function toggleSev(sev) {
+    setSevFilters(prev => {
+      const next = new Set(prev);
+      next.has(sev) ? next.delete(sev) : next.add(sev);
+      return next;
+    });
+  }
+
+  const filteredRules = visibleRules.filter(rule => {
+    if (sevFilters.size > 0 && !sevFilters.has(rule.severity)) return false;
+    if (searchTerms.length === 0) return true;
+    const haystack = [
+      rule.name, rule.description, rule.match_process, rule.match_message,
+      rule.match_username, rule.match_host, rule.match_src_ip, rule.match_dest_ip,
+      rule.match_category, String(rule.match_event_id ?? ''),
+    ].join(' ').toLowerCase();
+    return searchTerms.every(t => haystack.includes(t.toLowerCase()));
+  });
+
   return (
     <div style={s.container}>
       <div style={isMobile ? { ...s.header, flexWrap: 'wrap', gap: '8px' } : s.header}>
@@ -278,12 +312,64 @@ export function DetectionRules({ onNavigate }) {
         </button>
       </div>
 
+      {/* Search + filter bar */}
+      <div style={{ padding: '8px 20px', borderBottom: '1px solid var(--border)', background: 'var(--bg-surface)', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+        <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
+          <input
+            style={{ ...s.input, flex: 1, minWidth: '180px', padding: '6px 10px' }}
+            value={searchInput}
+            onChange={e => setSearchInput(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') commitSearch(); }}
+            placeholder="Search rules… press Enter to add term"
+            spellCheck={false}
+          />
+          <button style={s.btn} onClick={commitSearch}>Add</button>
+          {searchTerms.length > 0 && (
+            <button style={s.btn} onClick={() => setSearchTerms([])}>Clear</button>
+          )}
+        </div>
+        {searchTerms.length > 0 && (
+          <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', alignItems: 'center' }}>
+            <span style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginRight: '4px' }}>Terms</span>
+            {searchTerms.map(t => (
+              <span
+                key={t}
+                style={{ fontSize: '11px', padding: '2px 8px', background: 'var(--bg-primary)', border: '1px solid var(--border)', color: 'var(--text-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                onClick={() => removeTerm(t)}
+              >{t} ✕</span>
+            ))}
+          </div>
+        )}
+        <div style={{ display: 'flex', gap: '4px', alignItems: 'center', flexWrap: 'wrap' }}>
+          <span style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginRight: '4px' }}>Severity</span>
+          {['critical','high','medium','low','info'].map(sev => (
+            <button
+              key={sev}
+              style={{
+                background: sevFilters.has(sev) ? sevColor(sev) : 'none',
+                border: `1px solid ${sevColor(sev)}`,
+                color: sevFilters.has(sev) ? 'var(--bg-primary)' : sevColor(sev),
+                fontFamily: 'var(--font)', fontSize: '10px', padding: '2px 8px',
+                cursor: 'pointer', letterSpacing: '0.04em', textTransform: 'uppercase',
+              }}
+              onClick={() => toggleSev(sev)}
+            >{sev}</button>
+          ))}
+          {sevFilters.size > 0 && (
+            <button style={{ ...s.btn, fontSize: '10px', padding: '2px 8px' }} onClick={() => setSevFilters(new Set())}>Clear</button>
+          )}
+        </div>
+        <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
+          {filteredRules.length} of {visibleRules.length} {tab} rules
+        </div>
+      </div>
+
       {isMobile ? (
         <div>
-          {!loading && !visibleRules.length && (
-            <div style={s.muted}>No {tab} rules yet. Tap "+ New Rule" to create one.</div>
+          {!loading && !filteredRules.length && (
+            <div style={s.muted}>{visibleRules.length === 0 ? `No ${tab} rules yet. Tap "+ New Rule" to create one.` : 'No rules match your search.'}</div>
           )}
-          {visibleRules.map(rule => (
+          {filteredRules.map(rule => (
             <div
               key={rule.id}
               style={{ borderBottom: '1px solid var(--border-subtle)', padding: '12px 16px', opacity: rule.enabled ? 1 : 0.5, cursor: 'pointer' }}
@@ -314,15 +400,16 @@ export function DetectionRules({ onNavigate }) {
               </tr>
             </thead>
             <tbody>
-              {!loading && !visibleRules.length && (
+              {!loading && !filteredRules.length && (
                 <tr><td colSpan={5} style={s.muted}>
-                  No {tab === 'alert' ? 'alert' : 'suppression'} rules yet.{' '}
-                  {tab === 'alert'
-                    ? 'Create a rule to auto-generate alerts when logs match.'
-                    : 'Create a suppression rule to hide noisy benign events from the log feed.'}
+                  {visibleRules.length === 0
+                    ? (tab === 'alert'
+                        ? 'Create a rule to auto-generate alerts when logs match.'
+                        : 'Create a suppression rule to hide noisy benign events from the log feed.')
+                    : 'No rules match your search.'}
                 </td></tr>
               )}
-              {visibleRules.map(rule => (
+              {filteredRules.map(rule => (
                 <tr
                   key={rule.id}
                   style={{ cursor: 'pointer', opacity: rule.enabled ? 1 : 0.5 }}
