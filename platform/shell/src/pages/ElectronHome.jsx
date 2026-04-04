@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 
 const NO_AUTH_TOOLS = [
@@ -21,7 +22,7 @@ const styles = {
     fontSize: '13px',
     color: 'var(--text-muted)',
     letterSpacing: '0.08em',
-    textTransform: 'uppercase',
+    textTransform: 'none',
     marginBottom: '8px',
   },
   sub: {
@@ -38,14 +39,14 @@ const styles = {
     maxWidth: '560px',
     marginBottom: '40px',
   },
-  card: {
-    background: 'var(--bg-surface)',
-    border: '1px solid var(--border)',
+  card: (hovered) => ({
+    background: hovered ? 'var(--bg-panel)' : 'var(--bg-surface)',
+    border: `1px solid ${hovered ? 'var(--text-primary)' : 'var(--border)'}`,
     padding: '20px',
     cursor: 'pointer',
-    transition: 'border-color 0.15s',
+    transition: 'border-color 0.15s, background 0.15s',
     textAlign: 'left',
-  },
+  }),
   cardName: {
     fontSize: '12px',
     color: 'var(--text-primary)',
@@ -72,20 +73,37 @@ const styles = {
     color: 'var(--text-muted)',
     marginBottom: '12px',
   },
-  loginBtn: {
-    background: 'var(--btn-primary-bg)',
+  loginBtn: (hovered) => ({
+    background: hovered ? 'var(--text-primary)' : 'var(--btn-primary-bg)',
     color: 'var(--btn-primary-text)',
-    border: 'none',
+    border: `1px solid ${hovered ? 'var(--text-primary)' : 'var(--border)'}`,
     fontFamily: 'var(--font)',
     fontSize: '12px',
     padding: '8px 24px',
     cursor: 'pointer',
     letterSpacing: '0.04em',
-  },
+    transition: 'background 0.15s, border-color 0.15s',
+  }),
 };
+
+function ToolCard({ tool, onNavigate }) {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <div
+      style={styles.card(hovered)}
+      onClick={() => onNavigate(tool.route)}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      <div style={styles.cardName}>{tool.name}</div>
+      <div style={styles.cardDesc}>{tool.desc}</div>
+    </div>
+  );
+}
 
 export function ElectronHome({ onNavigate }) {
   const { loginWithRedirect } = useAuth0();
+  const [loginHovered, setLoginHovered] = useState(false);
 
   return (
     <div style={styles.page}>
@@ -94,16 +112,7 @@ export function ElectronHome({ onNavigate }) {
 
       <div style={styles.grid}>
         {NO_AUTH_TOOLS.map(tool => (
-          <div
-            key={tool.id}
-            style={styles.card}
-            onClick={() => onNavigate(tool.route)}
-            onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--text-subtle)'}
-            onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}
-          >
-            <div style={styles.cardName}>{tool.name}</div>
-            <div style={styles.cardDesc}>{tool.desc}</div>
-          </div>
+          <ToolCard key={tool.id} tool={tool} onNavigate={onNavigate} />
         ))}
       </div>
 
@@ -111,7 +120,12 @@ export function ElectronHome({ onNavigate }) {
 
       <div style={styles.loginSection}>
         <div style={styles.loginLabel}>Sign in for SIEM, alert triage, threat intel, and all 19 tools</div>
-        <button style={styles.loginBtn} onClick={() => loginWithRedirect()}>[ login ]</button>
+        <button
+          style={styles.loginBtn(loginHovered)}
+          onMouseEnter={() => setLoginHovered(true)}
+          onMouseLeave={() => setLoginHovered(false)}
+          onClick={() => loginWithRedirect()}
+        >[ login ]</button>
       </div>
     </div>
   );
