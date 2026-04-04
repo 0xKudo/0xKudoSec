@@ -117,20 +117,6 @@ function AppInner() {
 
   if (!isLoading && !isAuthenticated) {
     const path = window.location.pathname;
-    if (isElectron && !NO_AUTH_ROUTES.includes(path)) {
-      return (
-        <div style={styles.layout}>
-          <TopNav activeApp={activeApp} onSwitchApp={setActiveApp} onMenuToggle={() => {}} menuOpen={false} />
-          <div style={{ flex: 1, overflow: 'auto', height: '100%' }}>
-            {activeApp === 'siem' ? (
-              <RequireAuth />
-            ) : (
-              <ElectronHome onNavigate={(route) => { setActiveApp('tools'); navigate(route); }} />
-            )}
-          </div>
-        </div>
-      );
-    }
     if (!isElectron && !NO_AUTH_ROUTES.includes(path)) return <LandingPage />;
   }
 
@@ -251,8 +237,8 @@ function AppInner() {
                     }
                   />
                 ))}
-                <Route path="/dashboard" element={isMobile ? <DashboardMobile /> : <Dashboard />} />
-                <Route path="*" element={isMobile ? <DashboardMobile /> : <Dashboard />} />
+                <Route path="/dashboard" element={isElectron && !isAuthenticated ? <ElectronHome onNavigate={(route) => { setActiveApp('tools'); navigate(route); }} /> : isMobile ? <DashboardMobile /> : <Dashboard />} />
+                <Route path="*" element={isElectron && !isAuthenticated ? <ElectronHome onNavigate={(route) => { setActiveApp('tools'); navigate(route); }} /> : isMobile ? <DashboardMobile /> : <Dashboard />} />
               </Routes>
             </main>
           </>
