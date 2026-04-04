@@ -86,10 +86,15 @@ function createTray(mainWindow, store) {
     tray.setContextMenu(buildMenu(mainWindow, store, currentStatus));
   }
 
-  tray.on('click', () => {
+  // Windows: use double-click to open, single click shows context menu
+  tray.on('double-click', () => {
     if (!mainWindow || mainWindow.isDestroyed()) return;
     mainWindow.show();
     mainWindow.focus();
+  });
+
+  tray.on('click', () => {
+    tray.popUpContextMenu();
   });
 
   refreshMenu();
