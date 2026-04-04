@@ -11,7 +11,33 @@ Unified cybersecurity tools platform at `tools.laynekudo.com`. Monorepo — shar
 
 ## Current Status
 
-**All 19 tools complete. Auth complete. SIEM Phase 2 complete.**
+**All 19 tools complete. Auth complete. SIEM complete. Electron wrapper complete.**
+
+### Recently Completed (2026-04-04)
+
+**Electron desktop wrapper (`platform/electron/`):**
+- Frameless BrowserWindow with custom drag region on TopNav, window controls (minimize/maximize/close)
+- Splash screen while Express boots, polls `/health` before showing main window
+- In dev mode: detects already-running Express server instead of forking a second one
+- System tray: left-click opens window, right-click shows menu (Fluent Bit status, Configure Agent, Quit)
+- Fluent Bit IPC: status/start/stop/restart via `sc.exe`, write-config via IPC
+- Tray-on-close behavior: hide to tray on close (configurable in SiemConfiguration Account tab)
+- `_forceClose` flag allows tray Quit to bypass hide-on-close
+- Auth0 login: `will-navigate` intercepts redirect to system browser, localhost:8765 callback server catches code, `executeJavaScript` dispatches `auth0-callback` event to renderer, Auth0 SDK completes token exchange
+- Auth0 CORS fix: `http://localhost:5173` added to Auth0 Allowed Origins (CORS) and Allowed Web Origins
+- Agent Status panel in SiemConfiguration Connect a Source tab (Electron-only, `isElectron` gated)
+- Desktop App settings in SiemConfiguration Account tab (tray-on-close toggle)
+- `electron-builder.yml` for Windows NSIS installer
+- Placeholder `icon.ico` in `platform/electron/assets/`
+
+**Key gotchas:**
+- `npx electron` must run from the project root with `npm run dev` already running
+- Auth0 requires `http://localhost:5173` in both Allowed Web Origins AND Allowed Origins (CORS)
+- Auth0 Non-Verifiable Callback URI End-User Confirmation should be enabled (security)
+- `window-all-closed` must not call `app.quit()` -- tray keeps app alive
+- `webSecurity: true` -- CORS fix belongs in Auth0 dashboard, not Electron
+
+**Next:** Proxy tool Phase 2 (Electron intercepting proxy) or packaging/installer.
 
 ### Recently Completed
 - Fluent Bit migration complete -- replaced node-shipper with Fluent Bit `winevtlog` input
