@@ -131,12 +131,13 @@ function DateTimePicker({ value, onChange, label }) {
 const s = {
   container: { padding: 0, display: 'flex', flexDirection: 'column', height: '100%' },
   header: {
-    padding: '12px 20px', borderBottom: '1px solid var(--border)',
-    background: 'var(--bg-surface)', display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0,
+    padding: '14px 20px', borderBottom: '1px solid var(--border)',
+    background: 'var(--bg-surface)', display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0, minHeight: '44px',
   },
   title: { fontSize: '13px', color: 'var(--text-primary)', letterSpacing: '0.04em' },
   sub: { color: 'var(--text-muted)', fontSize: '11px' },
   tabs: { display: 'flex', borderBottom: '1px solid var(--border)', background: 'var(--bg-surface)', flexShrink: 0 },
+  tabsMobile: { display: 'flex', flexWrap: 'wrap', borderBottom: '1px solid var(--border)', background: 'var(--bg-surface)', flexShrink: 0 },
   tab: (active) => ({
     padding: '8px 20px', fontSize: '11px', letterSpacing: '0.06em', textTransform: 'uppercase',
     cursor: 'pointer', border: 'none', background: 'none', fontFamily: 'var(--font)',
@@ -479,7 +480,7 @@ winlogbeat.event_logs:
         <span style={s.title}>SIEM &nbsp;<span style={s.sub}>/ Configuration</span></span>
       </div>
 
-      <div style={{ ...s.tabs, overflowX: 'auto' }}>
+      <div style={isMobile ? s.tabsMobile : s.tabs}>
         {TABS.map((t, i) => (
           <button
             key={t}
@@ -653,12 +654,12 @@ winlogbeat.event_logs:
                   1. Install: <code>winget install Fluent.FluentBit</code><br />
                   2. Save config to <code>C:\Program Files\fluent-bit\conf\cybertools.conf</code><br />
                   3. Register service:<br />
-                  <code style={{ display: 'block', marginTop: '6px', marginLeft: '12px' }}>
+                  <code style={{ display: 'block', marginTop: '6px', marginLeft: '12px', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
                     sc.exe create fluent-bit binPath= "C:\Program Files\fluent-bit\bin\fluent-bit.exe -c C:\Program Files\fluent-bit\conf\cybertools.conf" start= auto
                   </code>
                   <code style={{ display: 'block', marginTop: '4px', marginLeft: '12px' }}>Start-Service fluent-bit</code>
                   4. Enable PowerShell Script Block Logging (Event ID 4104) — recommended:<br />
-                  <code style={{ display: 'block', marginTop: '6px', marginLeft: '12px' }}>
+                  <code style={{ display: 'block', marginTop: '6px', marginLeft: '12px', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
                     reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\PowerShell\ScriptBlockLogging" /v EnableScriptBlockLogging /t REG_DWORD /d 1 /f
                   </code>
                   5. Your machine will appear in Active Sources within 30 seconds.
