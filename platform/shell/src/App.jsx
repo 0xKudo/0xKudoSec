@@ -84,10 +84,42 @@ function ElectronLoadingScreen() {
   );
 }
 
+function CollapseToggle({ collapsed, onClick }) {
+  return (
+    <div style={{ position: 'relative', flexShrink: 0 }}>
+      <button
+        onClick={onClick}
+        title={collapsed ? 'Show sidebar' : 'Hide sidebar'}
+        style={{
+          position: 'absolute',
+          top: '50%',
+          right: collapsed ? undefined : '-12px',
+          left: collapsed ? '0' : undefined,
+          transform: 'translateY(-50%)',
+          width: '20px',
+          height: '48px',
+          background: 'var(--bg-panel)',
+          border: '1px solid var(--border)',
+          borderLeft: collapsed ? '1px solid var(--border)' : 'none',
+          borderRadius: collapsed ? '0 4px 4px 0' : '0 4px 4px 0',
+          color: 'var(--text-primary)',
+          cursor: 'pointer',
+          fontSize: '12px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 10,
+          padding: 0,
+        }}
+      >{collapsed ? '›' : '‹'}</button>
+    </div>
+  );
+}
+
 function ElectronCollapsibleSiemSidebar({ siemView, setSiemView, onSwitchToTools }) {
   const [collapsed, setCollapsed] = useState(true);
   return (
-    <div style={{ display: 'flex', flexShrink: 0 }}>
+    <div style={{ display: 'flex', flexShrink: 0, position: 'relative' }}>
       {!collapsed && (
         <SiemSidebar
           activeView={siemView}
@@ -96,23 +128,7 @@ function ElectronCollapsibleSiemSidebar({ siemView, setSiemView, onSwitchToTools
           isAuthenticated={false}
         />
       )}
-      <button
-        onClick={() => setCollapsed(c => !c)}
-        title={collapsed ? 'Show sidebar' : 'Hide sidebar'}
-        style={{
-          width: '18px',
-          background: 'var(--bg-sidebar)',
-          border: 'none',
-          borderRight: '1px solid var(--border)',
-          color: 'var(--text-subtle)',
-          cursor: 'pointer',
-          fontSize: '10px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          flexShrink: 0,
-        }}
-      >{collapsed ? '›' : '‹'}</button>
+      <CollapseToggle collapsed={collapsed} onClick={() => setCollapsed(c => !c)} />
     </div>
   );
 }
@@ -120,27 +136,11 @@ function ElectronCollapsibleSiemSidebar({ siemView, setSiemView, onSwitchToTools
 function ElectronCollapsibleToolsSidebar({ onSwitchToSiem, onSwitchToSiemView }) {
   const [collapsed, setCollapsed] = useState(true);
   return (
-    <div style={{ display: 'flex', flexShrink: 0 }}>
+    <div style={{ display: 'flex', flexShrink: 0, position: 'relative' }}>
       {!collapsed && (
         <Sidebar onSwitchToSiem={onSwitchToSiem} onSwitchToSiemView={onSwitchToSiemView} />
       )}
-      <button
-        onClick={() => setCollapsed(c => !c)}
-        title={collapsed ? 'Show sidebar' : 'Hide sidebar'}
-        style={{
-          width: '18px',
-          background: 'var(--bg-sidebar)',
-          border: 'none',
-          borderRight: '1px solid var(--border)',
-          color: 'var(--text-subtle)',
-          cursor: 'pointer',
-          fontSize: '10px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          flexShrink: 0,
-        }}
-      >{collapsed ? '›' : '‹'}</button>
+      <CollapseToggle collapsed={collapsed} onClick={() => setCollapsed(c => !c)} />
     </div>
   );
 }
