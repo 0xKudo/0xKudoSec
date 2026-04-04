@@ -585,6 +585,67 @@ router.delete('/rules/:id', wrap(async (req, res) => {
 }));
 
 
+router.get('/rules/export', wrap(async (req, res) => {
+  const { rows } = await pool.query(
+    `SELECT name, description, enabled, severity, action,
+            match_event_id, match_category, match_severity, match_username,
+            match_host, match_message, match_process, match_src_ip, match_dest_ip, match_dest_port
+     FROM detection_rules WHERE user_id = $1 ORDER BY created_at ASC`,
+    [uid(req)]
+  );
+  res.setHeader('Content-Disposition', 'attachment; filename="detection-rules.json"');
+  res.setHeader('Content-Type', 'application/json');
+  res.json(rows);
+}));
+
+router.post('/rules/import', wrap(async (req, res) => {
+  const rules = req.body;
+  if (!Array.isArray(rules) || !rules.length) return res.status(400).json({ error: 'expected non-empty array' });
+  if (rules.length > 500) return res.status(400).json({ error: 'max 500 rules per import' });
+
+  const validSev = ['critical', 'high', 'medium', 'low', 'info'];
+  const validActions = ['alert', 'suppress'];
+  const userId = uid(req);
+  let imported = 0, skipped = 0;
+
+  for (const rule of rules) {
+    if (!rule.name || typeof rule.name !== 'string' || !rule.name.trim()) { skipped++; continue; }
+    const name = rule.name.trim().slice(0, 255);
+    // Skip duplicates by name
+    const { rows: existing } = await pool.query(
+      'SELECT id FROM detection_rules WHERE user_id = $1 AND name = $2', [userId, name]
+    );
+    if (existing.length) { skipped++; continue; }
+
+    await pool.query(
+      `INSERT INTO detection_rules
+        (user_id, name, description, enabled, severity, action,
+         match_event_id, match_category, match_severity, match_username,
+         match_host, match_message, match_process, match_src_ip, match_dest_ip, match_dest_port)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)`,
+      [
+        userId, name,
+        rule.description ? String(rule.description).slice(0, 1000) : null,
+        rule.enabled !== false,
+        validSev.includes(rule.severity) ? rule.severity : 'high',
+        validActions.includes(rule.action) ? rule.action : 'alert',
+        rule.match_event_id ? parseInt(rule.match_event_id, 10) || null : null,
+        rule.match_category ? String(rule.match_category).slice(0, 64) : null,
+        validSev.includes(rule.match_severity) ? rule.match_severity : null,
+        rule.match_username ? String(rule.match_username).slice(0, 255) : null,
+        rule.match_host ? String(rule.match_host).slice(0, 255) : null,
+        rule.match_message ? String(rule.match_message).slice(0, 500) : null,
+        rule.match_process ? String(rule.match_process).slice(0, 255) : null,
+        rule.match_src_ip ? String(rule.match_src_ip).slice(0, 64) : null,
+        rule.match_dest_ip ? String(rule.match_dest_ip).slice(0, 64) : null,
+        rule.match_dest_port ? parseInt(rule.match_dest_port, 10) || null : null,
+      ]
+    );
+    imported++;
+  }
+  res.json({ imported, skipped });
+}));
+
 // Run all enabled rules against last 24 hours of logs (manual trigger)
 router.post('/rules/run', wrap(async (req, res) => {
   const { created, deduped } = await runDetectionRules(uid(req), null);

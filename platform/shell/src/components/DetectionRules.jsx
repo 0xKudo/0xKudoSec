@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useIsMobile } from '../hooks/useIsMobile.js';
 
@@ -10,12 +10,12 @@ const SEV_COLOR = {
   info: 'var(--severity-info)',
 };
 
-const EMPTY_FORM = {
-  name: '', description: '', severity: 'high', enabled: true, action: 'alert',
+const EMPTY_FORM = (action = 'alert') => ({
+  name: '', description: '', severity: 'high', enabled: true, action,
   match_event_id: '', match_category: '', match_severity: '',
   match_username: '', match_host: '', match_message: '',
   match_process: '', match_src_ip: '', match_dest_ip: '', match_dest_port: '',
-};
+});
 
 const CATEGORIES = ['', 'authentication', 'network', 'process', 'file', 'dns', 'registry', 'system', 'firewall', 'account', 'policy'];
 const SEVERITIES = ['', 'critical', 'high', 'medium', 'low', 'info'];
@@ -39,6 +39,16 @@ const s = {
     fontFamily: 'var(--font)', fontSize: '11px', padding: '4px 12px', cursor: 'pointer',
     letterSpacing: '0.04em',
   },
+  tabs: {
+    display: 'flex', borderBottom: '1px solid var(--border)', background: 'var(--bg-surface)',
+  },
+  tab: (active) => ({
+    padding: '8px 20px', fontSize: '11px', letterSpacing: '0.06em', textTransform: 'uppercase',
+    cursor: 'pointer', border: 'none', background: 'none', fontFamily: 'var(--font)',
+    color: active ? 'var(--text-primary)' : 'var(--text-muted)',
+    borderBottom: active ? '2px solid var(--text-primary)' : '2px solid transparent',
+    marginBottom: '-1px',
+  }),
   table: { width: '100%', borderCollapse: 'collapse' },
   th: {
     textAlign: 'left', padding: '8px 14px', fontSize: '10px', letterSpacing: '0.08em',
@@ -73,6 +83,11 @@ const s = {
   },
   sectionDivider: { fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: '4px', paddingTop: '8px', borderTop: '1px solid var(--border-subtle)' },
   hint: { fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' },
+  toast: {
+    position: 'fixed', bottom: '24px', right: '24px', zIndex: 2000,
+    background: 'var(--bg-surface)', border: '1px solid var(--border)',
+    padding: '10px 16px', fontSize: '12px', color: 'var(--text-primary)',
+  },
 };
 
 function sevColor(sev) { return SEV_COLOR[(sev || '').toLowerCase()] || 'var(--text-muted)'; }
@@ -97,11 +112,19 @@ export function DetectionRules({ onNavigate }) {
   const { getAccessTokenSilently } = useAuth0();
   const [rules, setRules] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [tab, setTab] = useState('alert'); // 'alert' | 'suppress'
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState(null);
-  const [confirmDelete, setConfirmDelete] = useState(null); // rule to delete
-  const [form, setForm] = useState(EMPTY_FORM);
+  const [confirmDelete, setConfirmDelete] = useState(null);
+  const [form, setForm] = useState(EMPTY_FORM('alert'));
   const [saving, setSaving] = useState(false);
+  const [toast, setToast] = useState(null);
+  const importRef = useRef(null);
+
+  const showToast = (msg) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 3000);
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -117,9 +140,11 @@ export function DetectionRules({ onNavigate }) {
 
   useEffect(() => { load(); }, [load]);
 
+  const visibleRules = rules.filter(r => (r.action || 'alert') === tab);
+
   function openNew() {
     setEditing(null);
-    setForm(EMPTY_FORM);
+    setForm(EMPTY_FORM(tab));
     setFormOpen(true);
   }
 
@@ -145,7 +170,6 @@ export function DetectionRules({ onNavigate }) {
     try {
       const token = await getAccessTokenSilently();
       const body = { ...form };
-      // Convert empty strings to null for numeric/enum fields
       if (body.match_event_id === '' || body.match_event_id === null) body.match_event_id = null;
       else body.match_event_id = parseInt(body.match_event_id, 10) || null;
       if (body.match_dest_port === '' || body.match_dest_port === null) body.match_dest_port = null;
@@ -194,22 +218,72 @@ export function DetectionRules({ onNavigate }) {
     setFormOpen(false);
   }
 
+  async function exportRules() {
+    const token = await getAccessTokenSilently();
+    const res = await fetch('/api/siem/rules/export', { headers: { Authorization: `Bearer ${token}` } });
+    const data = await res.json();
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = 'detection-rules.json'; a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async function handleImport(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    e.target.value = '';
+    let parsed;
+    try {
+      parsed = JSON.parse(await file.text());
+    } catch {
+      showToast('Invalid JSON file.');
+      return;
+    }
+    if (!Array.isArray(parsed)) { showToast('File must contain a JSON array of rules.'); return; }
+    const token = await getAccessTokenSilently();
+    const res = await fetch('/api/siem/rules/import', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(parsed),
+    });
+    const result = await res.json();
+    if (result.error) { showToast(result.error); return; }
+    showToast(`Imported ${result.imported} rule${result.imported !== 1 ? 's' : ''}${result.skipped ? `, ${result.skipped} skipped (duplicate names)` : ''}.`);
+    load();
+  }
+
+  const alertCount = rules.filter(r => (r.action || 'alert') === 'alert').length;
+  const suppressCount = rules.filter(r => r.action === 'suppress').length;
+
   return (
     <div style={s.container}>
       <div style={isMobile ? { ...s.header, flexWrap: 'wrap', gap: '8px' } : s.header}>
         <span style={s.title}>SIEM &nbsp;<span style={s.sub}>/ Detection Rules</span></span>
-        <div style={isMobile ? { display: 'flex', gap: '8px' } : s.actions}>
+        <div style={isMobile ? { display: 'flex', gap: '8px', flexWrap: 'wrap' } : s.actions}>
           <button style={s.btn} onClick={() => onNavigate('alerts')}>Alert Queue</button>
+          <button style={s.btn} onClick={exportRules}>Export JSON</button>
+          <button style={s.btn} onClick={() => importRef.current?.click()}>Import JSON</button>
+          <input ref={importRef} type="file" accept=".json" style={{ display: 'none' }} onChange={handleImport} />
           <button style={s.btnPrimary} onClick={openNew}>+ New Rule</button>
         </div>
       </div>
 
+      {/* Tabs */}
+      <div style={s.tabs}>
+        <button style={s.tab(tab === 'alert')} onClick={() => setTab('alert')}>
+          Alerts {alertCount > 0 && `(${alertCount})`}
+        </button>
+        <button style={s.tab(tab === 'suppress')} onClick={() => setTab('suppress')}>
+          Suppression {suppressCount > 0 && `(${suppressCount})`}
+        </button>
+      </div>
+
       {isMobile ? (
         <div>
-          {!loading && !rules.length && (
-            <div style={s.muted}>No rules yet. Tap "+ New Rule" to create one.</div>
+          {!loading && !visibleRules.length && (
+            <div style={s.muted}>No {tab} rules yet. Tap "+ New Rule" to create one.</div>
           )}
-          {rules.map(rule => (
+          {visibleRules.map(rule => (
             <div
               key={rule.id}
               style={{ borderBottom: '1px solid var(--border-subtle)', padding: '12px 16px', opacity: rule.enabled ? 1 : 0.5, cursor: 'pointer' }}
@@ -217,11 +291,6 @@ export function DetectionRules({ onNavigate }) {
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
                 <span style={s.sevBadge(sevColor(rule.severity))}>{rule.severity}</span>
-                <span style={{
-                  fontSize: '10px', padding: '2px 7px', letterSpacing: '0.06em', textTransform: 'uppercase',
-                  border: `1px solid ${rule.action === 'suppress' ? 'var(--text-muted)' : 'var(--severity-info)'}`,
-                  color: rule.action === 'suppress' ? 'var(--text-muted)' : 'var(--severity-info)',
-                }}>{rule.action || 'alert'}</span>
                 <span
                   style={{ marginLeft: 'auto', fontSize: '11px', cursor: 'pointer', color: rule.enabled ? 'var(--severity-low)' : 'var(--text-muted)' }}
                   onClick={e => { e.stopPropagation(); toggleEnabled(rule); }}
@@ -239,16 +308,21 @@ export function DetectionRules({ onNavigate }) {
           <table style={s.table}>
             <thead>
               <tr>
-                {['Name', 'Action', 'Severity', 'Conditions', 'Enabled', ''].map(h => (
+                {['Name', 'Severity', 'Conditions', 'Enabled', ''].map(h => (
                   <th key={h} style={s.th}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {!loading && !rules.length && (
-                <tr><td colSpan={6} style={s.muted}>No rules yet. Create a rule to auto-generate alerts when logs match.</td></tr>
+              {!loading && !visibleRules.length && (
+                <tr><td colSpan={5} style={s.muted}>
+                  No {tab === 'alert' ? 'alert' : 'suppression'} rules yet.{' '}
+                  {tab === 'alert'
+                    ? 'Create a rule to auto-generate alerts when logs match.'
+                    : 'Create a suppression rule to hide noisy benign events from the log feed.'}
+                </td></tr>
               )}
-              {rules.map(rule => (
+              {visibleRules.map(rule => (
                 <tr
                   key={rule.id}
                   style={{ cursor: 'pointer', opacity: rule.enabled ? 1 : 0.5 }}
@@ -257,15 +331,8 @@ export function DetectionRules({ onNavigate }) {
                   onMouseLeave={e => Array.from(e.currentTarget.cells).forEach(c => c.style.background = '')}
                 >
                   <td style={{ ...s.td, color: 'var(--text-primary)' }}>{rule.name}</td>
-                  <td style={s.td}>
-                    <span style={{
-                      fontSize: '10px', padding: '2px 7px', letterSpacing: '0.06em', textTransform: 'uppercase',
-                      border: `1px solid ${rule.action === 'suppress' ? 'var(--text-muted)' : 'var(--severity-info)'}`,
-                      color: rule.action === 'suppress' ? 'var(--text-muted)' : 'var(--severity-info)',
-                    }}>{rule.action || 'alert'}</span>
-                  </td>
                   <td style={s.td}><span style={s.sevBadge(sevColor(rule.severity))}>{rule.severity}</span></td>
-                  <td style={{ ...s.td, fontFamily: 'var(--font)', fontSize: '11px', maxWidth: '340px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <td style={{ ...s.td, fontFamily: 'var(--font)', fontSize: '11px', maxWidth: '400px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {conditionSummary(rule)}
                   </td>
                   <td style={s.td} onClick={e => { e.stopPropagation(); toggleEnabled(rule); }}>
@@ -316,7 +383,7 @@ export function DetectionRules({ onNavigate }) {
               <div style={isMobile ? { display: 'flex', flexDirection: 'column', gap: '4px' } : s.formRow}>
                 <span style={s.label}>Severity</span>
                 <select style={s.select} value={form.severity} onChange={e => set('severity', e.target.value)}>
-                  {['critical','high','medium','low','info'].map(s => <option key={s} value={s}>{s}</option>)}
+                  {['critical','high','medium','low','info'].map(sv => <option key={sv} value={sv}>{sv}</option>)}
                 </select>
               </div>
               <div style={isMobile ? { display: 'flex', flexDirection: 'column', gap: '4px' } : s.formRow}>
@@ -414,6 +481,8 @@ export function DetectionRules({ onNavigate }) {
           </div>
         </div>
       )}
+
+      {toast && <div style={s.toast}>{toast}</div>}
     </div>
   );
 }
