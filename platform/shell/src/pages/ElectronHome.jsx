@@ -74,15 +74,15 @@ const styles = {
     marginBottom: '12px',
   },
   loginBtn: (hovered) => ({
-    background: hovered ? 'var(--text-primary)' : 'var(--btn-primary-bg)',
-    color: 'var(--btn-primary-text)',
-    border: `1px solid ${hovered ? 'var(--text-primary)' : 'var(--border)'}`,
+    background: hovered ? 'var(--bg-primary)' : 'var(--btn-primary-bg)',
+    color: hovered ? 'var(--text-primary)' : 'var(--btn-primary-text)',
+    border: `1px solid ${hovered ? 'var(--text-primary)' : 'var(--btn-primary-bg)'}`,
     fontFamily: 'var(--font)',
     fontSize: '12px',
     padding: '8px 24px',
     cursor: 'pointer',
     letterSpacing: '0.04em',
-    transition: 'background 0.15s, border-color 0.15s',
+    transition: 'background 0.15s, color 0.15s, border-color 0.15s',
   }),
 };
 
