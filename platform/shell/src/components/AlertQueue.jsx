@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { ProcessTreePanel } from './ProcessTreePanel.jsx';
 import { useIsMobile } from '../hooks/useIsMobile.js';
@@ -239,6 +239,32 @@ export function AlertQueue({ onNavigate }) {
   const allChecked = alerts.length > 0 && alerts.every(a => selectedIds.has(a.id));
   const someChecked = !allChecked && alerts.some(a => selectedIds.has(a.id));
 
+  // Resizable columns
+  const COL_KEYS = ['time', 'severity', 'title', 'rule', 'host', 'user', 'eventid', 'status', 'action'];
+  const DEFAULT_WIDTHS = { time: 150, severity: 90, title: 220, rule: 160, host: 90, user: 90, eventid: 80, status: 100, action: 90 };
+  const [colWidths, setColWidths] = useState(DEFAULT_WIDTHS);
+  const dragRef = useRef(null);
+
+  function startResize(e, key) {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startW = colWidths[key];
+    dragRef.current = { key, startX, startW };
+
+    function onMove(ev) {
+      const delta = ev.clientX - dragRef.current.startX;
+      const newW = Math.max(50, dragRef.current.startW + delta);
+      setColWidths(prev => ({ ...prev, [dragRef.current.key]: newW }));
+    }
+    function onUp() {
+      dragRef.current = null;
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    }
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  }
+
   function toggleAll() {
     if (allChecked) {
       setSelectedIds(new Set());
@@ -351,7 +377,11 @@ export function AlertQueue({ onNavigate }) {
         </div>
       ) : (
         <div style={{ overflowX: 'auto' }}>
-          <table style={s.table}>
+          <table style={{ ...s.table, tableLayout: 'fixed' }}>
+            <colgroup>
+              <col style={{ width: '40px' }} />
+              {COL_KEYS.map(k => <col key={k} style={{ width: `${colWidths[k]}px` }} />)}
+            </colgroup>
             <thead>
               <tr>
                 <th style={{ ...s.th, width: '40px', textAlign: 'center' }}>
@@ -363,8 +393,14 @@ export function AlertQueue({ onNavigate }) {
                     onChange={toggleAll}
                   />
                 </th>
-                {['Time', 'Severity', 'Title', 'Rule', 'Host', 'User', 'Event ID', 'Status', ''].map(h => (
-                  <th key={h} style={s.th}>{h}</th>
+                {[['time','Time'],['severity','Severity'],['title','Title'],['rule','Rule'],['host','Host'],['user','User'],['eventid','Event ID'],['status','Status'],['action','']].map(([key, label]) => (
+                  <th key={key} style={{ ...s.th, position: 'relative', userSelect: 'none' }}>
+                    {label}
+                    <span
+                      style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: '5px', cursor: 'col-resize', zIndex: 1 }}
+                      onMouseDown={e => startResize(e, key)}
+                    />
+                  </th>
                 ))}
               </tr>
             </thead>
@@ -387,9 +423,11 @@ export function AlertQueue({ onNavigate }) {
                     </td>
                     <td style={s.td}>{new Date(a.created_at).toLocaleString()}</td>
                     <td style={s.td}><span style={s.sevBadge(sevColor(a.severity))}>{a.severity}</span></td>
-                    <td style={{ ...s.td, color: 'var(--text-primary)', maxWidth: '220px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {a.title}
-                      {a.count > 1 && <span style={{ marginLeft: '6px', fontSize: '10px', padding: '1px 5px', border: '1px solid var(--text-muted)', color: 'var(--text-muted)' }}>{a.count}×</span>}
+                    <td style={{ ...s.td, color: 'var(--text-primary)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden' }}>
+                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{a.title}</span>
+                        {a.count > 1 && <span style={{ flexShrink: 0, fontSize: '10px', padding: '1px 5px', border: '1px solid var(--text-muted)', color: 'var(--text-muted)' }}>{a.count}×</span>}
+                      </div>
                     </td>
                     <td style={s.td}>{a.rule_name || '—'}</td>
                     <td style={s.td}>{a.host || '—'}</td>
