@@ -330,7 +330,7 @@ function DonutChart({ severities, sevFilter, onSliceClick, size = 88 }) {
 }
 
 // Slide-in filter panel
-function FilterPanel({ open, onClose, hours, setHours, sevFilter, setSevFilter, catFilter, setCatFilter, srcFilter, setSrcFilter, categories, sourcesList, visibleCols, setVisibleCols, showSuppressed, setShowSuppressed }) {
+function FilterPanel({ open, onClose, hours, setHours, sevFilters, toggleSevFilter, setSevFilters, catFilter, setCatFilter, srcFilter, setSrcFilter, categories, sourcesList, visibleCols, setVisibleCols, showSuppressed, setShowSuppressed }) {
   if (!open) return null;
   // Show categories present in data; fall back to full list if data not loaded yet
   const catOptions = categories.length ? categories : ALL_CATEGORIES;
@@ -360,20 +360,20 @@ function FilterPanel({ open, onClose, hours, setHours, sevFilter, setSevFilter, 
           <div style={s.panelSectionTitle}>Severity</div>
           <div style={s.panelBtnRow}>
             <button
-              style={sevFilter === null ? s.btnActive : s.btn}
-              onClick={() => setSevFilter(null)}
+              style={sevFilters.size === 0 ? s.btnActive : s.btn}
+              onClick={() => setSevFilters(new Set())}
             >All</button>
             {['critical', 'high', 'medium', 'low', 'info'].map(sev => (
               <button
                 key={sev}
                 style={{
-                  background: sevFilter === sev ? sevColor(sev) : 'none',
+                  background: sevFilters.has(sev) ? sevColor(sev) : 'none',
                   border: `1px solid ${sevColor(sev)}`,
-                  color: sevFilter === sev ? 'var(--bg-primary)' : sevColor(sev),
+                  color: sevFilters.has(sev) ? 'var(--bg-primary)' : sevColor(sev),
                   fontFamily: 'var(--font)', fontSize: '11px', padding: '4px 12px',
                   cursor: 'pointer', letterSpacing: '0.04em', textTransform: 'uppercase',
                 }}
-                onClick={() => setSevFilter(sev)}
+                onClick={() => toggleSevFilter(sev)}
               >{sev}</button>
             ))}
           </div>
@@ -456,27 +456,36 @@ export function SiemDashboard({ onNavigate }) {
   const persisted = loadPersistedState();
 
   const [hours, setHoursRaw] = useState(persisted?.hours ?? 24);
-  const [sevFilter, setSevFilterRaw] = useState(persisted?.sevFilter ?? null);
+  const [sevFilters, setSevFiltersRaw] = useState(() => new Set(persisted?.sevFilters ?? []));
   const [catFilter, setCatFilterRaw] = useState(persisted?.catFilter ?? null);
   const [srcFilter, setSrcFilterRaw] = useState(persisted?.srcFilter ?? null);
   const [visibleCols, setVisibleColsRaw] = useState(persisted?.visibleCols ?? COL_NAMES.map(() => true));
   const [panelOpen, setPanelOpen] = useState(false);
 
   // Wrap setters to also persist
-  function setHours(v) { setHoursRaw(v); savePersistedState({ hours: v, sevFilter, catFilter, srcFilter, visibleCols }); }
-  function setSevFilter(v) { setSevFilterRaw(v); savePersistedState({ hours, sevFilter: v, catFilter, srcFilter, visibleCols }); }
-  function setCatFilter(v) { setCatFilterRaw(v); savePersistedState({ hours, sevFilter, catFilter: v, srcFilter, visibleCols }); }
-  function setSrcFilter(v) { setSrcFilterRaw(v); savePersistedState({ hours, sevFilter, catFilter, srcFilter: v, visibleCols }); }
+  function setHours(v) { setHoursRaw(v); savePersistedState({ hours: v, sevFilters: [...sevFilters], catFilter, srcFilter, visibleCols }); }
+  function setSevFilters(next) { setSevFiltersRaw(next); savePersistedState({ hours, sevFilters: [...next], catFilter, srcFilter, visibleCols }); }
+  function toggleSevFilter(sev) {
+    setSevFilters(prev => {
+      const next = new Set(prev);
+      next.has(sev) ? next.delete(sev) : next.add(sev);
+      return next;
+    });
+  }
+  function setCatFilter(v) { setCatFilterRaw(v); savePersistedState({ hours, sevFilters: [...sevFilters], catFilter: v, srcFilter, visibleCols }); }
+  function setSrcFilter(v) { setSrcFilterRaw(v); savePersistedState({ hours, sevFilters: [...sevFilters], catFilter, srcFilter: v, visibleCols }); }
   function setVisibleCols(v) {
     const next = typeof v === 'function' ? v(visibleCols) : v;
     setVisibleColsRaw(next);
-    savePersistedState({ hours, sevFilter, catFilter, srcFilter, visibleCols: next });
+    savePersistedState({ hours, sevFilters: [...sevFilters], catFilter, srcFilter, visibleCols: next });
   }
 
   const [stats, setStats] = useState(null);
   const [severities, setSeverities] = useState([]);
   const [sources, setSources] = useState([]);
   const [recent, setRecent] = useState([]);
+  // Client-side multi-severity filter (when >1 selected, server only gets one so filter here)
+  const filteredRecent = sevFilters.size > 1 ? recent.filter(r => sevFilters.has(r.severity)) : recent;
   const [categories, setCategories] = useState([]);
   const [sourcesList, setSourcesList] = useState([]);
   const [alertSummary, setAlertSummary] = useState([]);
@@ -516,7 +525,7 @@ export function SiemDashboard({ onNavigate }) {
       const sup = showSuppressed ? '&showSuppressed=1' : '';
       const h = `?hours=${hours}`;
       const recentParams = new URLSearchParams({ hours });
-      if (sevFilter) recentParams.set('severity', sevFilter);
+      if (sevFilters.size === 1) recentParams.set('severity', [...sevFilters][0]);
       if (catFilter) recentParams.set('category', catFilter);
       if (srcFilter) recentParams.set('source', srcFilter);
       if (debouncedSearch.trim()) recentParams.set('q', debouncedSearch.trim());
@@ -548,7 +557,7 @@ export function SiemDashboard({ onNavigate }) {
       setLoading(false);
       loadingRef.current = false;
     }
-  }, [hours, sevFilter, catFilter, srcFilter, debouncedSearch, showSuppressed, getAccessTokenSilently]);
+  }, [hours, sevFilters, catFilter, srcFilter, debouncedSearch, showSuppressed, getAccessTokenSilently]);
 
   // Slow refresh: charts + insights — triggered on mount and every 5 minutes
   const loadCharts = useCallback(async () => {
@@ -644,10 +653,10 @@ export function SiemDashboard({ onNavigate }) {
   }
 
   function handleDonutClick(sev) {
-    setSevFilter(sevFilter === sev ? null : sev);
+    toggleSevFilter(sev);
   }
 
-  const activeFilterCount = [sevFilter, catFilter, srcFilter].filter(Boolean).length + visibleCols.filter(v => !v).length;
+  const activeFilterCount = [sevFilters.size > 0, catFilter, srcFilter].filter(Boolean).length + visibleCols.filter(v => !v).length;
 
   return (
     <div style={s.container}>
@@ -668,7 +677,7 @@ export function SiemDashboard({ onNavigate }) {
         open={panelOpen}
         onClose={() => setPanelOpen(false)}
         hours={hours} setHours={setHours}
-        sevFilter={sevFilter} setSevFilter={setSevFilter}
+        sevFilters={sevFilters} toggleSevFilter={toggleSevFilter} setSevFilters={setSevFilters}
         catFilter={catFilter} setCatFilter={setCatFilter}
         srcFilter={srcFilter} setSrcFilter={setSrcFilter}
         categories={categories} sourcesList={sourcesList}
@@ -747,13 +756,13 @@ export function SiemDashboard({ onNavigate }) {
           <div style={s.chartPanel}>
             <div style={s.chartTitle}>By Severity</div>
             <div style={s.donutWrap}>
-              <DonutChart severities={severities} sevFilter={sevFilter} onSliceClick={handleDonutClick} size={160} />
+              <DonutChart severities={severities} sevFilter={sevFilters.size === 1 ? [...sevFilters][0] : null} onSliceClick={handleDonutClick} size={160} />
               <div style={s.legend}>
                 {['critical', 'high', 'medium', 'low', 'info'].map(sev => {
                   const row = severities.find(r => r.severity === sev);
                   if (!row) return null;
                   const pct = totalSev ? Math.round((Number(row.count) / totalSev) * 100) : 0;
-                  const isActive = sevFilter === sev;
+                  const isActive = sevFilters.has(sev);
                   return (
                     <div key={sev} style={s.legendItem(isActive, sevColor(sev))} onClick={() => handleDonutClick(sev)}>
                       <div style={s.legendDot(sevColor(sev))} />
@@ -989,16 +998,16 @@ export function SiemDashboard({ onNavigate }) {
         <span>Recent Events</span>
         <span style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '10px' }}>
           <span>
-            {recent.length} shown
-            {sevFilter ? ` · ${sevFilter}` : ''}
+            {filteredRecent.length} shown
+            {sevFilters.size > 0 ? ` · ${[...sevFilters].join(',')}` : ''}
             {catFilter ? ` · ${catFilter}` : ''}
             {srcFilter ? ` · ${srcFilter}` : ''}
             {debouncedSearch.trim() ? ` · "${debouncedSearch.trim()}"` : ''}
           </span>
-          {(sevFilter || catFilter || srcFilter) && (
+          {(sevFilters.size > 0 || catFilter || srcFilter) && (
             <button
               style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontFamily: 'var(--font)', fontSize: '10px', cursor: 'pointer', letterSpacing: '0.04em', textTransform: 'uppercase', padding: 0 }}
-              onClick={() => { setSevFilter(null); setCatFilter(null); setSrcFilter(null); }}
+              onClick={() => { setSevFilters(new Set()); setCatFilter(null); setSrcFilter(null); }}
               onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-primary)'; }}
               onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; }}
             >
@@ -1024,10 +1033,10 @@ export function SiemDashboard({ onNavigate }) {
             </tr>
           </thead>
           <tbody>
-            {recent.length === 0 && !loading && (
+            {filteredRecent.length === 0 && !loading && (
               <tr><td colSpan={visibleIdxs.length} style={s.muted}>No events yet</td></tr>
             )}
-            {recent.map(row => (
+            {filteredRecent.map(row => (
               <tr
                 key={row.id}
                 style={{ cursor: 'pointer' }}
@@ -1043,7 +1052,7 @@ export function SiemDashboard({ onNavigate }) {
                       <td key={i} style={s.td}>
                         <span
                           style={{ ...s.sevBadge(sevColor(row.severity)), cursor: 'pointer' }}
-                          onClick={e => { e.stopPropagation(); setSevFilter(row.severity || null); }}
+                          onClick={e => { e.stopPropagation(); if (row.severity) toggleSevFilter(row.severity); }}
                         >
                           {row.severity || '—'}
                         </span>
