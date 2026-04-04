@@ -144,6 +144,31 @@ const styles = {
   swapHint: { color: 'var(--text-muted)', fontSize: '11px' },
 };
 
+function OpChip({ op, group, active, onClick }) {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <button
+      style={{
+        background: active ? 'var(--btn-primary-bg)' : hovered ? 'var(--bg-panel)' : 'var(--bg-surface)',
+        border: `1px solid ${active || hovered ? 'var(--text-primary)' : 'var(--border)'}`,
+        borderRadius: '3px',
+        color: active ? 'var(--btn-primary-text)' : hovered ? 'var(--text-primary)' : 'var(--text-muted)',
+        fontFamily: 'var(--font)',
+        fontSize: '11px',
+        padding: '4px 10px',
+        cursor: 'pointer',
+        whiteSpace: 'nowrap',
+        transition: 'background 0.1s, color 0.1s, border-color 0.1s',
+      }}
+      onClick={onClick}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      {group.label} {op.label}
+    </button>
+  );
+}
+
 export default function Decoder() {
   const isMobile = useIsMobile();
   const [operation, setOperation] = useState('base64-decode');
@@ -228,13 +253,13 @@ export default function Decoder() {
         /* Desktop: flat chips across the top */
         <div style={styles.opPanel}>
           {OPERATION_GROUPS.map(group => group.ops.map(op => (
-            <button
+            <OpChip
               key={op.value}
-              style={styles.opBtn(operation === op.value)}
+              op={op}
+              group={group}
+              active={operation === op.value}
               onClick={() => { setOperation(op.value); setOutput(''); setError(null); }}
-            >
-              {group.label} {op.label}
-            </button>
+            />
           )))}
         </div>
       )}
