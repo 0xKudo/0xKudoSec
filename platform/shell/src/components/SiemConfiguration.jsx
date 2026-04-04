@@ -137,7 +137,15 @@ const s = {
   title: { fontSize: '13px', color: 'var(--text-primary)', letterSpacing: '0.04em' },
   sub: { color: 'var(--text-muted)', fontSize: '11px' },
   tabs: { display: 'flex', borderBottom: '1px solid var(--border)', background: 'var(--bg-surface)', flexShrink: 0 },
-  tabsMobile: { display: 'flex', flexWrap: 'wrap', borderBottom: '1px solid var(--border)', background: 'var(--bg-surface)', flexShrink: 0 },
+  tabsMobile: { display: 'flex', flexWrap: 'wrap', justifyContent: 'center', borderBottom: '1px solid var(--border)', background: 'var(--bg-surface)', flexShrink: 0 },
+  tabMobile: (active) => ({
+    flex: '0 0 33.333%', textAlign: 'center',
+    padding: '8px 4px', fontSize: '11px', letterSpacing: '0.06em', textTransform: 'uppercase',
+    cursor: 'pointer', border: 'none', background: 'none', fontFamily: 'var(--font)',
+    color: active ? 'var(--text-primary)' : 'var(--text-muted)',
+    borderBottom: active ? '2px solid var(--text-primary)' : '2px solid transparent',
+    marginBottom: '-1px', whiteSpace: 'nowrap',
+  }),
   tab: (active) => ({
     padding: '8px 20px', fontSize: '11px', letterSpacing: '0.06em', textTransform: 'uppercase',
     cursor: 'pointer', border: 'none', background: 'none', fontFamily: 'var(--font)',
@@ -484,7 +492,7 @@ winlogbeat.event_logs:
         {TABS.map((t, i) => (
           <button
             key={t}
-            style={s.tab(tab === i)}
+            style={isMobile ? s.tabMobile(tab === i) : s.tab(tab === i)}
             onClick={() => setTab(i)}
             onMouseEnter={e => { if (tab !== i) e.currentTarget.style.color = 'var(--text-primary)'; }}
             onMouseLeave={e => { if (tab !== i) e.currentTarget.style.color = 'var(--text-muted)'; }}
