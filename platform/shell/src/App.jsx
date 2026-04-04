@@ -117,6 +117,34 @@ function ElectronCollapsibleSiemSidebar({ siemView, setSiemView, onSwitchToTools
   );
 }
 
+function ElectronCollapsibleToolsSidebar({ onSwitchToSiem, onSwitchToSiemView }) {
+  const [collapsed, setCollapsed] = useState(true);
+  return (
+    <div style={{ display: 'flex', flexShrink: 0 }}>
+      {!collapsed && (
+        <Sidebar onSwitchToSiem={onSwitchToSiem} onSwitchToSiemView={onSwitchToSiemView} />
+      )}
+      <button
+        onClick={() => setCollapsed(c => !c)}
+        title={collapsed ? 'Show sidebar' : 'Hide sidebar'}
+        style={{
+          width: '18px',
+          background: 'var(--bg-sidebar)',
+          border: 'none',
+          borderRight: '1px solid var(--border)',
+          color: 'var(--text-subtle)',
+          cursor: 'pointer',
+          fontSize: '10px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexShrink: 0,
+        }}
+      >{collapsed ? '›' : '‹'}</button>
+    </div>
+  );
+}
+
 function AppInner() {
   const { isAuthenticated, isLoading } = useAuth0();
   const isMobile = useIsMobile();
@@ -273,7 +301,10 @@ function AppInner() {
 
         {activeApp === 'tools' && (
           <>
-            {!isMobile && <Sidebar onSwitchToSiem={switchToSiem} onSwitchToSiemView={switchToSiemView} />}
+            {!isMobile && (isElectron && !isAuthenticated
+              ? <ElectronCollapsibleToolsSidebar onSwitchToSiem={switchToSiem} onSwitchToSiemView={switchToSiemView} />
+              : <Sidebar onSwitchToSiem={switchToSiem} onSwitchToSiemView={switchToSiemView} />
+            )}
             <main style={isMobile ? { flex: 1 } : styles.content}>
               <Routes>
                 {tools.filter(t => t.status === 'active').map(t => (
