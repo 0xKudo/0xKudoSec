@@ -88,6 +88,7 @@ function AppInner() {
   const { isAuthenticated, isLoading } = useAuth0();
   const isMobile = useIsMobile();
   const [activeApp, setActiveApp] = useState(() => {
+    if (isElectron) return 'tools';
     const path = window.location.pathname;
     return (path !== '/' && path !== '/siem') ? 'tools' : 'siem';
   });
@@ -120,7 +121,7 @@ function AppInner() {
       return (
         <div style={styles.layout}>
           <TopNav activeApp={activeApp} onSwitchApp={setActiveApp} onMenuToggle={() => {}} menuOpen={false} />
-          <div style={{ flex: 1, overflow: 'auto' }}>
+          <div style={{ flex: 1, overflow: 'auto', height: '100%' }}>
             {activeApp === 'siem' ? (
               <RequireAuth />
             ) : (
