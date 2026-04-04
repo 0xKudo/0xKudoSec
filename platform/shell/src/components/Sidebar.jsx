@@ -178,19 +178,19 @@ export function Sidebar({ onSwitchToSiem, onSwitchToSiemView }) {
 
       <div
         style={styles.siemLink}
-        onClick={onSwitchToSiem}
-        onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-primary)'; }}
-        onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; }}
-      >
-        SIEM ↗
-      </div>
-      <div
-        style={styles.siemLink}
         onClick={() => onSwitchToSiemView?.('configuration')}
         onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-primary)'; }}
         onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; }}
       >
         Configuration ↗
+      </div>
+      <div
+        style={styles.siemLink}
+        onClick={onSwitchToSiem}
+        onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-primary)'; }}
+        onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; }}
+      >
+        SIEM ↗
       </div>
 
       <div style={styles.footer}>
