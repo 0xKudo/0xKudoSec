@@ -481,7 +481,13 @@ winlogbeat.event_logs:
 
       <div style={{ ...s.tabs, overflowX: 'auto' }}>
         {TABS.map((t, i) => (
-          <button key={t} style={s.tab(tab === i)} onClick={() => setTab(i)}>{t}</button>
+          <button
+            key={t}
+            style={s.tab(tab === i)}
+            onClick={() => setTab(i)}
+            onMouseEnter={e => { if (tab !== i) e.currentTarget.style.color = 'var(--text-primary)'; }}
+            onMouseLeave={e => { if (tab !== i) e.currentTarget.style.color = 'var(--text-muted)'; }}
+          >{t}</button>
         ))}
       </div>
 
