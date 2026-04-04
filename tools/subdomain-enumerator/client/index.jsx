@@ -142,7 +142,14 @@ export default function SubdomainEnumerator() {
       const restore = JSON.parse(localStorage.getItem('workspace-restore-subdomain-enumerator') || 'null');
       if (restore) {
         setDomain(restore.domain || '');
-        setResult(restore);
+        // Normalize workspace-restored data to full result shape
+        setResult({
+          domain: restore.domain || '',
+          allSubdomains: restore.allSubdomains || restore.subdomains || [],
+          totalUnique: restore.totalUnique ?? (restore.allSubdomains || restore.subdomains || []).length,
+          sources: restore.sources || {},
+          analysis: restore.analysis || null,
+        });
         localStorage.removeItem('workspace-restore-subdomain-enumerator');
       }
     } catch {}
