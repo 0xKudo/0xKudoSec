@@ -359,16 +359,22 @@ function FilterPanel({ open, onClose, hours, setHours, sevFilter, setSevFilter, 
         <div style={s.panelSection}>
           <div style={s.panelSectionTitle}>Severity</div>
           <div style={s.panelBtnRow}>
-            {[null, 'critical', 'high', 'medium', 'low', 'info'].map(sev => (
+            <button
+              style={sevFilter === null ? s.btnActive : s.btn}
+              onClick={() => setSevFilter(null)}
+            >All</button>
+            {['critical', 'high', 'medium', 'low', 'info'].map(sev => (
               <button
-                key={sev ?? 'all'}
-                style={sevFilter === sev
-                  ? { ...s.btnActive, ...(sev ? { background: 'none', border: `1px solid ${sevColor(sev)}`, color: sevColor(sev) } : {}) }
-                  : s.btn}
+                key={sev}
+                style={{
+                  background: sevFilter === sev ? sevColor(sev) : 'none',
+                  border: `1px solid ${sevColor(sev)}`,
+                  color: sevFilter === sev ? 'var(--bg-primary)' : sevColor(sev),
+                  fontFamily: 'var(--font)', fontSize: '11px', padding: '4px 12px',
+                  cursor: 'pointer', letterSpacing: '0.04em', textTransform: 'uppercase',
+                }}
                 onClick={() => setSevFilter(sev)}
-              >
-                {sev ?? 'All'}
-              </button>
+              >{sev}</button>
             ))}
           </div>
         </div>

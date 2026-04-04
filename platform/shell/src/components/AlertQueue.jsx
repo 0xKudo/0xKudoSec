@@ -55,13 +55,19 @@ const s = {
   },
   table: { width: '100%', borderCollapse: 'collapse' },
   th: {
-    textAlign: 'left', padding: '8px 14px', fontSize: '10px', letterSpacing: '0.08em',
-    textTransform: 'uppercase', color: 'var(--text-muted)', borderBottom: '1px solid var(--border)',
-    fontWeight: 'normal', background: 'var(--bg-surface)',
+    textAlign: 'left', padding: '8px 18px 8px 14px', fontSize: '10px',
+    letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-muted)',
+    borderBottom: '1px solid var(--border)', fontWeight: 'normal', background: 'var(--bg-surface)',
+    position: 'relative', overflow: 'hidden', whiteSpace: 'nowrap', userSelect: 'none', verticalAlign: 'middle',
+  },
+  resizeHandle: {
+    position: 'absolute', right: 0, top: 0, bottom: 0,
+    width: '5px', cursor: 'col-resize', zIndex: 1, borderRight: '2px solid var(--border)',
   },
   td: {
-    padding: '10px 14px', borderBottom: '1px solid var(--border-subtle)', fontSize: '12px',
-    color: 'var(--text-muted)', verticalAlign: 'middle',
+    padding: '9px 14px', borderBottom: '1px solid var(--border-subtle)', fontSize: '12px',
+    color: 'var(--text-muted)', verticalAlign: 'middle', overflow: 'hidden',
+    textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 0,
   },
   checkbox: {
     width: '14px', height: '14px', cursor: 'pointer', accentColor: 'var(--text-primary)',
@@ -394,12 +400,9 @@ export function AlertQueue({ onNavigate }) {
                   />
                 </th>
                 {[['time','Time'],['severity','Severity'],['title','Title'],['rule','Rule'],['host','Host'],['user','User'],['eventid','Event ID'],['status','Status'],['action','']].map(([key, label]) => (
-                  <th key={key} style={{ ...s.th, position: 'relative', userSelect: 'none' }}>
+                  <th key={key} style={s.th}>
                     {label}
-                    <span
-                      style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: '5px', cursor: 'col-resize', zIndex: 1 }}
-                      onMouseDown={e => startResize(e, key)}
-                    />
+                    <div style={s.resizeHandle} onMouseDown={e => startResize(e, key)} />
                   </th>
                 ))}
               </tr>
@@ -423,7 +426,7 @@ export function AlertQueue({ onNavigate }) {
                     </td>
                     <td style={s.td}>{new Date(a.created_at).toLocaleString()}</td>
                     <td style={s.td}><span style={s.sevBadge(sevColor(a.severity))}>{a.severity}</span></td>
-                    <td style={{ ...s.td, color: 'var(--text-primary)' }}>
+                    <td style={{ ...s.td, color: 'var(--text-primary)', overflow: 'visible' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden' }}>
                         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{a.title}</span>
                         {a.count > 1 && <span style={{ flexShrink: 0, fontSize: '10px', padding: '1px 5px', border: '1px solid var(--text-muted)', color: 'var(--text-muted)' }}>{a.count}×</span>}
