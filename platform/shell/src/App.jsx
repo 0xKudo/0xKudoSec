@@ -272,15 +272,11 @@ function AppInner() {
 
         {activeApp === 'siem' && (
           <>
-            {!isMobile && (
-              <SiemSidebar
-                activeView={siemView}
-                onNavigate={setSiemView}
-                onSwitchToTools={() => switchApp('tools')}
-                isAuthenticated={isAuthenticated}
-              />
+            {!isMobile && (isElectron && !isAuthenticated
+              ? <ElectronCollapsibleSiemSidebar siemView={siemView} setSiemView={setSiemView} onSwitchToTools={() => switchApp('tools')} />
+              : <SiemSidebar activeView={siemView} onNavigate={setSiemView} onSwitchToTools={() => switchApp('tools')} isAuthenticated={isAuthenticated} />
             )}
-            <main style={isMobile ? { flex: 1, background: 'var(--bg-primary)' } : { flex: 1, overflow: 'auto', background: 'var(--bg-primary)', minWidth: 0 }}>
+            <main style={isMobile ? { flex: 1, background: 'var(--bg-primary)' } : { flex: 1, minHeight: 0, overflow: 'auto', background: 'var(--bg-primary)', minWidth: 0, ...(isElectron && !isAuthenticated ? { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' } : {}) }}>
               <RequireAuth>
                 {siemView === 'dashboard' && (isMobile ? <SiemDashboardMobile onNavigate={setSiemView} /> : <SiemDashboard onNavigate={setSiemView} />)}
                 {siemView === 'alerts' && <AlertQueue onNavigate={setSiemView} />}
