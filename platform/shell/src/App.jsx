@@ -91,6 +91,7 @@ function AppInner() {
   };
 
   const switchToSiem = () => switchApp('siem');
+  const switchToSiemView = (view) => { setActiveApp('siem'); setSiemView(view); setMenuOpen(false); };
 
   const handleSiemNavigate = (view) => {
     setSiemView(view);
@@ -138,7 +139,7 @@ function AppInner() {
                   isAuthenticated={isAuthenticated}
                 />
               ) : (
-                <Sidebar onSwitchToSiem={switchToSiem} onNavigate={handleToolNavigate} />
+                <Sidebar onSwitchToSiem={switchToSiem} onSwitchToSiemView={switchToSiemView} onNavigate={handleToolNavigate} />
               )}
             </div>
           </div>
@@ -177,7 +178,7 @@ function AppInner() {
 
         {activeApp === 'tools' && (
           <>
-            {!isMobile && <Sidebar onSwitchToSiem={switchToSiem} />}
+            {!isMobile && <Sidebar onSwitchToSiem={switchToSiem} onSwitchToSiemView={switchToSiemView} />}
             <main style={isMobile ? { flex: 1 } : styles.content}>
               <Routes>
                 {tools.filter(t => t.status === 'active').map(t => (

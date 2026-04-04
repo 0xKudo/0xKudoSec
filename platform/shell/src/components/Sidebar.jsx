@@ -104,7 +104,7 @@ const styles = {
   },
 };
 
-export function Sidebar({ onSwitchToSiem }) {
+export function Sidebar({ onSwitchToSiem, onSwitchToSiemView }) {
   const tools = useTools();
   const navigate = useNavigate();
   const location = useLocation();
@@ -183,6 +183,14 @@ export function Sidebar({ onSwitchToSiem }) {
         onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; }}
       >
         SIEM ↗
+      </div>
+      <div
+        style={styles.siemLink}
+        onClick={() => onSwitchToSiemView?.('configuration')}
+        onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-primary)'; }}
+        onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; }}
+      >
+        Configuration ↗
       </div>
 
       <div style={styles.footer}>
