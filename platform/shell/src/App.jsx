@@ -84,6 +84,39 @@ function ElectronLoadingScreen() {
   );
 }
 
+function ElectronCollapsibleSiemSidebar({ siemView, setSiemView, onSwitchToTools }) {
+  const [collapsed, setCollapsed] = useState(true);
+  return (
+    <div style={{ display: 'flex', flexShrink: 0 }}>
+      {!collapsed && (
+        <SiemSidebar
+          activeView={siemView}
+          onNavigate={setSiemView}
+          onSwitchToTools={onSwitchToTools}
+          isAuthenticated={false}
+        />
+      )}
+      <button
+        onClick={() => setCollapsed(c => !c)}
+        title={collapsed ? 'Show sidebar' : 'Hide sidebar'}
+        style={{
+          width: '18px',
+          background: 'var(--bg-sidebar)',
+          border: 'none',
+          borderRight: '1px solid var(--border)',
+          color: 'var(--text-subtle)',
+          cursor: 'pointer',
+          fontSize: '10px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexShrink: 0,
+        }}
+      >{collapsed ? '›' : '‹'}</button>
+    </div>
+  );
+}
+
 function AppInner() {
   const { isAuthenticated, isLoading } = useAuth0();
   const isMobile = useIsMobile();
@@ -124,7 +157,7 @@ function AppInner() {
           <div style={styles.layout}>
             <TopNav activeApp="siem" onSwitchApp={setActiveApp} onMenuToggle={() => {}} menuOpen={false} />
             <div style={styles.body}>
-              <SiemSidebar activeView={siemView} onNavigate={setSiemView} onSwitchToTools={() => setActiveApp('tools')} isAuthenticated={false} />
+              <ElectronCollapsibleSiemSidebar siemView={siemView} setSiemView={setSiemView} onSwitchToTools={() => setActiveApp('tools')} />
               <main style={{ flex: 1, overflow: 'auto', background: 'var(--bg-primary)', minWidth: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <RequireAuth />
               </main>
@@ -132,7 +165,14 @@ function AppInner() {
           </div>
         );
       }
-      return <ElectronHome onNavigate={(route) => { setActiveApp('tools'); navigate(route); }} />;
+      return (
+        <div style={styles.layout}>
+          <TopNav activeApp="tools" onSwitchApp={setActiveApp} onMenuToggle={() => {}} menuOpen={false} />
+          <div style={{ flex: 1, overflow: 'auto' }}>
+            <ElectronHome onNavigate={(route) => { setActiveApp('tools'); navigate(route); }} />
+          </div>
+        </div>
+      );
     }
   }
 
