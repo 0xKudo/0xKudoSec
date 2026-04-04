@@ -119,9 +119,13 @@ function AppInner() {
     if (isElectron && !NO_AUTH_ROUTES.includes(path)) {
       return (
         <div style={styles.layout}>
-          <TopNav activeApp="tools" onSwitchApp={() => {}} onMenuToggle={() => {}} menuOpen={false} />
+          <TopNav activeApp={activeApp} onSwitchApp={setActiveApp} onMenuToggle={() => {}} menuOpen={false} />
           <div style={{ flex: 1, overflow: 'auto' }}>
-            <ElectronHome onNavigate={(route) => { setActiveApp('tools'); navigate(route); }} />
+            {activeApp === 'siem' ? (
+              <RequireAuth />
+            ) : (
+              <ElectronHome onNavigate={(route) => { setActiveApp('tools'); navigate(route); }} />
+            )}
           </div>
         </div>
       );

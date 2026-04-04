@@ -108,7 +108,7 @@ const PHASES = [
 
 const s = {
   // layout
-  page: { background: 'var(--bg-primary)', color: 'var(--text-primary)', fontFamily: 'var(--font)', fontSize: '13px', lineHeight: '1.6', minHeight: '100vh' },
+  page: { background: 'var(--bg-primary)', color: 'var(--text-primary)', fontFamily: 'var(--font)', fontSize: '13px', lineHeight: '1.6', minHeight: '100vh', overflowY: 'auto', height: '100vh' },
 
   // hero
   hero: { textAlign: 'center', padding: '88px 48px 72px', borderBottom: '1px solid var(--border)', position: 'relative', overflow: 'hidden' },
