@@ -94,14 +94,16 @@ function CollapseToggle({ collapsed, onClick }) {
         top: '8px',
         left: collapsed ? '0' : undefined,
         right: collapsed ? undefined : '0',
-        width: '28px',
-        height: '28px',
+        width: '14px',
+        height: '48px',
         background: 'var(--bg-sidebar)',
         border: '1px solid var(--accent-amber)',
+        borderLeft: collapsed ? '1px solid var(--accent-amber)' : 'none',
+        borderRight: collapsed ? 'none' : '1px solid var(--accent-amber)',
         borderRadius: collapsed ? '0 4px 4px 0' : '4px 0 0 4px',
         color: 'var(--accent-amber)',
         cursor: 'pointer',
-        fontSize: '14px',
+        fontSize: '10px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -116,7 +118,7 @@ function CollapseToggle({ collapsed, onClick }) {
 function ElectronCollapsibleSiemSidebar({ siemView, setSiemView, onSwitchToTools }) {
   const [collapsed, setCollapsed] = useState(true);
   return (
-    <div style={{ position: 'relative', flexShrink: 0, width: collapsed ? '28px' : 'auto' }}>
+    <div style={{ position: 'relative', flexShrink: 0, alignSelf: 'stretch', width: collapsed ? '14px' : 'auto' }}>
       {!collapsed && (
         <SiemSidebar
           activeView={siemView}
@@ -133,7 +135,7 @@ function ElectronCollapsibleSiemSidebar({ siemView, setSiemView, onSwitchToTools
 function ElectronCollapsibleToolsSidebar({ onSwitchToSiem, onSwitchToSiemView }) {
   const [collapsed, setCollapsed] = useState(true);
   return (
-    <div style={{ position: 'relative', flexShrink: 0, width: collapsed ? '28px' : 'auto' }}>
+    <div style={{ position: 'relative', flexShrink: 0, alignSelf: 'stretch', width: collapsed ? '14px' : 'auto' }}>
       {!collapsed && (
         <Sidebar onSwitchToSiem={onSwitchToSiem} onSwitchToSiemView={onSwitchToSiemView} />
       )}
