@@ -26,8 +26,8 @@ const styles = {
   body: { display: 'flex', flex: 1, overflow: 'hidden' },
   content: { flex: 1, overflow: 'auto' },
   overlay: {
-    position: 'fixed', inset: 0, zIndex: 200,
-    display: 'flex',
+    position: 'fixed', top: 0, left: 0, bottom: 0, zIndex: 201,
+    width: '260px',
   },
   overlayBackdrop: {
     position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 200,
@@ -35,7 +35,7 @@ const styles = {
   overlayDrawer: {
     position: 'relative', zIndex: 201,
     background: 'var(--bg-sidebar)', overflowY: 'auto',
-    width: '260px', flexShrink: 0,
+    width: '260px', height: '100%',
     borderRight: '1px solid var(--border)',
   },
 };
