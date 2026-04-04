@@ -103,8 +103,32 @@ function createMainWindow() {
 // ── Express server ────────────────────────────────────────────────────────
 function startServer() {
   return new Promise((resolve, reject) => {
+    // In dev mode, check if server is already running (started via npm run dev)
+    // If so, skip forking and just wait for it to be ready
+    function tryExisting() {
+      return new Promise(res => {
+        http.get(`http://localhost:${SERVER_PORT}/health`, (r) => {
+          res(r.statusCode === 200);
+        }).on('error', () => res(false));
+      });
+    }
+
+    if (isDev) {
+      tryExisting().then(already => {
+        if (already) { resolve(); return; }
+        // Not running yet -- fork it
+        forkServer(resolve, reject);
+      });
+      return;
+    }
+
+    forkServer(resolve, reject);
+  });
+}
+
+function forkServer(resolve, reject) {
     const serverEntry = isDev
-      ? path.join(__dirname, '../../server/index.js')
+      ? path.join(__dirname, '../server/index.js')
       : path.join(process.resourcesPath, 'server/index.js');
 
     const env = { ...process.env, NODE_ENV: isDev ? 'development' : 'production' };
@@ -130,7 +154,6 @@ function startServer() {
       setTimeout(poll, 300);
     }
     setTimeout(poll, 500);
-  });
 }
 
 // ── Fluent Bit IPC ────────────────────────────────────────────────────────
