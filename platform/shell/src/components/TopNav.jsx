@@ -201,7 +201,7 @@ export function TopNav({ activeApp, onSwitchApp, onMenuToggle, menuOpen }) {
           </div>
           <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '6px', padding: '0 8px', flexShrink: 0 }}>
             {isAuthenticated ? (
-              <button style={{ ...styles.authBtn, padding: '4px 8px', fontSize: '10px' }} onClick={() => logout({ logoutParams: { returnTo: window.location.origin } })}>logout</button>
+              <button style={{ ...styles.authBtn, padding: '4px 8px', fontSize: '10px' }} onClick={() => isElectron ? logout({ openUrl: false }) : logout({ logoutParams: { returnTo: window.location.origin } })}>logout</button>
             ) : (
               <button style={{ ...styles.authBtn, padding: '4px 8px', fontSize: '10px' }} onClick={() => loginWithRedirect()}>login</button>
             )}
@@ -228,7 +228,7 @@ export function TopNav({ activeApp, onSwitchApp, onMenuToggle, menuOpen }) {
             {isAuthenticated ? (
               <>
                 <span style={styles.userName}>{user.name || user.email}</span>
-                <button style={styles.authBtn} onClick={() => logout({ logoutParams: { returnTo: window.location.origin } })}>[ logout ]</button>
+                <button style={styles.authBtn} onClick={() => isElectron ? logout({ openUrl: false }) : logout({ logoutParams: { returnTo: window.location.origin } })}>[ logout ]</button>
               </>
             ) : (
               <button style={styles.authBtn} onClick={() => loginWithRedirect()}>[ login ]</button>
