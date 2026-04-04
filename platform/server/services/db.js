@@ -14,6 +14,29 @@ function getPool() {
   return pool;
 }
 
+// Run queries with RLS user context set for the duration of the transaction.
+// Usage:
+//   const result = await db.withUser(userId, async (client) => {
+//     return client.query('SELECT * FROM logs');
+//   });
+async function withUser(userId, fn) {
+  const client = await getPool().connect();
+  try {
+    await client.query('BEGIN');
+    await client.query('SET LOCAL app.user_id = $1', [userId]);
+    const result = await fn(client);
+    await client.query('COMMIT');
+    return result;
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
 export default {
   query: (...args) => getPool().query(...args),
+  withUser,
+  getPool,
 };

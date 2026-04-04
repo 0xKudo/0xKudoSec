@@ -12,6 +12,7 @@ import archiver from 'archiver';
 import pool from '../services/db.js';
 import { requireAuth } from '../middleware/requireAuth.js';
 import { runDetectionRules } from '../services/detection.js';
+import { audit } from '../services/audit.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -503,6 +504,7 @@ router.post('/ingest-key', async (req, res) => {
     [uid(req), hashed]
   );
   // Return the plaintext key once — it is never stored or retrievable again
+  audit(uid(req), 'ingest_key.rotate', {}, req.ip);
   res.json({ api_key: key, created_at: rows[0].created_at });
 });
 
@@ -578,6 +580,7 @@ router.post('/rules', wrap(async (req, res) => {
      match_dest_port ? parseInt(match_dest_port, 10) || null : null,
     ]
   );
+  audit(uid(req), 'rule.create', { name: rows[0].name, action: ruleAction, severity: ruleSev }, req.ip);
   res.json(rows[0]);
 }));
 
@@ -610,8 +613,10 @@ router.patch('/rules/:id', wrap(async (req, res) => {
 router.delete('/rules/:id', wrap(async (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (isNaN(id)) return res.status(400).json({ error: 'invalid id' });
+  const { rows: ruleRows } = await pool.query('SELECT name FROM detection_rules WHERE user_id = $1 AND id = $2', [uid(req), id]);
   await pool.query('DELETE FROM alerts WHERE user_id = $1 AND rule_id = $2', [uid(req), id]);
   await pool.query('DELETE FROM detection_rules WHERE user_id = $1 AND id = $2', [uid(req), id]);
+  audit(uid(req), 'rule.delete', { id, name: ruleRows[0]?.name }, req.ip);
   res.json({ ok: true });
 }));
 
@@ -676,6 +681,7 @@ router.post('/rules/import', wrap(async (req, res) => {
     );
     imported++;
   }
+  audit(uid(req), 'rules.import', { imported, skipped }, req.ip);
   res.json({ imported, skipped });
 }));
 
@@ -735,8 +741,10 @@ router.post('/alerts/bulk', wrap(async (req, res) => {
   const placeholders = safeIds.map((_, i) => `$${i + 2}`).join(', ');
   if (action === 'delete') {
     await pool.query(`DELETE FROM alerts WHERE user_id = $1 AND id IN (${placeholders})`, [uid(req), ...safeIds]);
+    audit(uid(req), 'alerts.bulk_delete', { count: safeIds.length }, req.ip);
   } else if (action === 'status' && STATUS_VALUES.includes(status)) {
     await pool.query(`UPDATE alerts SET status = $2 WHERE user_id = $1 AND id IN (${placeholders})`, [uid(req), status, ...safeIds]);
+    audit(uid(req), 'alerts.bulk_status', { count: safeIds.length, status }, req.ip);
   } else {
     return res.status(400).json({ error: 'invalid action' });
   }
@@ -777,6 +785,7 @@ router.post('/cases', wrap(async (req, res) => {
      description ? String(description).slice(0, 2000) : null,
      validSev.includes(severity) ? severity : 'medium']
   );
+  audit(uid(req), 'case.create', { id: rows[0].id, title: rows[0].title }, req.ip);
   res.json(rows[0]);
 }));
 
@@ -806,6 +815,7 @@ router.delete('/cases/:id', wrap(async (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (isNaN(id)) return res.status(400).json({ error: 'invalid id' });
   await pool.query('DELETE FROM cases WHERE user_id = $1 AND id = $2', [uid(req), id]);
+  audit(uid(req), 'case.delete', { id }, req.ip);
   res.json({ ok: true });
 }));
 
