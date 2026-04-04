@@ -5,7 +5,6 @@ const s = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    height: '100%',
     padding: '40px 24px',
     boxSizing: 'border-box',
   },

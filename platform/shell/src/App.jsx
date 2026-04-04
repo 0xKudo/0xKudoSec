@@ -118,6 +118,22 @@ function AppInner() {
   if (!isLoading && !isAuthenticated) {
     const path = window.location.pathname;
     if (!isElectron && !NO_AUTH_ROUTES.includes(path)) return <LandingPage />;
+    if (isElectron && !NO_AUTH_ROUTES.includes(path)) {
+      if (activeApp === 'siem') {
+        return (
+          <div style={styles.layout}>
+            <TopNav activeApp="siem" onSwitchApp={setActiveApp} onMenuToggle={() => {}} menuOpen={false} />
+            <div style={styles.body}>
+              <SiemSidebar activeView={siemView} onNavigate={setSiemView} onSwitchToTools={() => setActiveApp('tools')} isAuthenticated={false} />
+              <main style={{ flex: 1, overflow: 'auto', background: 'var(--bg-primary)', minWidth: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <RequireAuth />
+              </main>
+            </div>
+          </div>
+        );
+      }
+      return <ElectronHome onNavigate={(route) => { setActiveApp('tools'); navigate(route); }} />;
+    }
   }
 
   const switchApp = (app) => {
@@ -237,8 +253,8 @@ function AppInner() {
                     }
                   />
                 ))}
-                <Route path="/dashboard" element={isElectron && !isAuthenticated ? <ElectronHome onNavigate={(route) => { setActiveApp('tools'); navigate(route); }} /> : isMobile ? <DashboardMobile /> : <Dashboard />} />
-                <Route path="*" element={isElectron && !isAuthenticated ? <ElectronHome onNavigate={(route) => { setActiveApp('tools'); navigate(route); }} /> : isMobile ? <DashboardMobile /> : <Dashboard />} />
+                <Route path="/dashboard" element={isMobile ? <DashboardMobile /> : <Dashboard />} />
+                <Route path="*" element={isMobile ? <DashboardMobile /> : <Dashboard />} />
               </Routes>
             </main>
           </>
