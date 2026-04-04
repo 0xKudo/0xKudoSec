@@ -89,7 +89,7 @@ export function ElectronHome({ onNavigate }) {
 
   return (
     <div style={styles.page}>
-      <div style={styles.heading}>// 0xKudo Security Toolkit</div>
+      <div style={styles.heading}>[ 0xKudoSec ]</div>
       <div style={styles.sub}>Tools available without login</div>
 
       <div style={styles.grid}>
