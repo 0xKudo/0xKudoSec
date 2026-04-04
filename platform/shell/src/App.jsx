@@ -271,20 +271,25 @@ function AppInner() {
               : <SiemSidebar activeView={siemView} onNavigate={setSiemView} onSwitchToTools={() => switchApp('tools')} isAuthenticated={isAuthenticated} />
             )}
             <main style={isMobile ? { flex: 1, background: 'var(--bg-primary)' } : { flex: 1, minHeight: 0, overflow: 'auto', background: 'var(--bg-primary)', minWidth: 0, ...(isElectron && !isAuthenticated ? { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' } : {}) }}>
-              <RequireAuth>
-                {siemView === 'dashboard' && (isMobile ? <SiemDashboardMobile onNavigate={setSiemView} /> : <SiemDashboard onNavigate={setSiemView} />)}
-                {siemView === 'alerts' && <AlertQueue onNavigate={setSiemView} />}
-                {siemView === 'rules' && <DetectionRules onNavigate={setSiemView} />}
-                {siemView === 'logsearch' && <LogSearch />}
-                {siemView === 'cases' && <Cases onNavigate={setSiemView} />}
-                {siemView === 'configuration' && <SiemConfiguration />}
-                {siemView === 'auditlog' && <AuditLog />}
-                {!['dashboard','alerts','rules','logsearch','cases','configuration','auditlog'].includes(siemView) && (
-                  <div style={{ padding: '40px', color: 'var(--text-muted)', fontSize: '13px' }}>
-                    {siemView.charAt(0).toUpperCase() + siemView.slice(1)} — coming soon
-                  </div>
-                )}
-              </RequireAuth>
+              {isElectron && siemView === 'configuration'
+                ? <SiemConfiguration />
+                : (
+                  <RequireAuth>
+                    {siemView === 'dashboard' && (isMobile ? <SiemDashboardMobile onNavigate={setSiemView} /> : <SiemDashboard onNavigate={setSiemView} />)}
+                    {siemView === 'alerts' && <AlertQueue onNavigate={setSiemView} />}
+                    {siemView === 'rules' && <DetectionRules onNavigate={setSiemView} />}
+                    {siemView === 'logsearch' && <LogSearch />}
+                    {siemView === 'cases' && <Cases onNavigate={setSiemView} />}
+                    {siemView === 'configuration' && <SiemConfiguration />}
+                    {siemView === 'auditlog' && <AuditLog />}
+                    {!['dashboard','alerts','rules','logsearch','cases','configuration','auditlog'].includes(siemView) && (
+                      <div style={{ padding: '40px', color: 'var(--text-muted)', fontSize: '13px' }}>
+                        {siemView.charAt(0).toUpperCase() + siemView.slice(1)} — coming soon
+                      </div>
+                    )}
+                  </RequireAuth>
+                )
+              }
             </main>
           </>
         )}

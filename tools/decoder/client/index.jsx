@@ -149,10 +149,10 @@ function OpChip({ op, group, active, onClick }) {
   return (
     <button
       style={{
-        background: active ? 'var(--btn-primary-bg)' : hovered ? 'var(--bg-panel)' : 'var(--bg-surface)',
-        border: `1px solid ${active || hovered ? 'var(--text-primary)' : 'var(--border)'}`,
+        background: active || hovered ? 'var(--btn-primary-bg)' : 'var(--bg-surface)',
+        border: `1px solid ${active || hovered ? 'var(--btn-primary-bg)' : 'var(--border)'}`,
         borderRadius: '3px',
-        color: active ? 'var(--btn-primary-text)' : hovered ? 'var(--text-primary)' : 'var(--text-muted)',
+        color: active || hovered ? 'var(--btn-primary-text)' : 'var(--text-muted)',
         fontFamily: 'var(--font)',
         fontSize: '11px',
         padding: '4px 10px',

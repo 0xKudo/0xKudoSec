@@ -208,7 +208,7 @@ const s = {
   }),
 };
 
-const TABS = ['API Key', 'Connect a Source', 'Log Retention', 'Active Sources', 'Account'];
+const BASE_TABS = ['API Key', 'Connect a Source', 'Log Retention', 'Active Sources', 'Account'];
 const SHIPPER_TABS = ['Fluent Bit', 'Winlogbeat 7', 'Manual API'];
 
 const FLUENT_BIT_CONFIG = (apiKey) => `[SERVICE]
@@ -290,8 +290,9 @@ const FLUENT_BIT_CONFIG = (apiKey) => `[SERVICE]
 
 export function SiemConfiguration() {
   const isMobile = useIsMobile();
-  const { getAccessTokenSilently, user } = useAuth0();
-  const [tab, setTab] = useState(0);
+  const { getAccessTokenSilently, user, isAuthenticated } = useAuth0();
+  const isElectronUnauth = typeof window !== 'undefined' && window.electron?.isElectron === true && !isAuthenticated;
+  const [tab, setTab] = useState(isElectronUnauth ? 5 : 0);
 
   // API Key state
   const [keyMeta, setKeyMeta] = useState(undefined);
@@ -528,13 +529,13 @@ winlogbeat.event_logs:
       </div>
 
       <div style={isMobile ? s.tabsMobile : s.tabs}>
-        {TABS.map((t, i) => (
+        {(isElectronUnauth ? ['Desktop App'] : [...BASE_TABS, ...(isElectron ? ['Desktop App'] : [])]).map((t, i) => (
           <button
             key={t}
-            style={isMobile ? s.tabMobile(tab === i) : s.tab(tab === i)}
-            onClick={() => setTab(i)}
-            onMouseEnter={e => { if (tab !== i) e.currentTarget.style.color = 'var(--text-primary)'; }}
-            onMouseLeave={e => { if (tab !== i) e.currentTarget.style.color = 'var(--text-muted)'; }}
+            style={isMobile ? s.tabMobile(tab === (isElectronUnauth ? 5 : i)) : s.tab(tab === (isElectronUnauth ? 5 : i))}
+            onClick={() => setTab(isElectronUnauth ? 5 : i)}
+            onMouseEnter={e => { if (tab !== (isElectronUnauth ? 5 : i)) e.currentTarget.style.color = 'var(--text-primary)'; }}
+            onMouseLeave={e => { if (tab !== (isElectronUnauth ? 5 : i)) e.currentTarget.style.color = 'var(--text-muted)'; }}
           >{t}</button>
         ))}
       </div>
@@ -598,27 +599,6 @@ winlogbeat.event_logs:
               Signed in as <strong>{user?.email}</strong>.
             </div>
 
-            {isElectron && (
-              <div style={{ borderTop: '1px solid var(--border)', marginTop: '20px', paddingTop: '20px' }}>
-                <div style={s.sectionTitle}>Desktop App</div>
-                <div style={s.sectionDesc}>Settings for the 0xKudo desktop application.</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '12px' }}>
-                  <label style={{ fontSize: '12px', color: 'var(--text-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <input
-                      type="checkbox"
-                      checked={trayOnClose}
-                      onChange={e => handleTrayOnCloseToggle(e.target.checked)}
-                      style={{ cursor: 'pointer' }}
-                    />
-                    Minimize to tray when window is closed
-                  </label>
-                </div>
-                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px' }}>
-                  When enabled, closing the window keeps the app running in the system tray. Right-click the tray icon to quit.
-                </div>
-              </div>
-            )}
-
             <div style={{ borderTop: '1px solid var(--border)', marginTop: '20px', paddingTop: '20px' }}>
               <div style={s.sectionTitle}>Password</div>
               {isEmailUser ? (
@@ -637,6 +617,31 @@ winlogbeat.event_logs:
                   You signed in with {socialProvider ?? 'a social provider'}. Password management is handled by {socialProvider ?? 'your provider'}.
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* ── Tab 5: Desktop App (Electron only) ── */}
+        {isElectron && tab === 5 && (
+          <div style={s.section}>
+            <div style={s.sectionTitle}>Desktop App</div>
+            <div style={s.sectionDesc}>Settings for the [ 0xKudoSec ] desktop application.</div>
+            <div style={{ borderTop: '1px solid var(--border)', marginTop: '20px', paddingTop: '20px' }}>
+              <div style={s.sectionTitle}>Window Behavior</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '12px' }}>
+                <label style={{ fontSize: '12px', color: 'var(--text-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <input
+                    type="checkbox"
+                    checked={trayOnClose}
+                    onChange={e => handleTrayOnCloseToggle(e.target.checked)}
+                    style={{ cursor: 'pointer' }}
+                  />
+                  Minimize to tray when window is closed
+                </label>
+              </div>
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px' }}>
+                When enabled, closing the window keeps the app running in the system tray. Right-click the tray icon to quit.
+              </div>
             </div>
           </div>
         )}
