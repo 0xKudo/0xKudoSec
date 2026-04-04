@@ -1,5 +1,22 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
+// Inject CSS to remove outer scrollbars and style inner ones
+document.addEventListener('DOMContentLoaded', () => {
+  const style = document.createElement('style');
+  style.textContent = `
+    html, body, #root {
+      overflow: hidden !important;
+      height: 100% !important;
+      width: 100% !important;
+    }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #2a2928; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #3a3936; }
+  `;
+  document.head.appendChild(style);
+});
+
 contextBridge.exposeInMainWorld('electron', {
   isElectron: true,
 
