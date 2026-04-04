@@ -27,16 +27,14 @@ const styles = {
   content: { flex: 1, overflow: 'auto' },
   overlay: {
     position: 'fixed', top: 0, left: 0, bottom: 0, zIndex: 201,
-    width: '260px',
+    width: '240px',
   },
   overlayBackdrop: {
     position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 200,
   },
   overlayDrawer: {
-    position: 'relative', zIndex: 201,
+    display: 'flex', flexDirection: 'column', height: '100%',
     background: 'var(--bg-sidebar)', overflowY: 'auto',
-    width: '260px', height: '100%',
-    borderRight: '1px solid var(--border)',
   },
 };
 
@@ -131,16 +129,18 @@ function AppInner() {
                 <span style={{ fontSize: '12px', color: 'var(--text-muted)', letterSpacing: '0.04em' }}>Menu</span>
                 <button onClick={() => setMenuOpen(false)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '18px', cursor: 'pointer', padding: '0', lineHeight: 1 }}>✕</button>
               </div>
-              {activeApp === 'siem' ? (
-                <SiemSidebar
-                  activeView={siemView}
-                  onNavigate={handleSiemNavigate}
-                  onSwitchToTools={() => switchApp('tools')}
-                  isAuthenticated={isAuthenticated}
-                />
-              ) : (
-                <Sidebar onSwitchToSiem={switchToSiem} onSwitchToSiemView={switchToSiemView} onNavigate={handleToolNavigate} />
-              )}
+              <div style={{ flex: 1, overflow: 'hidden' }}>
+                {activeApp === 'siem' ? (
+                  <SiemSidebar
+                    activeView={siemView}
+                    onNavigate={handleSiemNavigate}
+                    onSwitchToTools={() => switchApp('tools')}
+                    isAuthenticated={isAuthenticated}
+                  />
+                ) : (
+                  <Sidebar onSwitchToSiem={switchToSiem} onSwitchToSiemView={switchToSiemView} onNavigate={handleToolNavigate} />
+                )}
+              </div>
             </div>
           </div>
         </>
