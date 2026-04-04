@@ -25,17 +25,19 @@ let callbackServer = null;
 function startCallbackServer() {
   if (callbackServer) return;
   callbackServer = http.createServer((req, res) => {
+    // Respond to the browser tab so it can close itself
     res.writeHead(200, { 'Content-Type': 'text/html' });
-    res.end('<html><body><script>window.close();</script><p>Login complete. You can close this tab.</p></body></html>');
+    res.end('<html><body><p>Login complete. You may close this tab.</p><script>setTimeout(()=>window.close(),500);</script></body></html>');
 
+    // Forward the callback URL to the Electron renderer for Auth0 SDK to process
     const fullUrl = `http://localhost:${AUTH0_CALLBACK_PORT}${req.url}`;
-    if (mainWindow) {
-      mainWindow.webContents.executeJavaScript(
-        `window.dispatchEvent(new CustomEvent('auth0-callback', { detail: ${JSON.stringify(fullUrl)} }))`
-      );
-      mainWindow.show();
-      mainWindow.focus();
-    }
+    setTimeout(() => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.executeJavaScript(
+          `window.dispatchEvent(new CustomEvent('auth0-callback', { detail: ${JSON.stringify(fullUrl)} }))`
+        ).catch(() => {});
+      }
+    }, 500);
   });
   callbackServer.listen(AUTH0_CALLBACK_PORT);
 }
@@ -74,6 +76,7 @@ function createMainWindow() {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
       contextIsolation: true,
+      webSecurity: true,
     },
   });
 
@@ -91,34 +94,33 @@ function createMainWindow() {
     mainWindow.show();
   });
 
+  mainWindow._forceClose = false;
+
   mainWindow.on('close', (e) => {
-    const trayOnClose = store.get('trayOnClose', true);
-    if (trayOnClose && tray) {
-      e.preventDefault();
-      mainWindow.hide();
-    }
+    if (mainWindow._forceClose) return; // allow quit via tray menu
+    e.preventDefault();
+    mainWindow.hide();
   });
 }
 
 // ── Express server ────────────────────────────────────────────────────────
 function startServer() {
   return new Promise((resolve, reject) => {
-    // In dev mode, check if server is already running (started via npm run dev)
-    // If so, skip forking and just wait for it to be ready
-    function tryExisting() {
-      return new Promise(res => {
-        http.get(`http://localhost:${SERVER_PORT}/health`, (r) => {
-          res(r.statusCode === 200);
-        }).on('error', () => res(false));
-      });
-    }
-
+    // In dev mode, always assume server is already running via npm run dev
+    // Poll until it responds rather than forking a second instance
     if (isDev) {
-      tryExisting().then(already => {
-        if (already) { resolve(); return; }
-        // Not running yet -- fork it
-        forkServer(resolve, reject);
-      });
+      const deadline = Date.now() + 15000;
+      function poll() {
+        http.get(`http://localhost:${SERVER_PORT}/health`, (res) => {
+          if (res.statusCode === 200) resolve();
+          else retry();
+        }).on('error', retry);
+      }
+      function retry() {
+        if (Date.now() > deadline) { reject(new Error('Server failed to start')); return; }
+        setTimeout(poll, 300);
+      }
+      poll();
       return;
     }
 
@@ -235,8 +237,8 @@ app.whenReady().then(async () => {
 });
 
 app.on('window-all-closed', () => {
-  // On Windows, keep app alive in tray even if all windows closed
-  // Quit only happens via tray menu or explicit quit
+  // Do nothing -- window is hidden not closed, so this shouldn't fire
+  // If it does fire, don't quit -- stay alive in tray
 });
 
 app.on('activate', () => {
@@ -255,8 +257,18 @@ app.on('before-quit', () => {
 
 // Open external links in system browser, not Electron window
 app.on('web-contents-created', (_event, contents) => {
+  // Intercept window.open() calls
   contents.setWindowOpenHandler(({ url }) => {
     shell.openExternal(url);
     return { action: 'deny' };
+  });
+
+  // Intercept top-level navigations away from localhost (e.g. Auth0 login redirect)
+  contents.on('will-navigate', (e, url) => {
+    const isLocal = url.startsWith('http://localhost:') || url.startsWith('http://127.0.0.1:');
+    if (!isLocal) {
+      e.preventDefault();
+      shell.openExternal(url);
+    }
   });
 });

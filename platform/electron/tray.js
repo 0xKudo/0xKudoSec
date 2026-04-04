@@ -70,6 +70,7 @@ function buildMenu(mainWindow, store, status) {
     {
       label: 'Quit',
       click: () => {
+        if (mainWindow && !mainWindow.isDestroyed()) mainWindow._forceClose = true;
         app.quit();
       },
     },
@@ -82,19 +83,31 @@ function createTray(mainWindow, store) {
   tray = new Tray(img.isEmpty() ? nativeImage.createEmpty() : img);
   tray.setToolTip('0xKudo Security Toolkit');
 
+  let currentMenu = null;
+
   function refreshMenu() {
-    tray.setContextMenu(buildMenu(mainWindow, store, currentStatus));
+    currentMenu = buildMenu(mainWindow, store, currentStatus);
+    // Do NOT call setContextMenu -- it suppresses click events on Windows
   }
 
-  // Windows: use double-click to open, single click shows context menu
-  tray.on('double-click', () => {
+  // Left click: open window
+  tray.on('click', () => {
     if (!mainWindow || mainWindow.isDestroyed()) return;
+    if (mainWindow.isMinimized()) mainWindow.restore();
     mainWindow.show();
     mainWindow.focus();
   });
 
-  tray.on('click', () => {
-    tray.popUpContextMenu();
+  // Right click: show menu
+  tray.on('right-click', () => {
+    tray.popUpContextMenu(currentMenu);
+  });
+
+  // Double click: also open window
+  tray.on('double-click', () => {
+    if (!mainWindow || mainWindow.isDestroyed()) return;
+    mainWindow.show();
+    mainWindow.focus();
   });
 
   refreshMenu();
