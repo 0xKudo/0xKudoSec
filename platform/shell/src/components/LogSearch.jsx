@@ -149,9 +149,8 @@ export function LogSearch() {
     const header = cols.join(',');
     const rows = results.map(r =>
       cols.map(c => {
-        const v = r[c] ?? '';
-        return typeof v === 'string' && (v.includes(',') || v.includes('"') || v.includes('\n'))
-          ? `"${v.replace(/"/g, '""')}"` : v;
+        const v = String(r[c] ?? '').replace(/\r?\n/g, ' ').replace(/"/g, '""');
+        return `"${v}"`;
       }).join(',')
     );
     const blob = new Blob([header + '\n' + rows.join('\n')], { type: 'text/csv' });
