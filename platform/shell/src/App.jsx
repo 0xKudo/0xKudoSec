@@ -98,7 +98,10 @@ function AppInner() {
     return (
       <div style={{ ...styles.layout, background: 'var(--bg-primary)' }}>
         <TopNav activeApp="tools" onSwitchApp={() => {}} onMenuToggle={() => {}} menuOpen={false} />
-        <div style={{ flex: 1 }} />
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '16px' }}>
+          <div style={{ fontSize: '13px', color: 'var(--text-muted)', letterSpacing: '0.08em' }}>[ 0xKudoSec ]</div>
+          <div style={{ fontSize: '11px', color: 'var(--text-subtle)', letterSpacing: '0.06em' }}>Connecting...</div>
+        </div>
       </div>
     );
   }
