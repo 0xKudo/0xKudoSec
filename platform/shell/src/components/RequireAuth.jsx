@@ -12,8 +12,10 @@ const s = {
     justifyContent: 'center',
     padding: '40px 24px',
     boxSizing: 'border-box',
+    pointerEvents: 'none',
   },
   card: {
+    pointerEvents: 'auto',
     background: 'var(--bg-surface)',
     border: '1px solid var(--border)',
     padding: '40px 36px',

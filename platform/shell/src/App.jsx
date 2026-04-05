@@ -179,7 +179,7 @@ function AppInner() {
         return (
           <div style={styles.layout}>
             <TopNav activeApp="siem" onSwitchApp={setActiveApp} onMenuToggle={() => {}} menuOpen={false} />
-            <div style={styles.body}>
+            <div style={{ ...styles.body, overflow: 'visible' }}>
               <ElectronCollapsibleSiemSidebar siemView={siemView} setSiemView={setSiemView} onSwitchToTools={() => setActiveApp('tools')} />
               <main style={{ flex: 1, minHeight: 0, overflow: 'auto', background: 'var(--bg-primary)', minWidth: 0, ...(siemView !== 'configuration' ? { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' } : {}) }}>
                 {siemView === 'configuration' ? <SiemConfiguration /> : <RequireAuth />}
