@@ -84,15 +84,16 @@ function ElectronLoadingScreen() {
   );
 }
 
-const collapseToggleStyle = (collapsed) => ({
+const collapseToggleStyle = {
+  position: 'absolute',
+  right: 0,
+  top: '8px',
+  transform: 'translateX(100%)',
   width: '16px',
   height: '48px',
-  flexShrink: 0,
-  alignSelf: 'flex-start',
-  marginTop: '8px',
   background: 'var(--accent-amber)',
   border: 'none',
-  borderRadius: collapsed ? '0 4px 4px 0' : '4px 0 0 4px',
+  borderRadius: '0 4px 4px 0',
   color: 'var(--bg-primary)',
   cursor: 'pointer',
   fontSize: '11px',
@@ -101,12 +102,13 @@ const collapseToggleStyle = (collapsed) => ({
   alignItems: 'center',
   justifyContent: 'center',
   padding: 0,
-});
+  zIndex: 10,
+};
 
 function ElectronCollapsibleSiemSidebar({ siemView, setSiemView, onSwitchToTools }) {
   const [collapsed, setCollapsed] = useState(true);
   return (
-    <div style={{ display: 'flex', flexShrink: 0, height: '100%' }}>
+    <div style={{ position: 'relative', flexShrink: 0, height: '100%', width: collapsed ? 0 : '240px' }}>
       {!collapsed && (
         <SiemSidebar
           activeView={siemView}
@@ -118,7 +120,7 @@ function ElectronCollapsibleSiemSidebar({ siemView, setSiemView, onSwitchToTools
       <button
         onClick={() => setCollapsed(c => !c)}
         title={collapsed ? 'Show sidebar' : 'Hide sidebar'}
-        style={collapseToggleStyle(collapsed)}
+        style={collapseToggleStyle}
       >{collapsed ? '›' : '‹'}</button>
     </div>
   );
@@ -127,14 +129,14 @@ function ElectronCollapsibleSiemSidebar({ siemView, setSiemView, onSwitchToTools
 function ElectronCollapsibleToolsSidebar({ onSwitchToSiem, onSwitchToSiemView }) {
   const [collapsed, setCollapsed] = useState(true);
   return (
-    <div style={{ display: 'flex', flexShrink: 0, height: '100%' }}>
+    <div style={{ position: 'relative', flexShrink: 0, height: '100%', width: collapsed ? 0 : '240px' }}>
       {!collapsed && (
         <Sidebar onSwitchToSiem={onSwitchToSiem} onSwitchToSiemView={onSwitchToSiemView} />
       )}
       <button
         onClick={() => setCollapsed(c => !c)}
         title={collapsed ? 'Show sidebar' : 'Hide sidebar'}
-        style={collapseToggleStyle(collapsed)}
+        style={collapseToggleStyle}
       >{collapsed ? '›' : '‹'}</button>
     </div>
   );
