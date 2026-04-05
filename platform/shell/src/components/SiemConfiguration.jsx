@@ -322,8 +322,11 @@ export function SiemConfiguration() {
 
   // Log Retention state
   const [retentionDays, setRetentionDays] = useState('');
+  const [auditRetentionEnabled, setAuditRetentionEnabled] = useState(true);
+  const [auditRetentionDays, setAuditRetentionDays] = useState('365');
   const [retentionLoading, setRetentionLoading] = useState(true);
   const [saved, setSaved] = useState(null);
+  const [auditSaved, setAuditSaved] = useState(null);
 
   // Password state
   const sub = user?.sub ?? '';
@@ -359,6 +362,8 @@ export function SiemConfiguration() {
       const res = await fetch('/api/siem/settings', { headers: { Authorization: `Bearer ${token}` } });
       const data = await res.json();
       setRetentionDays(String(data.log_retention_days ?? 90));
+      setAuditRetentionEnabled(data.audit_log_retention_enabled ?? true);
+      setAuditRetentionDays(String(data.audit_log_retention_days ?? 365));
     } catch { setRetentionDays('90'); }
     setRetentionLoading(false);
   }
@@ -407,6 +412,23 @@ export function SiemConfiguration() {
       });
       setSaved(res.ok ? 'ok' : 'error');
     } catch { setSaved('error'); }
+  }
+
+  async function saveAuditRetention() {
+    setAuditSaved(null);
+    try {
+      const token = await getAccessTokenSilently();
+      const res = await fetch('/api/siem/settings', {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          log_retention_days: parseInt(retentionDays, 10),
+          audit_log_retention_enabled: auditRetentionEnabled,
+          audit_log_retention_days: parseInt(auditRetentionDays, 10),
+        }),
+      });
+      setAuditSaved(res.ok ? 'ok' : 'error');
+    } catch { setAuditSaved('error'); }
   }
 
   async function sendPasswordReset() {
@@ -687,6 +709,62 @@ winlogbeat.event_logs:
                 <div style={{ marginTop: '10px', padding: '8px 12px', fontSize: '11px', border: '1px solid var(--severity-high)', color: 'var(--severity-high)' }}>
                   Error: {exportError}
                 </div>
+              )}
+            </div>
+
+            {/* ── Audit Log Retention ── */}
+            <div style={{ borderTop: '1px solid var(--border)', marginTop: '28px', paddingTop: '20px' }}>
+              <div style={s.sectionTitle}>Audit Log Retention</div>
+              <div style={s.sectionDesc}>
+                The audit log records all privileged actions (key rotation, rule changes, bulk operations, exports).
+                Auto-purge runs nightly. PCI DSS 10.7 and SOC 2 CC7 require a minimum of 365 days retention.
+                Disable auto-purge only if you are archiving audit logs externally.
+              </div>
+
+              {retentionLoading ? (
+                <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Loading...</div>
+              ) : (
+                <>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '14px' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11px', color: 'var(--text-primary)', cursor: 'pointer' }}>
+                      <input
+                        type="checkbox"
+                        checked={auditRetentionEnabled}
+                        onChange={e => { setAuditRetentionEnabled(e.target.checked); setAuditSaved(null); }}
+                        style={{ cursor: 'pointer' }}
+                      />
+                      Enable auto-purge
+                    </label>
+                  </div>
+
+                  {auditRetentionEnabled && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '14px' }}>
+                      <input
+                        style={s.input}
+                        type="number" min="1" max="3650"
+                        value={auditRetentionDays}
+                        onChange={e => { setAuditRetentionDays(e.target.value); setAuditSaved(null); }}
+                      />
+                      <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>days</span>
+                    </div>
+                  )}
+
+                  {!auditRetentionEnabled && (
+                    <div style={s.warning}>
+                      Auto-purge is disabled. Audit entries will accumulate indefinitely. Ensure you have an external archiving pipeline in place. Disabling auto-purge may violate PCI DSS 10.7 and SOC 2 CC7 if audit entries are not being archived elsewhere.
+                    </div>
+                  )}
+
+                  {auditRetentionEnabled && parseInt(auditRetentionDays, 10) < 365 && (
+                    <div style={s.warning}>
+                      Retention below 365 days violates PCI DSS 10.7 (minimum 12 months) and SOC 2 CC7. Set to 365 or higher for compliance.
+                    </div>
+                  )}
+
+                  <button style={s.btnPrimary} onClick={saveAuditRetention}>Save</button>
+                  {auditSaved === 'ok' && <div style={s.status(true)}>Saved.</div>}
+                  {auditSaved === 'error' && <div style={s.status(false)}>Failed to save. Try again.</div>}
+                </>
               )}
             </div>
 

@@ -122,18 +122,25 @@ export function AuditLog() {
   const [loading, setLoading] = useState(true);
   const [actionFilter, setActionFilter] = useState('');
   const [limitFilter, setLimitFilter] = useState('100');
+  const [retentionPolicy, setRetentionPolicy] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
       const token = await getAccessTokenSilently();
-      const params = new URLSearchParams({ limit: limitFilter });
-      if (actionFilter) params.set('action', actionFilter);
-      const res = await fetch(`/api/siem/audit-log?${params}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
+      const [logsRes, settingsRes] = await Promise.all([
+        fetch(`/api/siem/audit-log?${new URLSearchParams({ limit: limitFilter, ...(actionFilter && { action: actionFilter }) })}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        fetch('/api/siem/settings', { headers: { Authorization: `Bearer ${token}` } }),
+      ]);
+      const data = await logsRes.json();
+      const settings = await settingsRes.json();
       setRows(Array.isArray(data) ? data : []);
+      setRetentionPolicy({
+        enabled: settings.audit_log_retention_enabled ?? true,
+        days: settings.audit_log_retention_days ?? 365,
+      });
     } catch {
       setRows([]);
     } finally {
@@ -148,7 +155,16 @@ export function AuditLog() {
       <div style={styles.header}>
         <div>
           <div style={styles.title}>Audit Log</div>
-          <div style={styles.subtitle}>Privileged user actions — append-only record</div>
+          <div style={styles.subtitle}>
+            Privileged user actions — append-only record
+            {retentionPolicy && (
+              <span style={{ marginLeft: '12px', color: retentionPolicy.enabled && retentionPolicy.days < 365 ? 'var(--severity-high)' : 'var(--text-subtle)' }}>
+                {retentionPolicy.enabled
+                  ? `· retained ${retentionPolicy.days} days${retentionPolicy.days < 365 ? ' (below PCI DSS minimum)' : ''}`
+                  : '· auto-purge disabled — retained indefinitely'}
+              </span>
+            )}
+          </div>
         </div>
       </div>
 

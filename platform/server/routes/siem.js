@@ -854,7 +854,7 @@ router.get('/settings', wrap(async (req, res) => {
     'SELECT * FROM user_settings WHERE user_id = $1',
     [uid(req)]
   );
-  res.json(rows[0] || { log_retention_days: 90 });
+  res.json(rows[0] || { log_retention_days: 90, audit_log_retention_enabled: true, audit_log_retention_days: 365 });
 }));
 
 router.patch('/settings', wrap(async (req, res) => {
@@ -862,12 +862,30 @@ router.patch('/settings', wrap(async (req, res) => {
   if (isNaN(days) || days < 1 || days > 3650) {
     return res.status(400).json({ error: 'log_retention_days must be between 1 and 3650' });
   }
+
+  // Audit log retention fields — optional, only updated if present in body
+  let auditEnabled = null;
+  let auditDays = null;
+  if (req.body.audit_log_retention_enabled !== undefined) {
+    auditEnabled = req.body.audit_log_retention_enabled === true || req.body.audit_log_retention_enabled === 'true';
+  }
+  if (req.body.audit_log_retention_days !== undefined) {
+    auditDays = parseInt(req.body.audit_log_retention_days, 10);
+    if (isNaN(auditDays) || auditDays < 1 || auditDays > 3650) {
+      return res.status(400).json({ error: 'audit_log_retention_days must be between 1 and 3650' });
+    }
+  }
+
   const { rows } = await pool.query(
-    `INSERT INTO user_settings (user_id, log_retention_days)
-     VALUES ($1, $2)
-     ON CONFLICT (user_id) DO UPDATE SET log_retention_days = $2, updated_at = NOW()
+    `INSERT INTO user_settings (user_id, log_retention_days, audit_log_retention_enabled, audit_log_retention_days)
+     VALUES ($1, $2, COALESCE($3, true), COALESCE($4, 365))
+     ON CONFLICT (user_id) DO UPDATE SET
+       log_retention_days          = $2,
+       audit_log_retention_enabled = COALESCE($3, user_settings.audit_log_retention_enabled),
+       audit_log_retention_days    = COALESCE($4, user_settings.audit_log_retention_days),
+       updated_at                  = NOW()
      RETURNING *`,
-    [uid(req), days]
+    [uid(req), days, auditEnabled, auditDays]
   );
   res.json(rows[0]);
 }));
