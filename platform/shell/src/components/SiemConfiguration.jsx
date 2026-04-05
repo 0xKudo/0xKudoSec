@@ -129,7 +129,7 @@ function DateTimePicker({ value, onChange, label }) {
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 const s = {
-  container: { padding: 0, display: 'flex', flexDirection: 'column', height: '100%' },
+  container: { padding: 0, display: 'flex', flexDirection: 'column', height: '100%', width: '100%' },
   header: {
     padding: '14px 20px', borderBottom: '1px solid var(--border)',
     background: 'var(--bg-surface)', display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0, minHeight: '44px',
