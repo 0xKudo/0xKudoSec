@@ -89,7 +89,7 @@ export function SiemSidebar({ activeView, onNavigate, onSwitchToTools, isAuthent
         <div key={group.section}>
           <div style={styles.sectionLabel}>{group.section}</div>
           {group.items.map(item => {
-            const locked = !isAuthenticated && item.id !== 'configuration';
+            const locked = !isAuthenticated && item.id !== 'configuration' && item.id !== 'dashboard';
             return (
               <div
                 key={item.id}

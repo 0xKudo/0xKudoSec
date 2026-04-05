@@ -86,7 +86,7 @@ function ElectronLoadingScreen() {
 
 const collapseBtn = (collapsed) => ({
   position: 'absolute',
-  right: collapsed ? 0 : '-16px',
+  left: collapsed ? 0 : 'calc(100% - 16px)',
   bottom: '80px',
   width: '16px',
   height: '48px',
@@ -107,7 +107,7 @@ const collapseBtn = (collapsed) => ({
 function ElectronCollapsibleSiemSidebar({ siemView, setSiemView, onSwitchToTools }) {
   const [collapsed, setCollapsed] = useState(true);
   return (
-    <div style={{ position: 'relative', flexShrink: 0, height: '100%', width: collapsed ? 0 : '240px' }}>
+    <div style={{ position: 'relative', flexShrink: 0, height: '100%', width: collapsed ? 0 : '240px', overflow: 'visible' }}>
       {!collapsed && (
         <SiemSidebar
           activeView={siemView}
@@ -128,7 +128,7 @@ function ElectronCollapsibleSiemSidebar({ siemView, setSiemView, onSwitchToTools
 function ElectronCollapsibleToolsSidebar({ onSwitchToSiem, onSwitchToSiemView }) {
   const [collapsed, setCollapsed] = useState(true);
   return (
-    <div style={{ position: 'relative', flexShrink: 0, height: '100%', width: collapsed ? 0 : '240px' }}>
+    <div style={{ position: 'relative', flexShrink: 0, height: '100%', width: collapsed ? 0 : '240px', overflow: 'visible' }}>
       {!collapsed && (
         <Sidebar onSwitchToSiem={onSwitchToSiem} onSwitchToSiemView={onSwitchToSiemView} />
       )}
