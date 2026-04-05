@@ -2,11 +2,13 @@
 // Runs daily at 02:00 server time.
 // Deletes logs older than each user's configured retention period.
 // Users with no setting default to 90 days.
+// Audit log is retained for AUDIT_LOG_RETENTION_DAYS (default 365) per PCI DSS 10.7.
 
 import cron from 'node-cron';
 import pool from './db.js';
 
 const DEFAULT_RETENTION_DAYS = 90;
+const DEFAULT_AUDIT_RETENTION_DAYS = parseInt(process.env.AUDIT_LOG_RETENTION_DAYS, 10) || 365;
 
 async function runRetention() {
   try {
@@ -40,6 +42,15 @@ async function runRetention() {
 
     if (totalDeleted === 0) {
       console.log('[retention] No logs expired.');
+    }
+
+    // Audit log retention — PCI DSS 10.7 requires 12 months minimum.
+    // Default: 365 days. Configurable via AUDIT_LOG_RETENTION_DAYS env var.
+    const { rowCount: auditDeleted } = await pool.query(
+      `DELETE FROM audit_log WHERE created_at < NOW() - INTERVAL '${DEFAULT_AUDIT_RETENTION_DAYS} days'`
+    );
+    if (auditDeleted > 0) {
+      console.log(`[retention] Deleted ${auditDeleted} audit log entries older than ${DEFAULT_AUDIT_RETENTION_DAYS} days`);
     }
   } catch (err) {
     console.error('[retention] Error during log retention run:', err.message);
