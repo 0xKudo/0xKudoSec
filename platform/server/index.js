@@ -18,8 +18,24 @@ import { startRetentionCron } from './services/retentionCron.js';
 
 const app = express();
 
+const AUTH0_DOMAIN = process.env.AUTH0_DOMAIN;
+const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || '';
+const wsOrigin = ALLOWED_ORIGIN.replace(/^https?/, 'wss');
+
 app.use(helmet({
   crossOriginResourcePolicy: { policy: process.env.NODE_ENV === 'production' ? 'same-origin' : 'cross-origin' },
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      fontSrc: ["'self'"],
+      imgSrc: ["'self'", 'data:'],
+      connectSrc: ["'self'", `https://${AUTH0_DOMAIN}`, wsOrigin],
+      frameAncestors: ["'none'"],
+      reportUri: ['/api/csp-report'],
+    },
+  },
 }));
 app.use(corsMiddleware);
 
@@ -30,6 +46,10 @@ app.use((req, res, next) => {
   next();
 });
 app.get('/health', (req, res) => res.json({ ok: true }));
+app.post('/api/csp-report', express.json({ type: 'application/csp-report', limit: '10kb' }), (req, res) => {
+  console.warn('[csp-violation]', JSON.stringify(req.body));
+  res.status(204).end();
+});
 app.use('/api/ingest', express.json({ limit: '10mb' }), apiRateLimiter, ingestRoutes);
 app.use('/api/siem', express.json({ limit: '50kb' }), apiRateLimiter, siemRoutes);
 app.use(express.json({ limit: '50kb' }));
