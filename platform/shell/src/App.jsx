@@ -84,11 +84,10 @@ function ElectronLoadingScreen() {
   );
 }
 
-const collapseToggleStyle = {
+const collapseBtn = (collapsed) => ({
   position: 'absolute',
-  right: 0,
-  top: 'calc(100% - 120px)',
-  transform: 'translateX(100%)',
+  right: collapsed ? 0 : '-16px',
+  bottom: '80px',
   width: '16px',
   height: '48px',
   background: 'var(--accent-amber)',
@@ -103,7 +102,7 @@ const collapseToggleStyle = {
   justifyContent: 'center',
   padding: 0,
   zIndex: 10,
-};
+});
 
 function ElectronCollapsibleSiemSidebar({ siemView, setSiemView, onSwitchToTools }) {
   const [collapsed, setCollapsed] = useState(true);
@@ -120,7 +119,7 @@ function ElectronCollapsibleSiemSidebar({ siemView, setSiemView, onSwitchToTools
       <button
         onClick={() => setCollapsed(c => !c)}
         title={collapsed ? 'Show sidebar' : 'Hide sidebar'}
-        style={collapseToggleStyle}
+        style={collapseBtn(collapsed)}
       >{collapsed ? '›' : '‹'}</button>
     </div>
   );
@@ -136,7 +135,7 @@ function ElectronCollapsibleToolsSidebar({ onSwitchToSiem, onSwitchToSiemView })
       <button
         onClick={() => setCollapsed(c => !c)}
         title={collapsed ? 'Show sidebar' : 'Hide sidebar'}
-        style={collapseToggleStyle}
+        style={collapseBtn(collapsed)}
       >{collapsed ? '›' : '‹'}</button>
     </div>
   );
