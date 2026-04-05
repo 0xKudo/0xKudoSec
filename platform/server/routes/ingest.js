@@ -2,7 +2,10 @@
 import { Router } from 'express';
 import { createHash } from 'crypto';
 import multer from 'multer';
-import pool from '../services/db.js';
+import db from '../services/db.js';
+const pool = db; // main pool — RLS enforced (cybertools role has NOBYPASSRLS)
+// ingestAuthPool — BYPASSRLS role used only for key lookups before user_id is known
+let _ingestAuthPool;
 import { normalizeEvent } from '../services/ingest/normalizeEvent.js';
 import { broadcast } from '../services/wsBroadcast.js';
 import { requireAuth } from '../middleware/requireAuth.js';
@@ -25,14 +28,19 @@ function hashKey(key) {
   return createHash('sha256').update(key).digest('hex');
 }
 
+function getIngestAuthPool() {
+  if (!_ingestAuthPool) _ingestAuthPool = db.getIngestAuthPool();
+  return _ingestAuthPool;
+}
+
 async function requireIngestKey(req, res, next) {
   const header = req.headers.authorization || '';
   const token = header.startsWith('Bearer ') ? header.slice(7) : null;
   if (!token) return res.status(401).json({ error: 'Unauthorized' });
 
-  // Hash the incoming token and compare against stored hashes
+  // Use ingest_auth role (BYPASSRLS) — user_id is not yet known at this stage
   try {
-    const { rows } = await pool.query(
+    const { rows } = await getIngestAuthPool().query(
       'SELECT user_id, expires_at FROM user_ingest_keys WHERE api_key = $1', [hashKey(token)]
     );
     if (rows.length) {
@@ -42,8 +50,7 @@ async function requireIngestKey(req, res, next) {
       }
       req.ingestUserId = rows[0].user_id;
       // Update last_used_at — fire and forget, never block ingest
-      // Update by api_key hash (already in scope) to bypass RLS
-      pool.query(
+      getIngestAuthPool().query(
         'UPDATE user_ingest_keys SET last_used_at = NOW() WHERE api_key = $1',
         [hashKey(token)]
       ).catch(() => {});

@@ -3,6 +3,7 @@ import pg from 'pg';
 const { Pool } = pg;
 
 let pool;
+let ingestAuthPool;
 
 function getPool() {
   if (!pool) {
@@ -15,6 +16,21 @@ function getPool() {
     pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl });
   }
   return pool;
+}
+
+// Dedicated pool for ingest key lookups — uses a role with BYPASSRLS so
+// requireIngestKey can look up keys cross-user before the user_id is known.
+// The cybertools role has NOBYPASSRLS; only ingest_auth bypasses RLS.
+function getIngestAuthPool() {
+  if (!ingestAuthPool) {
+    const connStr = process.env.INGEST_AUTH_DB_URL || process.env.DATABASE_URL;
+    const ssl = process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false;
+    ingestAuthPool = new Pool({ connectionString: connStr, ssl });
+    if (!process.env.INGEST_AUTH_DB_URL) {
+      console.warn('[db] INGEST_AUTH_DB_URL not set — ingest key lookups falling back to main pool (RLS bypass still required on that role)');
+    }
+  }
+  return ingestAuthPool;
 }
 
 // Run queries with RLS user context set for the duration of the transaction.
@@ -42,4 +58,5 @@ export default {
   query: (...args) => getPool().query(...args),
   withUser,
   getPool,
+  getIngestAuthPool,
 };
