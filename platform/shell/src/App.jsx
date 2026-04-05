@@ -182,7 +182,7 @@ function AppInner() {
             <TopNav activeApp="siem" onSwitchApp={setActiveApp} onMenuToggle={() => {}} menuOpen={false} />
             <div style={{ ...styles.body, overflow: 'visible' }}>
               <ElectronCollapsibleSiemSidebar siemView={siemView} setSiemView={setSiemView} onSwitchToTools={() => setActiveApp('tools')} />
-              <main style={{ flex: 1, minHeight: 0, overflow: siemView === 'configuration' ? 'hidden' : 'auto', background: 'var(--bg-primary)', minWidth: 0, ...(siemView !== 'configuration' ? { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' } : {}) }}>
+              <main style={{ flex: 1, minHeight: 0, overflow: siemView === 'configuration' ? 'hidden' : 'auto', display: 'flex', flexDirection: 'column', background: 'var(--bg-primary)', minWidth: 0, ...(siemView !== 'configuration' ? { alignItems: 'center', justifyContent: 'center' } : {}) }}>
                 {siemView === 'configuration' ? <SiemConfiguration /> : <RequireAuth />}
               </main>
             </div>
@@ -272,7 +272,7 @@ function AppInner() {
               ? <ElectronCollapsibleSiemSidebar siemView={siemView} setSiemView={setSiemView} onSwitchToTools={() => switchApp('tools')} />
               : <SiemSidebar activeView={siemView} onNavigate={setSiemView} onSwitchToTools={() => switchApp('tools')} isAuthenticated={isAuthenticated} />
             )}
-            <main style={isMobile ? { flex: 1, background: 'var(--bg-primary)' } : { flex: 1, minHeight: 0, overflow: siemView === 'configuration' ? 'hidden' : 'auto', background: 'var(--bg-primary)', minWidth: 0, ...(isElectron && !isAuthenticated ? { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' } : {}) }}>
+            <main style={isMobile ? { flex: 1, background: 'var(--bg-primary)' } : { flex: 1, minHeight: 0, overflow: siemView === 'configuration' ? 'hidden' : 'auto', display: 'flex', flexDirection: 'column', background: 'var(--bg-primary)', minWidth: 0, ...(isElectron && !isAuthenticated ? { alignItems: 'center', justifyContent: 'center' } : {}) }}>
               {isElectron && siemView === 'configuration'
                 ? <SiemConfiguration />
                 : (
