@@ -86,30 +86,39 @@ function ElectronLoadingScreen() {
 
 function CollapsibleSidebar({ children, collapsed, onToggle }) {
   return (
-    <div style={{ display: 'flex', flexShrink: 0, height: '100%' }}>
+    <div style={{ display: 'flex', flexShrink: 0, height: '100%', position: 'relative' }}>
       {!collapsed && children}
-      <button
-        onClick={onToggle}
-        title={collapsed ? 'Show sidebar' : 'Hide sidebar'}
-        style={{
-          width: '16px',
-          flexShrink: 0,
-          alignSelf: 'flex-start',
-          marginTop: '8px',
-          height: '48px',
-          background: 'var(--accent-amber)',
-          border: 'none',
-          borderRadius: collapsed ? '0 4px 4px 0' : '4px 0 0 4px',
-          color: 'var(--bg-primary)',
-          cursor: 'pointer',
-          fontSize: '11px',
-          fontWeight: 'bold',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: 0,
-        }}
-      >{collapsed ? '›' : '‹'}</button>
+      <div style={{
+        width: '16px',
+        flexShrink: 0,
+        background: 'var(--bg-sidebar)',
+        borderRight: collapsed ? 'none' : '1px solid var(--border)',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        paddingTop: '8px',
+      }}>
+        <button
+          onClick={onToggle}
+          title={collapsed ? 'Show sidebar' : 'Hide sidebar'}
+          style={{
+            width: '16px',
+            height: '48px',
+            background: 'var(--accent-amber)',
+            border: 'none',
+            borderRadius: collapsed ? '0 4px 4px 0' : '4px 0 0 4px',
+            color: 'var(--bg-primary)',
+            cursor: 'pointer',
+            fontSize: '11px',
+            fontWeight: 'bold',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 0,
+            flexShrink: 0,
+          }}
+        >{collapsed ? '›' : '‹'}</button>
+      </div>
     </div>
   );
 }
