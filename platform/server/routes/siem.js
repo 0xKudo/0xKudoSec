@@ -13,6 +13,7 @@ import pool from '../services/db.js';
 import { requireAuth } from '../middleware/requireAuth.js';
 import { runDetectionRules } from '../services/detection.js';
 import { audit } from '../services/audit.js';
+import { ingestKeyLimiter, ruleImportLimiter } from '../middleware/rateLimiter.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -493,7 +494,7 @@ router.get('/ingest-key', async (req, res) => {
   res.json(rows[0] ? { exists: true, created_at: rows[0].created_at } : null);
 });
 
-router.post('/ingest-key', async (req, res) => {
+router.post('/ingest-key', ingestKeyLimiter, async (req, res) => {
   const key = randomBytes(32).toString('hex');
   const hashed = hashKey(key);
   // Check if key already exists to distinguish create vs rotate
@@ -646,7 +647,7 @@ router.get('/rules/export', wrap(async (req, res) => {
   res.json(rows);
 }));
 
-router.post('/rules/import', wrap(async (req, res) => {
+router.post('/rules/import', ruleImportLimiter, wrap(async (req, res) => {
   // Reject anything that isn't application/json — prevents multipart/file-based attacks
   if (!req.is('application/json')) return res.status(415).json({ error: 'content-type must be application/json' });
   const rules = req.body;

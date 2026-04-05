@@ -8,6 +8,7 @@ import { broadcast } from '../services/wsBroadcast.js';
 import { requireAuth } from '../middleware/requireAuth.js';
 import { runDetectionRules } from '../services/detection.js';
 import { audit } from '../services/audit.js';
+import { ingestBeatsLimiter } from '../middleware/rateLimiter.js';
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -49,7 +50,7 @@ async function requireIngestKey(req, res, next) {
   return res.status(401).json({ error: 'Unauthorized' });
 }
 
-router.post('/beats', requireIngestKey, async (req, res) => {
+router.post('/beats', ingestBeatsLimiter, requireIngestKey, async (req, res) => {
   const body = req.body;
   if (!body || typeof body !== 'object') {
     return res.status(400).json({ error: 'Request body must be a JSON object or array' });

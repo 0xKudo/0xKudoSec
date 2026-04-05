@@ -7,6 +7,7 @@ import express from 'express';
 import helmet from 'helmet';
 import { corsMiddleware } from './middleware/cors.js';
 import { apiRateLimiter } from './middleware/rateLimiter.js';
+
 import apiRoutes from './routes/tools.js';
 import ingestRoutes from './routes/ingest.js';
 import siemRoutes from './routes/siem.js';
@@ -21,8 +22,8 @@ app.use(helmet({
 }));
 app.use(corsMiddleware);
 app.get('/health', (req, res) => res.json({ ok: true }));
-app.use('/api/ingest', express.json({ limit: '10mb' }), ingestRoutes);
-app.use('/api/siem', express.json({ limit: '50kb' }), siemRoutes);
+app.use('/api/ingest', express.json({ limit: '10mb' }), apiRateLimiter, ingestRoutes);
+app.use('/api/siem', express.json({ limit: '50kb' }), apiRateLimiter, siemRoutes);
 app.use(express.json({ limit: '50kb' }));
 app.use('/api', apiRateLimiter);
 app.use('/api', apiRoutes);
