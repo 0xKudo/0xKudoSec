@@ -161,6 +161,7 @@ function AppInner() {
       try {
         const msg = JSON.parse(e.data);
         if (msg.type === 'ingest_key_rotated') setKeyRotatedBanner(true);
+        if (msg.type === 'new_events') setKeyRotatedBanner(false);
       } catch {}
     };
     return () => { if (ws.readyState !== WebSocket.CONNECTING) ws.close(); else ws.onopen = () => ws.close(); };
@@ -289,7 +290,7 @@ function AppInner() {
             <main style={isMobile ? { flex: 1, background: 'var(--bg-primary)' } : { flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column', background: 'var(--bg-primary)', minWidth: 0, ...(isElectron && !isAuthenticated ? { alignItems: 'center', justifyContent: 'center' } : {}) }}>
               {keyRotatedBanner && (
                 <div style={{ background: 'var(--bg-surface)', borderBottom: '1px solid var(--accent-amber)', padding: '6px 16px', display: 'flex', alignItems: 'center', gap: '12px', fontSize: '11px', color: 'var(--accent-amber)', flexShrink: 0 }}>
-                  <span>Ingest key rotated — update your Fluent Bit config and restart the agent.</span>
+                  <span>Ingest key rotated. Update your Fluent Bit config and restart the agent.</span>
                   <button onClick={() => setKeyRotatedBanner(false)} style={{ background: 'none', border: 'none', color: 'var(--accent-amber)', fontFamily: 'var(--font)', fontSize: '11px', cursor: 'pointer', opacity: 0.7, marginLeft: 'auto' }}>✕</button>
                 </div>
               )}
