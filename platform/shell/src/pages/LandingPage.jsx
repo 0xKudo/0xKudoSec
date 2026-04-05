@@ -449,20 +449,20 @@ function DesktopLanding({ onLogin }) {
           <button
             style={s.btnPrimary}
             onClick={onLogin}
-            onMouseEnter={e => { e.currentTarget.style.opacity = '0.85'; }}
-            onMouseLeave={e => { e.currentTarget.style.opacity = '1'; }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'var(--btn-primary-text)'; e.currentTarget.style.color = 'var(--btn-primary-bg)'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'var(--btn-primary-bg)'; e.currentTarget.style.color = 'var(--btn-primary-text)'; }}
           >Create Free Account</button>
           <button
             style={s.btnSecondary}
             onClick={scrollToTools}
-            onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.borderColor = 'var(--text-primary)'; }}
-            onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.borderColor = 'var(--border)'; }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'var(--text-muted)'; e.currentTarget.style.color = 'var(--bg-primary)'; e.currentTarget.style.borderColor = 'var(--text-muted)'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.borderColor = 'var(--border)'; }}
           >Browse Tools</button>
           <a
             href={DESKTOP_DOWNLOAD_URL}
             style={{ ...s.btnSecondary, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px', color: 'var(--accent-amber)', borderColor: 'var(--accent-amber)' }}
-            onMouseEnter={e => { e.currentTarget.style.opacity = '0.75'; }}
-            onMouseLeave={e => { e.currentTarget.style.opacity = '1'; }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'var(--accent-amber)'; e.currentTarget.style.color = 'var(--bg-primary)'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = 'var(--accent-amber)'; }}
           >↓ Download for Windows</a>
         </div>
         <p style={s.heroNote}>

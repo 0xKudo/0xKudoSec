@@ -239,8 +239,8 @@ export function TopNav({ activeApp, onSwitchApp, onMenuToggle, menuOpen }) {
               <a
                 href={DESKTOP_DOWNLOAD_URL}
                 style={{ fontSize: '11px', color: 'var(--accent-amber)', textDecoration: 'none', letterSpacing: '0.04em', whiteSpace: 'nowrap', border: '1px solid var(--accent-amber)', padding: '4px 10px' }}
-                onMouseEnter={e => { e.currentTarget.style.opacity = '0.75'; }}
-                onMouseLeave={e => { e.currentTarget.style.opacity = '1'; }}
+                onMouseEnter={e => { e.currentTarget.style.background = 'var(--accent-amber)'; e.currentTarget.style.color = 'var(--bg-primary)'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = 'var(--accent-amber)'; }}
               >↓ Desktop App</a>
             )}
             {isAuthenticated ? (
