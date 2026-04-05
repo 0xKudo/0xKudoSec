@@ -42,9 +42,10 @@ async function requireIngestKey(req, res, next) {
       }
       req.ingestUserId = rows[0].user_id;
       // Update last_used_at — fire and forget, never block ingest
+      // Update by api_key hash (already in scope) to bypass RLS
       pool.query(
-        'UPDATE user_ingest_keys SET last_used_at = NOW() WHERE user_id = $1',
-        [rows[0].user_id]
+        'UPDATE user_ingest_keys SET last_used_at = NOW() WHERE api_key = $1',
+        [hashKey(token)]
       ).catch(() => {});
       return next();
     }
