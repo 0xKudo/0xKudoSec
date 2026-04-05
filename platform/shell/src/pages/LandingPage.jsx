@@ -130,8 +130,8 @@ const s = {
   heroCtasMobile: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px', marginBottom: '16px', position: 'relative' },
 
   // buttons
-  btnPrimary: { background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-text)', border: '1px solid var(--btn-primary-bg)', fontFamily: 'var(--font)', fontSize: '12px', fontWeight: 600, padding: '11px 28px', cursor: 'pointer', letterSpacing: '0.06em', textTransform: 'uppercase' },
-  btnPrimaryFull: { background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-text)', border: '1px solid var(--btn-primary-bg)', fontFamily: 'var(--font)', fontSize: '12px', fontWeight: 600, padding: '11px 28px', cursor: 'pointer', letterSpacing: '0.06em', textTransform: 'uppercase', width: '100%' },
+  btnPrimary: { background: '#e8e6e3', color: '#111110', border: '1px solid #e8e6e3', fontFamily: 'var(--font)', fontSize: '12px', fontWeight: 600, padding: '11px 28px', cursor: 'pointer', letterSpacing: '0.06em', textTransform: 'uppercase' },
+  btnPrimaryFull: { background: '#e8e6e3', color: '#111110', border: '1px solid #e8e6e3', fontFamily: 'var(--font)', fontSize: '12px', fontWeight: 600, padding: '11px 28px', cursor: 'pointer', letterSpacing: '0.06em', textTransform: 'uppercase', width: '100%' },
   btnSecondary: { background: 'none', color: 'var(--text-muted)', border: '1px solid var(--border)', fontFamily: 'var(--font)', fontSize: '12px', padding: '11px 28px', cursor: 'pointer', letterSpacing: '0.04em' },
   btnSecondaryFull: { background: 'none', color: 'var(--text-muted)', border: '1px solid var(--border)', fontFamily: 'var(--font)', fontSize: '12px', padding: '11px 28px', cursor: 'pointer', letterSpacing: '0.04em', width: '100%' },
 
@@ -449,8 +449,8 @@ function DesktopLanding({ onLogin }) {
           <button
             style={s.btnPrimary}
             onClick={onLogin}
-            onMouseEnter={e => { e.currentTarget.style.background = 'var(--btn-primary-text)'; e.currentTarget.style.color = 'var(--btn-primary-bg)'; e.currentTarget.style.borderColor = 'var(--btn-primary-text)'; }}
-            onMouseLeave={e => { e.currentTarget.style.background = 'var(--btn-primary-bg)'; e.currentTarget.style.color = 'var(--btn-primary-text)'; e.currentTarget.style.borderColor = 'var(--btn-primary-bg)'; }}
+            onMouseEnter={e => { e.currentTarget.style.background = '#111110'; e.currentTarget.style.color = '#e8e6e3'; e.currentTarget.style.borderColor = '#e8e6e3'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = '#e8e6e3'; e.currentTarget.style.color = '#111110'; e.currentTarget.style.borderColor = '#e8e6e3'; }}
           >Create Free Account</button>
           <button
             style={s.btnSecondary}
