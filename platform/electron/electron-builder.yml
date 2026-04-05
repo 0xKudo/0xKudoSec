@@ -3,7 +3,7 @@ appId: com.laynekudo.0xkudo
 publish:
   provider: github
   owner: 0xKudoX
-  repo: 0xKudoSec-releases1
+  repo: 0xKudoSec-releases
 productName: 0xKudo Security Toolkit
 copyright: Copyright © 2025 Layne Kudo
 
