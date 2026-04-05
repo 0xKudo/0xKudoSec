@@ -45,6 +45,7 @@ contextBridge.exposeInMainWorld('electron', {
     onReady: (cb) => ipcRenderer.on('update:ready', () => cb()),
     onError: (cb) => ipcRenderer.on('update:error', (_e, info) => cb(info)),
     onDismissed: (cb) => ipcRenderer.on('update:dismissed', () => cb()),
+    checkPending: () => ipcRenderer.invoke('update:check-pending'),
     download: () => ipcRenderer.invoke('update:download'),
     install: () => ipcRenderer.invoke('update:install'),
     dismiss: () => ipcRenderer.invoke('update:dismiss'),

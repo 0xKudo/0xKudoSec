@@ -231,11 +231,14 @@ ipcMain.on('window:close', () => mainWindow?.close());
 autoUpdater.autoDownload = false;
 autoUpdater.autoInstallOnAppQuit = false;
 
+let pendingUpdateInfo = null; // cache in case renderer registers listener after event fires
+
 function setupAutoUpdater() {
   // Only run in packaged app -- not during dev
   if (!app.isPackaged) return;
 
   autoUpdater.on('update-available', (info) => {
+    pendingUpdateInfo = { version: info.version };
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('update:available', { version: info.version });
     }
@@ -264,6 +267,7 @@ function setupAutoUpdater() {
   setInterval(() => autoUpdater.checkForUpdates(), 4 * 60 * 60 * 1000);
 }
 
+ipcMain.handle('update:check-pending', () => pendingUpdateInfo);
 ipcMain.handle('update:download', () => autoUpdater.downloadUpdate());
 ipcMain.handle('update:install', () => {
   // Clear Electron cache before install so the new version loads fresh

@@ -113,6 +113,10 @@ function UpdateBanner() {
     window.electron.updater.onReady(() => setState('ready'));
     window.electron.updater.onError(() => setState('error'));
     window.electron.updater.onDismissed(() => setDismissed(true));
+    // Check if update-available fired before this component mounted
+    window.electron.updater.checkPending().then(info => {
+      if (info) { setVersion(info.version); setState('available'); }
+    });
   }, []);
 
   if (!isElectron || dismissed || !state) return null;
