@@ -397,6 +397,11 @@ export function SiemConfiguration() {
     loadSources();
   }, []);
 
+  // Refresh key metadata when user navigates to the API Key tab
+  useEffect(() => {
+    if (tab === 0 && !newKey) loadKey();
+  }, [tab]);
+
   async function generateKey() {
     setGenerating(true);
     try {
