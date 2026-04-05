@@ -13,6 +13,7 @@ import pool from '../services/db.js';
 import { requireAuth } from '../middleware/requireAuth.js';
 import { runDetectionRules } from '../services/detection.js';
 import { audit } from '../services/audit.js';
+import { broadcast } from '../services/wsBroadcast.js';
 import { ingestKeyLimiter, ruleImportLimiter } from '../middleware/rateLimiter.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -538,6 +539,7 @@ router.post('/ingest-key', ingestKeyLimiter, async (req, res) => {
     [uid(req), hashed, expiryDays]
   );
   audit(uid(req), isRotate ? 'ingest_key.rotate' : 'ingest_key.create', { expiry_days: expiryDays }, req.ip);
+  if (isRotate) broadcast('ingest_key_rotated', { userId: uid(req) });
   res.json({ api_key: key, created_at: rows[0].created_at, expires_at: rows[0].expires_at, expiry_days: rows[0].expiry_days });
 });
 
