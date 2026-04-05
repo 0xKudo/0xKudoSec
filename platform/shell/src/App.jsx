@@ -85,9 +85,9 @@ function ElectronLoadingScreen() {
 }
 
 const collapseBtn = (collapsed) => ({
-  position: 'absolute',
-  left: collapsed ? 0 : 'calc(100% - 16px)',
-  bottom: '80px',
+  position: 'fixed',
+  left: collapsed ? 0 : '240px',
+  bottom: 'calc(80px / 1.15)',
   width: '16px',
   height: '48px',
   background: 'var(--accent-amber)',
