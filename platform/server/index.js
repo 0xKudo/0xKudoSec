@@ -18,17 +18,17 @@ import { startRetentionCron } from './services/retentionCron.js';
 
 const app = express();
 
-// Correlation ID — attach to every request, return in response header
-app.use((req, res, next) => {
-  req.id = randomUUID();
-  res.setHeader('X-Request-ID', req.id);
-  next();
-});
-
 app.use(helmet({
   crossOriginResourcePolicy: { policy: process.env.NODE_ENV === 'production' ? 'same-origin' : 'cross-origin' },
 }));
 app.use(corsMiddleware);
+
+// Correlation ID — attach to every request, return in response header
+app.use((req, res, next) => {
+  req.id = randomUUID();
+  res.set('X-Request-ID', req.id);
+  next();
+});
 app.get('/health', (req, res) => res.json({ ok: true }));
 app.use('/api/ingest', express.json({ limit: '10mb' }), apiRateLimiter, ingestRoutes);
 app.use('/api/siem', express.json({ limit: '50kb' }), apiRateLimiter, siemRoutes);
