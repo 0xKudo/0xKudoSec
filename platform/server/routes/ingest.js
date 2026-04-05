@@ -56,7 +56,9 @@ async function requireIngestKey(req, res, next) {
       ).catch(() => {});
       return next();
     }
-  } catch {}
+  } catch (err) {
+    console.error('[ingest auth] key lookup failed:', err.message);
+  }
 
   // Fallback: env key (dev only) — no user scoping
   if (token === process.env.INGEST_API_KEY) {
