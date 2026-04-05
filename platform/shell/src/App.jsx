@@ -329,7 +329,7 @@ function AppInner() {
           <>
             {!isMobile && (isElectron && !isAuthenticated
               ? <ElectronCollapsibleSiemSidebar siemView={siemView} setSiemView={setSiemView} onSwitchToTools={() => switchApp('tools')} />
-              : <SiemSidebar activeView={siemView} onNavigate={setSiemView} onSwitchToTools={() => switchApp('tools')} isAuthenticated={isAuthenticated} />
+              : <SiemSidebar activeView={siemView} onNavigate={handleSiemNavigate} onSwitchToTools={() => switchApp('tools')} isAuthenticated={isAuthenticated} />
             )}
             <main style={isMobile ? { flex: 1, background: 'var(--bg-primary)' } : { flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column', background: 'var(--bg-primary)', minWidth: 0, ...(isElectron && !isAuthenticated ? { alignItems: 'center', justifyContent: 'center' } : {}) }}>
               {keyRotatedBanner && (
@@ -342,11 +342,11 @@ function AppInner() {
                 ? <SiemConfiguration />
                 : (
                   <RequireAuth>
-                    {siemView === 'dashboard' && (isMobile ? <SiemDashboardMobile onNavigate={setSiemView} /> : <SiemDashboard onNavigate={setSiemView} />)}
-                    {siemView === 'alerts' && <AlertQueue onNavigate={setSiemView} />}
-                    {siemView === 'rules' && <DetectionRules onNavigate={setSiemView} />}
+                    {siemView === 'dashboard' && (isMobile ? <SiemDashboardMobile onNavigate={handleSiemNavigate} /> : <SiemDashboard onNavigate={handleSiemNavigate} />)}
+                    {siemView === 'alerts' && <AlertQueue onNavigate={handleSiemNavigate} />}
+                    {siemView === 'rules' && <DetectionRules onNavigate={handleSiemNavigate} />}
                     {siemView === 'logsearch' && <LogSearch />}
-                    {siemView === 'cases' && <Cases onNavigate={setSiemView} />}
+                    {siemView === 'cases' && <Cases onNavigate={handleSiemNavigate} />}
                     {siemView === 'configuration' && <SiemConfiguration />}
                     {siemView === 'auditlog' && <AuditLog />}
                     {!['dashboard','alerts','rules','logsearch','cases','configuration','auditlog'].includes(siemView) && (
