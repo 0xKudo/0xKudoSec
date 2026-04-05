@@ -87,7 +87,7 @@ function ElectronLoadingScreen() {
 const collapseToggleStyle = {
   position: 'absolute',
   right: 0,
-  top: '8px',
+  top: 'calc(100% - 120px)',
   transform: 'translateX(100%)',
   width: '16px',
   height: '48px',
