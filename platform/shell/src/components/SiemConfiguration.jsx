@@ -290,7 +290,7 @@ const FLUENT_BIT_CONFIG = (apiKey) => `[SERVICE]
 
 export function SiemConfiguration() {
   const isMobile = useIsMobile();
-  const { getAccessTokenSilently, user, isAuthenticated } = useAuth0();
+  const { getAccessTokenSilently, user, isAuthenticated, logout } = useAuth0();
   const isElectronUnauth = typeof window !== 'undefined' && window.electron?.isElectron === true && !isAuthenticated;
   const [tab, setTab] = useState(isElectronUnauth ? 5 : 0);
 
@@ -334,6 +334,12 @@ export function SiemConfiguration() {
   const socialProvider = sub.startsWith('google-oauth2|') ? 'Google' : sub.startsWith('github|') ? 'GitHub' : null;
   const [pwStatus, setPwStatus] = useState(null);
   const [pwError, setPwError] = useState('');
+
+  // Account deletion state
+  const [deleteModal, setDeleteModal] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
 
   // Active Sources + upload + export
   const [sources, setSources] = useState([]);
@@ -429,6 +435,29 @@ export function SiemConfiguration() {
       });
       setAuditSaved(res.ok ? 'ok' : 'error');
     } catch { setAuditSaved('error'); }
+  }
+
+  async function deleteAccount() {
+    setDeleting(true);
+    setDeleteError('');
+    try {
+      const token = await getAccessTokenSilently();
+      const res = await fetch('/api/siem/account', {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setDeleteError(data.error || 'Deletion failed. Try again.');
+        setDeleting(false);
+        return;
+      }
+      // Log out after successful deletion
+      logout({ returnTo: window.location.origin });
+    } catch {
+      setDeleteError('Request failed. Try again.');
+      setDeleting(false);
+    }
   }
 
   async function sendPasswordReset() {
@@ -639,6 +668,61 @@ winlogbeat.event_logs:
                   You signed in with {socialProvider ?? 'a social provider'}. Password management is handled by {socialProvider ?? 'your provider'}.
                 </div>
               )}
+            </div>
+
+            {/* ── Danger Zone ── */}
+            <div style={{ borderTop: '1px solid var(--severity-critical)', marginTop: '32px', paddingTop: '20px' }}>
+              <div style={{ ...s.sectionTitle, color: 'var(--severity-critical)' }}>Danger Zone</div>
+              <div style={s.sectionDesc}>
+                Permanently delete your account and all associated data — logs, alerts, cases, detection rules, ingest keys, and settings.
+                Audit log entries are anonymized and retained for legal compliance. This action cannot be undone.
+              </div>
+              <button
+                style={{ ...s.btnPrimary, background: 'transparent', border: '1px solid var(--severity-critical)', color: 'var(--severity-critical)' }}
+                onClick={() => { setDeleteModal(true); setDeleteConfirmText(''); setDeleteError(''); }}
+              >
+                Delete My Account
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ── Account Deletion Confirm Modal ── */}
+        {deleteModal && (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+            <div style={{ background: 'var(--bg-primary)', border: '1px solid var(--severity-critical)', padding: '28px 32px', maxWidth: '420px', width: '90%' }}>
+              <div style={{ fontSize: '13px', color: 'var(--severity-critical)', marginBottom: '12px', letterSpacing: '0.04em' }}>DELETE ACCOUNT</div>
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', lineHeight: 1.7, marginBottom: '20px' }}>
+                This will permanently delete all your logs, alerts, cases, detection rules, and ingest keys.
+                Your audit log entries will be anonymized. <strong style={{ color: 'var(--text-primary)' }}>This cannot be undone.</strong>
+              </div>
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px' }}>
+                Type <strong style={{ color: 'var(--text-primary)' }}>DELETE</strong> to confirm:
+              </div>
+              <input
+                style={{ ...s.input, width: '100%', marginBottom: '16px', boxSizing: 'border-box' }}
+                value={deleteConfirmText}
+                onChange={e => { setDeleteConfirmText(e.target.value); setDeleteError(''); }}
+                placeholder="DELETE"
+                autoFocus
+              />
+              {deleteError && <div style={{ ...s.status(false), marginBottom: '12px' }}>{deleteError}</div>}
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button
+                  style={{ ...s.btnPrimary, background: 'var(--severity-critical)', border: '1px solid var(--severity-critical)', color: '#fff', opacity: deleteConfirmText !== 'DELETE' || deleting ? 0.5 : 1 }}
+                  disabled={deleteConfirmText !== 'DELETE' || deleting}
+                  onClick={deleteAccount}
+                >
+                  {deleting ? 'Deleting...' : 'Delete Everything'}
+                </button>
+                <button
+                  style={{ ...s.btnPrimary, background: 'transparent' }}
+                  onClick={() => setDeleteModal(false)}
+                  disabled={deleting}
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
           </div>
         )}

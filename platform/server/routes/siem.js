@@ -999,6 +999,78 @@ router.post('/change-password', wrap(async (req, res) => {
   res.json({ ok: true });
 }));
 
+// ── ACCOUNT DELETION (GDPR Art. 17 right to erasure) ─────────────────────────
+// Deletes all user data across all tables. Audit log entries are anonymized
+// (user_id set to '[deleted]') rather than deleted — required for legal traceability.
+// Also deletes the Auth0 user via Management API.
+router.delete('/account', wrap(async (req, res) => {
+  const userId = uid(req);
+  const domain       = process.env.AUTH0_DOMAIN;
+  const clientId     = process.env.AUTH0_MGMT_CLIENT_ID;
+  const clientSecret = process.env.AUTH0_MGMT_CLIENT_SECRET;
+
+  if (!clientId || !clientSecret) {
+    return res.status(500).json({ error: 'Account deletion is not configured on this server.' });
+  }
+
+  // Write a final audit entry before anonymizing
+  await audit(userId, 'account.delete', { initiated_by: userId }, req.ip);
+
+  // Delete all user data in dependency order
+  const client = await pool.getPool().connect();
+  try {
+    await client.query('BEGIN');
+
+    // case_alerts cascade-deletes when alerts or cases are deleted
+    await client.query('DELETE FROM alerts WHERE user_id = $1', [userId]);
+    await client.query('DELETE FROM cases WHERE user_id = $1', [userId]);
+    await client.query('DELETE FROM detection_rules WHERE user_id = $1', [userId]);
+    await client.query('DELETE FROM logs WHERE user_id = $1', [userId]);
+    await client.query('DELETE FROM ingest_sources WHERE user_id = $1', [userId]);
+    await client.query('DELETE FROM user_ingest_keys WHERE user_id = $1', [userId]);
+    await client.query('DELETE FROM user_settings WHERE user_id = $1', [userId]);
+
+    // Anonymize audit log — retain entries for legal traceability, remove PII
+    await client.query(
+      `UPDATE audit_log SET user_id = '[deleted]', ip = NULL WHERE user_id = $1`,
+      [userId]
+    );
+
+    await client.query('COMMIT');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+
+  // Delete Auth0 user via Management API
+  try {
+    const tokenRes = await fetch(`https://${domain}/oauth/token`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        grant_type: 'client_credentials',
+        client_id: clientId,
+        client_secret: clientSecret,
+        audience: `https://${domain}/api/v2/`,
+      }),
+    });
+    if (tokenRes.ok) {
+      const { access_token } = await tokenRes.json();
+      await fetch(`https://${domain}/api/v2/users/${encodeURIComponent(userId)}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${access_token}` },
+      });
+    }
+  } catch {
+    // Auth0 deletion failure is non-fatal — local data already deleted
+    console.error(`[account.delete] Auth0 deletion failed for ${userId}`);
+  }
+
+  res.json({ ok: true });
+}));
+
 // ── AUDIT LOG ─────────────────────────────────────────────────────────────────
 router.get('/audit-log', wrap(async (req, res) => {
   const limit = Math.min(parseInt(req.query.limit, 10) || 100, 500);
