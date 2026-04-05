@@ -9,11 +9,12 @@ import pool from './db.js';
  * @param {object} meta    - arbitrary JSON detail (rule name, count, IP, etc.)
  * @param {string} ip      - request IP for traceability
  */
-export async function audit(userId, action, meta = {}, ip = null) {
+export async function audit(userId, action, meta = {}, ip = null, requestId = null) {
   try {
+    const metaWithId = requestId ? { ...meta, requestId } : meta;
     await pool.query(
       `INSERT INTO audit_log (user_id, action, meta, ip) VALUES ($1, $2, $3, $4)`,
-      [userId, action, JSON.stringify(meta), ip]
+      [userId, action, JSON.stringify(metaWithId), ip]
     );
   } catch (err) {
     // Never let an audit failure break the main request

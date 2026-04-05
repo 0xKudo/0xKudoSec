@@ -4,6 +4,7 @@ import { fileURLToPath as _fileURLToPath } from 'url';
 const _dirname = _fileURLToPath(new URL('.', import.meta.url));
 config({ path: resolve(_dirname, '../../.env') });
 import express from 'express';
+import { randomUUID } from 'crypto';
 import helmet from 'helmet';
 import { corsMiddleware } from './middleware/cors.js';
 import { apiRateLimiter } from './middleware/rateLimiter.js';
@@ -16,6 +17,13 @@ import { attachWebSocketServer } from './services/wsBroadcast.js';
 import { startRetentionCron } from './services/retentionCron.js';
 
 const app = express();
+
+// Correlation ID — attach to every request, return in response header
+app.use((req, res, next) => {
+  req.id = randomUUID();
+  res.setHeader('X-Request-ID', req.id);
+  next();
+});
 
 app.use(helmet({
   crossOriginResourcePolicy: { policy: process.env.NODE_ENV === 'production' ? 'same-origin' : 'cross-origin' },
@@ -33,8 +41,13 @@ app.use((err, req, res, next) => {
   if (err.name === 'UnauthorizedError') {
     return res.status(401).json({ error: 'Unauthorized' });
   }
-  console.error('[server error]', err.message, err.stack?.split('\n')[1]?.trim());
-  res.status(500).json({ error: err.message || 'Internal server error' });
+  const requestId = req.id || 'unknown';
+  console.error(`[server error] requestId=${requestId}`, err.message, err.stack);
+  if (process.env.NODE_ENV === 'production') {
+    res.status(500).json({ error: 'Internal server error', requestId });
+  } else {
+    res.status(500).json({ error: err.message || 'Internal server error', requestId });
+  }
 });
 
 // createApp sets up the express app and loads tools.
