@@ -123,21 +123,24 @@ function UpdateBanner() {
 
   const bannerStyle = {
     background: 'var(--bg-surface)',
-    borderBottom: '1px solid var(--border)',
+    borderBottom: '1px solid var(--accent-amber)',
     padding: '6px 16px',
     display: 'flex',
     alignItems: 'center',
     gap: '12px',
     fontSize: '11px',
-    color: 'var(--text-muted)',
+    color: 'var(--accent-amber)',
     flexShrink: 0,
   };
+
+  const dismissBtn = { background: 'none', border: 'none', color: 'var(--accent-amber)', fontFamily: 'var(--font)', fontSize: '11px', cursor: 'pointer', opacity: 0.7 };
+  const actionBtn = { background: 'none', border: '1px solid var(--accent-amber)', color: 'var(--accent-amber)', fontFamily: 'var(--font)', fontSize: '11px', padding: '3px 10px', cursor: 'pointer', letterSpacing: '0.04em' };
 
   if (state === 'available') return (
     <div style={bannerStyle}>
       <span>Update available — v{version}</span>
-      <button style={{ ...styles.authBtn, padding: '3px 10px' }} onClick={() => window.electron.updater.download()}>Download</button>
-      <button style={{ background: 'none', border: 'none', color: 'var(--text-subtle)', fontFamily: 'var(--font)', fontSize: '11px', cursor: 'pointer' }} onClick={() => { setDismissed(true); window.electron.updater.dismiss(); }}>✕</button>
+      <button style={actionBtn} onClick={() => window.electron.updater.download()}>Download</button>
+      <button style={dismissBtn} onClick={() => { setDismissed(true); window.electron.updater.dismiss(); }}>✕</button>
     </div>
   );
 
@@ -145,7 +148,7 @@ function UpdateBanner() {
     <div style={bannerStyle}>
       <span>Downloading update... {percent}%</span>
       <div style={{ flex: 1, maxWidth: '120px', height: '3px', background: 'var(--border)', borderRadius: '2px' }}>
-        <div style={{ width: `${percent}%`, height: '100%', background: 'var(--text-muted)', borderRadius: '2px', transition: 'width 0.2s' }} />
+        <div style={{ width: `${percent}%`, height: '100%', background: 'var(--accent-amber)', borderRadius: '2px', transition: 'width 0.2s' }} />
       </div>
     </div>
   );
@@ -153,15 +156,15 @@ function UpdateBanner() {
   if (state === 'ready') return (
     <div style={bannerStyle}>
       <span>Update ready to install</span>
-      <button style={{ ...styles.authBtn, padding: '3px 10px' }} onClick={() => window.electron.updater.install()}>Restart & Install</button>
-      <button style={{ background: 'none', border: 'none', color: 'var(--text-subtle)', fontFamily: 'var(--font)', fontSize: '11px', cursor: 'pointer' }} onClick={() => setDismissed(true)}>later</button>
+      <button style={actionBtn} onClick={() => window.electron.updater.install()}>Restart & Install</button>
+      <button style={dismissBtn} onClick={() => setDismissed(true)}>later</button>
     </div>
   );
 
   if (state === 'error') return (
     <div style={bannerStyle}>
       <span>Update check failed</span>
-      <button style={{ background: 'none', border: 'none', color: 'var(--text-subtle)', fontFamily: 'var(--font)', fontSize: '11px', cursor: 'pointer' }} onClick={() => setDismissed(true)}>✕</button>
+      <button style={dismissBtn} onClick={() => setDismissed(true)}>✕</button>
     </div>
   );
 
