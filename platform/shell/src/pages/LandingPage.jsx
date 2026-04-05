@@ -460,7 +460,7 @@ function DesktopLanding({ onLogin }) {
           >Browse Tools</button>
           <a
             href={DESKTOP_DOWNLOAD_URL}
-            style={{ ...s.btnSecondary, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px', color: 'var(--accent-amber)', borderColor: 'var(--accent-amber)' }}
+            style={{ ...s.btnSecondary, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px', color: 'var(--accent-amber)', borderColor: 'var(--accent-amber)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}
             onMouseEnter={e => { e.currentTarget.style.background = 'var(--accent-amber)'; e.currentTarget.style.color = 'var(--bg-primary)'; }}
             onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = 'var(--accent-amber)'; }}
           >↓ Download for Windows</a>
