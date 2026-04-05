@@ -5,11 +5,6 @@ export const requireAuth = (req, res, next) => {
   const AUTH0_DOMAIN = process.env.AUTH0_DOMAIN;
   const AUTH0_AUDIENCE = process.env.AUTH0_AUDIENCE;
 
-  // SSE streams can't send headers — accept token from query param
-  if (req.query.token && !req.headers.authorization) {
-    req.headers.authorization = `Bearer ${req.query.token}`;
-  }
-
   return expressjwt({
     secret: expressJwtSecret({
       cache: true,
