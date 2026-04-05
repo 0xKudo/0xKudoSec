@@ -2,25 +2,56 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 
 const ACTION_LABELS = {
+  // Ingest key
+  'ingest_key.create':    'API Key Created',
   'ingest_key.rotate':    'API Key Rotated',
+  // Rules
   'rule.create':          'Rule Created',
+  'rule.update':          'Rule Updated',
+  'rule.toggle':          'Rule Toggled',
   'rule.delete':          'Rule Deleted',
   'rules.import':         'Rules Imported',
+  // Alerts
+  'alert.status_change':  'Alert Status Changed',
+  'alert.delete':         'Alert Deleted',
   'alerts.bulk_delete':   'Alerts Bulk Deleted',
-  'alerts.bulk_status':   'Alerts Status Updated',
+  'alerts.bulk_status':   'Alerts Bulk Status',
+  // Cases
   'case.create':          'Case Created',
+  'case.update':          'Case Updated',
+  'case.status_change':   'Case Status Changed',
   'case.delete':          'Case Deleted',
+  // Data
+  'export.logs':          'Log Data Exported',
+  'ingest.file_upload':   'Log File Uploaded',
+  // Settings
+  'settings.update':      'Settings Updated',
 };
 
 const ACTION_COLOR = {
-  'rule.delete':        'var(--severity-critical)',
-  'alerts.bulk_delete': 'var(--severity-high)',
-  'case.delete':        'var(--severity-high)',
-  'rule.create':        'var(--severity-low)',
-  'case.create':        'var(--severity-low)',
-  'rules.import':       'var(--severity-info)',
-  'ingest_key.rotate':  'var(--severity-medium)',
-  'alerts.bulk_status': 'var(--severity-info)',
+  // Destructive
+  'rule.delete':          'var(--severity-critical)',
+  'alerts.bulk_delete':   'var(--severity-high)',
+  'alert.delete':         'var(--severity-high)',
+  'case.delete':          'var(--severity-high)',
+  // Credential changes
+  'ingest_key.create':    'var(--severity-medium)',
+  'ingest_key.rotate':    'var(--severity-medium)',
+  // Data movement
+  'export.logs':          'var(--severity-medium)',
+  'ingest.file_upload':   'var(--severity-info)',
+  // Creates
+  'rule.create':          'var(--severity-low)',
+  'case.create':          'var(--severity-low)',
+  // Updates / status changes
+  'rule.update':          'var(--severity-info)',
+  'rule.toggle':          'var(--severity-info)',
+  'rules.import':         'var(--severity-info)',
+  'alert.status_change':  'var(--severity-info)',
+  'alerts.bulk_status':   'var(--severity-info)',
+  'case.update':          'var(--severity-info)',
+  'case.status_change':   'var(--severity-info)',
+  'settings.update':      'var(--severity-info)',
 };
 
 const styles = {

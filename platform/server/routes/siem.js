@@ -496,6 +496,11 @@ router.get('/ingest-key', async (req, res) => {
 router.post('/ingest-key', async (req, res) => {
   const key = randomBytes(32).toString('hex');
   const hashed = hashKey(key);
+  // Check if key already exists to distinguish create vs rotate
+  const { rows: existing } = await pool.query(
+    'SELECT user_id FROM user_ingest_keys WHERE user_id = $1', [uid(req)]
+  );
+  const isRotate = existing.length > 0;
   const { rows } = await pool.query(
     `INSERT INTO user_ingest_keys (user_id, api_key)
      VALUES ($1, $2)
@@ -504,7 +509,7 @@ router.post('/ingest-key', async (req, res) => {
     [uid(req), hashed]
   );
   // Return the plaintext key once — it is never stored or retrievable again
-  audit(uid(req), 'ingest_key.rotate', {}, req.ip);
+  audit(uid(req), isRotate ? 'ingest_key.rotate' : 'ingest_key.create', {}, req.ip);
   res.json({ api_key: key, created_at: rows[0].created_at });
 });
 
@@ -607,6 +612,13 @@ router.patch('/rules/:id', wrap(async (req, res) => {
     params
   );
   if (!rows.length) return res.status(404).json({ error: 'not found' });
+  // Distinguish toggle (enabled only) from full edit
+  const isToggle = Object.keys(req.body).length === 1 && 'enabled' in req.body;
+  if (isToggle) {
+    audit(uid(req), 'rule.toggle', { id, name: rows[0].name, enabled: rows[0].enabled }, req.ip);
+  } else {
+    audit(uid(req), 'rule.update', { id, name: rows[0].name }, req.ip);
+  }
   res.json(rows[0]);
 }));
 
@@ -730,6 +742,7 @@ router.patch('/alerts/:id', wrap(async (req, res) => {
     [status, uid(req), id]
   );
   if (!rows.length) return res.status(404).json({ error: 'not found' });
+  audit(uid(req), 'alert.status_change', { id, status: rows[0].status }, req.ip);
   res.json(rows[0]);
 }));
 
@@ -755,6 +768,7 @@ router.delete('/alerts/:id', wrap(async (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (isNaN(id)) return res.status(400).json({ error: 'invalid id' });
   await pool.query('DELETE FROM alerts WHERE user_id = $1 AND id = $2', [uid(req), id]);
+  audit(uid(req), 'alert.delete', { id }, req.ip);
   res.json({ ok: true });
 }));
 
@@ -808,6 +822,11 @@ router.patch('/cases/:id', wrap(async (req, res) => {
     params
   );
   if (!rows.length) return res.status(404).json({ error: 'not found' });
+  if ('status' in req.body) {
+    audit(uid(req), 'case.status_change', { id, status: rows[0].status }, req.ip);
+  } else {
+    audit(uid(req), 'case.update', { id, title: rows[0].title }, req.ip);
+  }
   res.json(rows[0]);
 }));
 
@@ -887,6 +906,11 @@ router.patch('/settings', wrap(async (req, res) => {
      RETURNING *`,
     [uid(req), days, auditEnabled, auditDays]
   );
+  audit(uid(req), 'settings.update', {
+    log_retention_days: rows[0].log_retention_days,
+    audit_log_retention_enabled: rows[0].audit_log_retention_enabled,
+    audit_log_retention_days: rows[0].audit_log_retention_days,
+  }, req.ip);
   res.json(rows[0]);
 }));
 
@@ -916,6 +940,7 @@ router.get('/logs/export', wrap(async (req, res) => {
 
   const fromStr = fromDate.toISOString().slice(0, 10);
   const toStr   = toDate.toISOString().slice(0, 10);
+  audit(uid(req), 'export.logs', { from: fromStr, to: toStr, count: rows.length }, req.ip);
   res.setHeader('Content-Disposition', `attachment; filename="logs-${fromStr}-to-${toStr}.json"`);
   res.setHeader('Content-Type', 'application/json');
   res.json(rows);

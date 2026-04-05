@@ -7,6 +7,7 @@ import { normalizeEvent } from '../services/ingest/normalizeEvent.js';
 import { broadcast } from '../services/wsBroadcast.js';
 import { requireAuth } from '../middleware/requireAuth.js';
 import { runDetectionRules } from '../services/detection.js';
+import { audit } from '../services/audit.js';
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -135,6 +136,7 @@ router.post('/upload', requireAuth, upload.single('file'), async (req, res, next
     const userId = req.auth.sub;
     const accepted = await insertEvents(events, userId);
     if (accepted > 0) broadcast('new_events', { count: accepted });
+    audit(userId, 'ingest.file_upload', { filename: req.file.originalname, total: events.length, accepted }, req.ip);
     res.json({ accepted, total: events.length });
   } catch (err) {
     if (err instanceof SyntaxError) return res.status(400).json({ error: 'Invalid JSON in file' });
