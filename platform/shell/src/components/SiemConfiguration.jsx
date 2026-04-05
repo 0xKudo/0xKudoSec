@@ -153,7 +153,7 @@ const s = {
     borderBottom: active ? '2px solid var(--text-primary)' : '2px solid transparent',
     marginBottom: '-1px', whiteSpace: 'nowrap',
   }),
-  body: { flex: 1, overflow: 'auto' },
+  body: { flex: 1, overflow: 'auto', minHeight: 0 },
   section: { padding: '24px 28px', maxWidth: '660px' },
   sectionTitle: {
     fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase',

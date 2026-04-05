@@ -14,7 +14,7 @@ const SEV_COLOR = {
 const STATUS_OPTIONS = ['new', 'acknowledged', 'resolved'];
 
 const s = {
-  container: { padding: 0 },
+  container: { padding: 0, flex: 1, minHeight: 0, overflow: 'auto' },
   header: {
     padding: '12px 20px', borderBottom: '1px solid var(--border)',
     background: 'var(--bg-surface)', display: 'flex', alignItems: 'center', gap: '12px',

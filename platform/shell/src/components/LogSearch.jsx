@@ -15,7 +15,7 @@ const HOURS_OPTIONS = [1, 6, 24, 48, 168];
 const FIELD_HINTS = ['username:', 'host:', 'src:', 'dst:', 'process:', 'event_id:', 'event:', 'msg:'];
 
 const s = {
-  container: { padding: 0, display: 'flex', flexDirection: 'column', height: '100%' },
+  container: { padding: 0, display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 },
   header: {
     padding: '12px 20px', borderBottom: '1px solid var(--border)',
     background: 'var(--bg-surface)', display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0,

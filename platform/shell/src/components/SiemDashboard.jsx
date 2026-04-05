@@ -38,7 +38,7 @@ function savePersistedState(state) {
 const ALL_CATEGORIES = ['authentication', 'network', 'process', 'file', 'dns', 'registry', 'system', 'firewall', 'account', 'policy'];
 
 const s = {
-  container: { padding: 0 },
+  container: { padding: 0, flex: 1, minHeight: 0, overflow: 'auto' },
   pageHeader: {
     padding: '12px 20px',
     borderBottom: '1px solid var(--border)',

@@ -272,7 +272,7 @@ function AppInner() {
               ? <ElectronCollapsibleSiemSidebar siemView={siemView} setSiemView={setSiemView} onSwitchToTools={() => switchApp('tools')} />
               : <SiemSidebar activeView={siemView} onNavigate={setSiemView} onSwitchToTools={() => switchApp('tools')} isAuthenticated={isAuthenticated} />
             )}
-            <main style={isMobile ? { flex: 1, background: 'var(--bg-primary)' } : { flex: 1, minHeight: 0, overflow: siemView === 'configuration' ? 'hidden' : 'auto', display: 'flex', flexDirection: 'column', background: 'var(--bg-primary)', minWidth: 0, ...(isElectron && !isAuthenticated ? { alignItems: 'center', justifyContent: 'center' } : {}) }}>
+            <main style={isMobile ? { flex: 1, background: 'var(--bg-primary)' } : { flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column', background: 'var(--bg-primary)', minWidth: 0, ...(isElectron && !isAuthenticated ? { alignItems: 'center', justifyContent: 'center' } : {}) }}>
               {isElectron && siemView === 'configuration'
                 ? <SiemConfiguration />
                 : (
