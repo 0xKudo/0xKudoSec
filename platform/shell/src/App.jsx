@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { ToolRegistryProvider, useTools } from './context/ToolRegistry';
 import { WorkspaceProvider } from './context/WorkspaceContext';
 import { TopNav } from './components/TopNav';
@@ -66,6 +66,16 @@ function ToolLoader({ toolId }) {
 }
 
 const NO_AUTH_ROUTES = ['/decoder', '/reverse-shell-generator', '/wordlist-generator', '/payload-generator'];
+const SIEM_VIEW_PATHS = {
+  '/siem': 'dashboard',
+  '/siem/alerts': 'alerts',
+  '/siem/rules': 'rules',
+  '/siem/logsearch': 'logsearch',
+  '/siem/cases': 'cases',
+  '/siem/configuration': 'configuration',
+  '/siem/auditlog': 'auditlog',
+};
+const SIEM_VIEW_TO_PATH = Object.fromEntries(Object.entries(SIEM_VIEW_PATHS).map(([k, v]) => [v, k]));
 const isElectron = typeof window !== 'undefined' && window.electron?.isElectron === true;
 
 function ElectronLoadingScreen() {
@@ -144,14 +154,39 @@ function ElectronCollapsibleToolsSidebar({ onSwitchToSiem, onSwitchToSiemView })
 function AppInner() {
   const { isAuthenticated, isLoading } = useAuth0();
   const isMobile = useIsMobile();
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  // Derive activeApp and siemView from URL (web only — Electron stays state-based)
+  const derivedSiemView = !isElectron ? (SIEM_VIEW_PATHS[location.pathname] ?? null) : null;
+  const derivedActiveApp = !isElectron
+    ? (derivedSiemView !== null || location.pathname === '/' ? 'siem' : 'tools')
+    : 'tools';
+
   const [activeApp, setActiveApp] = useState(() => {
     if (isElectron) return 'tools';
-    const path = window.location.pathname;
-    return (path !== '/' && path !== '/siem') ? 'tools' : 'siem';
+    return derivedActiveApp;
   });
-  const [siemView, setSiemView] = useState('dashboard');
+  const [siemView, setSiemView] = useState(() => {
+    if (isElectron) return 'dashboard';
+    return derivedSiemView ?? 'dashboard';
+  });
   const [menuOpen, setMenuOpen] = useState(false);
   const [keyRotatedBanner, setKeyRotatedBanner] = useState(false);
+
+  // Sync state from URL on navigation (back/forward buttons, direct URL load)
+  useEffect(() => {
+    if (isElectron) return;
+    if (derivedSiemView !== null) {
+      setActiveApp('siem');
+      setSiemView(derivedSiemView);
+    } else if (location.pathname === '/') {
+      setActiveApp('siem');
+      setSiemView('dashboard');
+    } else {
+      setActiveApp('tools');
+    }
+  }, [location.pathname]);
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -167,7 +202,6 @@ function AppInner() {
     return () => { if (ws.readyState !== WebSocket.CONNECTING) ws.close(); else ws.onopen = () => ws.close(); };
   }, [isAuthenticated]);
   const tools = useTools();
-  const navigate = useNavigate();
 
   // Must be above any conditional returns to satisfy rules of hooks
   useEffect(() => {
@@ -216,17 +250,27 @@ function AppInner() {
   }
 
   const switchApp = (app) => {
-    setActiveApp(app);
     setMenuOpen(false);
-    if (app === 'tools') navigate('/dashboard');
+    if (app === 'tools') {
+      navigate('/dashboard');
+    } else {
+      navigate(SIEM_VIEW_TO_PATH[siemView] ?? '/siem');
+    }
   };
 
   const switchToSiem = () => switchApp('siem');
-  const switchToSiemView = (view) => { setActiveApp('siem'); setSiemView(view); setMenuOpen(false); };
+  const switchToSiemView = (view) => {
+    setMenuOpen(false);
+    navigate(SIEM_VIEW_TO_PATH[view] ?? '/siem');
+  };
 
   const handleSiemNavigate = (view) => {
-    setSiemView(view);
     setMenuOpen(false);
+    if (isElectron) {
+      setSiemView(view);
+    } else {
+      navigate(SIEM_VIEW_TO_PATH[view] ?? '/siem');
+    }
   };
 
   const handleToolNavigate = (route) => {
@@ -343,6 +387,7 @@ function AppInner() {
                   />
                 ))}
                 <Route path="/dashboard" element={isMobile ? <DashboardMobile /> : <Dashboard />} />
+                <Route path="/siem/*" element={null} />
                 <Route path="*" element={isMobile ? <DashboardMobile /> : <Dashboard />} />
               </Routes>
             </main>
