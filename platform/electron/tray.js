@@ -55,7 +55,7 @@ function buildMenu(mainWindow, store, status) {
       enabled: status === 'STOPPED',
       click: async () => {
         const { exec } = require('child_process');
-        exec('sc start fluent-bit', { windowsHide: true });
+        exec('powershell -Command "Start-Process sc -ArgumentList \'start fluent-bit\' -Verb RunAs -WindowStyle Hidden"', { windowsHide: true });
       },
     },
     {
@@ -63,7 +63,7 @@ function buildMenu(mainWindow, store, status) {
       enabled: status === 'RUNNING',
       click: async () => {
         const { exec } = require('child_process');
-        exec('sc stop fluent-bit', { windowsHide: true });
+        exec('powershell -Command "Start-Process sc -ArgumentList \'stop fluent-bit\' -Verb RunAs -WindowStyle Hidden"', { windowsHide: true });
       },
     },
     { type: 'separator' },

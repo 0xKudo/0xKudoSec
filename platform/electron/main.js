@@ -170,8 +170,12 @@ function forkServer(resolve, reject) {
 // ── Fluent Bit IPC ────────────────────────────────────────────────────────
 function runSc(args) {
   return new Promise((resolve) => {
-    exec(`sc ${args}`, { windowsHide: true }, (err, stdout) => {
-      resolve({ err: err ? err.message : null, stdout: stdout.trim() });
+    const needsElevation = args.startsWith('start') || args.startsWith('stop');
+    const cmd = needsElevation
+      ? `powershell -Command "Start-Process sc -ArgumentList '${args}' -Verb RunAs -WindowStyle Hidden -Wait"`
+      : `sc ${args}`;
+    exec(cmd, { windowsHide: true }, (err, stdout) => {
+      resolve({ err: err ? err.message : null, stdout: (stdout || '').trim() });
     });
   });
 }
