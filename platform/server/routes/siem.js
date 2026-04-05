@@ -487,31 +487,58 @@ router.get('/sources', async (req, res) => {
 // Ingest key management
 router.get('/ingest-key', async (req, res) => {
   const { rows } = await pool.query(
-    'SELECT created_at FROM user_ingest_keys WHERE user_id = $1',
+    'SELECT created_at, expires_at, expiry_days, last_used_at FROM user_ingest_keys WHERE user_id = $1',
     [uid(req)]
   );
-  // Never return the key on GET — only on POST (one-time reveal at generation)
-  res.json(rows[0] ? { exists: true, created_at: rows[0].created_at } : null);
+  // Never return the key hash on GET — only plaintext on POST (one-time reveal)
+  res.json(rows[0] ? {
+    exists: true,
+    created_at: rows[0].created_at,
+    expires_at: rows[0].expires_at,
+    expiry_days: rows[0].expiry_days,
+    last_used_at: rows[0].last_used_at,
+  } : null);
 });
 
 router.post('/ingest-key', ingestKeyLimiter, async (req, res) => {
   const key = randomBytes(32).toString('hex');
   const hashed = hashKey(key);
+
+  // Validate expiry_days — optional, defaults to 365, range 1-3650
+  let expiryDays = 365;
+  if (req.body.expiry_days !== undefined) {
+    expiryDays = parseInt(req.body.expiry_days, 10);
+    if (isNaN(expiryDays) || expiryDays < 1 || expiryDays > 3650) {
+      return res.status(400).json({ error: 'expiry_days must be between 1 and 3650' });
+    }
+  } else {
+    // Preserve existing expiry_days preference on rotate if not specified
+    const { rows: existing } = await pool.query(
+      'SELECT expiry_days FROM user_ingest_keys WHERE user_id = $1', [uid(req)]
+    );
+    if (existing.length) expiryDays = existing[0].expiry_days;
+  }
+
   // Check if key already exists to distinguish create vs rotate
   const { rows: existing } = await pool.query(
     'SELECT user_id FROM user_ingest_keys WHERE user_id = $1', [uid(req)]
   );
   const isRotate = existing.length > 0;
+
   const { rows } = await pool.query(
-    `INSERT INTO user_ingest_keys (user_id, api_key)
-     VALUES ($1, $2)
-     ON CONFLICT (user_id) DO UPDATE SET api_key = $2
-     RETURNING created_at`,
-    [uid(req), hashed]
+    `INSERT INTO user_ingest_keys (user_id, api_key, expiry_days, expires_at)
+     VALUES ($1, $2, $3, NOW() + ($3 || ' days')::INTERVAL)
+     ON CONFLICT (user_id) DO UPDATE SET
+       api_key = $2,
+       expiry_days = $3,
+       expires_at = NOW() + ($3 || ' days')::INTERVAL,
+       last_used_at = NULL,
+       created_at = NOW()
+     RETURNING created_at, expires_at, expiry_days`,
+    [uid(req), hashed, expiryDays]
   );
-  // Return the plaintext key once — it is never stored or retrievable again
-  audit(uid(req), isRotate ? 'ingest_key.rotate' : 'ingest_key.create', {}, req.ip);
-  res.json({ api_key: key, created_at: rows[0].created_at });
+  audit(uid(req), isRotate ? 'ingest_key.rotate' : 'ingest_key.create', { expiry_days: expiryDays }, req.ip);
+  res.json({ api_key: key, created_at: rows[0].created_at, expires_at: rows[0].expires_at, expiry_days: rows[0].expiry_days });
 });
 
 router.get('/shipper-download', wrap(async (req, res) => {

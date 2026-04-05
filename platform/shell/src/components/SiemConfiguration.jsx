@@ -302,6 +302,8 @@ export function SiemConfiguration() {
   const [copied, setCopied] = useState(false);
   const [shipperTab, setShipperTab] = useState(0);
   const [configCopied, setConfigCopied] = useState(false);
+  const [expiryDays, setExpiryDays] = useState('365');
+  const [expiryCustom, setExpiryCustom] = useState(false);
 
   // Electron agent status state
   const isElectron = typeof window !== 'undefined' && window.electron?.isElectron === true;
@@ -358,6 +360,11 @@ export function SiemConfiguration() {
       const res = await fetch('/api/siem/ingest-key', { headers: { Authorization: `Bearer ${token}` } });
       const meta = await res.json();
       setKeyMeta(meta);
+      if (meta?.expiry_days) {
+        const preset = ['30','90','180','365'].includes(String(meta.expiry_days));
+        setExpiryDays(String(meta.expiry_days));
+        setExpiryCustom(!preset);
+      }
     } catch {}
     setLoading(false);
   }
@@ -394,10 +401,14 @@ export function SiemConfiguration() {
     setGenerating(true);
     try {
       const token = await getAccessTokenSilently();
-      const res = await fetch('/api/siem/ingest-key', { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
+      const res = await fetch('/api/siem/ingest-key', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ expiry_days: parseInt(expiryDays, 10) }),
+      });
       const data = await res.json();
       setNewKey(data.api_key);
-      setKeyMeta({ exists: true, created_at: data.created_at });
+      setKeyMeta({ exists: true, created_at: data.created_at, expires_at: data.expires_at, expiry_days: data.expiry_days });
       setCopied(false);
     } catch {}
     setGenerating(false);
@@ -601,6 +612,34 @@ winlogbeat.event_logs:
               Your API key authorizes log shippers to send events to this platform. It is only shown once at generation time. Store it securely.
             </div>
 
+            {/* Expiry selector — always visible so user can change before generate/regenerate */}
+            <div style={{ marginBottom: '16px' }}>
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px' }}>Key expiry</div>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+                {['30','90','180','365'].map(d => (
+                  <button
+                    key={d}
+                    style={{ ...s.btn, background: expiryDays === d && !expiryCustom ? 'var(--btn-primary-bg)' : 'transparent', color: expiryDays === d && !expiryCustom ? 'var(--btn-primary-text)' : 'var(--text-muted)', marginRight: 0 }}
+                    onClick={() => { setExpiryDays(d); setExpiryCustom(false); }}
+                  >{d}d</button>
+                ))}
+                <button
+                  style={{ ...s.btn, background: expiryCustom ? 'var(--btn-primary-bg)' : 'transparent', color: expiryCustom ? 'var(--btn-primary-text)' : 'var(--text-muted)', marginRight: 0 }}
+                  onClick={() => setExpiryCustom(true)}
+                >Custom</button>
+                {expiryCustom && (
+                  <input
+                    style={{ ...s.input, width: '70px' }}
+                    type="number" min="1" max="3650"
+                    value={expiryDays}
+                    onChange={e => setExpiryDays(e.target.value)}
+                    placeholder="days"
+                    autoFocus
+                  />
+                )}
+              </div>
+            </div>
+
             {loading ? (
               <div style={s.keyMuted}>Loading...</div>
             ) : newKey ? (
@@ -621,8 +660,24 @@ winlogbeat.event_logs:
               </>
             ) : keyMeta?.exists ? (
               <>
+                {/* Expiry status */}
+                {(() => {
+                  const expiresAt = keyMeta.expires_at ? new Date(keyMeta.expires_at) : null;
+                  const now = new Date();
+                  const daysLeft = expiresAt ? Math.ceil((expiresAt - now) / (1000 * 60 * 60 * 24)) : null;
+                  if (daysLeft !== null && daysLeft <= 0) {
+                    return <div style={{ ...s.warning, marginBottom: '12px' }}>Your ingest key has expired. Regenerate it to resume log ingestion.</div>;
+                  }
+                  if (daysLeft !== null && daysLeft <= 7) {
+                    return <div style={{ ...s.warning, marginBottom: '12px' }}>Your ingest key expires in {daysLeft} day{daysLeft !== 1 ? 's' : ''}. Regenerate soon to avoid ingestion interruption.</div>;
+                  }
+                  return null;
+                })()}
                 <div style={s.keyMuted}>
-                  A key was generated on {new Date(keyMeta.created_at).toLocaleString()}.
+                  Generated {new Date(keyMeta.created_at).toLocaleString()}
+                  {keyMeta.expires_at && <span> · expires {new Date(keyMeta.expires_at).toLocaleDateString()}</span>}
+                  {keyMeta.last_used_at && <span> · last used {new Date(keyMeta.last_used_at).toLocaleString()}</span>}
+                  {!keyMeta.last_used_at && <span> · never used</span>}
                 </div>
                 <button style={s.btn} onClick={generateKey} disabled={generating}>
                   {generating ? 'Generating...' : 'Regenerate Key'}

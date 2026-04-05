@@ -33,10 +33,19 @@ async function requireIngestKey(req, res, next) {
   // Hash the incoming token and compare against stored hashes
   try {
     const { rows } = await pool.query(
-      'SELECT user_id FROM user_ingest_keys WHERE api_key = $1', [hashKey(token)]
+      'SELECT user_id, expires_at FROM user_ingest_keys WHERE api_key = $1', [hashKey(token)]
     );
     if (rows.length) {
+      // Check expiry
+      if (rows[0].expires_at && new Date(rows[0].expires_at) < new Date()) {
+        return res.status(401).json({ error: 'Ingest key expired. Rotate your key in Configuration.' });
+      }
       req.ingestUserId = rows[0].user_id;
+      // Update last_used_at — fire and forget, never block ingest
+      pool.query(
+        'UPDATE user_ingest_keys SET last_used_at = NOW() WHERE user_id = $1',
+        [rows[0].user_id]
+      ).catch(() => {});
       return next();
     }
   } catch {}
