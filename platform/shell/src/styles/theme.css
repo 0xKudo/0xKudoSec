@@ -52,7 +52,7 @@ body {
 }
 
 #root {
-  height: calc(100% / 1.15);
+  height: 100%;
   zoom: 1.15;
 }
 

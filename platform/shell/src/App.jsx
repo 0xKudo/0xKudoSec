@@ -24,7 +24,7 @@ import { useIsMobile } from './hooks/useIsMobile';
 import './styles/theme.css';
 
 const styles = {
-  layout: { display: 'flex', flexDirection: 'column', height: '100vh' },
+  layout: { display: 'flex', flexDirection: 'column', height: '100%' },
   body: { display: 'flex', flex: 1, overflow: 'hidden' },
   content: { flex: 1, overflow: 'auto' },
   overlay: {
