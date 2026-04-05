@@ -197,6 +197,9 @@ export function Sidebar({ onSwitchToSiem, onSwitchToSiemView }) {
 
       <div style={styles.footer}>
         <a href="https://laynekudo.com" style={styles.footerLink}>← laynekudo.com</a>
+        <div style={{ marginTop: '8px', fontSize: '10px', color: 'var(--text-muted)', letterSpacing: '0.04em', opacity: 0.6 }}>
+          v{__APP_VERSION__} &nbsp;·&nbsp; {__BUILD_DATE__}
+        </div>
       </div>
     </aside>
   );
