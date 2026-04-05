@@ -65,6 +65,9 @@ router.post('/beats', ingestBeatsLimiter, requireIngestKey, async (req, res) => 
   if (!body || typeof body !== 'object') {
     return res.status(400).json({ error: 'Request body must be a JSON object or array' });
   }
+  if (!req.ingestUserId) {
+    return res.status(401).json({ error: 'Ingest key is not associated with a user account.' });
+  }
 
   const events = Array.isArray(body) ? body : [body];
   const accepted = await insertEvents(events, req.ingestUserId);
