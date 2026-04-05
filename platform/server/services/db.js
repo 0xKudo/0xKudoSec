@@ -9,8 +9,9 @@ function getPool() {
     if (!process.env.DATABASE_URL) {
       throw new Error('DATABASE_URL is not set. Check your .env file.');
     }
-    const ssl = process.env.NODE_ENV === 'production' ? { rejectUnauthorized: true } : false;
-    console.log(`[db] SSL mode: ${ssl ? 'enabled' : 'disabled'}`);
+    // rejectUnauthorized: false — VPS uses a self-signed cert; connection is still encrypted
+    const ssl = process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false;
+    console.log(`[db] SSL mode: ${ssl ? 'enabled (self-signed allowed)' : 'disabled'}`);
     pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl });
   }
   return pool;
