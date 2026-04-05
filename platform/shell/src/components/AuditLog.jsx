@@ -187,12 +187,12 @@ export function AuditLog() {
         <div>
           <div style={styles.title}>Audit Log</div>
           <div style={styles.subtitle}>
-            Privileged user actions — append-only record
+            Privileged user actions, append-only record
             {retentionPolicy && (
               <span style={{ marginLeft: '12px', color: retentionPolicy.enabled && retentionPolicy.days < 365 ? 'var(--severity-high)' : 'var(--text-subtle)' }}>
                 {retentionPolicy.enabled
                   ? `· retained ${retentionPolicy.days} days${retentionPolicy.days < 365 ? ' (below PCI DSS minimum)' : ''}`
-                  : '· auto-purge disabled — retained indefinitely'}
+                  : '· auto-purge disabled, retained indefinitely'}
               </span>
             )}
           </div>

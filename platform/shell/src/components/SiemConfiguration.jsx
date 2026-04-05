@@ -598,7 +598,7 @@ winlogbeat.event_logs:
           <div style={s.section}>
             <div style={s.sectionTitle}>Ingest API Key</div>
             <div style={s.sectionDesc}>
-              Your API key authorizes log shippers to send events to this platform. It is only shown once at generation time — store it securely.
+              Your API key authorizes log shippers to send events to this platform. It is only shown once at generation time. Store it securely.
             </div>
 
             {loading ? (
@@ -606,7 +606,7 @@ winlogbeat.event_logs:
             ) : newKey ? (
               <>
                 <div style={s.warning}>
-                  This is the only time this key will be shown. Copy it now — if you leave this page without copying it, you will need to regenerate.
+                  This is the only time this key will be shown. Copy it now. If you leave this page without copying it, you will need to regenerate.
                 </div>
                 <div style={s.keyBox}>{newKey}</div>
                 <div style={{ display: 'flex', alignItems: 'center' }}>
@@ -616,7 +616,7 @@ winlogbeat.event_logs:
                 </div>
                 <div style={s.note}>
                   Use this key as the Bearer token in your log shipper. Go to <strong>Connect a Source</strong> to get pre-filled configs.<br />
-                  Regenerating will invalidate the old key — update any configured shippers after.
+                  Regenerating will invalidate the old key. Update any configured shippers after.
                 </div>
               </>
             ) : keyMeta?.exists ? (
@@ -627,7 +627,7 @@ winlogbeat.event_logs:
                 <button style={s.btn} onClick={generateKey} disabled={generating}>
                   {generating ? 'Generating...' : 'Regenerate Key'}
                 </button>
-                <div style={s.note}>Regenerating will invalidate the current key — update any configured shippers after.</div>
+                <div style={s.note}>Regenerating will invalidate the current key. Update any configured shippers after.</div>
               </>
             ) : (
               <>
@@ -674,7 +674,7 @@ winlogbeat.event_logs:
             <div style={{ borderTop: '1px solid var(--severity-critical)', marginTop: '32px', paddingTop: '20px' }}>
               <div style={{ ...s.sectionTitle, color: 'var(--severity-critical)' }}>Danger Zone</div>
               <div style={s.sectionDesc}>
-                Permanently delete your account and all associated data — logs, alerts, cases, detection rules, ingest keys, and settings.
+                Permanently delete your account and all associated data: logs, alerts, cases, detection rules, ingest keys, and settings.
                 Audit log entries are anonymized and retained for legal compliance. This action cannot be undone.
               </div>
               <button
@@ -874,7 +874,7 @@ winlogbeat.event_logs:
             {shipperTab === 0 && (
               <div>
                 <div style={s.note}>
-                  <strong style={{ color: 'var(--text-primary)' }}>Fluent Bit</strong> — lightweight, production-grade log shipper. Recommended for Windows.<br />
+                  <strong style={{ color: 'var(--text-primary)' }}>Fluent Bit</strong> is a lightweight, production-grade log shipper. Recommended for Windows.<br />
                   Download from <strong>fluentbit.io</strong>, then save the config below and run as a Windows service.<br /><br />
                   This config ships 10 Windows event channels: Security, Sysmon, System, Application, PowerShell, WMI, Task Scheduler, Defender, Firewall, and RDP.
                 </div>
@@ -932,7 +932,7 @@ winlogbeat.event_logs:
                     sc.exe create fluent-bit binPath= "C:\Program Files\fluent-bit\bin\fluent-bit.exe -c C:\Program Files\fluent-bit\conf\cybertools.conf" start= auto
                   </code>
                   <code style={{ display: 'block', marginTop: '4px', marginLeft: '12px' }}>Start-Service fluent-bit</code>
-                  4. Enable PowerShell Script Block Logging (Event ID 4104) — recommended:<br />
+                  4. Enable PowerShell Script Block Logging (Event ID 4104), recommended:<br />
                   <code style={{ display: 'block', marginTop: '6px', marginLeft: '12px', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
                     reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\PowerShell\ScriptBlockLogging" /v EnableScriptBlockLogging /t REG_DWORD /d 1 /f
                   </code>
@@ -944,7 +944,7 @@ winlogbeat.event_logs:
             {shipperTab === 1 && (
               <div>
                 <div style={s.note}>
-                  <strong style={{ color: 'var(--text-primary)' }}>Winlogbeat 7</strong> — Elastic's Windows event log shipper. Use version 7.x only — v8+ dropped generic HTTP output.<br />
+                  <strong style={{ color: 'var(--text-primary)' }}>Winlogbeat 7</strong> is Elastic's Windows event log shipper. Use version 7.x only, as v8+ dropped generic HTTP output.<br />
                   Download from <strong>elastic.co/downloads/past-releases</strong>, search for Winlogbeat 7.17.
                 </div>
                 <pre style={{ ...s.keyBox, marginTop: '12px', fontSize: '11px', lineHeight: 1.7, overflowX: 'auto' }}>{winlogbeatConfig}</pre>
@@ -966,7 +966,7 @@ winlogbeat.event_logs:
             {shipperTab === 2 && (
               <div>
                 <div style={s.note}>
-                  <strong style={{ color: 'var(--text-primary)' }}>Manual API</strong> — POST JSON events directly. Use for custom integrations, scripts, or any platform.
+                  <strong style={{ color: 'var(--text-primary)' }}>Manual API</strong>: POST JSON events directly. Use for custom integrations, scripts, or any platform.
                 </div>
                 <pre style={{ ...s.keyBox, marginTop: '12px', fontSize: '11px', lineHeight: 1.7, overflowX: 'auto' }}>{curlExample}</pre>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
@@ -997,7 +997,7 @@ winlogbeat.event_logs:
               <div>
                 {sources.length === 0 && (
                   <div style={{ padding: '20px 28px', fontSize: '12px', color: 'var(--text-muted)' }}>
-                    No sources yet — start the shipper to begin ingesting logs.
+                    No sources yet. Start the shipper to begin ingesting logs.
                   </div>
                 )}
                 {sources.map(src => (
@@ -1023,7 +1023,7 @@ winlogbeat.event_logs:
                 <tbody>
                   {sources.length === 0 && (
                     <tr><td colSpan={4} style={{ ...s.td, padding: '20px 14px' }}>
-                      No sources yet — start the shipper to begin ingesting logs.
+                      No sources yet. Start the shipper to begin ingesting logs.
                     </td></tr>
                   )}
                   {sources.map(src => (
@@ -1040,7 +1040,7 @@ winlogbeat.event_logs:
             <div style={{ padding: '16px 28px', borderTop: '1px solid var(--border)', marginTop: '8px' }}>
               <div style={{ ...s.sectionTitle, marginBottom: '10px' }}>Upload Log File</div>
               <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '10px', lineHeight: 1.6 }}>
-                Upload a JSON log export — JSON array or newline-delimited JSON. Max 50 MB / 100,000 events.
+                Upload a JSON log export: JSON array or newline-delimited JSON. Max 50 MB / 100,000 events.
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginBottom: '16px' }}>
                 <label style={{
