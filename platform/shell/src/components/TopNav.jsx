@@ -4,6 +4,9 @@ import { useIsMobile } from '../hooks/useIsMobile';
 
 const isElectron = typeof window !== 'undefined' && window.electron?.isElectron === true;
 
+// ── Update this URL with each Electron release ────────────────────────────────
+const DESKTOP_DOWNLOAD_URL = 'https://github.com/0xKudoX/0xKudoSec-releases/releases/download/v1.0.4/0xKudo-Security-Toolkit-Setup-1.0.4.exe';
+
 const styles = {
   nav: {
     background: 'var(--bg-sidebar)',
@@ -232,6 +235,9 @@ export function TopNav({ activeApp, onSwitchApp, onMenuToggle, menuOpen }) {
             ))}
           </div>
           <div style={{ ...styles.right, WebkitAppRegion: 'no-drag' }}>
+            {!isElectron && (
+              <a href={DESKTOP_DOWNLOAD_URL} style={{ fontSize: '11px', color: 'var(--text-muted)', textDecoration: 'none', letterSpacing: '0.04em', whiteSpace: 'nowrap' }}>↓ Desktop App</a>
+            )}
             {isAuthenticated ? (
               <>
                 <span style={styles.userName}>{user.name || user.email}</span>

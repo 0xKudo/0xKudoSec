@@ -2,6 +2,9 @@ import { useState, useEffect, useRef } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useIsMobile } from '../hooks/useIsMobile';
 
+// ── Update this URL with each Electron release ────────────────────────────────
+const DESKTOP_DOWNLOAD_URL = 'https://github.com/0xKudoX/0xKudoSec-releases/releases/download/v1.0.4/0xKudo-Security-Toolkit-Setup-1.0.4.exe';
+
 // Donut chart — same algorithm as SiemDashboard.jsx DonutChart
 function DonutChart({ size = 80 }) {
   const cx = size / 2, cy = size / 2;
@@ -445,6 +448,7 @@ function DesktopLanding({ onLogin }) {
         <div style={s.heroCtas}>
           <button style={s.btnPrimary} onClick={onLogin}>Create Free Account</button>
           <button style={s.btnSecondary} onClick={scrollToTools}>Browse Tools</button>
+          <a href={DESKTOP_DOWNLOAD_URL} style={{ ...s.btnSecondary, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>↓ Download for Windows</a>
         </div>
         <p style={s.heroNote}>
           <span style={{ color: 'var(--severity-low)' }}>✓</span>
