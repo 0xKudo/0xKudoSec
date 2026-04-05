@@ -528,11 +528,11 @@ router.post('/ingest-key', ingestKeyLimiter, async (req, res) => {
 
   const { rows } = await pool.query(
     `INSERT INTO user_ingest_keys (user_id, api_key, expiry_days, expires_at)
-     VALUES ($1, $2, $3, NOW() + ($3 || ' days')::INTERVAL)
+     VALUES ($1, $2, $3, NOW() + ($3::text || ' days')::INTERVAL)
      ON CONFLICT (user_id) DO UPDATE SET
        api_key = $2,
        expiry_days = $3,
-       expires_at = NOW() + ($3 || ' days')::INTERVAL,
+       expires_at = NOW() + ($3::text || ' days')::INTERVAL,
        last_used_at = NULL,
        created_at = NOW()
      RETURNING created_at, expires_at, expiry_days`,
