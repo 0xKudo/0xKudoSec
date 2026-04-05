@@ -446,9 +446,24 @@ function DesktopLanding({ onLogin }) {
           Real-time SIEM and 19 security tools covering detection, investigation, reporting, compliance, and simulation. Built for SOC analysts, pen testers, and security engineers.
         </p>
         <div style={s.heroCtas}>
-          <button style={s.btnPrimary} onClick={onLogin}>Create Free Account</button>
-          <button style={s.btnSecondary} onClick={scrollToTools}>Browse Tools</button>
-          <a href={DESKTOP_DOWNLOAD_URL} style={{ ...s.btnSecondary, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>↓ Download for Windows</a>
+          <button
+            style={s.btnPrimary}
+            onClick={onLogin}
+            onMouseEnter={e => { e.currentTarget.style.opacity = '0.85'; }}
+            onMouseLeave={e => { e.currentTarget.style.opacity = '1'; }}
+          >Create Free Account</button>
+          <button
+            style={s.btnSecondary}
+            onClick={scrollToTools}
+            onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.borderColor = 'var(--text-primary)'; }}
+            onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.borderColor = 'var(--border)'; }}
+          >Browse Tools</button>
+          <a
+            href={DESKTOP_DOWNLOAD_URL}
+            style={{ ...s.btnSecondary, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px', color: 'var(--accent-amber)', borderColor: 'var(--accent-amber)' }}
+            onMouseEnter={e => { e.currentTarget.style.opacity = '0.75'; }}
+            onMouseLeave={e => { e.currentTarget.style.opacity = '1'; }}
+          >↓ Download for Windows</a>
         </div>
         <p style={s.heroNote}>
           <span style={{ color: 'var(--severity-low)' }}>✓</span>

@@ -236,7 +236,12 @@ export function TopNav({ activeApp, onSwitchApp, onMenuToggle, menuOpen }) {
           </div>
           <div style={{ ...styles.right, WebkitAppRegion: 'no-drag' }}>
             {!isElectron && (
-              <a href={DESKTOP_DOWNLOAD_URL} style={{ fontSize: '11px', color: 'var(--text-muted)', textDecoration: 'none', letterSpacing: '0.04em', whiteSpace: 'nowrap' }}>↓ Desktop App</a>
+              <a
+                href={DESKTOP_DOWNLOAD_URL}
+                style={{ fontSize: '11px', color: 'var(--accent-amber)', textDecoration: 'none', letterSpacing: '0.04em', whiteSpace: 'nowrap', border: '1px solid var(--accent-amber)', padding: '4px 10px' }}
+                onMouseEnter={e => { e.currentTarget.style.opacity = '0.75'; }}
+                onMouseLeave={e => { e.currentTarget.style.opacity = '1'; }}
+              >↓ Desktop App</a>
             )}
             {isAuthenticated ? (
               <>
