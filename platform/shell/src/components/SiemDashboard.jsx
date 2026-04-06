@@ -19,7 +19,7 @@ const SEV_COLOR_HEX = {
 
 const HOURS_OPTIONS = [1, 6, 24, 48, 168];
 const COL_NAMES = ['Time', 'Severity', 'Event ID', 'Category', 'Host', 'Src IP', 'Dest IP', 'User', 'Message'];
-const COL_DEFAULTS_W = [110, 120, 80, 110, 110, 120, 120, 110, 260];
+const COL_DEFAULTS_W = [110, 110, 80, 110, 110, 120, 120, 110, 260];
 const COL_FIELDS = ['timestamp', 'severity', 'event_id', 'event_category', 'host', 'source_ip', 'dest_ip', 'username', 'message'];
 const LS_KEY = 'siem_filter_state';
 
