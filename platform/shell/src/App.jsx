@@ -251,6 +251,10 @@ function AppInner() {
 
   const switchApp = (app) => {
     setMenuOpen(false);
+    if (isElectron) {
+      setActiveApp(app);
+      return;
+    }
     if (app === 'tools') {
       navigate('/dashboard');
     } else {
