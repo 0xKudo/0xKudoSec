@@ -2,11 +2,16 @@ import { useNavigate } from 'react-router-dom';
 
 const s = {
   page: {
-    height: '100vh',
-    overflowY: 'auto',
+    height: '100%',
+    display: 'flex',
+    flexDirection: 'column',
     background: 'var(--bg-primary)',
     color: 'var(--text-primary)',
     fontFamily: 'var(--font)',
+  },
+  scrollArea: {
+    flex: 1,
+    overflowY: 'auto',
   },
   nav: {
     display: 'flex',
@@ -93,7 +98,7 @@ export function PrivacyPage() {
         <button style={s.back} onClick={() => navigate(-1)}>← Back</button>
       </nav>
 
-      <div style={s.container}>
+      <div style={s.scrollArea}><div style={s.container}>
         <h1 style={s.h1}>Privacy Policy</h1>
         <div style={s.updated}>Last updated: April 6, 2026</div>
 
@@ -164,7 +169,7 @@ export function PrivacyPage() {
           For privacy questions or data requests, contact:{' '}
           <span style={s.muted}>layne@laynekudo.com</span>
         </p>
-      </div>
+      </div></div>
     </div>
   );
 }
