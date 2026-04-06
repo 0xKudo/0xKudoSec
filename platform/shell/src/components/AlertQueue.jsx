@@ -123,6 +123,9 @@ export function AlertQueue({ onNavigate }) {
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [caseTitle, setCaseTitle] = useState('');
   const [creating, setCreating] = useState(false);
+  const [cases, setCases] = useState([]);
+  const [selectedCaseId, setSelectedCaseId] = useState('');
+  const [addingToCase, setAddingToCase] = useState(false);
   const [toast, setToast] = useState(null);
   const toastTimer = useRef(null);
   function showToast(msg) {
@@ -157,6 +160,7 @@ export function AlertQueue({ onNavigate }) {
   }, [statusFilter, getAccessTokenSilently]);
 
   useEffect(() => { load(); }, [load]);
+  useEffect(() => { if (selected) loadCases(); }, [selected?.id]);
 
   async function runRules() {
     setRunning(true);
@@ -215,6 +219,35 @@ export function AlertQueue({ onNavigate }) {
       showToast(`${ids.length} alert${ids.length !== 1 ? 's' : ''} marked ${status}.`);
     }
     setSelectedIds(new Set());
+  }
+
+  async function loadCases() {
+    try {
+      const token = await getAccessTokenSilently();
+      const res = await fetch('/api/siem/cases', { headers: { Authorization: `Bearer ${token}` } });
+      const data = await res.json();
+      setCases(Array.isArray(data) ? data : []);
+      setSelectedCaseId('');
+    } catch {}
+  }
+
+  async function addToCase() {
+    if (!selectedCaseId) return;
+    setAddingToCase(true);
+    try {
+      const token = await getAccessTokenSilently();
+      await fetch(`/api/siem/cases/${selectedCaseId}/alerts`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ alert_id: selected.id }),
+      });
+      showToast('Alert added to case.');
+      setSelectedCaseId('');
+    } catch {
+      showToast('Failed to add to case.');
+    } finally {
+      setAddingToCase(false);
+    }
   }
 
   async function createCase() {
@@ -499,6 +532,26 @@ export function AlertQueue({ onNavigate }) {
                   </button>
                 </div>
               </div>
+              {cases.length > 0 && (
+                <div style={{ marginTop: '10px' }}>
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Add to Existing Case</div>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <select
+                      style={{ ...s.input, flex: 1 }}
+                      value={selectedCaseId}
+                      onChange={e => setSelectedCaseId(e.target.value)}
+                    >
+                      <option value="">Select a case...</option>
+                      {cases.map(c => (
+                        <option key={c.id} value={c.id}>{c.title}</option>
+                      ))}
+                    </select>
+                    <button style={s.btn} onClick={addToCase} disabled={addingToCase || !selectedCaseId}>
+                      {addingToCase ? '...' : 'Add'}
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
             <div style={s.modalActions}>
               {STATUS_OPTIONS.filter(st => st !== selected.status).map(st => (
