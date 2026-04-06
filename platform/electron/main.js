@@ -17,6 +17,15 @@ let splashWindow = null;
 let serverProcess = null;
 let tray = null;
 
+function isValidSender(event) {
+  const url = event.senderFrame?.url ?? '';
+  return (
+    url.startsWith('http://localhost:') ||
+    url.startsWith('http://127.0.0.1:') ||
+    url.startsWith(PRODUCTION_URL)
+  );
+}
+
 // ── Auth0 localhost callback interceptor ──────────────────────────────────
 // Auth0 does not accept custom protocol URIs. We use http://localhost:8765/callback
 // and spin up a tiny HTTP server that catches the redirect and forwards the
@@ -183,7 +192,8 @@ function runSc(args) {
   });
 }
 
-ipcMain.handle('fluent-bit:status', async () => {
+ipcMain.handle('fluent-bit:status', async (event) => {
+  if (!isValidSender(event)) return 'UNKNOWN';
   const { stdout, err } = await runSc('query fluent-bit');
   if (err && err.includes('1060')) return 'NOT_INSTALLED';
   if (stdout.includes('RUNNING')) return 'RUNNING';
@@ -193,17 +203,20 @@ ipcMain.handle('fluent-bit:status', async () => {
   return 'UNKNOWN';
 });
 
-ipcMain.handle('fluent-bit:start', async () => {
+ipcMain.handle('fluent-bit:start', async (event) => {
+  if (!isValidSender(event)) return { ok: false, err: 'Unauthorized' };
   const { err } = await runSc('start fluent-bit');
   return { ok: !err, err };
 });
 
-ipcMain.handle('fluent-bit:stop', async () => {
+ipcMain.handle('fluent-bit:stop', async (event) => {
+  if (!isValidSender(event)) return { ok: false, err: 'Unauthorized' };
   const { err } = await runSc('stop fluent-bit');
   return { ok: !err, err };
 });
 
-ipcMain.handle('fluent-bit:restart', async () => {
+ipcMain.handle('fluent-bit:restart', async (event) => {
+  if (!isValidSender(event)) return { ok: false, err: 'Unauthorized' };
   await runSc('stop fluent-bit');
   // Wait for stop
   await new Promise(r => setTimeout(r, 2000));
@@ -211,7 +224,8 @@ ipcMain.handle('fluent-bit:restart', async () => {
   return { ok: !err, err };
 });
 
-ipcMain.handle('fluent-bit:write-config', async (_event, configText) => {
+ipcMain.handle('fluent-bit:write-config', async (event, configText) => {
+  if (!isValidSender(event)) return { ok: false, err: 'Unauthorized' };
   const fs = require('fs');
   const confPath = 'C:\\Program Files\\fluent-bit\\conf\\cybertools.conf';
   try {
@@ -223,17 +237,31 @@ ipcMain.handle('fluent-bit:write-config', async (_event, configText) => {
 });
 
 // ── Settings IPC ──────────────────────────────────────────────────────────
-ipcMain.handle('settings:getTrayOnClose', () => store.get('trayOnClose', true));
-ipcMain.handle('settings:setTrayOnClose', (_event, val) => { store.set('trayOnClose', val); });
+ipcMain.handle('settings:getTrayOnClose', (event) => {
+  if (!isValidSender(event)) return true;
+  return store.get('trayOnClose', true);
+});
+ipcMain.handle('settings:setTrayOnClose', (event, val) => {
+  if (!isValidSender(event)) return;
+  store.set('trayOnClose', val);
+});
 
 // ── Window control IPC ────────────────────────────────────────────────────
-ipcMain.on('window:minimize', () => mainWindow?.minimize());
-ipcMain.on('window:maximize', () => {
+ipcMain.on('window:minimize', (event) => {
+  if (!isValidSender(event)) return;
+  mainWindow?.minimize();
+});
+ipcMain.on('window:maximize', (event) => {
+  if (!isValidSender(event)) return;
   if (mainWindow?.isMaximized()) mainWindow.unmaximize();
   else mainWindow?.maximize();
 });
-ipcMain.on('window:close', () => mainWindow?.close());
-ipcMain.on('window:expand', () => {
+ipcMain.on('window:close', (event) => {
+  if (!isValidSender(event)) return;
+  mainWindow?.close();
+});
+ipcMain.on('window:expand', (event) => {
+  if (!isValidSender(event)) return;
   if (!mainWindow) return;
   mainWindow.setMinimumSize(900, 600);
   mainWindow.setSize(1400, 900);
@@ -280,9 +308,16 @@ function setupAutoUpdater() {
   setInterval(() => autoUpdater.checkForUpdates(), 4 * 60 * 60 * 1000);
 }
 
-ipcMain.handle('update:check-pending', () => pendingUpdateInfo);
-ipcMain.handle('update:download', () => autoUpdater.downloadUpdate());
-ipcMain.handle('update:install', () => {
+ipcMain.handle('update:check-pending', (event) => {
+  if (!isValidSender(event)) return null;
+  return pendingUpdateInfo;
+});
+ipcMain.handle('update:download', (event) => {
+  if (!isValidSender(event)) return;
+  return autoUpdater.downloadUpdate();
+});
+ipcMain.handle('update:install', (event) => {
+  if (!isValidSender(event)) return;
   // Clear Electron cache before install so the new version loads fresh
   const session = mainWindow?.webContents?.session;
   if (session) {
@@ -295,7 +330,8 @@ ipcMain.handle('update:install', () => {
     autoUpdater.quitAndInstall(false, true);
   }
 });
-ipcMain.handle('update:dismiss', () => {
+ipcMain.handle('update:dismiss', (event) => {
+  if (!isValidSender(event)) return;
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send('update:dismissed');
   }
