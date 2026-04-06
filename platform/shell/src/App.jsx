@@ -80,17 +80,13 @@ const SIEM_VIEW_TO_PATH = Object.fromEntries(Object.entries(SIEM_VIEW_PATHS).map
 const isElectron = typeof window !== 'undefined' && window.electron?.isElectron === true;
 
 function ElectronLoadingScreen() {
-  const [dots, setDots] = useState(1);
-  useEffect(() => {
-    const t = setInterval(() => setDots(d => d === 3 ? 1 : d + 1), 500);
-    return () => clearInterval(t);
-  }, []);
   return (
-    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '16px', background: 'var(--bg-primary)' }}>
-      <div style={{ fontSize: '13px', color: 'var(--text-muted)', letterSpacing: '0.08em' }}>[ 0xKudoSec ]</div>
-      <div style={{ fontSize: '11px', color: 'var(--text-subtle)', letterSpacing: '0.06em', width: '80px' }}>
-        Connecting{'.'.repeat(dots)}
-      </div>
+    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#111110', userSelect: 'none', WebkitAppRegion: 'drag' }}>
+      <div style={{ fontSize: '22px', fontWeight: 'bold', letterSpacing: '0.08em', color: '#e8e6e3', fontFamily: 'Courier New, Courier, monospace', marginBottom: '6px' }}>0xKudo</div>
+      <div style={{ fontSize: '11px', letterSpacing: '0.12em', textTransform: 'uppercase', color: '#6e6b68', fontFamily: 'Courier New, Courier, monospace', marginBottom: '40px' }}>Security Toolkit</div>
+      <div style={{ width: '32px', height: '32px', border: '2px solid #2a2928', borderTopColor: '#e8e6e3', borderRadius: '50%', animation: 'spin 0.8s linear infinite', marginBottom: '20px' }} />
+      <div style={{ fontSize: '11px', letterSpacing: '0.06em', color: '#4a4845', textTransform: 'uppercase', fontFamily: 'Courier New, Courier, monospace' }}>Connecting...</div>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }
@@ -188,6 +184,12 @@ function AppInner() {
       setActiveApp('tools');
     }
   }, [location.pathname]);
+
+  useEffect(() => {
+    if (isElectron && !isLoading) {
+      window.electron?.window?.expand?.();
+    }
+  }, [isLoading]);
 
   useEffect(() => {
     if (!isAuthenticated) return;

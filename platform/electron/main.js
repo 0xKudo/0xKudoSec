@@ -67,11 +67,12 @@ function createSplash() {
 // ── Main window ───────────────────────────────────────────────────────────
 function createMainWindow() {
   mainWindow = new BrowserWindow({
-    width: 1400,
-    height: 900,
-    minWidth: 900,
-    minHeight: 600,
+    width: 480,
+    height: 280,
+    minWidth: 480,
+    minHeight: 280,
     frame: false,
+    movable: true,
     show: false,
     icon: path.join(__dirname, 'assets', 'icon.ico'),
     webPreferences: {
@@ -230,6 +231,12 @@ ipcMain.on('window:maximize', () => {
   else mainWindow?.maximize();
 });
 ipcMain.on('window:close', () => mainWindow?.close());
+ipcMain.on('window:expand', () => {
+  if (!mainWindow) return;
+  mainWindow.setMinimumSize(900, 600);
+  mainWindow.setSize(1400, 900);
+  mainWindow.center();
+});
 
 // ── Auto-updater ──────────────────────────────────────────────────────────
 autoUpdater.autoDownload = false;
