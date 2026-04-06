@@ -41,7 +41,7 @@ function startCallbackServer() {
       }
     }, 500);
   });
-  callbackServer.listen(AUTH0_CALLBACK_PORT);
+  callbackServer.listen(AUTH0_CALLBACK_PORT, '127.0.0.1');
 }
 
 app.on('before-quit', () => {
@@ -344,7 +344,7 @@ app.on('before-quit', () => {
 app.on('web-contents-created', (_event, contents) => {
   // Intercept window.open() calls
   contents.setWindowOpenHandler(({ url }) => {
-    shell.openExternal(url);
+    if (url.startsWith('https://')) shell.openExternal(url);
     return { action: 'deny' };
   });
 
@@ -354,7 +354,7 @@ app.on('web-contents-created', (_event, contents) => {
     const isProductionApp = url.startsWith(PRODUCTION_URL);
     if (!isLocal && !isProductionApp) {
       e.preventDefault();
-      shell.openExternal(url);
+      if (url.startsWith('https://')) shell.openExternal(url);
     }
   });
 });
