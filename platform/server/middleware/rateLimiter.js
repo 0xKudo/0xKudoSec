@@ -1,10 +1,11 @@
 import rateLimit from 'express-rate-limit';
 import { audit } from '../services/audit.js';
 
-// General API rate limiter — 60 req/min per IP
+// General API rate limiter — 200 req/min per IP
+// Dashboard polling alone hits ~40 req/min; 200 leaves headroom for user actions
 export const apiRateLimiter = rateLimit({
   windowMs: 60 * 1000,
-  max: 60,
+  max: 200,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many requests, please try again in a minute.' },
