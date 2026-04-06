@@ -89,8 +89,8 @@ function createMainWindow() {
 
   mainWindow.loadURL(url);
 
-  // F12 opens DevTools — dev only
-  if (isDev) {
+  // F12 opens DevTools — only when not packaged (dev mode)
+  if (!app.isPackaged) {
     mainWindow.webContents.on('before-input-event', (_e, input) => {
       if (input.key === 'F12' && input.type === 'keyDown') {
         mainWindow.webContents.toggleDevTools();
