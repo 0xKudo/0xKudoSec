@@ -158,10 +158,10 @@ function AppInner() {
   const derivedSiemView = !isElectron ? (SIEM_VIEW_PATHS[location.pathname] ?? null) : null;
   const derivedActiveApp = !isElectron
     ? (derivedSiemView !== null || location.pathname === '/' ? 'siem' : 'tools')
-    : 'tools';
+    : 'siem';
 
   const [activeApp, setActiveApp] = useState(() => {
-    if (isElectron) return 'tools';
+    if (isElectron) return 'siem';
     return derivedActiveApp;
   });
   const [siemView, setSiemView] = useState(() => {
