@@ -167,7 +167,7 @@ export function PrivacyPage() {
         <h2 style={s.h2}>Contact</h2>
         <p style={s.p}>
           For privacy questions or data requests, contact:{' '}
-          <span style={s.muted}>layne@laynekudo.com</span>
+          <span style={s.muted}>contact@laynekudo.com</span>
         </p>
       </div></div>
     </div>
