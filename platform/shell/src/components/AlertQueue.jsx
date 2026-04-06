@@ -280,7 +280,7 @@ export function AlertQueue({ onNavigate }) {
 
   // Resizable columns
   const COL_KEYS = ['time', 'severity', 'title', 'rule', 'host', 'user', 'eventid', 'status', 'action'];
-  const DEFAULT_WIDTHS = { time: 150, severity: 90, title: 220, rule: 160, host: 90, user: 90, eventid: 80, status: 100, action: 90 };
+  const DEFAULT_WIDTHS = { time: 150, severity: 100, title: 220, rule: 160, host: 90, user: 90, eventid: 80, status: 100, action: 90 };
   const [colWidths, setColWidths] = useState(DEFAULT_WIDTHS);
   const dragRef = useRef(null);
 
