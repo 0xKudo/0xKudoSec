@@ -574,7 +574,7 @@ function DesktopLanding({ onLogin }) {
       <footer style={s.footer}>
         <span style={s.footerBrand}>[ 0xKudoSec ]</span>
         <div style={s.footerLinks}>
-          {[['Tools', e => { e.preventDefault(); scrollToTools(); }], ['SIEM', null], ['Sign In', e => { e.preventDefault(); onLogin(); }]].map(([label, handler]) => (
+          {[['Tools', e => { e.preventDefault(); scrollToTools(); }], ['SIEM', null], ['Sign In', e => { e.preventDefault(); onLogin(); }], ['Privacy', e => { e.preventDefault(); window.location.href = '/privacy'; }]].map(([label, handler]) => (
             <a
               key={label}
               href="#"
