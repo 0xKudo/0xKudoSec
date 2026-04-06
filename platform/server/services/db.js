@@ -1,11 +1,7 @@
 // platform/server/services/db.js
 import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
 import pg from 'pg';
 const { Pool } = pg;
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 let pool;
 let ingestAuthPool;
@@ -13,13 +9,13 @@ let opsPool;
 
 function getSsl() {
   if (process.env.NODE_ENV !== 'production') return false;
-  const caPath = path.resolve(__dirname, '../certs/pg-ca.crt');
-  if (fs.existsSync(caPath)) {
+  const caPath = process.env.DATABASE_CA_CERT;
+  if (caPath && fs.existsSync(caPath)) {
     console.log('[db] SSL mode: enabled (CA-verified)');
     return { rejectUnauthorized: true, ca: fs.readFileSync(caPath).toString() };
   }
-  // Fallback if cert file missing — encrypted but unverified
-  console.warn('[db] SSL mode: enabled (self-signed fallback — pg-ca.crt not found)');
+  // Fallback if cert path not set or file missing — encrypted but unverified
+  console.warn('[db] SSL mode: enabled (self-signed fallback — DATABASE_CA_CERT not set or file not found)');
   return { rejectUnauthorized: false };
 }
 
