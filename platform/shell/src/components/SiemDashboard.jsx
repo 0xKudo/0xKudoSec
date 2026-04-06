@@ -115,7 +115,7 @@ const s = {
     color: 'var(--text-muted)', verticalAlign: 'middle', overflow: 'hidden',
     textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 0,
   },
-  sevBadge: (color) => ({ fontSize: '10px', padding: '2px 7px', letterSpacing: '0.06em', textTransform: 'uppercase', border: `1px solid ${color}`, color, whiteSpace: 'nowrap' }),
+  sevBadge: (color) => ({ fontSize: '10px', width: '64px', textAlign: 'center', padding: '2px 0', letterSpacing: '0.06em', textTransform: 'uppercase', border: `1px solid ${color}`, color, whiteSpace: 'nowrap', display: 'inline-block', boxSizing: 'border-box', flexShrink: 0 }),
   error: { padding: '20px', color: 'var(--severity-high)', fontSize: '12px' },
   muted: { padding: '20px', color: 'var(--text-muted)', fontSize: '12px' },
   overlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 },
