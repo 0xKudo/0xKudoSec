@@ -3,7 +3,7 @@ import { useAuth0 } from '@auth0/auth0-react';
 import { useIsMobile } from '../hooks/useIsMobile';
 
 // ── Update this URL with each Electron release ────────────────────────────────
-const DESKTOP_DOWNLOAD_URL = 'https://github.com/0xKudoX/0xKudoSec-releases/releases/download/v1.0.5/0xKudo-Security-Toolkit-Setup-1.0.5.exe';
+const DESKTOP_DOWNLOAD_URL = 'https://github.com/0xKudoX/0xKudoSec-releases/releases/download/v1.0.6/0xKudo-Security-Toolkit-Setup-1.0.6.exe';
 
 // Donut chart — same algorithm as SiemDashboard.jsx DonutChart
 function DonutChart({ size = 80 }) {
