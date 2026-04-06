@@ -226,6 +226,16 @@ ipcMain.handle('fluent-bit:restart', async (event) => {
 
 ipcMain.handle('fluent-bit:write-config', async (event, configText) => {
   if (!isValidSender(event)) return { ok: false, err: 'Unauthorized' };
+
+  if (typeof configText !== 'string') return { ok: false, err: 'Invalid config: must be a string' };
+  if (configText.length > 65536) return { ok: false, err: 'Invalid config: exceeds 64KB limit' };
+
+  const dangerous = /\b(exec|command|script|shell|program)\s*=/i;
+  if (dangerous.test(configText)) return { ok: false, err: 'Invalid config: prohibited directive detected' };
+
+  const validSection = /^\[(SERVICE|INPUT|OUTPUT|FILTER|PARSER|MULTILINE_PARSER)\]/m;
+  if (!validSection.test(configText)) return { ok: false, err: 'Invalid config: no recognized Fluent Bit section found' };
+
   const fs = require('fs');
   const confPath = 'C:\\Program Files\\fluent-bit\\conf\\cybertools.conf';
   try {
