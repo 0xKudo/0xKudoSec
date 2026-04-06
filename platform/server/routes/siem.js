@@ -65,7 +65,7 @@ router.get('/stats', wrap(async (req, res) => {
   const userId = uid(req);
 
   const params = [userId];
-  const conditions = [`user_id = $1`, `timestamp > NOW() - INTERVAL '${hours} hours'`];
+  params.push(hours); const conditions = [`user_id = $1`, `timestamp > NOW() - make_interval(hours := $${params.length})`];
   if (req.query.showSuppressed !== '1') await applySuppressFilters(userId, params, conditions);
 
   const { rows } = await pool.query(
@@ -183,7 +183,7 @@ router.get('/events/recent', wrap(async (req, res) => {
   const q = rawQ && rawQ.trim() ? rawQ.trim() : null;
 
   const params = [userId];
-  const conditions = [`user_id = $1`, `timestamp > NOW() - INTERVAL '${hours} hours'`];
+  params.push(hours); const conditions = [`user_id = $1`, `timestamp > NOW() - make_interval(hours := $${params.length})`];
   if (sevList.length === 1) {
     params.push(sevList[0]); conditions.push(`severity = $${params.length}`);
   } else if (sevList.length > 1) {
@@ -212,7 +212,7 @@ router.get('/events/by-severity', wrap(async (req, res) => {
   const hours = hoursParam(req);
   const userId = uid(req);
   const params = [userId];
-  const conditions = [`user_id = $1`, `timestamp > NOW() - INTERVAL '${hours} hours'`];
+  params.push(hours); const conditions = [`user_id = $1`, `timestamp > NOW() - make_interval(hours := $${params.length})`];
   if (req.query.showSuppressed !== '1') await applySuppressFilters(userId, params, conditions);
   const { rows } = await pool.query(
     `SELECT severity, COUNT(*) AS count FROM logs WHERE ${conditions.join(' AND ')} GROUP BY severity ORDER BY count DESC`,
@@ -226,9 +226,9 @@ router.get('/events/by-source', async (req, res) => {
   const { rows } = await pool.query(
     `SELECT host, COUNT(*) AS count
      FROM logs
-     WHERE user_id = $1 AND timestamp > NOW() - INTERVAL '${hours} hours'
+     WHERE user_id = $1 AND timestamp > NOW() - make_interval(hours := $2)
      GROUP BY host ORDER BY count DESC LIMIT 10`,
-    [uid(req)]
+    [uid(req), hours]
   );
   res.json(rows);
 });
@@ -237,7 +237,7 @@ router.get('/events/top-event-ids', wrap(async (req, res) => {
   const hours = hoursParam(req);
   const userId = uid(req);
   const params = [userId];
-  const conditions = [`user_id = $1`, `timestamp > NOW() - INTERVAL '${hours} hours'`, `event_id IS NOT NULL`];
+  params.push(hours); const conditions = [`user_id = $1`, `timestamp > NOW() - make_interval(hours := $${params.length})`, `event_id IS NOT NULL`];
   if (req.query.showSuppressed !== '1') await applySuppressFilters(userId, params, conditions);
   const { rows } = await pool.query(
     `SELECT event_id, COUNT(*) AS count FROM logs WHERE ${conditions.join(' AND ')} GROUP BY event_id ORDER BY count DESC LIMIT 10`,
@@ -251,10 +251,10 @@ router.get('/events/top-usernames', async (req, res) => {
   const { rows } = await pool.query(
     `SELECT username, COUNT(*) AS count
      FROM logs
-     WHERE user_id = $1 AND timestamp > NOW() - INTERVAL '${hours} hours'
+     WHERE user_id = $1 AND timestamp > NOW() - make_interval(hours := $2)
        AND username IS NOT NULL
      GROUP BY username ORDER BY count DESC LIMIT 10`,
-    [uid(req)]
+    [uid(req), hours]
   );
   res.json(rows);
 });
@@ -264,10 +264,10 @@ router.get('/events/top-dest-ports', async (req, res) => {
   const { rows } = await pool.query(
     `SELECT dest_port, COUNT(*) AS count
      FROM logs
-     WHERE user_id = $1 AND timestamp > NOW() - INTERVAL '${hours} hours'
+     WHERE user_id = $1 AND timestamp > NOW() - make_interval(hours := $2)
        AND dest_port IS NOT NULL
      GROUP BY dest_port ORDER BY count DESC LIMIT 10`,
-    [uid(req)]
+    [uid(req), hours]
   );
   res.json(rows);
 });
@@ -277,10 +277,10 @@ router.get('/events/top-processes', async (req, res) => {
   const { rows } = await pool.query(
     `SELECT process_name, COUNT(*) AS count
      FROM logs
-     WHERE user_id = $1 AND timestamp > NOW() - INTERVAL '${hours} hours'
+     WHERE user_id = $1 AND timestamp > NOW() - make_interval(hours := $2)
        AND process_name IS NOT NULL
      GROUP BY process_name ORDER BY count DESC LIMIT 10`,
-    [uid(req)]
+    [uid(req), hours]
   );
   res.json(rows);
 });
@@ -290,10 +290,10 @@ router.get('/events/top-dest-ips', async (req, res) => {
   const { rows } = await pool.query(
     `SELECT dest_ip, COUNT(*) AS count
      FROM logs
-     WHERE user_id = $1 AND timestamp > NOW() - INTERVAL '${hours} hours'
+     WHERE user_id = $1 AND timestamp > NOW() - make_interval(hours := $2)
        AND dest_ip IS NOT NULL
      GROUP BY dest_ip ORDER BY count DESC LIMIT 10`,
-    [uid(req)]
+    [uid(req), hours]
   );
   res.json(rows);
 });
@@ -304,10 +304,10 @@ router.get('/events/categories', async (req, res) => {
     `SELECT event_category AS category, COUNT(*) AS count
      FROM logs
      WHERE user_id = $1
-       AND timestamp > NOW() - INTERVAL '${hours} hours'
+       AND timestamp > NOW() - make_interval(hours := $2)
        AND event_category IS NOT NULL
      GROUP BY event_category ORDER BY count DESC`,
-    [uid(req)]
+    [uid(req), hours]
   );
   res.json(rows);
 });
@@ -318,10 +318,10 @@ router.get('/events/sources-list', async (req, res) => {
     `SELECT source, COUNT(*) AS count
      FROM logs
      WHERE user_id = $1
-       AND timestamp > NOW() - INTERVAL '${hours} hours'
+       AND timestamp > NOW() - make_interval(hours := $2)
        AND source IS NOT NULL
      GROUP BY source ORDER BY count DESC`,
-    [uid(req)]
+    [uid(req), hours]
   );
   res.json(rows);
 });
@@ -334,10 +334,10 @@ router.get('/events/hourly', async (req, res) => {
        severity,
        COUNT(*) AS count
      FROM logs
-     WHERE user_id = $1 AND timestamp > NOW() - INTERVAL '${hours} hours'
+     WHERE user_id = $1 AND timestamp > NOW() - make_interval(hours := $2)
      GROUP BY hour, severity
      ORDER BY hour ASC`,
-    [uid(req)]
+    [uid(req), hours]
   );
   res.json(rows);
 });
@@ -347,10 +347,10 @@ router.get('/events/failed-logins', wrap(async (req, res) => {
   const { rows } = await pool.query(
     `SELECT timestamp, username, host, source_ip, message
      FROM logs
-     WHERE user_id = $1 AND timestamp > NOW() - INTERVAL '${hours} hours'
+     WHERE user_id = $1 AND timestamp > NOW() - make_interval(hours := $2)
        AND event_id = '4625'
      ORDER BY timestamp DESC LIMIT 20`,
-    [uid(req)]
+    [uid(req), hours]
   );
   res.json(rows);
 }));
@@ -420,15 +420,16 @@ router.get('/events/process-tree', wrap(async (req, res) => {
 
   // Fallback: no guid available — find events with same process_name on same host in time window
   if (process_name && host) {
+    const safeHours = parseInt(hours, 10);
     const { rows } = await pool.query(
       `SELECT id, process_guid, parent_process_guid, process_name, process_id,
               parent_process_name, parent_process_id, username, host, timestamp,
               event_id, message, 0 AS depth
        FROM logs
        WHERE user_id = $1 AND host = $2 AND process_name ILIKE $3
-         AND timestamp > NOW() - INTERVAL '${parseInt(hours, 10) || 24} hours'
+         AND timestamp > NOW() - make_interval(hours := $4)
        ORDER BY timestamp ASC LIMIT 50`,
-      [userId, host, process_name]
+      [userId, host, process_name, (!isNaN(safeHours) && safeHours > 0 && safeHours <= 168) ? safeHours : 24]
     );
     return res.json({ mode: 'name_fallback', nodes: rows });
   }
@@ -475,11 +476,11 @@ router.get('/rules/hit-counts', wrap(async (req, res) => {
      FROM detection_rules r
      LEFT JOIN alerts a ON a.rule_id = r.id
        AND a.user_id = $1
-       AND a.created_at > NOW() - INTERVAL '${hours} hours'
+       AND a.created_at > NOW() - make_interval(hours := $2)
      WHERE r.user_id = $1
      GROUP BY r.id
      ORDER BY hits DESC LIMIT 10`,
-    [uid(req)]
+    [uid(req), hours]
   );
   res.json(rows);
 }));
