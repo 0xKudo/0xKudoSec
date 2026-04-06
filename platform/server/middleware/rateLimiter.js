@@ -1,4 +1,5 @@
 import rateLimit from 'express-rate-limit';
+import { audit } from '../services/audit.js';
 
 // General API rate limiter — 60 req/min per IP
 export const apiRateLimiter = rateLimit({
@@ -18,13 +19,19 @@ export const ingestBeatsLimiter = rateLimit({
   message: { error: 'Ingest rate limit exceeded. Reduce shipper batch frequency.' },
 });
 
-// Ingest key rotation — tight limit, this is a privileged credential action
+// Ingest key rotation — per-user limit (keyed on Auth0 sub, not IP)
+// 5 rotations per hour. Blocks distributed attacks that bypass IP-based limiting.
 export const ingestKeyLimiter = rateLimit({
-  windowMs: 60 * 1000,
+  windowMs: 60 * 60 * 1000,
   max: 5,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { error: 'Too many key rotation attempts. Try again in a minute.' },
+  keyGenerator: (req) => req.auth?.sub || req.ip,
+  message: { error: 'Too many key rotation attempts. Try again in an hour.' },
+  handler: (req, res, next, options) => {
+    audit(req.auth?.sub || null, 'ingest_key.rotation_blocked', { ip: req.ip }, req.ip);
+    res.status(options.statusCode).json(options.message);
+  },
 });
 
 // Rule import — bulk write operation, tighter than general API
