@@ -19,6 +19,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { RequireAuth } from './components/RequireAuth';
 import { LandingPage } from './pages/LandingPage';
 import { ElectronHome } from './pages/ElectronHome';
+import { PrivacyPage } from './pages/PrivacyPage';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useIsMobile } from './hooks/useIsMobile';
 import './styles/theme.css';
@@ -65,7 +66,7 @@ function ToolLoader({ toolId }) {
   return <Component />;
 }
 
-const NO_AUTH_ROUTES = ['/decoder', '/reverse-shell-generator', '/wordlist-generator', '/payload-generator'];
+const NO_AUTH_ROUTES = ['/decoder', '/reverse-shell-generator', '/wordlist-generator', '/payload-generator', '/privacy'];
 const SIEM_VIEW_PATHS = {
   '/siem': 'dashboard',
   '/siem/alerts': 'alerts',
@@ -220,6 +221,8 @@ function AppInner() {
   if (isElectron && isLoading) {
     return <ElectronLoadingScreen />;
   }
+
+  if (window.location.pathname === '/privacy') return <PrivacyPage />;
 
   if (!isLoading && !isAuthenticated) {
     const path = window.location.pathname;
@@ -391,6 +394,7 @@ function AppInner() {
                   />
                 ))}
                 <Route path="/dashboard" element={isMobile ? <DashboardMobile /> : <Dashboard />} />
+                <Route path="/privacy" element={<PrivacyPage />} />
                 <Route path="/siem/*" element={null} />
                 <Route path="*" element={isMobile ? <DashboardMobile /> : <Dashboard />} />
               </Routes>
