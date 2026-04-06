@@ -33,9 +33,9 @@ const s = {
     letterSpacing: '0.04em',
   },
   container: {
-    maxWidth: '720px',
+    maxWidth: '800px',
     margin: '0 auto',
-    padding: '48px 32px 80px',
+    padding: '48px 48px 80px',
   },
   h1: {
     fontSize: '18px',
