@@ -1,9 +1,9 @@
-import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 const s = {
   page: {
-    minHeight: '100vh',
+    height: '100vh',
+    overflowY: 'auto',
     background: 'var(--bg-primary)',
     color: 'var(--text-primary)',
     fontFamily: 'var(--font)',
@@ -85,10 +85,6 @@ const s = {
 export function PrivacyPage() {
   const navigate = useNavigate();
 
-  useEffect(() => {
-    document.body.style.overflow = 'auto';
-    return () => { document.body.style.overflow = ''; };
-  }, []);
 
   return (
     <div style={s.page}>
