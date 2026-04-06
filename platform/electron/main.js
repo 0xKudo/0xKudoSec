@@ -89,12 +89,14 @@ function createMainWindow() {
 
   mainWindow.loadURL(url);
 
-  // F12 opens DevTools for debugging
-  mainWindow.webContents.on('before-input-event', (_e, input) => {
-    if (input.key === 'F12' && input.type === 'keyDown') {
-      mainWindow.webContents.toggleDevTools();
-    }
-  });
+  // F12 opens DevTools — dev only
+  if (isDev) {
+    mainWindow.webContents.on('before-input-event', (_e, input) => {
+      if (input.key === 'F12' && input.type === 'keyDown') {
+        mainWindow.webContents.toggleDevTools();
+      }
+    });
+  }
 
   mainWindow.once('ready-to-show', () => {
     if (splashWindow && !splashWindow.isDestroyed()) {
