@@ -120,8 +120,7 @@ export function SiemSidebar({ activeView, onNavigate, onSwitchToTools, isAuthent
       </div>
 
       <div style={styles.footer}>
-        <a href="https://laynekudo.com" style={styles.footerLink}>← laynekudo.com</a>
-        <a href="/privacy" style={{ ...styles.footerLink, marginTop: '4px' }}>Privacy Policy</a>
+        <a href="/privacy" style={styles.footerLink}>Privacy Policy</a>
         <div style={{ marginTop: '8px', fontSize: '10px', color: 'var(--text-muted)', letterSpacing: '0.04em', opacity: 0.6 }}>
           v{__APP_VERSION__} &nbsp;·&nbsp; {__BUILD_DATE__}
         </div>
