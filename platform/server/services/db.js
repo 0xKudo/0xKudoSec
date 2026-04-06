@@ -4,6 +4,7 @@ const { Pool } = pg;
 
 let pool;
 let ingestAuthPool;
+let opsPool;
 
 function getPool() {
   if (!pool) {
@@ -33,6 +34,21 @@ function getIngestAuthPool() {
   return ingestAuthPool;
 }
 
+// Dedicated pool for privileged maintenance operations (audit_log DELETE/UPDATE).
+// Uses cybertools_ops role which is a member of cybertools_ops and bypasses the
+// append-only trigger. Used by retention cron and GDPR account deletion only.
+function getOpsPool() {
+  if (!opsPool) {
+    const connStr = process.env.OPS_DB_URL || process.env.DATABASE_URL;
+    const ssl = process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false;
+    opsPool = new Pool({ connectionString: connStr, ssl });
+    if (!process.env.OPS_DB_URL) {
+      console.warn('[db] OPS_DB_URL not set — ops queries falling back to main pool (audit_log trigger will block DELETE/UPDATE)');
+    }
+  }
+  return opsPool;
+}
+
 // Run queries with RLS user context set for the duration of the transaction.
 // Usage:
 //   const result = await db.withUser(userId, async (client) => {
@@ -59,4 +75,5 @@ export default {
   withUser,
   getPool,
   getIngestAuthPool,
+  getOpsPool,
 };

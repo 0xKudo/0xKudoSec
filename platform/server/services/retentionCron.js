@@ -5,8 +5,16 @@
 // Audit log retention is per-user configurable. Default 365 days per PCI DSS 10.7.
 // If audit_log_retention_enabled = false for a user, their audit entries are never auto-purged.
 
+import { createHash } from 'crypto';
 import cron from 'node-cron';
-import pool from './db.js';
+import db from './db.js';
+
+const pool = db;
+let _opsPool;
+function getOpsPool() {
+  if (!_opsPool) _opsPool = db.getOpsPool();
+  return _opsPool;
+}
 
 const DEFAULT_RETENTION_DAYS = 90;
 const DEFAULT_AUDIT_RETENTION_DAYS = 365;
@@ -65,7 +73,7 @@ async function runRetention() {
       }
 
       const days = s?.audit_log_retention_days ?? DEFAULT_AUDIT_RETENTION_DAYS;
-      const { rowCount } = await pool.query(
+      const { rowCount } = await getOpsPool().query(
         `DELETE FROM audit_log WHERE user_id = $1 AND created_at < NOW() - INTERVAL '${days} days'`,
         [user_id]
       );
@@ -76,7 +84,7 @@ async function runRetention() {
     }
 
     // Also purge audit entries with no user_id (system events) using the global default
-    const { rowCount: sysAuditDeleted } = await pool.query(
+    const { rowCount: sysAuditDeleted } = await getOpsPool().query(
       `DELETE FROM audit_log WHERE user_id IS NULL AND created_at < NOW() - INTERVAL '${DEFAULT_AUDIT_RETENTION_DAYS} days'`
     );
     if (sysAuditDeleted > 0) {
@@ -92,8 +100,40 @@ async function runRetention() {
   }
 }
 
+async function runIntegrityCheck() {
+  try {
+    const { rows } = await pool.query(
+      `SELECT id, user_id, action, meta, ip, created_at, row_hash
+       FROM audit_log
+       WHERE created_at > NOW() - INTERVAL '25 hours'
+       AND row_hash IS NOT NULL`
+    );
+
+    let mismatches = 0;
+    for (const row of rows) {
+      const hashInput = `${row.user_id}|${row.action}|${JSON.stringify(row.meta)}|${row.ip}|${new Date(row.created_at).toISOString()}`;
+      const expected = createHash('sha256').update(hashInput).digest('hex');
+      if (expected !== row.row_hash) {
+        mismatches++;
+        console.error(`[integrity] MISMATCH audit_log id=${row.id} action=${row.action} user=${row.user_id}`);
+      }
+    }
+
+    if (mismatches === 0) {
+      console.log(`[integrity] Audit log check passed — ${rows.length} rows verified.`);
+    } else {
+      console.error(`[integrity] AUDIT LOG INTEGRITY FAILURE — ${mismatches} mismatched rows detected.`);
+    }
+  } catch (err) {
+    console.error('[integrity] Check failed:', err.message);
+  }
+}
+
 export function startRetentionCron() {
   // Run daily at 02:00
   cron.schedule('0 2 * * *', runRetention);
   console.log('[retention] Log retention cron scheduled (daily at 02:00)');
+  // Run integrity check daily at 02:15 (after retention completes)
+  cron.schedule('15 2 * * *', runIntegrityCheck);
+  console.log('[integrity] Audit log integrity check scheduled (daily at 02:15)');
 }
