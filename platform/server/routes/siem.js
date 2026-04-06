@@ -173,7 +173,9 @@ router.get('/events/recent', wrap(async (req, res) => {
   const validSources = ['node-shipper', 'winlogbeat', 'fluent-bit', 'syslog'];
   const hours = hoursParam(req);
   const userId = uid(req);
-  const sev = validSeverities.includes(req.query.severity) ? req.query.severity : null;
+  // severity accepts a single value or comma-separated list for multi-select
+  const rawSev = typeof req.query.severity === 'string' ? req.query.severity : '';
+  const sevList = rawSev.split(',').map(s => s.trim()).filter(s => validSeverities.includes(s));
   const cat = validCategories.includes(req.query.category) ? req.query.category : null;
   const src = validSources.includes(req.query.source) ? req.query.source : null;
   // Sanitize search query — max 200 chars, strip null bytes
@@ -182,7 +184,12 @@ router.get('/events/recent', wrap(async (req, res) => {
 
   const params = [userId];
   const conditions = [`user_id = $1`, `timestamp > NOW() - INTERVAL '${hours} hours'`];
-  if (sev) { params.push(sev); conditions.push(`severity = $${params.length}`); }
+  if (sevList.length === 1) {
+    params.push(sevList[0]); conditions.push(`severity = $${params.length}`);
+  } else if (sevList.length > 1) {
+    const placeholders = sevList.map(s => { params.push(s); return `$${params.length}`; }).join(', ');
+    conditions.push(`severity IN (${placeholders})`);
+  }
   if (cat) { params.push(cat); conditions.push(`event_category = $${params.length}`); }
   if (src) { params.push(src); conditions.push(`source = $${params.length}`); }
   for (const c of buildSearchConditions(q, params)) conditions.push(c);

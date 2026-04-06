@@ -99,7 +99,7 @@ export function LogSearch() {
   const [query, setQuery] = useState('');
   const [submittedQuery, setSubmittedQuery] = useState('');
   const [hours, setHours] = useState(24);
-  const [sevFilter, setSevFilter] = useState(null);
+  const [sevFilters, setSevFilters] = useState(new Set());
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
@@ -111,7 +111,7 @@ export function LogSearch() {
   async function search(q, h, sev) {
     const qToUse = q ?? submittedQuery;
     const hToUse = h ?? hours;
-    const sevToUse = sev !== undefined ? sev : sevFilter;
+    const sevToUse = sev !== undefined ? sev : sevFilters;
     setLoading(true);
     setSearched(true);
     setSubmittedQuery(qToUse);
@@ -119,7 +119,8 @@ export function LogSearch() {
       const token = await getAccessTokenSilently();
       const params = new URLSearchParams({ hours: hToUse });
       if (qToUse.trim()) params.set('q', qToUse.trim());
-      if (sevToUse) params.set('severity', sevToUse);
+      if (sevToUse instanceof Set && sevToUse.size > 0) params.set('severity', [...sevToUse].join(','));
+      else if (typeof sevToUse === 'string' && sevToUse) params.set('severity', sevToUse);
       const res = await fetch(`/api/siem/events/recent?${params}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -133,8 +134,15 @@ export function LogSearch() {
     }
   }
 
+  function toggleSev(sev) {
+    const next = new Set(sevFilters);
+    if (next.has(sev)) next.delete(sev); else next.add(sev);
+    setSevFilters(next);
+    if (searched) search(query, hours, next);
+  }
+
   function handleKeyDown(e) {
-    if (e.key === 'Enter') search(query, hours, sevFilter);
+    if (e.key === 'Enter') search(query, hours, sevFilters);
   }
 
   function appendHint(hint) {
@@ -176,7 +184,7 @@ export function LogSearch() {
           spellCheck={false}
           autoFocus={!isMobile}
         />
-        <button style={s.btnActive} onClick={() => search(query, hours, sevFilter)} disabled={loading}>
+        <button style={s.btnActive} onClick={() => search(query, hours, sevFilters)} disabled={loading}>
           {loading ? 'Searching...' : 'Search'}
         </button>
         {results.length > 0 && (
@@ -187,20 +195,27 @@ export function LogSearch() {
       <div style={{ ...s.filterRow, flexWrap: 'wrap' }}>
         <span style={s.filterLabel}>Time</span>
         {HOURS_OPTIONS.map(h => (
-          <button key={h} style={hours === h ? s.btnActive : s.btn} onClick={() => { setHours(h); if (searched) search(query, h, sevFilter); }}>
+          <button key={h} style={hours === h ? s.btnActive : s.btn} onClick={() => { setHours(h); if (searched) search(query, h, sevFilters); }}>
             {h < 24 ? `${h}h` : h === 24 ? '24h' : h === 48 ? '48h' : '7d'}
           </button>
         ))}
         <span style={{ ...s.filterLabel, marginLeft: isMobile ? 0 : '12px' }}>Severity</span>
-        {[null, 'critical', 'high', 'medium', 'low', 'info'].map(sev => (
+        {['critical', 'high', 'medium', 'low', 'info'].map(sev => (
           <button
-            key={sev ?? 'all'}
-            style={sevFilter === sev ? s.btnActive : s.btn}
-            onClick={() => { setSevFilter(sev); if (searched) search(query, hours, sev); }}
-          >
-            {sev ?? 'All'}
-          </button>
+            key={sev}
+            style={{
+              background: sevFilters.has(sev) ? sevColor(sev) : 'none',
+              border: `1px solid ${sevColor(sev)}`,
+              color: sevFilters.has(sev) ? 'var(--bg-primary)' : sevColor(sev),
+              fontFamily: 'var(--font)', fontSize: '10px', padding: '2px 8px',
+              cursor: 'pointer', letterSpacing: '0.04em', textTransform: 'uppercase',
+            }}
+            onClick={() => toggleSev(sev)}
+          >{sev}</button>
         ))}
+        {sevFilters.size > 0 && (
+          <button style={{ ...s.btn, fontSize: '10px', padding: '2px 8px' }} onClick={() => { setSevFilters(new Set()); if (searched) search(query, hours, new Set()); }}>Clear</button>
+        )}
       </div>
 
       <div style={{ ...s.hintsRow, flexWrap: 'wrap' }}>
