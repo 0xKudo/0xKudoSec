@@ -3,6 +3,7 @@ node_modules/
 dist/
 dist-electron/
 .env
+platform/server/certs/pg-ca.crt
 *.local
 .DS_Store
 .claude/

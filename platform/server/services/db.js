@@ -1,19 +1,34 @@
 // platform/server/services/db.js
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import pg from 'pg';
 const { Pool } = pg;
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 let pool;
 let ingestAuthPool;
 let opsPool;
+
+function getSsl() {
+  if (process.env.NODE_ENV !== 'production') return false;
+  const caPath = path.resolve(__dirname, '../certs/pg-ca.crt');
+  if (fs.existsSync(caPath)) {
+    console.log('[db] SSL mode: enabled (CA-verified)');
+    return { rejectUnauthorized: true, ca: fs.readFileSync(caPath).toString() };
+  }
+  // Fallback if cert file missing — encrypted but unverified
+  console.warn('[db] SSL mode: enabled (self-signed fallback — pg-ca.crt not found)');
+  return { rejectUnauthorized: false };
+}
 
 function getPool() {
   if (!pool) {
     if (!process.env.DATABASE_URL) {
       throw new Error('DATABASE_URL is not set. Check your .env file.');
     }
-    // rejectUnauthorized: false — VPS uses a self-signed cert; connection is still encrypted
-    const ssl = process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false;
-    console.log(`[db] SSL mode: ${ssl ? 'enabled (self-signed allowed)' : 'disabled'}`);
+    const ssl = getSsl();
     pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl });
   }
   return pool;
@@ -25,7 +40,7 @@ function getPool() {
 function getIngestAuthPool() {
   if (!ingestAuthPool) {
     const connStr = process.env.INGEST_AUTH_DB_URL || process.env.DATABASE_URL;
-    const ssl = process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false;
+    const ssl = getSsl();
     ingestAuthPool = new Pool({ connectionString: connStr, ssl });
     if (!process.env.INGEST_AUTH_DB_URL) {
       console.warn('[db] INGEST_AUTH_DB_URL not set — ingest key lookups falling back to main pool (RLS bypass still required on that role)');
@@ -40,7 +55,7 @@ function getIngestAuthPool() {
 function getOpsPool() {
   if (!opsPool) {
     const connStr = process.env.OPS_DB_URL || process.env.DATABASE_URL;
-    const ssl = process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false;
+    const ssl = getSsl();
     opsPool = new Pool({ connectionString: connStr, ssl });
     if (!process.env.OPS_DB_URL) {
       console.warn('[db] OPS_DB_URL not set — ops queries falling back to main pool (audit_log trigger will block DELETE/UPDATE)');
