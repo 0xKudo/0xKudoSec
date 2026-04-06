@@ -158,10 +158,10 @@ function AppInner() {
   const derivedSiemView = !isElectron ? (SIEM_VIEW_PATHS[location.pathname] ?? null) : null;
   const derivedActiveApp = !isElectron
     ? (derivedSiemView !== null || location.pathname === '/' ? 'siem' : 'tools')
-    : 'siem';
+    : 'tools';
 
   const [activeApp, setActiveApp] = useState(() => {
-    if (isElectron) return 'siem';
+    if (isElectron) return 'tools';
     return derivedActiveApp;
   });
   const [siemView, setSiemView] = useState(() => {
@@ -190,6 +190,12 @@ function AppInner() {
       window.electron?.window?.expand?.();
     }
   }, [isLoading]);
+
+  useEffect(() => {
+    if (isElectron && isAuthenticated) {
+      setActiveApp('siem');
+    }
+  }, [isAuthenticated]);
 
   useEffect(() => {
     if (!isAuthenticated) return;
