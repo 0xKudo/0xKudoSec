@@ -745,7 +745,7 @@ export function SiemDashboard({ onNavigate }) {
                   {a.count > 1 && <span style={{ marginLeft: '6px', fontSize: '10px', padding: '1px 5px', border: '1px solid var(--text-muted)', color: 'var(--text-muted)' }}>{a.count}×</span>}
                 </span>
                 <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.host || '—'}</span>
-                <span style={{ fontSize: '11px' }}>{new Date(a.created_at).toLocaleTimeString()}</span>
+                <span style={{ fontSize: '11px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{new Date(a.created_at).toLocaleString()}</span>
               </div>
             ))}
           </div>
