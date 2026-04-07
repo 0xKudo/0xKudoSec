@@ -53,7 +53,7 @@ function buildMenu(mainWindow, store, status, navigateTo) {
       enabled: status === 'STOPPED',
       click: async () => {
         const { exec } = require('child_process');
-        exec('powershell -Command "Start-Process sc -ArgumentList \'start fluent-bit\' -Verb RunAs -WindowStyle Hidden"', { windowsHide: true });
+        exec('schtasks /Run /TN "0xKudoSec-FluentBit-Start"', { windowsHide: true });
       },
     },
     {
@@ -61,7 +61,7 @@ function buildMenu(mainWindow, store, status, navigateTo) {
       enabled: status === 'RUNNING',
       click: async () => {
         const { exec } = require('child_process');
-        exec('powershell -Command "Start-Process sc -ArgumentList \'stop fluent-bit\' -Verb RunAs -WindowStyle Hidden"', { windowsHide: true });
+        exec('schtasks /Run /TN "0xKudoSec-FluentBit-Stop"', { windowsHide: true });
       },
     },
     { type: 'separator' },
