@@ -17,3 +17,16 @@ export const requireAuth = (req, res, next) => {
     algorithms: ['RS256'],
   })(req, res, next);
 };
+
+// Middleware to require a specific Auth0 role.
+// Must be used after requireAuth. Roles are injected by the
+// "Add roles to token" Auth0 Action into the custom claim.
+const ROLES_CLAIM = 'https://tools.laynekudo.com/roles';
+
+export const requireRole = (role) => (req, res, next) => {
+  const roles = req.auth?.[ROLES_CLAIM] ?? [];
+  if (!roles.includes(role)) {
+    return res.status(403).json({ error: 'Forbidden: insufficient role' });
+  }
+  next();
+};

@@ -311,6 +311,17 @@ export function SiemConfiguration() {
   const [agentAction, setAgentAction] = useState(null);
   const [trayOnClose, setTrayOnClose] = useState(true);
 
+  // Role-based access
+  const ROLES_CLAIM = 'https://tools.laynekudo.com/roles';
+  const userRoles = user?.[ROLES_CLAIM] ?? [];
+  const isConfigEditor = isElectron && userRoles.includes('config-editor');
+
+  // Agent config editor state
+  const [configText, setConfigText] = useState('');
+  const [configLoading, setConfigLoading] = useState(false);
+  const [configSaving, setConfigSaving] = useState(false);
+  const [configMsg, setConfigMsg] = useState(null);
+
   useEffect(() => {
     if (!isElectron) return;
     window.electron.settings.getTrayOnClose().then(val => setTrayOnClose(val));
@@ -321,6 +332,30 @@ export function SiemConfiguration() {
     const t = setInterval(pollAgent, 10000);
     return () => clearInterval(t);
   }, [isElectron]);
+
+  // Load Fluent Bit config when Edit Config tab opens
+  useEffect(() => {
+    if (!isConfigEditor || tab !== 6) return;
+    setConfigLoading(true);
+    setConfigMsg(null);
+    window.electron.fluentBit.readConfig().then(res => {
+      if (res.ok) setConfigText(res.text);
+      else setConfigMsg({ ok: false, text: res.err });
+      setConfigLoading(false);
+    });
+  }, [isConfigEditor, tab]);
+
+  const saveConfig = async () => {
+    setConfigSaving(true);
+    setConfigMsg(null);
+    const res = await window.electron.fluentBit.writeConfig(configText);
+    if (res.ok) {
+      setConfigMsg({ ok: true, text: 'Saved. Restart the Fluent Bit agent for changes to take effect.' });
+    } else {
+      setConfigMsg({ ok: false, text: res.err });
+    }
+    setConfigSaving(false);
+  };
 
   // Log Retention state
   const [retentionDays, setRetentionDays] = useState('');
@@ -596,7 +631,7 @@ winlogbeat.event_logs:
       </div>
 
       <div style={isMobile ? s.tabsMobile : s.tabs}>
-        {(isElectronUnauth ? ['Desktop App'] : [...BASE_TABS, ...(isElectron ? ['Desktop App'] : [])]).map((t, i) => (
+        {(isElectronUnauth ? ['Desktop App'] : [...BASE_TABS, ...(isElectron ? ['Desktop App'] : []), ...(isConfigEditor ? ['Edit Config'] : [])]).map((t, i) => (
           <button
             key={t}
             style={isMobile ? s.tabMobile(tab === (isElectronUnauth ? 5 : i)) : s.tab(tab === (isElectronUnauth ? 5 : i))}
@@ -809,6 +844,52 @@ winlogbeat.event_logs:
                 When enabled, closing the window keeps the app running in the system tray. Right-click the tray icon to quit.
               </div>
             </div>
+          </div>
+        )}
+
+        {/* ── Tab 6: Edit Config (config-editor role + Electron only) ── */}
+        {isConfigEditor && tab === 6 && (
+          <div style={s.section}>
+            <div style={s.sectionTitle}>Edit Config</div>
+            <div style={s.sectionDesc}>
+              Raw Fluent Bit configuration file. Changes take effect after restarting the agent.
+              Access restricted to users with the <strong>config-editor</strong> role.
+            </div>
+            {configLoading ? (
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '16px' }}>Loading...</div>
+            ) : (
+              <div style={{ marginTop: '16px' }}>
+                <textarea
+                  value={configText}
+                  onChange={e => { setConfigText(e.target.value); setConfigMsg(null); }}
+                  spellCheck={false}
+                  style={{
+                    width: '100%',
+                    minHeight: '400px',
+                    fontFamily: 'var(--font)',
+                    fontSize: '12px',
+                    background: 'var(--bg-secondary, #0e0d0c)',
+                    color: 'var(--text-primary)',
+                    border: '1px solid var(--border)',
+                    padding: '12px',
+                    resize: 'vertical',
+                    boxSizing: 'border-box',
+                    lineHeight: '1.6',
+                    outline: 'none',
+                  }}
+                />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '12px' }}>
+                  <button style={s.btnPrimary} onClick={saveConfig} disabled={configSaving}>
+                    {configSaving ? 'Saving...' : 'Save'}
+                  </button>
+                </div>
+                {configMsg && (
+                  <div style={{ marginTop: '10px', padding: '8px 12px', fontSize: '11px', border: `1px solid ${configMsg.ok ? 'var(--severity-low)' : 'var(--severity-high)'}`, color: configMsg.ok ? 'var(--severity-low)' : 'var(--severity-high)' }}>
+                    {configMsg.text}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
 

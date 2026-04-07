@@ -319,6 +319,17 @@ ipcMain.handle('fluent-bit:restart', async (event) => {
   return { ok: !err, err };
 });
 
+ipcMain.handle('fluent-bit:read-config', async (event) => {
+  if (!isValidSender(event)) return { ok: false, err: 'Unauthorized' };
+  const confPath = 'C:\\Program Files\\fluent-bit\\conf\\cybertools.conf';
+  try {
+    const text = fs.readFileSync(confPath, 'utf8');
+    return { ok: true, text };
+  } catch (e) {
+    return { ok: false, err: e.message };
+  }
+});
+
 ipcMain.handle('fluent-bit:write-config', async (event, configText) => {
   if (!isValidSender(event)) return { ok: false, err: 'Unauthorized' };
 
