@@ -25,7 +25,7 @@ nsis:
   shortcutName: 0xKudo Security Toolkit
   createDesktopShortcut: true
   createStartMenuShortcut: true
-  include: assets/installer.nsh
+  include: installer.nsh
 
 # Files to include in the package
 files:
