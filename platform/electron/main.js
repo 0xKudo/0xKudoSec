@@ -98,6 +98,27 @@ function createMainWindow() {
 
   mainWindow.loadURL(url);
 
+  // ── Session-level CSP (Finding 10) ────────────────────────────────────
+  // Mirrors the VPS policy as a defence-in-depth layer in case headers are
+  // stripped in transit. Auth0 popup opens in the system browser, not here.
+  mainWindow.webContents.session.webRequest.onHeadersReceived((details, callback) => {
+    callback({
+      responseHeaders: {
+        ...details.responseHeaders,
+        'Content-Security-Policy': [
+          "default-src 'self';" +
+          "script-src 'self' 'unsafe-inline';" +
+          "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;" +
+          "font-src 'self' https://fonts.gstatic.com;" +
+          "img-src 'self' data: https:;" +
+          "connect-src 'self' https://tools.laynekudo.com https://*.auth0.com wss://tools.laynekudo.com;" +
+          "frame-ancestors 'none';" +
+          "object-src 'none';"
+        ],
+      },
+    });
+  });
+
   // F12 opens DevTools — only when not packaged (dev mode)
   if (!app.isPackaged) {
     mainWindow.webContents.on('before-input-event', (_e, input) => {
