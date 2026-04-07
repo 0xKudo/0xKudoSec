@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, shell, protocol, safeStorage } = require('electron');
+const { app, BrowserWindow, ipcMain, shell, protocol, safeStorage, Menu } = require('electron');
 const path = require('path');
 const { fork } = require('child_process');
 const { exec } = require('child_process');
@@ -139,6 +139,11 @@ function createMainWindow() {
     : PRODUCTION_URL;
 
   mainWindow.loadURL(url);
+
+  // Disable built-in Electron reload shortcuts at the session level
+  mainWindow.webContents.on('did-finish-load', () => {
+    mainWindow.webContents.setIgnoreMenuShortcuts(true);
+  });
 
   // Block keyboard shortcuts that shouldn't work in production
   mainWindow.webContents.on('before-input-event', (e, input) => {
@@ -446,6 +451,10 @@ ipcMain.handle('update:dismiss', (event) => {
 
 // ── App lifecycle ─────────────────────────────────────────────────────────
 app.whenReady().then(async () => {
+  // Remove default application menu — eliminates Chromium's built-in
+  // keyboard shortcuts (Ctrl+R, Ctrl+Shift+R, Ctrl+Shift+I, etc.)
+  Menu.setApplicationMenu(null);
+
   initStore();
   startCallbackServer();
   createSplash();
