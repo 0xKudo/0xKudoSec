@@ -172,7 +172,13 @@ function createMainWindow() {
     }
   });
 
+  // Show main window but keep it invisible until React signals it's painted.
+  // This prevents the flash between splash → blank → connecting screen.
   mainWindow.once('ready-to-show', () => {
+    mainWindow.showInactive(); // render offscreen, don't steal focus yet
+  });
+
+  ipcMain.once('app:ready', () => {
     if (splashWindow && !splashWindow.isDestroyed()) {
       splashWindow.destroy();
       splashWindow = null;
@@ -372,15 +378,48 @@ ipcMain.handle('settings:setPin', (event, pin) => {
   return { ok: true };
 });
 
+// In-memory PIN attempt tracker — resets on app restart (intentional)
+const pinAttempts = { count: 0, lockedUntil: null };
+const PIN_MAX_ATTEMPTS = 5;
+const PIN_LOCKOUT_MS = 60 * 1000;
+
 ipcMain.handle('settings:verifyPin', (event, pin) => {
   if (!isValidSender(event)) return { ok: false, err: 'Unauthorized' };
   if (typeof pin !== 'string') return { ok: false, err: 'Invalid input' };
+  if (pin.length > 256) return { ok: false, err: 'PIN too long' };
+
+  // Lockout check
+  if (pinAttempts.lockedUntil && Date.now() < pinAttempts.lockedUntil) {
+    const secsLeft = Math.ceil((pinAttempts.lockedUntil - Date.now()) / 1000);
+    return { ok: false, err: `Too many attempts. Try again in ${secsLeft} seconds.` };
+  }
+
   const salt = store.get('pinSalt');
   const storedHash = store.get('pinHash');
   if (!salt || !storedHash) return { ok: false, err: 'No PIN set' };
+
   const attemptHash = hashPin(pin, salt);
+
+  // Guard against corrupted store causing timingSafeEqual to throw
+  if (storedHash.length !== attemptHash.length) {
+    return { ok: false, err: 'PIN verification failed' };
+  }
+
   const match = timingSafeEqual(Buffer.from(storedHash, 'hex'), Buffer.from(attemptHash, 'hex'));
-  return { ok: match, err: match ? null : 'Incorrect PIN' };
+
+  if (match) {
+    pinAttempts.count = 0;
+    pinAttempts.lockedUntil = null;
+    return { ok: true, err: null };
+  } else {
+    pinAttempts.count += 1;
+    if (pinAttempts.count >= PIN_MAX_ATTEMPTS) {
+      pinAttempts.lockedUntil = Date.now() + PIN_LOCKOUT_MS;
+      pinAttempts.count = 0;
+      return { ok: false, err: 'Too many attempts. Try again in 60 seconds.' };
+    }
+    return { ok: false, err: 'Incorrect PIN' };
+  }
 });
 
 // ── Settings IPC ──────────────────────────────────────────────────────────
