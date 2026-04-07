@@ -919,7 +919,7 @@ winlogbeat.event_logs:
                     placeholder="New PIN"
                     value={pinNewInput}
                     onChange={e => { setPinNewInput(e.target.value); setPinErr(null); }}
-                    style={s.input}
+                    style={{ ...s.input, width: '200px' }}
                   />
                   <input
                     type="password"
@@ -927,7 +927,7 @@ winlogbeat.event_logs:
                     value={pinConfirmInput}
                     onChange={e => { setPinConfirmInput(e.target.value); setPinErr(null); }}
                     onKeyDown={e => { if (e.key === 'Enter') handleSetPin(); }}
-                    style={s.input}
+                    style={{ ...s.input, width: '200px' }}
                   />
                   <button style={s.btnPrimary} onClick={handleSetPin}>Set PIN</button>
                 </div>
