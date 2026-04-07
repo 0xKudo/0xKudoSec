@@ -391,7 +391,7 @@ export function SiemConfiguration() {
       setPinErr(null);
       setPinState('unlocked');
     } else {
-      setPinErr('Incorrect PIN');
+      setPinErr(res.err || 'Incorrect PIN');
       setPinInput('');
     }
   };
