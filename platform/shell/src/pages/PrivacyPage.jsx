@@ -100,7 +100,7 @@ export function PrivacyPage() {
 
       <div style={s.scrollArea}><div style={s.container}>
         <h1 style={s.h1}>Privacy Policy</h1>
-        <div style={s.updated}>Last updated: April 6, 2026</div>
+        <div style={s.updated}>Last updated: April 7, 2026</div>
 
         <p style={s.p}>
           0xKudoSec ("the platform") is a cybersecurity operations platform operated by Layne Kudo.
@@ -155,6 +155,8 @@ export function PrivacyPage() {
           <li style={s.li}>Audit log rows include tamper-detection hashes verified nightly.</li>
           <li style={s.li}>The server enforces HTTPS, strict CORS, and Content Security Policy headers on all responses.</li>
           <li style={s.li}>All API endpoints are rate-limited and require authentication.</li>
+          <li style={s.li}>On the desktop app, locally stored application data (preferences and access credentials) is encrypted at rest using Windows DPAPI, which ties encryption to the operating system user account and machine. Access to sensitive configuration features is protected by a user-set PIN stored as a salted scrypt hash; the plaintext PIN is never stored.</li>
+          <li style={s.li}>Access to privileged configuration features is restricted by role-based access control enforced at both the application and API layers, in accordance with the principle of least privilege.</li>
         </ul>
 
         <h2 style={s.h2}>Your Rights</h2>
