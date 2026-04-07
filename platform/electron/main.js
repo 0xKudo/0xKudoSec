@@ -36,6 +36,17 @@ let callbackServer = null;
 function startCallbackServer() {
   if (callbackServer) return;
   callbackServer = http.createServer((req, res) => {
+    const parsedUrl = new URL(req.url, `http://localhost:${AUTH0_CALLBACK_PORT}`);
+
+    // Reject requests that don't look like a real Auth0 PKCE callback
+    const hasCode = parsedUrl.searchParams.has('code');
+    const hasState = parsedUrl.searchParams.has('state');
+    if (!hasCode || !hasState || parsedUrl.pathname !== '/callback') {
+      res.writeHead(400, { 'Content-Type': 'text/plain' });
+      res.end('Bad Request');
+      return;
+    }
+
     // Respond to the browser tab so it can close itself
     res.writeHead(200, { 'Content-Type': 'text/html' });
     res.end('<html><body><p>Login complete. You may close this tab.</p><script>setTimeout(()=>window.close(),500);</script></body></html>');
