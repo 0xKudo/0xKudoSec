@@ -111,7 +111,7 @@ function createMainWindow() {
           "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;" +
           "font-src 'self' https://fonts.gstatic.com;" +
           "img-src 'self' data: https:;" +
-          "connect-src 'self' https://tools.laynekudo.com https://*.auth0.com wss://tools.laynekudo.com;" +
+          "connect-src 'self' https://tools.laynekudo.com https://*.auth0.com wss://tools.laynekudo.com http://localhost:8765 http://127.0.0.1:8765;" +
           "frame-ancestors 'none';" +
           "object-src 'none';"
         ],
