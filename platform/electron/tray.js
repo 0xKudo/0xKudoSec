@@ -10,7 +10,7 @@ function getIconPath(status) {
   return path.join(__dirname, 'assets', 'icon.ico');
 }
 
-function buildMenu(mainWindow, store, status) {
+function buildMenu(mainWindow, store, status, navigateTo) {
   const statusLabel = {
     RUNNING: '● Fluent Bit: Running',
     STOPPED: '○ Fluent Bit: Stopped',
@@ -40,9 +40,7 @@ function buildMenu(mainWindow, store, status) {
         if (!mainWindow || mainWindow.isDestroyed()) return;
         mainWindow.show();
         mainWindow.focus();
-        mainWindow.webContents.executeJavaScript(
-          `window.dispatchEvent(new CustomEvent('electron:navigate', { detail: '/siem/configuration' }))`
-        );
+        navigateTo('/siem/configuration');
       },
     },
     { type: 'separator' },
@@ -77,7 +75,7 @@ function buildMenu(mainWindow, store, status) {
   ]);
 }
 
-function createTray(mainWindow, store) {
+function createTray(mainWindow, store, navigateTo) {
   const iconPath = getIconPath('UNKNOWN');
   const img = nativeImage.createFromPath(iconPath);
   tray = new Tray(img.isEmpty() ? nativeImage.createEmpty() : img);
@@ -86,7 +84,7 @@ function createTray(mainWindow, store) {
   let currentMenu = null;
 
   function refreshMenu() {
-    currentMenu = buildMenu(mainWindow, store, currentStatus);
+    currentMenu = buildMenu(mainWindow, store, currentStatus, navigateTo);
     // Do NOT call setContextMenu -- it suppresses click events on Windows
   }
 

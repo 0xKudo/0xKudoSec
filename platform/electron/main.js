@@ -350,6 +350,13 @@ ipcMain.on('window:expand', (event) => {
   mainWindow.center();
 });
 
+// Send a navigation event to the renderer — used by tray menu instead of executeJavaScript
+function navigateTo(path) {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('window:navigate', path);
+  }
+}
+
 // ── Auto-updater ──────────────────────────────────────────────────────────
 autoUpdater.autoDownload = false;
 autoUpdater.autoInstallOnAppQuit = false;
@@ -435,7 +442,7 @@ app.whenReady().then(async () => {
 
   // Tray is set up after main window exists
   const { createTray } = require('./tray');
-  tray = createTray(mainWindow, store);
+  tray = createTray(mainWindow, store, navigateTo);
 
   setupAutoUpdater();
 });

@@ -214,16 +214,14 @@ function AppInner() {
 
   // Must be above any conditional returns to satisfy rules of hooks
   useEffect(() => {
-    function onElectronNavigate(e) {
-      const target = e.detail;
+    if (!isElectron || !window.electron?.window?.onNavigate) return;
+    window.electron.window.onNavigate((target) => {
       if (target === '/siem/configuration') {
         setActiveApp('siem');
         setSiemView('configuration');
         setMenuOpen(false);
       }
-    }
-    window.addEventListener('electron:navigate', onElectronNavigate);
-    return () => window.removeEventListener('electron:navigate', onElectronNavigate);
+    });
   }, []);
 
   if (isElectron && isLoading) {
