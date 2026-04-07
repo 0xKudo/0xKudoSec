@@ -1,12 +1,38 @@
-const { app, BrowserWindow, ipcMain, shell, protocol } = require('electron');
+const { app, BrowserWindow, ipcMain, shell, protocol, safeStorage } = require('electron');
 const path = require('path');
 const { fork } = require('child_process');
 const { exec } = require('child_process');
+const fs = require('fs');
 const http = require('http');
 const Store = require('electron-store');
 const { autoUpdater } = require('electron-updater');
 
-const store = new Store();
+let store = null;
+
+// ── Encrypted store initialisation ────────────────────────────────────────
+// safeStorage uses Windows DPAPI to protect a randomly generated encryption
+// key. The encrypted blob is written to disk; the plaintext key never is.
+function initStore() {
+  const keyFile = path.join(app.getPath('userData'), '.store-key');
+  let encryptionKey;
+
+  if (safeStorage.isEncryptionAvailable()) {
+    if (fs.existsSync(keyFile)) {
+      const encrypted = fs.readFileSync(keyFile);
+      encryptionKey = safeStorage.decryptString(encrypted);
+    } else {
+      // First run — generate a random key, encrypt it, persist the blob
+      const raw = require('crypto').randomBytes(32).toString('hex');
+      const encrypted = safeStorage.encryptString(raw);
+      fs.writeFileSync(keyFile, encrypted, { mode: 0o600 });
+      encryptionKey = raw;
+    }
+    store = new Store({ encryptionKey });
+  } else {
+    // safeStorage unavailable (rare edge case) — fall back to unencrypted
+    store = new Store();
+  }
+}
 const SHELL_PORT = 5173;
 const SERVER_PORT = 4000;
 const isDev = process.env.NODE_ENV !== 'production' && !app.isPackaged;
@@ -360,6 +386,7 @@ ipcMain.handle('update:dismiss', (event) => {
 
 // ── App lifecycle ─────────────────────────────────────────────────────────
 app.whenReady().then(async () => {
+  initStore();
   startCallbackServer();
   createSplash();
 
