@@ -7,6 +7,11 @@ const http = require('http');
 const Store = require('electron-store');
 const { autoUpdater } = require('electron-updater');
 
+// Override userData path before app is ready so electron-store and all
+// Chromium profile data land in a folder named after the app, not the
+// package name (@cybertools/electron → "electron")
+app.setPath('userData', path.join(app.getPath('appData'), '0xKudoSec'));
+
 let store = null;
 
 // ── Encrypted store initialisation ────────────────────────────────────────
