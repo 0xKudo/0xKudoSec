@@ -1,6 +1,6 @@
 {
   "name": "@cybertools/electron",
-  "version": "1.1.7",
+  "version": "1.1.8",
   "description": "0xKudo Security Toolkit desktop app",
   "author": "Layne Kudo",
   "private": true,

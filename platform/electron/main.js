@@ -196,7 +196,37 @@ function forkServer(resolve, reject) {
       ? path.join(__dirname, '../server/index.js')
       : path.join(process.resourcesPath, 'server/index.js');
 
-    const env = { ...process.env, NODE_ENV: isDev ? 'development' : 'production' };
+    // Allowlist — only pass vars the server actually needs, never forward all of process.env
+    const ALLOWED_ENV_VARS = [
+      'ANTHROPIC_API_KEY',
+      'ALLOWED_ORIGIN',
+      'PORT',
+      'AUTH0_DOMAIN',
+      'AUTH0_CLIENT_ID',
+      'AUTH0_AUDIENCE',
+      'AUTH0_MGMT_CLIENT_ID',
+      'AUTH0_MGMT_CLIENT_SECRET',
+      'AUTH0_TENANT_DOMAIN',
+      'DB_ENCRYPTION_KEY',
+      'DATABASE_URL',
+      'INGEST_AUTH_DB_URL',
+      'OPS_DB_URL',
+      'DATABASE_CA_CERT',
+      'INGEST_API_KEY',
+      'AUDIT_LOG_RETENTION_DAYS',
+      'SHODAN_API_KEY',
+      'VIRUSTOTAL_API_KEY',
+      'HUNTER_API_KEY',
+      'IPINFO_TOKEN',
+      'ABUSEIPDB_API_KEY',
+      'ABUSECH_API_KEY',
+    ];
+    const env = Object.fromEntries(
+      ALLOWED_ENV_VARS
+        .filter(k => process.env[k] !== undefined)
+        .map(k => [k, process.env[k]])
+    );
+    env.NODE_ENV = isDev ? 'development' : 'production';
 
     serverProcess = fork(serverEntry, [], {
       env,
