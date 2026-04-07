@@ -12,19 +12,16 @@ const isElectron = typeof window !== 'undefined' && window.electron?.isElectron 
 // that Electron intercepts and forwards to the Auth0 SDK
 const redirectUri = isElectron ? 'http://localhost:8765/callback' : window.location.origin;
 
-// In Electron, handle the localhost callback forwarded from main process
+// In Electron, handle the localhost callback forwarded from main process via typed IPC
 function Auth0CallbackHandler({ children }) {
   const { handleRedirectCallback } = useAuth0();
   useEffect(() => {
     if (!isElectron) return;
-    function onCallback(e) {
-      const url = e.detail;
+    window.electron.auth.onCallback((url) => {
       if (url && url.includes('localhost:8765/callback')) {
         handleRedirectCallback(url).catch(() => {});
       }
-    }
-    window.addEventListener('auth0-callback', onCallback);
-    return () => window.removeEventListener('auth0-callback', onCallback);
+    });
   }, [handleRedirectCallback]);
   return children;
 }

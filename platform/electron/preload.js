@@ -37,7 +37,12 @@ contextBridge.exposeInMainWorld('electron', {
     verifyPin: (pin) => ipcRenderer.invoke('settings:verifyPin', pin),
   },
 
+  auth: {
+    onCallback: (cb) => ipcRenderer.on('auth0:callback', (_e, url) => cb(url)),
+  },
+
   window: {
+    ready: () => ipcRenderer.send('app:ready'),
     minimize: () => ipcRenderer.send('window:minimize'),
     maximize: () => ipcRenderer.send('window:maximize'),
     close: () => ipcRenderer.send('window:close'),

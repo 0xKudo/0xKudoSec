@@ -82,13 +82,11 @@ function startCallbackServer() {
     res.writeHead(200, { 'Content-Type': 'text/html' });
     res.end('<html><body><p>Login complete. You may close this tab.</p><script>setTimeout(()=>window.close(),500);</script></body></html>');
 
-    // Forward the callback URL to the Electron renderer for Auth0 SDK to process
+    // Forward the callback URL to the Electron renderer via typed IPC
     const fullUrl = `http://localhost:${AUTH0_CALLBACK_PORT}${req.url}`;
     setTimeout(() => {
       if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.webContents.executeJavaScript(
-          `window.dispatchEvent(new CustomEvent('auth0-callback', { detail: ${JSON.stringify(fullUrl)} }))`
-        ).catch(() => {});
+        mainWindow.webContents.send('auth0:callback', fullUrl);
       }
     }, 500);
   });
