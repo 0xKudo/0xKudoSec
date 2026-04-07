@@ -442,7 +442,7 @@ app.whenReady().then(async () => {
 
   // Tray is set up after main window exists
   const { createTray } = require('./tray');
-  tray = createTray(mainWindow, store, navigateTo);
+  tray = createTray(mainWindow, store, navigateTo, runSc);
 
   setupAutoUpdater();
 });

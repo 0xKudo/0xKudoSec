@@ -10,7 +10,7 @@ function getIconPath(status) {
   return path.join(__dirname, 'assets', 'icon.ico');
 }
 
-function buildMenu(mainWindow, store, status, navigateTo) {
+function buildMenu(mainWindow, store, status, navigateTo, runSc) {
   const statusLabel = {
     RUNNING: '● Fluent Bit: Running',
     STOPPED: '○ Fluent Bit: Stopped',
@@ -51,18 +51,12 @@ function buildMenu(mainWindow, store, status, navigateTo) {
     {
       label: 'Start Fluent Bit',
       enabled: status === 'STOPPED',
-      click: async () => {
-        const { exec } = require('child_process');
-        exec('schtasks /Run /TN "0xKudoSec-FluentBit-Start"', { windowsHide: true });
-      },
+      click: async () => { runSc('start fluent-bit'); },
     },
     {
       label: 'Stop Fluent Bit',
       enabled: status === 'RUNNING',
-      click: async () => {
-        const { exec } = require('child_process');
-        exec('schtasks /Run /TN "0xKudoSec-FluentBit-Stop"', { windowsHide: true });
-      },
+      click: async () => { runSc('stop fluent-bit'); },
     },
     { type: 'separator' },
     {
@@ -75,7 +69,7 @@ function buildMenu(mainWindow, store, status, navigateTo) {
   ]);
 }
 
-function createTray(mainWindow, store, navigateTo) {
+function createTray(mainWindow, store, navigateTo, runSc) {
   const iconPath = getIconPath('UNKNOWN');
   const img = nativeImage.createFromPath(iconPath);
   tray = new Tray(img.isEmpty() ? nativeImage.createEmpty() : img);
@@ -84,7 +78,7 @@ function createTray(mainWindow, store, navigateTo) {
   let currentMenu = null;
 
   function refreshMenu() {
-    currentMenu = buildMenu(mainWindow, store, currentStatus, navigateTo);
+    currentMenu = buildMenu(mainWindow, store, currentStatus, navigateTo, runSc);
     // Do NOT call setContextMenu -- it suppresses click events on Windows
   }
 
