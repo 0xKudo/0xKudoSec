@@ -140,14 +140,32 @@ function createMainWindow() {
 
   mainWindow.loadURL(url);
 
-  // F12 opens DevTools — only when not packaged (dev mode)
-  if (!app.isPackaged) {
-    mainWindow.webContents.on('before-input-event', (_e, input) => {
-      if (input.key === 'F12' && input.type === 'keyDown') {
-        mainWindow.webContents.toggleDevTools();
-      }
-    });
-  }
+  // Block keyboard shortcuts that shouldn't work in production
+  mainWindow.webContents.on('before-input-event', (e, input) => {
+    if (input.type !== 'keyDown') return;
+
+    // F12 DevTools — dev only
+    if (input.key === 'F12') {
+      if (!app.isPackaged) mainWindow.webContents.toggleDevTools();
+      e.preventDefault();
+      return;
+    }
+
+    // Block reload shortcuts
+    if (input.key === 'F5') { e.preventDefault(); return; }
+    if (input.control && input.key === 'r') { e.preventDefault(); return; }
+
+    // Block DevTools / inspect shortcuts
+    if (input.control && input.shift && ['i', 'I', 'j', 'J', 'c', 'C'].includes(input.key)) {
+      e.preventDefault();
+      return;
+    }
+
+    // Block view source
+    if (input.control && ['u', 'U'].includes(input.key)) {
+      e.preventDefault();
+    }
+  });
 
   mainWindow.once('ready-to-show', () => {
     if (splashWindow && !splashWindow.isDestroyed()) {
