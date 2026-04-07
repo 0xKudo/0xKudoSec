@@ -5,7 +5,7 @@ import { useIsMobile } from '../hooks/useIsMobile';
 const isElectron = typeof window !== 'undefined' && window.electron?.isElectron === true;
 
 // ── Update this URL with each Electron release ────────────────────────────────
-const DESKTOP_DOWNLOAD_URL = 'https://github.com/0xKudoX/0xKudoSec-releases/releases/download/v1.1.2/0xKudo-Security-Toolkit-Setup-1.1.2.exe';
+const DESKTOP_DOWNLOAD_URL = 'https://github.com/0xKudoX/0xKudoSec-releases/releases/download/v1.1.3/0xKudo-Security-Toolkit-Setup-1.1.3.exe';
 
 const styles = {
   nav: {

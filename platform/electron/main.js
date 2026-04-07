@@ -102,6 +102,13 @@ function createMainWindow() {
   // Mirrors the VPS policy as a defence-in-depth layer in case headers are
   // stripped in transit. Auth0 popup opens in the system browser, not here.
   mainWindow.webContents.session.webRequest.onHeadersReceived((details, callback) => {
+    // Don't inject CSP on the Auth0 callback server responses — executeJavaScript
+    // dispatches the callback event and must not be blocked
+    const url = details.url || '';
+    if (url.startsWith('http://localhost:8765') || url.startsWith('http://127.0.0.1:8765')) {
+      callback({ responseHeaders: details.responseHeaders });
+      return;
+    }
     callback({
       responseHeaders: {
         ...details.responseHeaders,
