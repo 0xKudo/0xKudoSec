@@ -32,6 +32,9 @@ contextBridge.exposeInMainWorld('electron', {
   settings: {
     getTrayOnClose: () => ipcRenderer.invoke('settings:getTrayOnClose'),
     setTrayOnClose: (val) => ipcRenderer.invoke('settings:setTrayOnClose', val),
+    hasPin: () => ipcRenderer.invoke('settings:hasPin'),
+    setPin: (pin) => ipcRenderer.invoke('settings:setPin', pin),
+    verifyPin: (pin) => ipcRenderer.invoke('settings:verifyPin', pin),
   },
 
   window: {

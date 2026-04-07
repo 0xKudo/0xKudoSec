@@ -322,6 +322,13 @@ export function SiemConfiguration() {
   const [configSaving, setConfigSaving] = useState(false);
   const [configMsg, setConfigMsg] = useState(null);
 
+  // PIN state: 'unset' | 'locked' | 'unlocked'
+  const [pinState, setPinState] = useState('locked');
+  const [pinInput, setPinInput] = useState('');
+  const [pinNewInput, setPinNewInput] = useState('');
+  const [pinConfirmInput, setPinConfirmInput] = useState('');
+  const [pinErr, setPinErr] = useState(null);
+
   useEffect(() => {
     if (!isElectron) return;
     window.electron.settings.getTrayOnClose().then(val => setTrayOnClose(val));
@@ -333,9 +340,27 @@ export function SiemConfiguration() {
     return () => clearInterval(t);
   }, [isElectron]);
 
-  // Load Fluent Bit config when Edit Config tab opens
+  // When Edit Config tab opens: check if PIN is set, reset lock state
   useEffect(() => {
-    if (!isConfigEditor || tab !== 6) return;
+    if (!isConfigEditor || tab !== 6) {
+      // Reset lock whenever user leaves the tab
+      setPinState('locked');
+      setPinInput('');
+      setPinNewInput('');
+      setPinConfirmInput('');
+      setPinErr(null);
+      setConfigText('');
+      setConfigMsg(null);
+      return;
+    }
+    window.electron.settings.hasPin().then(has => {
+      setPinState(has ? 'locked' : 'unset');
+    });
+  }, [isConfigEditor, tab]);
+
+  // Load config only when unlocked
+  useEffect(() => {
+    if (!isConfigEditor || tab !== 6 || pinState !== 'unlocked') return;
     setConfigLoading(true);
     setConfigMsg(null);
     window.electron.fluentBit.readConfig().then(res => {
@@ -343,7 +368,33 @@ export function SiemConfiguration() {
       else setConfigMsg({ ok: false, text: res.err });
       setConfigLoading(false);
     });
-  }, [isConfigEditor, tab]);
+  }, [isConfigEditor, tab, pinState]);
+
+  const handleSetPin = async () => {
+    if (pinNewInput.length < 4) { setPinErr('PIN must be at least 4 characters'); return; }
+    if (pinNewInput !== pinConfirmInput) { setPinErr('PINs do not match'); return; }
+    const res = await window.electron.settings.setPin(pinNewInput);
+    if (res.ok) {
+      setPinNewInput('');
+      setPinConfirmInput('');
+      setPinErr(null);
+      setPinState('locked');
+    } else {
+      setPinErr(res.err);
+    }
+  };
+
+  const handleVerifyPin = async () => {
+    const res = await window.electron.settings.verifyPin(pinInput);
+    if (res.ok) {
+      setPinInput('');
+      setPinErr(null);
+      setPinState('unlocked');
+    } else {
+      setPinErr('Incorrect PIN');
+      setPinInput('');
+    }
+  };
 
   const saveConfig = async () => {
     setConfigSaving(true);
@@ -855,40 +906,98 @@ winlogbeat.event_logs:
               Raw Fluent Bit configuration file. Changes take effect after restarting the agent.
               Access restricted to users with the <strong>config-editor</strong> role.
             </div>
-            {configLoading ? (
-              <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '16px' }}>Loading...</div>
-            ) : (
-              <div style={{ marginTop: '16px' }}>
-                <textarea
-                  value={configText}
-                  onChange={e => { setConfigText(e.target.value); setConfigMsg(null); }}
-                  spellCheck={false}
-                  style={{
-                    width: '100%',
-                    minHeight: '400px',
-                    fontFamily: 'var(--font)',
-                    fontSize: '12px',
-                    background: 'var(--bg-secondary, #0e0d0c)',
-                    color: 'var(--text-primary)',
-                    border: '1px solid var(--border)',
-                    padding: '12px',
-                    resize: 'vertical',
-                    boxSizing: 'border-box',
-                    lineHeight: '1.6',
-                    outline: 'none',
-                  }}
-                />
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '12px' }}>
-                  <button style={s.btnPrimary} onClick={saveConfig} disabled={configSaving}>
-                    {configSaving ? 'Saving...' : 'Save'}
-                  </button>
+
+            {/* PIN not set — prompt to create one */}
+            {pinState === 'unset' && (
+              <div style={{ marginTop: '24px', maxWidth: '320px' }}>
+                <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '16px' }}>
+                  Set a PIN to protect access to the config editor. You will need to enter it each time you open this tab.
                 </div>
-                {configMsg && (
-                  <div style={{ marginTop: '10px', padding: '8px 12px', fontSize: '11px', border: `1px solid ${configMsg.ok ? 'var(--severity-low)' : 'var(--severity-high)'}`, color: configMsg.ok ? 'var(--severity-low)' : 'var(--severity-high)' }}>
-                    {configMsg.text}
-                  </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <input
+                    type="password"
+                    placeholder="New PIN"
+                    value={pinNewInput}
+                    onChange={e => { setPinNewInput(e.target.value); setPinErr(null); }}
+                    style={s.input}
+                  />
+                  <input
+                    type="password"
+                    placeholder="Confirm PIN"
+                    value={pinConfirmInput}
+                    onChange={e => { setPinConfirmInput(e.target.value); setPinErr(null); }}
+                    onKeyDown={e => { if (e.key === 'Enter') handleSetPin(); }}
+                    style={s.input}
+                  />
+                  <button style={s.btnPrimary} onClick={handleSetPin}>Set PIN</button>
+                </div>
+                {pinErr && (
+                  <div style={{ marginTop: '10px', fontSize: '11px', color: 'var(--severity-high)' }}>{pinErr}</div>
                 )}
               </div>
+            )}
+
+            {/* PIN set — locked, prompt to unlock */}
+            {pinState === 'locked' && (
+              <div style={{ marginTop: '24px', maxWidth: '320px' }}>
+                <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '16px' }}>
+                  Enter your PIN to unlock the config editor.
+                </div>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <input
+                    type="password"
+                    placeholder="PIN"
+                    value={pinInput}
+                    onChange={e => { setPinInput(e.target.value); setPinErr(null); }}
+                    onKeyDown={e => { if (e.key === 'Enter') handleVerifyPin(); }}
+                    style={{ ...s.input, flex: 1 }}
+                    autoFocus
+                  />
+                  <button style={s.btnPrimary} onClick={handleVerifyPin}>Unlock</button>
+                </div>
+                {pinErr && (
+                  <div style={{ marginTop: '10px', fontSize: '11px', color: 'var(--severity-high)' }}>{pinErr}</div>
+                )}
+              </div>
+            )}
+
+            {/* Unlocked — show editor */}
+            {pinState === 'unlocked' && (
+              configLoading ? (
+                <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '16px' }}>Loading...</div>
+              ) : (
+                <div style={{ marginTop: '16px' }}>
+                  <textarea
+                    value={configText}
+                    onChange={e => { setConfigText(e.target.value); setConfigMsg(null); }}
+                    spellCheck={false}
+                    style={{
+                      width: '100%',
+                      minHeight: '400px',
+                      fontFamily: 'var(--font)',
+                      fontSize: '12px',
+                      background: 'var(--bg-secondary, #0e0d0c)',
+                      color: 'var(--text-primary)',
+                      border: '1px solid var(--border)',
+                      padding: '12px',
+                      resize: 'vertical',
+                      boxSizing: 'border-box',
+                      lineHeight: '1.6',
+                      outline: 'none',
+                    }}
+                  />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '12px' }}>
+                    <button style={s.btnPrimary} onClick={saveConfig} disabled={configSaving}>
+                      {configSaving ? 'Saving...' : 'Save'}
+                    </button>
+                  </div>
+                  {configMsg && (
+                    <div style={{ marginTop: '10px', padding: '8px 12px', fontSize: '11px', border: `1px solid ${configMsg.ok ? 'var(--severity-low)' : 'var(--severity-high)'}`, color: configMsg.ok ? 'var(--severity-low)' : 'var(--severity-high)' }}>
+                      {configMsg.text}
+                    </div>
+                  )}
+                </div>
+              )
             )}
           </div>
         )}

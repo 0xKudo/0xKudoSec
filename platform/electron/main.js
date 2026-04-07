@@ -334,13 +334,9 @@ ipcMain.handle('fluent-bit:write-config', async (event, configText) => {
   if (!isValidSender(event)) return { ok: false, err: 'Unauthorized' };
 
   if (typeof configText !== 'string') return { ok: false, err: 'Invalid config: must be a string' };
-  if (configText.length > 65536) return { ok: false, err: 'Invalid config: exceeds 64KB limit' };
-
-  const dangerous = /\b(exec|command|script|shell|program)\s*=/i;
-  if (dangerous.test(configText)) return { ok: false, err: 'Invalid config: prohibited directive detected' };
-
-  const validSection = /^\[(SERVICE|INPUT|OUTPUT|FILTER|PARSER|MULTILINE_PARSER)\]/m;
-  if (!validSection.test(configText)) return { ok: false, err: 'Invalid config: no recognized Fluent Bit section found' };
+  if (configText.length > 51200) return { ok: false, err: 'Invalid config: exceeds 50KB limit' };
+  if (/\x00/.test(configText)) return { ok: false, err: 'Invalid config: null bytes not allowed' };
+  if (/`|\$\(/.test(configText)) return { ok: false, err: 'Invalid config: shell expansion not allowed' };
 
   const fs = require('fs');
   const confPath = 'C:\\Program Files\\fluent-bit\\conf\\cybertools.conf';
@@ -350,6 +346,41 @@ ipcMain.handle('fluent-bit:write-config', async (event, configText) => {
   } catch (e) {
     return { ok: false, err: e.message };
   }
+});
+
+// ── PIN IPC ───────────────────────────────────────────────────────────────
+const { scryptSync, randomBytes, timingSafeEqual } = require('crypto');
+
+function hashPin(pin, salt) {
+  return scryptSync(pin, salt, 64).toString('hex');
+}
+
+ipcMain.handle('settings:hasPin', (event) => {
+  if (!isValidSender(event)) return false;
+  return !!store.get('pinHash');
+});
+
+ipcMain.handle('settings:setPin', (event, pin) => {
+  if (!isValidSender(event)) return { ok: false, err: 'Unauthorized' };
+  if (typeof pin !== 'string' || pin.length < 4 || pin.length > 64) {
+    return { ok: false, err: 'PIN must be between 4 and 64 characters' };
+  }
+  const salt = randomBytes(16).toString('hex');
+  const hash = hashPin(pin, salt);
+  store.set('pinSalt', salt);
+  store.set('pinHash', hash);
+  return { ok: true };
+});
+
+ipcMain.handle('settings:verifyPin', (event, pin) => {
+  if (!isValidSender(event)) return { ok: false, err: 'Unauthorized' };
+  if (typeof pin !== 'string') return { ok: false, err: 'Invalid input' };
+  const salt = store.get('pinSalt');
+  const storedHash = store.get('pinHash');
+  if (!salt || !storedHash) return { ok: false, err: 'No PIN set' };
+  const attemptHash = hashPin(pin, salt);
+  const match = timingSafeEqual(Buffer.from(storedHash, 'hex'), Buffer.from(attemptHash, 'hex'));
+  return { ok: match, err: match ? null : 'Incorrect PIN' };
 });
 
 // ── Settings IPC ──────────────────────────────────────────────────────────
