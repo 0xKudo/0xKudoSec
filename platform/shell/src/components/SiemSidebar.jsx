@@ -1,4 +1,7 @@
 import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+
+const isElectron = typeof window !== 'undefined' && window.electron?.isElectron === true;
 
 const styles = {
   sidebar: {
@@ -84,8 +87,30 @@ const NAV = [
   ]},
 ];
 
+function useFluentBitStatus() {
+  const [status, setStatus] = useState('UNKNOWN');
+  useEffect(() => {
+    if (!isElectron) return;
+    const poll = () => window.electron.fluentBit.getStatus().then(setStatus).catch(() => {});
+    poll();
+    const id = setInterval(poll, 15000);
+    return () => clearInterval(id);
+  }, []);
+  return status;
+}
+
+const STATUS_COLOR = {
+  RUNNING: '#16a34a',
+  STOPPED: '#d97706',
+  STARTING: '#60a5fa',
+  STOPPING: '#60a5fa',
+  NOT_INSTALLED: '#6b7280',
+  UNKNOWN: '#6b7280',
+};
+
 export function SiemSidebar({ activeView, onNavigate, onSwitchToTools, isAuthenticated }) {
   const navigate = useNavigate();
+  const fluentStatus = useFluentBitStatus();
   return (
     <aside style={styles.sidebar}>
       {NAV.map(group => (
@@ -121,6 +146,18 @@ export function SiemSidebar({ activeView, onNavigate, onSwitchToTools, isAuthent
       >
         Security Tools ↗
       </div>
+
+      {isElectron && (
+        <div style={{ padding: '10px 16px', borderTop: '1px solid var(--border)' }}>
+          <div style={{ fontSize: '10px', color: 'var(--text-subtle)', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '6px' }}>Agent Status</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: STATUS_COLOR[fluentStatus] || STATUS_COLOR.UNKNOWN, flexShrink: 0 }} />
+            <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+              Fluent Bit: {fluentStatus.charAt(0) + fluentStatus.slice(1).toLowerCase().replace('_', ' ')}
+            </span>
+          </div>
+        </div>
+      )}
 
       <div style={styles.footer}>
         <span style={{ ...styles.footerLink, cursor: 'pointer' }} onClick={() => navigate('/privacy')}>Privacy Policy</span>
