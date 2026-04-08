@@ -29,7 +29,7 @@ function Auth0CallbackHandler({ children }) {
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     {/* Auth0Provider uses in-memory token storage by default (no cacheLocation prop).
-        This is intentional — storing tokens in localStorage exposes them to XSS.
+        This is intentional: storing tokens in localStorage exposes them to XSS.
         Do NOT add cacheLocation: 'localstorage'. Tokens are never written to
         localStorage or sessionStorage anywhere in the codebase. */}
     <Auth0Provider
