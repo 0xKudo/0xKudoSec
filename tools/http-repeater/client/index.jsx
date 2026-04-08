@@ -30,7 +30,7 @@ function saveHistory(history) {
 const styles = {
   container: { maxWidth: '1100px' },
   header: { marginBottom: '20px' },
-  title: { color: 'var(--text-primary)', fontSize: '18px', marginBottom: '6px' },
+  title: { color: 'var(--text-primary)', fontSize: '13px', marginBottom: '4px' },
   subtitle: { color: 'var(--text-muted)', fontSize: '13px' },
   layout: { display: 'grid', gridTemplateColumns: '220px 1fr', gap: '16px' },
   sidebar: {

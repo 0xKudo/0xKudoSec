@@ -19,7 +19,7 @@ const RISK_COLORS = {
 const styles = {
   container: { maxWidth: '960px' },
   header: { marginBottom: '24px' },
-  title: { color: 'var(--text-primary)', fontSize: '18px', marginBottom: '6px' },
+  title: { color: 'var(--text-primary)', fontSize: '13px', marginBottom: '4px' },
   subtitle: { color: 'var(--text-muted)', fontSize: '13px' },
   section: { marginBottom: '16px' },
   label: { color: 'var(--text-muted)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px', display: 'block' },

@@ -64,7 +64,7 @@ const OPERATION_GROUPS = [
 const styles = {
   container: { maxWidth: '960px' },
   header: { marginBottom: '16px' },
-  title: { color: 'var(--text-primary)', fontSize: '18px', marginBottom: '6px' },
+  title: { color: 'var(--text-primary)', fontSize: '13px', marginBottom: '4px' },
   subtitle: { color: 'var(--text-muted)', fontSize: '13px' },
   opPanel: {
     display: 'flex',

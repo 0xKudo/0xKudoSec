@@ -15,7 +15,7 @@ const SEVERITY_COLOR = {
 const styles = {
   container: { maxWidth: '960px' },
   header: { marginBottom: '20px' },
-  title: { color: 'var(--text-primary)', fontSize: '18px', marginBottom: '6px' },
+  title: { color: 'var(--text-primary)', fontSize: '13px', marginBottom: '4px' },
   subtitle: { color: 'var(--text-muted)', fontSize: '13px' },
   warning: {
     background: 'rgba(239,68,68,0.08)',

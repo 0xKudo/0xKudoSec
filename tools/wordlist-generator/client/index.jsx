@@ -21,7 +21,7 @@ const RULE_OPTIONS = [
 const styles = {
   container: { maxWidth: '900px' },
   header: { marginBottom: '24px' },
-  title: { color: 'var(--text-primary)', fontSize: '18px', marginBottom: '6px' },
+  title: { color: 'var(--text-primary)', fontSize: '13px', marginBottom: '4px' },
   subtitle: { color: 'var(--text-muted)', fontSize: '13px' },
   tabs: { display: 'flex', gap: '4px', marginBottom: '20px', borderBottom: '1px solid var(--border)', paddingBottom: '0' },
   tab: (active) => ({
