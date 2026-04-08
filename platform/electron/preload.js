@@ -33,8 +33,9 @@ contextBridge.exposeInMainWorld('electron', {
     getTrayOnClose: () => ipcRenderer.invoke('settings:getTrayOnClose'),
     setTrayOnClose: (val) => ipcRenderer.invoke('settings:setTrayOnClose', val),
     hasPin: () => ipcRenderer.invoke('settings:hasPin'),
-    setPin: (pin) => ipcRenderer.invoke('settings:setPin', pin),
+    setPin: (pin, recoveryPassphrase) => ipcRenderer.invoke('settings:setPin', pin, recoveryPassphrase),
     verifyPin: (pin) => ipcRenderer.invoke('settings:verifyPin', pin),
+    resetWithPassphrase: (passphrase) => ipcRenderer.invoke('settings:resetWithPassphrase', passphrase),
   },
 
   auth: {

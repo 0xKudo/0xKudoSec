@@ -358,16 +358,67 @@ ipcMain.handle('settings:hasPin', (event) => {
   return !!store.get('pinHash');
 });
 
-ipcMain.handle('settings:setPin', (event, pin) => {
+ipcMain.handle('settings:setPin', (event, pin, recoveryPassphrase) => {
   if (!isValidSender(event)) return { ok: false, err: 'Unauthorized' };
   if (typeof pin !== 'string' || pin.length < 4 || pin.length > 64) {
     return { ok: false, err: 'PIN must be between 4 and 64 characters' };
   }
-  const salt = randomBytes(16).toString('hex');
-  const hash = hashPin(pin, salt);
-  store.set('pinSalt', salt);
-  store.set('pinHash', hash);
+  if (typeof recoveryPassphrase !== 'string' || recoveryPassphrase.length < 8 || recoveryPassphrase.length > 256) {
+    return { ok: false, err: 'Recovery passphrase must be between 8 and 256 characters' };
+  }
+  if (pin === recoveryPassphrase) {
+    return { ok: false, err: 'Recovery passphrase must differ from PIN' };
+  }
+
+  const pinSalt = randomBytes(16).toString('hex');
+  const recoverySalt = randomBytes(16).toString('hex');
+  store.set('pinSalt', pinSalt);
+  store.set('pinHash', hashPin(pin, pinSalt));
+  store.set('recoverySalt', recoverySalt);
+  store.set('recoveryHash', hashPin(recoveryPassphrase, recoverySalt));
   return { ok: true };
+});
+
+ipcMain.handle('settings:resetWithPassphrase', (event, recoveryPassphrase) => {
+  if (!isValidSender(event)) return { ok: false, err: 'Unauthorized' };
+  if (typeof recoveryPassphrase !== 'string') return { ok: false, err: 'Invalid input' };
+  if (recoveryPassphrase.length > 256) return { ok: false, err: 'Passphrase too long' };
+
+  // Use same lockout tracker as PIN — shared counter, shared lockout
+  if (pinAttempts.lockedUntil && Date.now() < pinAttempts.lockedUntil) {
+    const secsLeft = Math.ceil((pinAttempts.lockedUntil - Date.now()) / 1000);
+    return { ok: false, err: `Too many attempts. Try again in ${secsLeft} seconds.` };
+  }
+
+  const recoverySalt = store.get('recoverySalt');
+  const storedRecoveryHash = store.get('recoveryHash');
+  if (!recoverySalt || !storedRecoveryHash) return { ok: false, err: 'No recovery passphrase set' };
+
+  const attemptHash = hashPin(recoveryPassphrase, recoverySalt);
+  if (storedRecoveryHash.length !== attemptHash.length) {
+    return { ok: false, err: 'Recovery verification failed' };
+  }
+
+  const match = timingSafeEqual(Buffer.from(storedRecoveryHash, 'hex'), Buffer.from(attemptHash, 'hex'));
+
+  if (match) {
+    pinAttempts.count = 0;
+    pinAttempts.lockedUntil = null;
+    store.delete('pinHash');
+    store.delete('pinSalt');
+    // Keep recoveryHash/recoverySalt — user will set new PIN + passphrase together
+    store.delete('recoveryHash');
+    store.delete('recoverySalt');
+    return { ok: true };
+  } else {
+    pinAttempts.count += 1;
+    if (pinAttempts.count >= PIN_MAX_ATTEMPTS) {
+      pinAttempts.lockedUntil = Date.now() + PIN_LOCKOUT_MS;
+      pinAttempts.count = 0;
+      return { ok: false, err: 'Too many attempts. Try again in 60 seconds.' };
+    }
+    return { ok: false, err: 'Incorrect recovery passphrase' };
+  }
 });
 
 // In-memory PIN attempt tracker — resets on app restart (intentional)
