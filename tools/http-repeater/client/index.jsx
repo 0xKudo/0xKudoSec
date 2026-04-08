@@ -40,7 +40,7 @@ const styles = {
   },
   title: { fontSize: '13px', color: 'var(--text-primary)', letterSpacing: '0.02em', margin: 0 },
   subtitle: { color: 'var(--text-muted)', fontSize: '11px', margin: 0 },
-  layout: { display: 'grid', gridTemplateColumns: '220px 1fr', gap: '16px' },
+  layout: { display: 'grid', gridTemplateColumns: '220px 1fr', gap: '16px', paddingTop: '20px' },
   sidebar: {
     background: 'var(--bg-primary)',
     border: '1px solid var(--border)',
