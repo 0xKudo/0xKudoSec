@@ -61,15 +61,13 @@ function isValidSender(event) {
 // Auth0 does not accept custom protocol URIs. We use http://localhost:8765/callback
 // and spin up a tiny HTTP server that catches the redirect and forwards the
 // full URL to the renderer so the Auth0 SDK can complete the exchange.
-//
-// Finding 27: session nonce. A random token is generated per app session and
-// included as electron_nonce in the Auth0 authorizationParams. Auth0 passes
-// unknown query params through unchanged in the callback redirect. The server
-// verifies the nonce before forwarding via IPC, preventing any other local
-// process from sending a crafted request to the callback endpoint.
+// The server binds only to 127.0.0.1 and validates that the callback contains
+// both a code and state param (PKCE flow) before forwarding via IPC.
+// Note (finding 27): Auth0 strips unknown query params from callback redirects,
+// so a per-session nonce cannot be verified this way. The existing code+state
+// validation plus 127.0.0.1 binding is the practical defense here.
 const AUTH0_CALLBACK_PORT = 8765;
 let callbackServer = null;
-const callbackNonce = require('crypto').randomBytes(32).toString('hex');
 
 function startCallbackServer() {
   if (callbackServer) return;
@@ -82,14 +80,6 @@ function startCallbackServer() {
     if (!hasCode || !hasState || parsedUrl.pathname !== '/callback') {
       res.writeHead(400, { 'Content-Type': 'text/plain' });
       res.end('Bad Request');
-      return;
-    }
-
-    // Reject if the session nonce is missing or wrong
-    const receivedNonce = parsedUrl.searchParams.get('electron_nonce');
-    if (!receivedNonce || receivedNonce !== callbackNonce) {
-      res.writeHead(403, { 'Content-Type': 'text/plain' });
-      res.end('Forbidden');
       return;
     }
 
@@ -531,11 +521,6 @@ ipcMain.handle('settings:verifyPin', (event, pin) => {
 });
 
 // ── Settings IPC ──────────────────────────────────────────────────────────
-ipcMain.handle('auth0:getNonce', (event) => {
-  if (!isValidSender(event)) return null;
-  return callbackNonce;
-});
-
 ipcMain.handle('settings:getTrayOnClose', (event) => {
   if (!isValidSender(event)) return true;
   return store.get('trayOnClose', true);

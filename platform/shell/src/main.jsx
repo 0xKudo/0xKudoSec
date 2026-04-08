@@ -26,40 +26,23 @@ function Auth0CallbackHandler({ children }) {
   return children;
 }
 
-async function mount() {
-  // In Electron, fetch the per-session nonce from main process and include it
-  // in authorizationParams. Auth0 passes unknown params through unchanged in
-  // the callback redirect, and the callback server verifies the nonce before
-  // forwarding via IPC. This prevents other local processes from sending
-  // crafted requests to the callback endpoint.
-  let electronNonce = null;
-  if (isElectron && window.electron.auth.getNonce) {
-    electronNonce = await window.electron.auth.getNonce().catch(() => null);
-  }
-
-  const authorizationParams = {
-    redirect_uri: redirectUri,
-    audience,
-    ...(electronNonce ? { electron_nonce: electronNonce } : {}),
-  };
-
-  createRoot(document.getElementById('root')).render(
-    <StrictMode>
-      {/* Auth0Provider uses in-memory token storage by default (no cacheLocation prop).
-          This is intentional: storing tokens in localStorage exposes them to XSS.
-          Do NOT add cacheLocation: 'localstorage'. Tokens are never written to
-          localStorage or sessionStorage anywhere in the codebase. */}
-      <Auth0Provider
-        domain={domain}
-        clientId={clientId}
-        authorizationParams={authorizationParams}
-      >
-        <Auth0CallbackHandler>
-          <App />
-        </Auth0CallbackHandler>
-      </Auth0Provider>
-    </StrictMode>
-  );
-}
-
-mount();
+createRoot(document.getElementById('root')).render(
+  <StrictMode>
+    {/* Auth0Provider uses in-memory token storage by default (no cacheLocation prop).
+        This is intentional: storing tokens in localStorage exposes them to XSS.
+        Do NOT add cacheLocation: 'localstorage'. Tokens are never written to
+        localStorage or sessionStorage anywhere in the codebase. */}
+    <Auth0Provider
+      domain={domain}
+      clientId={clientId}
+      authorizationParams={{
+        redirect_uri: redirectUri,
+        audience,
+      }}
+    >
+      <Auth0CallbackHandler>
+        <App />
+      </Auth0CallbackHandler>
+    </Auth0Provider>
+  </StrictMode>
+);

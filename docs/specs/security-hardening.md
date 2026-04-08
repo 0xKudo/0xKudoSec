@@ -2,7 +2,7 @@
 
 **Standard:** PCI DSS v4.0 / SOC 2 Type II / ISO 27001 / NIST SP 800-53  
 **Status:** In progress  
-**Last updated:** 2026-04-05
+**Last updated:** 2026-04-07
 
 ---
 
@@ -428,10 +428,11 @@ Findings from a comprehensive review of the Electron app, web application, and m
 
 **Compliance:** NIST SP 800-53 SC-7, defensive design  
 **Gap:** The Auth0 callback HTTP server on `127.0.0.1:8765` validates `code`, `state`, and `/callback` path, but any process running on the same machine can make a request to it. A local malicious process could send a crafted request with a fake `code`/`state` to trigger the callback flow. The PKCE exchange would fail at Auth0's end, but the callback event would still be dispatched to the renderer.  
-**Target:**
-- Add a random per-session nonce to the callback URL registered with Auth0 (appended as a custom query param)
-- Verify the nonce in the callback server before dispatching
-- This ensures only the browser tab opened by the app can trigger the callback
+**Current posture:** The callback server binds to `127.0.0.1` only and requires both `code` and `state` params (PKCE). A crafted request with a fake `code`/`state` would still be rejected by Auth0 during token exchange, so the practical exploit impact is low.
+
+**Attempted:** Per-session nonce appended to `authorizationParams` (`electron_nonce`). Auth0 strips unknown query params from callback redirects — the nonce never arrives back at the callback server. Reverted.
+
+**Future option (Auth0 appState):** The `@auth0/auth0-react` SDK supports a custom `appState` object passed to `loginWithRedirect`. Auth0 encodes it into the `state` param and returns it via `onRedirectCallback` after the exchange completes. A nonce could be embedded there and verified. This requires restructuring the login trigger so Electron main generates the nonce and passes it to the renderer before `loginWithRedirect` is called, then verifies it in the `onRedirectCallback` handler via IPC. Medium complexity, deferred.
 
 **Files:** `platform/electron/main.js`
 
