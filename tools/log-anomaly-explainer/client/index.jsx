@@ -28,7 +28,7 @@ const LOG_SOURCES = [
 const styles = {
   container: { maxWidth: '900px' },
   header: {
-    margin: '-24px -24px 20px -24px',
+    margin: '-24px -24px 0 -24px',
     padding: '12px 20px',
     borderBottom: '1px solid var(--border)',
     background: 'var(--bg-surface)',
@@ -38,7 +38,7 @@ const styles = {
   },
   title: { fontSize: '13px', color: 'var(--text-primary)', letterSpacing: '0.02em', margin: 0 },
   subtitle: { color: 'var(--text-muted)', fontSize: '11px', margin: 0 },
-  tabs: { display: 'flex', gap: '4px', marginBottom: '12px' },
+  tabs: { display: 'flex', borderBottom: '1px solid var(--border)', background: 'var(--bg-surface)', margin: '0 -24px', paddingLeft: '8px' },
   tab: (active) => ({
     background: active ? 'var(--btn-primary-bg)' : 'var(--bg-surface)',
     color: active ? 'var(--btn-primary-text)' : 'var(--text-muted)',
@@ -71,12 +71,12 @@ const styles = {
   textarea: {
     width: '100%',
     minHeight: '220px',
-    background: 'var(--bg-surface)',
+    background: 'var(--bg-primary)',
     border: '1px solid var(--border)',
     color: 'var(--text-primary)',
     fontFamily: 'var(--font)',
     fontSize: '12px',
-    padding: '12px',
+    padding: '6px 10px',
     outline: 'none',
     resize: 'vertical',
     boxSizing: 'border-box',
@@ -94,7 +94,7 @@ const styles = {
   error: { color: 'var(--severity-critical)', fontSize: '13px', marginTop: '12px' },
   results: { marginTop: '24px' },
   summaryCard: {
-    background: 'var(--bg-surface)',
+    background: 'var(--bg-primary)',
     border: '1px solid var(--border)',
     padding: '20px',
     marginBottom: '16px',
@@ -113,7 +113,7 @@ const styles = {
   summaryText: { color: 'var(--text-primary)', fontSize: '14px', lineHeight: '1.6', marginBottom: '16px' },
   label: {
     color: 'var(--text-muted)',
-    fontSize: '11px',
+    fontSize: '10px',
     textTransform: 'uppercase',
     letterSpacing: '0.08em',
     marginBottom: '8px',
@@ -131,7 +131,7 @@ const styles = {
   lineRefs: { color: 'var(--text-muted)', fontSize: '11px', fontStyle: 'italic' },
   listItem: { padding: '5px 0', color: 'var(--text-primary)', fontSize: '13px', borderBottom: '1px solid var(--border)' },
   cleanBanner: {
-    background: 'var(--bg-surface)',
+    background: 'var(--bg-primary)',
     border: '1px solid var(--severity-low)',
     padding: '16px',
     color: 'var(--severity-low)',

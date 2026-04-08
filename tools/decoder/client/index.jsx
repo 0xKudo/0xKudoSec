@@ -64,7 +64,7 @@ const OPERATION_GROUPS = [
 const styles = {
   container: { maxWidth: '960px' },
   header: {
-    margin: '-24px -24px 20px -24px',
+    margin: '-24px -24px 0 -24px',
     padding: '12px 20px',
     borderBottom: '1px solid var(--border)',
     background: 'var(--bg-surface)',
@@ -84,7 +84,6 @@ const styles = {
   opBtn: (active) => ({
     background: active ? 'var(--btn-primary-bg)' : 'var(--bg-surface)',
     border: '1px solid var(--border)',
-    borderRadius: '3px',
     color: active ? 'var(--btn-primary-text)' : 'var(--text-muted)',
     fontFamily: 'var(--font)',
     fontSize: '11px',
@@ -93,7 +92,7 @@ const styles = {
     whiteSpace: 'nowrap',
   }),
   mainPanel: {},
-  label: { color: 'var(--text-muted)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '6px', display: 'block' },
+  label: { color: 'var(--text-muted)', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '6px', display: 'block' },
   textarea: {
     width: '100%',
     minHeight: '140px',
@@ -119,7 +118,7 @@ const styles = {
     cursor: disabled ? 'not-allowed' : 'pointer',
   }),
   secondaryBtn: {
-    background: 'var(--bg-surface)',
+    background: 'var(--bg-primary)',
     color: 'var(--text-primary)',
     border: '1px solid var(--border)',
     padding: '8px 14px',
@@ -128,11 +127,11 @@ const styles = {
     cursor: 'pointer',
   },
   error: { color: 'var(--severity-critical)', fontSize: '13px', marginBottom: '10px' },
-  outputLabel: { color: 'var(--text-muted)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
+  outputLabel: { color: 'var(--text-muted)', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
   outputBox: {
     width: '100%',
     minHeight: '140px',
-    background: 'var(--bg-surface)',
+    background: 'var(--bg-primary)',
     border: '1px solid var(--border)',
     color: 'var(--text-primary)',
     fontFamily: 'var(--font)',
@@ -154,7 +153,6 @@ function OpChip({ op, group, active, onClick }) {
       style={{
         background: active || hovered ? 'var(--btn-primary-bg)' : 'var(--bg-surface)',
         border: `1px solid ${active || hovered ? 'var(--btn-primary-bg)' : 'var(--border)'}`,
-        borderRadius: '3px',
         color: active || hovered ? 'var(--btn-primary-text)' : 'var(--text-muted)',
         fontFamily: 'var(--font)',
         fontSize: '11px',
@@ -232,14 +230,13 @@ export default function Decoder() {
 
       {isMobile ? (
         /* Mobile: original chip layout */
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: '6px', padding: '12px', marginBottom: '16px' }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '6px', padding: '6px 10px', marginBottom: '16px' }}>
           {OPERATION_GROUPS.map(group => group.ops.map(op => (
             <button
               key={op.value}
               style={{
                 background: operation === op.value ? 'var(--border)' : 'none',
                 border: '1px solid var(--border)',
-                borderRadius: '3px',
                 color: operation === op.value ? 'var(--text-primary)' : 'var(--text-muted)',
                 fontFamily: 'var(--font)',
                 fontSize: '12px',

@@ -30,7 +30,7 @@ function saveHistory(history) {
 const styles = {
   container: { maxWidth: '1100px' },
   header: {
-    margin: '-24px -24px 20px -24px',
+    margin: '-24px -24px 0 -24px',
     padding: '12px 20px',
     borderBottom: '1px solid var(--border)',
     background: 'var(--bg-surface)',
@@ -44,11 +44,10 @@ const styles = {
   sidebar: {
     background: 'var(--bg-primary)',
     border: '1px solid var(--border)',
-    borderRadius: '6px',
-    padding: '12px',
+    padding: '6px 10px',
     minHeight: '500px',
   },
-  sidebarTitle: { color: 'var(--text-muted)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '10px' },
+  sidebarTitle: { color: 'var(--text-muted)', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '10px' },
   historyItem: (active) => ({
     background: active ? 'var(--border)' : 'none',
     border: 'none',
@@ -83,7 +82,7 @@ const styles = {
     marginTop: '8px',
   },
   main: {},
-  label: { color: 'var(--text-muted)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '6px', display: 'block' },
+  label: { color: 'var(--text-muted)', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '6px', display: 'block' },
   requestBar: { display: 'flex', gap: '8px', marginBottom: '12px' },
   select: {
     background: 'var(--bg-primary)',
@@ -97,7 +96,7 @@ const styles = {
   },
   urlInput: {
     flex: 1,
-    background: 'var(--bg-surface)',
+    background: 'var(--bg-primary)',
     border: '1px solid var(--border)',
     color: 'var(--text-primary)',
     fontFamily: 'var(--font)',
@@ -118,7 +117,7 @@ const styles = {
   textarea: (minH) => ({
     width: '100%',
     minHeight: minH || '80px',
-    background: 'var(--bg-surface)',
+    background: 'var(--bg-primary)',
     border: '1px solid var(--border)',
     color: 'var(--text-primary)',
     fontFamily: 'var(--font)',
@@ -139,13 +138,12 @@ const styles = {
     fontSize: '12px',
     fontWeight: 'bold',
     padding: '2px 10px',
-    borderRadius: '3px',
   }),
   durationBadge: {
     color: 'var(--text-muted)',
     fontSize: '12px',
   },
-  tabs: { display: 'flex', gap: '4px', marginBottom: '10px', borderBottom: '1px solid var(--border)' },
+  tabs: { display: 'flex', borderBottom: '1px solid var(--border)', background: 'var(--bg-surface)', margin: '0 -24px', paddingLeft: '8px' },
   tab: (active) => ({
     background: 'none',
     border: 'none',
@@ -158,9 +156,9 @@ const styles = {
     marginBottom: '-1px',
   }),
   responseBox: {
-    background: 'var(--bg-surface)',
+    background: 'var(--bg-primary)',
     border: '1px solid var(--border)',
-    padding: '12px',
+    padding: '6px 10px',
     fontFamily: 'var(--font)',
     fontSize: '12px',
     color: 'var(--text-primary)',

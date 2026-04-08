@@ -31,7 +31,7 @@ const ENCODING_HINTS = [
 const styles = {
   container: { maxWidth: '900px' },
   header: {
-    margin: '-24px -24px 20px -24px',
+    margin: '-24px -24px 0 -24px',
     padding: '12px 20px',
     borderBottom: '1px solid var(--border)',
     background: 'var(--bg-surface)',
@@ -64,12 +64,12 @@ const styles = {
   textarea: {
     width: '100%',
     minHeight: '180px',
-    background: 'var(--bg-surface)',
+    background: 'var(--bg-primary)',
     border: '1px solid var(--border)',
     color: 'var(--text-primary)',
     fontFamily: 'var(--font)',
     fontSize: '12px',
-    padding: '12px',
+    padding: '6px 10px',
     outline: 'none',
     resize: 'vertical',
     boxSizing: 'border-box',
@@ -77,7 +77,7 @@ const styles = {
   },
   contextInput: {
     width: '100%',
-    background: 'var(--bg-surface)',
+    background: 'var(--bg-primary)',
     border: '1px solid var(--border)',
     color: 'var(--text-primary)',
     fontFamily: 'var(--font)',
@@ -90,7 +90,7 @@ const styles = {
   error: { color: 'var(--severity-critical)', fontSize: '13px', marginTop: '12px' },
   results: { marginTop: '24px' },
   summaryCard: {
-    background: 'var(--bg-surface)',
+    background: 'var(--bg-primary)',
     border: '1px solid var(--border)',
     padding: '20px',
     marginBottom: '16px',
@@ -105,7 +105,7 @@ const styles = {
     fontWeight: 'bold',
     textTransform: 'uppercase',
   }),
-  label: { color: 'var(--text-muted)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '6px' },
+  label: { color: 'var(--text-muted)', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '6px' },
   sectionBlock: { marginBottom: '16px' },
   explanationText: { color: 'var(--text-primary)', fontSize: '14px', lineHeight: '1.7' },
   intentText: { color: 'var(--text-primary)', fontSize: '14px', lineHeight: '1.6', marginBottom: '16px' },

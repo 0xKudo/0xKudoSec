@@ -15,7 +15,7 @@ const SEVERITY_COLOR = {
 const styles = {
   container: { maxWidth: '960px' },
   header: {
-    margin: '-24px -24px 20px -24px',
+    margin: '-24px -24px 0 -24px',
     padding: '12px 20px',
     borderBottom: '1px solid var(--border)',
     background: 'var(--bg-surface)',
@@ -34,7 +34,7 @@ const styles = {
     marginBottom: '20px',
   },
   section: { marginBottom: '16px' },
-  label: { color: 'var(--text-muted)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px', display: 'block' },
+  label: { color: 'var(--text-muted)', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px', display: 'block' },
   inputRow: { display: 'flex', gap: '10px', alignItems: 'flex-end', flexWrap: 'wrap', marginBottom: '14px' },
   input: {
     flex: 1,
@@ -61,7 +61,6 @@ const styles = {
   modeCard: (active) => ({
     background: active ? 'rgba(232,230,227,0.06)' : 'var(--bg-surface)',
     border: `1px solid ${active ? 'var(--text-primary)' : 'var(--border)'}`,
-    borderRadius: '6px',
     padding: '6px 10px',
     cursor: 'pointer',
     minWidth: '200px',
@@ -81,9 +80,8 @@ const styles = {
   error: { color: 'var(--severity-critical)', fontSize: '13px', marginBottom: '12px' },
   results: { marginTop: '24px' },
   analysisCard: {
-    background: 'var(--bg-surface)',
+    background: 'var(--bg-primary)',
     border: '1px solid var(--border)',
-    borderRadius: '6px',
     padding: '16px',
     marginBottom: '20px',
   },
@@ -93,14 +91,13 @@ const styles = {
     display: 'inline-block',
     background: SEVERITY_COLOR[level] || SEVERITY_COLOR.info,
     color: '#fff',
-    fontSize: '11px',
+    fontSize: '10px',
     fontWeight: 'bold',
     padding: '2px 8px',
-    borderRadius: '3px',
     textTransform: 'uppercase',
   }),
   summary: { color: 'var(--text-primary)', fontSize: '13px', lineHeight: '1.6', marginBottom: '10px' },
-  listLabel: { color: 'var(--text-muted)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '4px', marginTop: '10px' },
+  listLabel: { color: 'var(--text-muted)', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '4px', marginTop: '10px' },
   listItem: { color: 'var(--text-primary)', fontSize: '12px', lineHeight: '1.7', marginLeft: '12px' },
   statsRow: { display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '16px' },
   statBadge: (sev) => ({
@@ -109,7 +106,6 @@ const styles = {
     fontSize: '12px',
     fontWeight: 'bold',
     padding: '3px 10px',
-    borderRadius: '3px',
   }),
   findingCard: (sev) => ({
     background: 'var(--bg-surface)',
@@ -126,11 +122,10 @@ const styles = {
     fontSize: '10px',
     fontWeight: 'bold',
     padding: '1px 6px',
-    borderRadius: '2px',
     textTransform: 'uppercase',
     marginRight: '8px',
   }),
-  groupHeader: { color: 'var(--text-muted)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px', marginTop: '16px' },
+  groupHeader: { color: 'var(--text-muted)', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px', marginTop: '16px' },
   emptyState: { color: 'var(--text-muted)', fontSize: '13px', padding: '20px 0' },
 };
 

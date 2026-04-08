@@ -24,7 +24,7 @@ const SCAN_TYPES = [
 const styles = {
   container: { maxWidth: '900px' },
   header: {
-    margin: '-24px -24px 20px -24px',
+    margin: '-24px -24px 0 -24px',
     padding: '12px 20px',
     borderBottom: '1px solid var(--border)',
     background: 'var(--bg-surface)',
@@ -55,7 +55,7 @@ const styles = {
     outline: 'none',
   },
   select: {
-    background: 'var(--bg-surface)',
+    background: 'var(--bg-primary)',
     border: '1px solid var(--border)',
     color: 'var(--text-primary)',
     fontFamily: 'var(--font)',
@@ -88,12 +88,11 @@ const styles = {
     marginTop: '20px',
     background: 'var(--bg-primary)',
     border: '1px solid var(--border)',
-    borderRadius: '4px',
   },
   livePanelHeader: {
     padding: '8px 14px',
     borderBottom: '1px solid var(--border)',
-    fontSize: '11px',
+    fontSize: '10px',
     color: 'var(--text-muted)',
     letterSpacing: '0.06em',
     textTransform: 'uppercase',
@@ -104,14 +103,12 @@ const styles = {
   pulse: {
     width: '7px',
     height: '7px',
-    borderRadius: '50%',
     background: 'var(--severity-low)',
     flexShrink: 0,
   },
   analyzing: {
     width: '7px',
     height: '7px',
-    borderRadius: '50%',
     background: 'var(--accent-amber)',
     flexShrink: 0,
   },
@@ -128,7 +125,7 @@ const styles = {
   },
   results: { marginTop: '24px' },
   summaryCard: {
-    background: 'var(--bg-surface)',
+    background: 'var(--bg-primary)',
     border: '1px solid var(--border)',
     padding: '20px',
     marginBottom: '16px',
@@ -147,7 +144,7 @@ const styles = {
   summaryText: { color: 'var(--text-primary)', fontSize: '14px', lineHeight: '1.6', marginBottom: '16px' },
   label: {
     color: 'var(--text-muted)',
-    fontSize: '11px',
+    fontSize: '10px',
     textTransform: 'uppercase',
     letterSpacing: '0.08em',
     marginBottom: '6px',

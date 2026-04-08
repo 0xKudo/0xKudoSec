@@ -14,7 +14,7 @@ const RISK_COLORS = {
 const styles = {
   container: { maxWidth: '900px' },
   header: {
-    margin: '-24px -24px 20px -24px',
+    margin: '-24px -24px 0 -24px',
     padding: '12px 20px',
     borderBottom: '1px solid var(--border)',
     background: 'var(--bg-surface)',
@@ -36,7 +36,7 @@ const styles = {
     outline: 'none',
   },
   select: {
-    background: 'var(--bg-surface)',
+    background: 'var(--bg-primary)',
     border: '1px solid var(--border)',
     color: 'var(--text-primary)',
     fontFamily: 'var(--font)',
@@ -57,7 +57,7 @@ const styles = {
   error: { color: 'var(--severity-critical)', fontSize: '13px', marginTop: '12px' },
   results: { marginTop: '24px' },
   summaryCard: {
-    background: 'var(--bg-surface)',
+    background: 'var(--bg-primary)',
     border: '1px solid var(--border)',
     padding: '20px',
     marginBottom: '16px',
@@ -81,7 +81,7 @@ const styles = {
   summaryText: { color: 'var(--text-primary)', fontSize: '14px', lineHeight: '1.6', marginBottom: '16px' },
   label: {
     color: 'var(--text-muted)',
-    fontSize: '11px',
+    fontSize: '10px',
     textTransform: 'uppercase',
     letterSpacing: '0.08em',
     marginBottom: '6px',
@@ -104,7 +104,7 @@ const styles = {
     gap: '12px',
   },
   sourceCard: {
-    background: 'var(--bg-surface)',
+    background: 'var(--bg-primary)',
     border: '1px solid var(--border)',
     padding: '16px',
   },

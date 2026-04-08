@@ -16,7 +16,7 @@ const SEVERITIES = ['critical', 'high', 'medium', 'low', 'info'];
 const styles = {
   container: { maxWidth: '800px' },
   header: {
-    margin: '-24px -24px 20px -24px',
+    margin: '-24px -24px 0 -24px',
     padding: '12px 20px',
     borderBottom: '1px solid var(--border)',
     background: 'var(--bg-surface)',
@@ -29,12 +29,12 @@ const styles = {
   importBanner: {
     background: 'var(--bg-primary)',
     border: '1px solid var(--border)',
-    padding: '12px',
+    padding: '6px 10px',
     marginBottom: '12px',
   },
   importBannerLabel: {
     color: 'var(--text-muted)',
-    fontSize: '11px',
+    fontSize: '10px',
     textTransform: 'uppercase',
     letterSpacing: '0.08em',
     marginBottom: '8px',
@@ -57,7 +57,7 @@ const styles = {
     color: 'var(--text-primary)',
     fontFamily: 'var(--font)',
     fontSize: '13px',
-    padding: '12px',
+    padding: '6px 10px',
     resize: 'vertical',
     outline: 'none',
     marginBottom: '12px',
@@ -69,7 +69,7 @@ const styles = {
     marginBottom: '12px',
   },
   select: {
-    background: 'var(--bg-surface)',
+    background: 'var(--bg-primary)',
     border: '1px solid var(--border)',
     color: 'var(--text-primary)',
     fontFamily: 'var(--font)',
@@ -89,7 +89,7 @@ const styles = {
   error: { color: 'var(--severity-critical)', fontSize: '13px', marginTop: '12px' },
   results: {
     marginTop: '24px',
-    background: 'var(--bg-surface)',
+    background: 'var(--bg-primary)',
     border: '1px solid var(--border)',
     padding: '20px',
   },
@@ -118,7 +118,7 @@ const styles = {
   timelineRow: { display: 'flex', gap: '24px', marginBottom: '20px' },
   label: {
     color: 'var(--text-muted)',
-    fontSize: '11px',
+    fontSize: '10px',
     textTransform: 'uppercase',
     letterSpacing: '0.08em',
     marginBottom: '4px',

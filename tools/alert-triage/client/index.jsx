@@ -15,7 +15,7 @@ const styles = {
     maxWidth: '800px',
   },
   header: {
-    margin: '-24px -24px 20px -24px',
+    margin: '-24px -24px 0 -24px',
     padding: '12px 20px',
     borderBottom: '1px solid var(--border)',
     background: 'var(--bg-surface)',
@@ -33,7 +33,7 @@ const styles = {
     color: 'var(--text-primary)',
     fontFamily: 'var(--font)',
     fontSize: '13px',
-    padding: '12px',
+    padding: '6px 10px',
     resize: 'vertical',
     outline: 'none',
     marginBottom: '12px',
@@ -49,7 +49,7 @@ const styles = {
   }),
   results: {
     marginTop: '24px',
-    background: 'var(--bg-surface)',
+    background: 'var(--bg-primary)',
     border: '1px solid var(--border)',
     padding: '20px',
   },
@@ -65,7 +65,7 @@ const styles = {
   }),
   label: {
     color: 'var(--text-muted)',
-    fontSize: '11px',
+    fontSize: '10px',
     textTransform: 'uppercase',
     letterSpacing: '0.08em',
     marginBottom: '4px',

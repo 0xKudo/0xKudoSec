@@ -25,7 +25,7 @@ const STATUS_COLOR = (status) => {
 const styles = {
   container: { maxWidth: '1100px' },
   header: {
-    margin: '-24px -24px 20px -24px',
+    margin: '-24px -24px 0 -24px',
     padding: '12px 20px',
     borderBottom: '1px solid var(--border)',
     background: 'var(--bg-surface)',
@@ -47,11 +47,10 @@ const styles = {
   panel: {
     background: 'var(--bg-primary)',
     border: '1px solid var(--border)',
-    borderRadius: '6px',
     padding: '16px',
   },
   panelTitle: { color: 'var(--text-primary)', fontSize: '13px', fontWeight: 'bold', marginBottom: '14px' },
-  label: { color: 'var(--text-muted)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '6px', display: 'block' },
+  label: { color: 'var(--text-muted)', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '6px', display: 'block' },
   row: { display: 'flex', gap: '8px', marginBottom: '12px', alignItems: 'flex-end' },
   select: {
     background: 'var(--bg-primary)',
@@ -64,7 +63,7 @@ const styles = {
   },
   input: {
     flex: 1,
-    background: 'var(--bg-surface)',
+    background: 'var(--bg-primary)',
     border: '1px solid var(--border)',
     color: 'var(--text-primary)',
     fontFamily: 'var(--font)',
@@ -77,7 +76,7 @@ const styles = {
   textarea: (minH) => ({
     width: '100%',
     minHeight: minH || '80px',
-    background: 'var(--bg-surface)',
+    background: 'var(--bg-primary)',
     border: '1px solid var(--border)',
     color: 'var(--text-primary)',
     fontFamily: 'var(--font)',
@@ -91,9 +90,8 @@ const styles = {
   hint: { color: 'var(--text-muted)', fontSize: '11px', marginBottom: '10px' },
   builtInRow: { display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '10px' },
   chip: {
-    background: 'var(--bg-surface)',
+    background: 'var(--bg-primary)',
     border: '1px solid var(--border)',
-    borderRadius: '3px',
     color: 'var(--text-primary)',
     fontFamily: 'var(--font)',
     fontSize: '11px',
@@ -117,9 +115,8 @@ const styles = {
     display: 'flex',
     gap: '16px',
     flexWrap: 'wrap',
-    background: 'var(--bg-surface)',
+    background: 'var(--bg-primary)',
     border: '1px solid var(--border)',
-    borderRadius: '6px',
     padding: '6px 10px',
     marginBottom: '16px',
     fontSize: '12px',
@@ -136,7 +133,7 @@ const styles = {
   },
   tableWrap: { overflowX: 'auto' },
   table: { width: '100%', borderCollapse: 'collapse', fontSize: '12px' },
-  th: { color: 'var(--text-muted)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.06em', padding: '6px 10px', borderBottom: '1px solid var(--border)', textAlign: 'left' },
+  th: { color: 'var(--text-muted)', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.06em', padding: '6px 10px', borderBottom: '1px solid var(--border)', textAlign: 'left' },
   td: (flagged) => ({
     padding: '6px 10px',
     borderBottom: '1px solid var(--border)',

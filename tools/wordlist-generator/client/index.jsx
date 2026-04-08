@@ -21,7 +21,7 @@ const RULE_OPTIONS = [
 const styles = {
   container: { maxWidth: '900px' },
   header: {
-    margin: '-24px -24px 20px -24px',
+    margin: '-24px -24px 0 -24px',
     padding: '12px 20px',
     borderBottom: '1px solid var(--border)',
     background: 'var(--bg-surface)',
@@ -31,7 +31,7 @@ const styles = {
   },
   title: { fontSize: '13px', color: 'var(--text-primary)', letterSpacing: '0.02em', margin: 0 },
   subtitle: { color: 'var(--text-muted)', fontSize: '11px', margin: 0 },
-  tabs: { display: 'flex', gap: '4px', marginBottom: '20px', borderBottom: '1px solid var(--border)', paddingBottom: '0' },
+  tabs: { display: 'flex', borderBottom: '1px solid var(--border)', background: 'var(--bg-surface)', margin: '0 -24px', paddingLeft: '8px' },
   tab: (active) => ({
     background: 'none',
     border: 'none',
@@ -44,7 +44,7 @@ const styles = {
     marginBottom: '-1px',
   }),
   section: { marginBottom: '16px' },
-  label: { color: 'var(--text-muted)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px', display: 'block' },
+  label: { color: 'var(--text-muted)', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px', display: 'block' },
   checkRow: { display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '8px' },
   checkItem: { display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-primary)', fontSize: '13px', cursor: 'pointer' },
   input: {
@@ -58,7 +58,7 @@ const styles = {
     width: '80px',
   },
   inputWide: {
-    background: 'var(--bg-surface)',
+    background: 'var(--bg-primary)',
     border: '1px solid var(--border)',
     color: 'var(--text-primary)',
     fontFamily: 'var(--font)',
@@ -70,7 +70,7 @@ const styles = {
   textarea: {
     width: '100%',
     minHeight: '80px',
-    background: 'var(--bg-surface)',
+    background: 'var(--bg-primary)',
     border: '1px solid var(--border)',
     color: 'var(--text-primary)',
     fontFamily: 'var(--font)',
@@ -92,7 +92,7 @@ const styles = {
     whiteSpace: 'nowrap',
   }),
   secondaryBtn: {
-    background: 'var(--bg-surface)',
+    background: 'var(--bg-primary)',
     color: 'var(--text-primary)',
     border: '1px solid var(--border)',
     padding: '6px 14px',
@@ -106,9 +106,9 @@ const styles = {
   resultMeta: { color: 'var(--text-muted)', fontSize: '12px' },
   actionRow: { display: 'flex', gap: '8px' },
   wordlistBox: {
-    background: 'var(--bg-surface)',
+    background: 'var(--bg-primary)',
     border: '1px solid var(--border)',
-    padding: '12px',
+    padding: '6px 10px',
     fontFamily: 'var(--font)',
     fontSize: '12px',
     color: 'var(--text-primary)',
