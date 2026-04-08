@@ -65,7 +65,7 @@ const styles = {
     alignItems: 'center',
     gap: '16px',
   },
-  title: { fontSize: '13px', fontWeight: 'bold', color: 'var(--text-primary)', letterSpacing: '0.04em' },
+  title: { fontSize: '13px', color: 'var(--text-primary)', letterSpacing: '0.04em' },
   subtitle: { fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' },
   filterRow: {
     display: 'flex',
