@@ -55,7 +55,7 @@ const ACTION_COLOR = {
 };
 
 const styles = {
-  page: { display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' },
+  page: { display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' },
   header: {
     padding: '20px 24px 16px',
     borderBottom: '1px solid var(--border)',
@@ -93,8 +93,8 @@ const styles = {
     cursor: 'pointer',
     marginLeft: 'auto',
   },
-  tableWrap: { flex: 1, overflowX: 'auto', overflowY: 'auto', WebkitOverflowScrolling: 'touch' },
-  table: { width: '100%', minWidth: '600px', borderCollapse: 'collapse', fontSize: '11px' },
+  tableWrap: { flex: 1, minHeight: 0, overflow: 'auto', WebkitOverflowScrolling: 'touch' },
+  table: { width: 'max-content', minWidth: '100%', borderCollapse: 'collapse', fontSize: '11px' },
   th: {
     padding: '8px 16px',
     textAlign: 'left',

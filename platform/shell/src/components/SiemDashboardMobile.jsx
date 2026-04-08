@@ -179,7 +179,7 @@ export function SiemDashboardMobile({ onNavigate }) {
   const [bySeverity, setBySeverity] = useState([]);
   const [recentEvents, setRecentEvents] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [sevFilter, setSevFilter] = useState(null);
+  const [sevFilters, setSevFilters] = useState(new Set());
   const [hours, setHours] = useState(24);
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -200,7 +200,7 @@ export function SiemDashboardMobile({ onNavigate }) {
       const token = await getAccessTokenSilently();
       const h = { Authorization: `Bearer ${token}` };
       const recentParams = new URLSearchParams({ hours });
-      if (sevFilter) recentParams.set('severity', sevFilter);
+      if (sevFilters.size === 1) recentParams.set('severity', [...sevFilters][0]);
       if (debouncedSearch.trim()) recentParams.set('q', debouncedSearch.trim());
       const [statsRes, countsRes, sevRes, recentRes] = await Promise.all([
         fetch(`/api/siem/stats?hours=${hours}`, { headers: h }),
@@ -212,11 +212,13 @@ export function SiemDashboardMobile({ onNavigate }) {
       setStats(st);
       setAlertCounts(Array.isArray(c) ? c : []);
       setBySeverity(Array.isArray(sv) ? sv : []);
-      setRecentEvents(Array.isArray(r) ? r.slice(0, 30) : []);
+      const events = Array.isArray(r) ? r.slice(0, 30) : [];
+      // client-side filter when >1 severity selected (server only handles single)
+      setRecentEvents(sevFilters.size > 1 ? events.filter(e => sevFilters.has((e.severity || 'info').toLowerCase())) : events);
     } catch {}
     loadingRef.current = false;
     setLoading(false);
-  }, [getAccessTokenSilently, hours, sevFilter, debouncedSearch]);
+  }, [getAccessTokenSilently, hours, sevFilters, debouncedSearch]);
 
   // Initial load + reload when filters change
   useEffect(() => { load(); }, [load]);
@@ -244,10 +246,10 @@ export function SiemDashboardMobile({ onNavigate }) {
           ))}
         </div>
         <button
-          style={s.filterToggleBtn(sevPanelOpen || !!sevFilter)}
+          style={s.filterToggleBtn(sevPanelOpen || sevFilters.size > 0)}
           onClick={() => setSevPanelOpen(v => !v)}
         >
-          {sevFilter ? `sev: ${sevFilter}` : 'severity'}
+          {sevFilters.size > 0 ? `filter (${sevFilters.size})` : 'filter'}
         </button>
       </div>
 
@@ -255,16 +257,16 @@ export function SiemDashboardMobile({ onNavigate }) {
       {sevPanelOpen && (
         <div style={s.sevPanel}>
           <button
-            style={s.sevPanelBtn(!sevFilter, 'var(--text-muted)')}
-            onClick={() => { setSevFilter(null); setSevPanelOpen(false); }}
+            style={s.sevPanelBtn(sevFilters.size === 0, 'var(--text-muted)')}
+            onClick={() => setSevFilters(new Set())}
           >
             All
           </button>
           {SEVERITIES.map(sev => (
             <button
               key={sev}
-              style={s.sevPanelBtn(sevFilter === sev, SEV_COLOR_HEX[sev])}
-              onClick={() => { setSevFilter(sevFilter === sev ? null : sev); setSevPanelOpen(false); }}
+              style={s.sevPanelBtn(sevFilters.has(sev), SEV_COLOR_HEX[sev])}
+              onClick={() => setSevFilters(prev => { const next = new Set(prev); next.has(sev) ? next.delete(sev) : next.add(sev); return next; })}
             >
               {sev}
             </button>
@@ -316,13 +318,13 @@ export function SiemDashboardMobile({ onNavigate }) {
           <Donut data={bySeverity} size={110} />
           <div style={s.legend}>
             {bySeverity.map(d => {
-              const active = sevFilter === d.severity;
+              const active = sevFilters.has(d.severity);
               const color = SEV_COLOR_HEX[d.severity] || '#555';
               return (
                 <div
                   key={d.severity}
                   style={s.legendItemClickable(color, active)}
-                  onClick={() => setSevFilter(active ? null : d.severity)}
+                  onClick={() => setSevFilters(prev => { const next = new Set(prev); next.has(d.severity) ? next.delete(d.severity) : next.add(d.severity); return next; })}
                 >
                   <div style={s.legendDot(color)} />
                   {d.severity} ({Number(d.count).toLocaleString()})
@@ -339,25 +341,25 @@ export function SiemDashboardMobile({ onNavigate }) {
         <div style={{ ...s.panelTitle, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <span>
             Recent Events
-            {sevFilter ? ` — ${sevFilter}` : ''}
+            {sevFilters.size > 0 ? ` — ${[...sevFilters].join(', ')}` : ''}
             {debouncedSearch.trim() ? ` · "${debouncedSearch.trim()}"` : ''}
           </span>
-          {(sevFilter || debouncedSearch.trim()) && (
+          {(sevFilters.size > 0 || debouncedSearch.trim()) && (
             <span
               style={{ fontSize: '10px', color: 'var(--text-muted)', cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.06em', WebkitTapHighlightColor: 'transparent' }}
-              onClick={() => { setSevFilter(null); setSearch(''); }}
+              onClick={() => { setSevFilters(new Set()); setSearch(''); }}
             >
               Clear
             </span>
           )}
         </div>
-        {recentEvents.length === 0 && <div style={s.muted}>No events{sevFilter ? ` for severity: ${sevFilter}` : ` in the last ${HOURS_LABELS[hours]}`}.</div>}
+        {recentEvents.length === 0 && <div style={s.muted}>No events{sevFilters.size > 0 ? ` for severity: ${[...sevFilters].join(', ')}` : ` in the last ${HOURS_LABELS[hours]}`}.</div>}
         {recentEvents.map((e, i) => (
           <div key={i} style={s.eventRowTappable} onClick={() => setSelectedEvent(e)}>
             <div style={s.eventTop}>
               <span
                 style={{ ...s.sevBadge(SEV_COLOR_HEX[e.severity] || '#555'), cursor: 'pointer', WebkitTapHighlightColor: 'transparent' }}
-                onClick={ev => { ev.stopPropagation(); const sev = (e.severity || 'info').toLowerCase(); setSevFilter(sevFilter === sev ? null : sev); }}
+                onClick={ev => { ev.stopPropagation(); const sev = (e.severity || 'info').toLowerCase(); setSevFilters(prev => { const next = new Set(prev); next.has(sev) ? next.delete(sev) : next.add(sev); return next; }); }}
               >{e.severity || 'info'}</span>
               <span style={s.eventMsg}>{e.message || e.event_category || '—'}</span>
             </div>
