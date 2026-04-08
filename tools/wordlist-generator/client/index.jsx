@@ -46,7 +46,7 @@ const styles = {
   section: { marginBottom: '16px' },
   label: { color: 'var(--text-muted)', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px', display: 'block' },
   checkRow: { display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '8px' },
-  checkItem: { display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-primary)', fontSize: '13px', cursor: 'pointer' },
+  checkItem: { display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-primary)', fontSize: '13px', cursor: 'pointer', fontWeight: 'normal' },
   input: {
     background: 'var(--bg-primary)',
     border: '1px solid var(--border)',

@@ -56,7 +56,7 @@ const styles = {
     boxSizing: 'border-box',
   },
   checkRow: { display: 'flex', flexWrap: 'wrap', gap: '10px', marginBottom: '12px' },
-  checkItem: { display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-primary)', fontSize: '13px', cursor: 'pointer' },
+  checkItem: { display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-primary)', fontSize: '13px', cursor: 'pointer', fontWeight: 'normal' },
   button: (disabled) => ({
     background: disabled ? 'var(--bg-surface)' : 'var(--btn-primary-bg)',
     color: disabled ? 'var(--text-muted)' : 'var(--btn-primary-text)',

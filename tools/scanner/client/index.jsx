@@ -76,7 +76,7 @@ const styles = {
     alignItems: 'flex-start',
     gap: '10px',
   },
-  authText: { color: 'var(--text-primary)', fontSize: '12px', lineHeight: '1.5' },
+  authText: { color: 'var(--text-primary)', fontSize: '12px', lineHeight: '1.5', fontWeight: 'normal' },
   error: { color: 'var(--severity-critical)', fontSize: '13px', marginBottom: '12px' },
   results: { marginTop: '24px' },
   analysisCard: {
