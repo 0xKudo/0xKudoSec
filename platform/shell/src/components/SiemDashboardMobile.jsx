@@ -3,7 +3,7 @@ import { useAuth0 } from '@auth0/auth0-react';
 
 const HOURS_OPTIONS = [1, 6, 24, 48, 168];
 const HOURS_LABELS = { 1: '1h', 6: '6h', 24: '24h', 48: '48h', 168: '7d' };
-const ALL_CATEGORIES = ['authentication', 'network', 'process', 'file', 'dns', 'registry', 'system', 'firewall', 'account', 'policy'];
+const SEVERITIES = ['critical', 'high', 'medium', 'low', 'info'];
 
 function sevColor(sev) {
   const map = {
@@ -75,11 +75,11 @@ const s = {
     WebkitTapHighlightColor: 'transparent',
   }),
   filterBar: {
-    display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center',
-    background: 'var(--bg-surface)', border: '1px solid var(--border)', padding: '10px 12px',
+    display: 'flex', gap: '6px', alignItems: 'center',
+    background: 'var(--bg-surface)', border: '1px solid var(--border)', padding: '8px 12px',
   },
   filterLabel: { fontSize: '9px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginRight: '2px' },
-  filterBtnGroup: { display: 'flex', gap: '4px', flexWrap: 'wrap' },
+  filterBtnGroup: { display: 'flex', gap: '4px' },
   filterBtn: (active) => ({
     background: active ? 'var(--btn-primary-bg)' : 'none',
     border: '1px solid var(--border)',
@@ -91,17 +91,49 @@ const s = {
     letterSpacing: '0.04em',
     WebkitTapHighlightColor: 'transparent',
   }),
-  filterSelect: {
-    background: 'var(--bg-surface)',
+  filterToggleBtn: (active) => ({
+    background: active ? 'var(--btn-primary-bg)' : 'none',
     border: '1px solid var(--border)',
-    color: 'var(--text-primary)',
+    color: active ? 'var(--btn-primary-text)' : 'var(--text-muted)',
     fontFamily: 'var(--font)',
     fontSize: '10px',
-    padding: '3px 6px',
+    padding: '3px 10px',
     cursor: 'pointer',
-    flex: '1 1 auto',
-    minWidth: 0,
+    letterSpacing: '0.04em',
+    marginLeft: 'auto',
+    WebkitTapHighlightColor: 'transparent',
+    flexShrink: 0,
+  }),
+  searchBar: {
+    display: 'flex', alignItems: 'center', gap: '6px',
+    background: 'var(--bg-surface)', border: '1px solid var(--border)', padding: '8px 12px',
   },
+  searchInput: {
+    flex: 1, background: 'var(--bg-primary)', border: '1px solid var(--border)',
+    color: 'var(--text-primary)', fontFamily: 'var(--font)', fontSize: '11px',
+    padding: '6px 8px', outline: 'none', letterSpacing: '0.02em', minWidth: 0,
+  },
+  searchClear: {
+    background: 'none', border: 'none', color: 'var(--text-muted)',
+    fontFamily: 'var(--font)', fontSize: '14px', cursor: 'pointer', padding: '0 2px', lineHeight: 1,
+    WebkitTapHighlightColor: 'transparent', flexShrink: 0,
+  },
+  sevPanel: {
+    background: 'var(--bg-surface)', border: '1px solid var(--border)',
+    borderTop: 'none', padding: '10px 12px', display: 'flex', flexWrap: 'wrap', gap: '6px',
+  },
+  sevPanelBtn: (active, color) => ({
+    background: active ? color : 'none',
+    border: `1px solid ${color}`,
+    color: active ? '#111110' : color,
+    fontFamily: 'var(--font)',
+    fontSize: '10px',
+    padding: '4px 12px',
+    cursor: 'pointer',
+    letterSpacing: '0.04em',
+    textTransform: 'uppercase',
+    WebkitTapHighlightColor: 'transparent',
+  }),
   overlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 1000 },
   modal: { background: 'var(--bg-primary)', border: '1px solid var(--border)', borderBottom: 'none', width: '100%', maxHeight: '80vh', display: 'flex', flexDirection: 'column' },
   modalHeader: { padding: '12px 16px', borderBottom: '1px solid var(--border)', background: 'var(--bg-surface)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 },
@@ -149,9 +181,17 @@ export function SiemDashboardMobile({ onNavigate }) {
   const [loading, setLoading] = useState(true);
   const [sevFilter, setSevFilter] = useState(null);
   const [hours, setHours] = useState(24);
-  const [catFilter, setCatFilter] = useState(null);
+  const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [sevPanelOpen, setSevPanelOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState(null);
   const loadingRef = useRef(false);
+
+  // Debounce search 300ms
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(t);
+  }, [search]);
 
   const load = useCallback(async () => {
     if (loadingRef.current) return;
@@ -161,7 +201,7 @@ export function SiemDashboardMobile({ onNavigate }) {
       const h = { Authorization: `Bearer ${token}` };
       const recentParams = new URLSearchParams({ hours });
       if (sevFilter) recentParams.set('severity', sevFilter);
-      if (catFilter) recentParams.set('category', catFilter);
+      if (debouncedSearch.trim()) recentParams.set('q', debouncedSearch.trim());
       const [statsRes, countsRes, sevRes, recentRes] = await Promise.all([
         fetch(`/api/siem/stats?hours=${hours}`, { headers: h }),
         fetch('/api/siem/alerts/counts', { headers: h }),
@@ -176,7 +216,7 @@ export function SiemDashboardMobile({ onNavigate }) {
     } catch {}
     loadingRef.current = false;
     setLoading(false);
-  }, [getAccessTokenSilently, hours, sevFilter, catFilter]);
+  }, [getAccessTokenSilently, hours, sevFilter, debouncedSearch]);
 
   // Initial load + reload when filters change
   useEffect(() => { load(); }, [load]);
@@ -203,14 +243,50 @@ export function SiemDashboardMobile({ onNavigate }) {
             </button>
           ))}
         </div>
-        <select
-          style={s.filterSelect}
-          value={catFilter || ''}
-          onChange={e => setCatFilter(e.target.value || null)}
+        <button
+          style={s.filterToggleBtn(sevPanelOpen || !!sevFilter)}
+          onClick={() => setSevPanelOpen(v => !v)}
         >
-          <option value="">All categories</option>
-          {ALL_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-        </select>
+          {sevFilter ? `sev: ${sevFilter}` : 'severity'}
+        </button>
+      </div>
+
+      {/* Severity panel (collapsible) */}
+      {sevPanelOpen && (
+        <div style={s.sevPanel}>
+          <button
+            style={s.sevPanelBtn(!sevFilter, 'var(--text-muted)')}
+            onClick={() => { setSevFilter(null); setSevPanelOpen(false); }}
+          >
+            All
+          </button>
+          {SEVERITIES.map(sev => (
+            <button
+              key={sev}
+              style={s.sevPanelBtn(sevFilter === sev, SEV_COLOR_HEX[sev])}
+              onClick={() => { setSevFilter(sevFilter === sev ? null : sev); setSevPanelOpen(false); }}
+            >
+              {sev}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Search bar */}
+      <div style={s.searchBar}>
+        <input
+          style={s.searchInput}
+          type="text"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="search message, host, ip, username, event_id..."
+          autoCorrect="off"
+          autoCapitalize="none"
+          spellCheck={false}
+        />
+        {search && (
+          <button style={s.searchClear} onClick={() => setSearch('')}>✕</button>
+        )}
       </div>
 
       {/* KPI cards */}
@@ -261,13 +337,17 @@ export function SiemDashboardMobile({ onNavigate }) {
       {/* Recent events */}
       <div style={s.panel}>
         <div style={{ ...s.panelTitle, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span>Recent Events{sevFilter ? ` — ${sevFilter}` : ''}</span>
-          {sevFilter && (
+          <span>
+            Recent Events
+            {sevFilter ? ` — ${sevFilter}` : ''}
+            {debouncedSearch.trim() ? ` · "${debouncedSearch.trim()}"` : ''}
+          </span>
+          {(sevFilter || debouncedSearch.trim()) && (
             <span
-              style={{ fontSize: '10px', color: 'var(--text-muted)', cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.06em' }}
-              onClick={() => setSevFilter(null)}
+              style={{ fontSize: '10px', color: 'var(--text-muted)', cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.06em', WebkitTapHighlightColor: 'transparent' }}
+              onClick={() => { setSevFilter(null); setSearch(''); }}
             >
-              Clear filter
+              Clear
             </span>
           )}
         </div>

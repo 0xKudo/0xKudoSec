@@ -344,7 +344,7 @@ function AppInner() {
               ? <ElectronCollapsibleSiemSidebar siemView={siemView} setSiemView={setSiemView} onSwitchToTools={() => switchApp('tools')} />
               : <SiemSidebar activeView={siemView} onNavigate={handleSiemNavigate} onSwitchToTools={() => switchApp('tools')} isAuthenticated={isAuthenticated} />
             )}
-            <main style={isMobile ? { flex: 1, background: 'var(--bg-primary)' } : { flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column', background: 'var(--bg-primary)', minWidth: 0, ...(isElectron && !isAuthenticated ? { alignItems: 'center', justifyContent: 'center' } : {}) }}>
+            <main style={isMobile ? { flex: 1, minWidth: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column', background: 'var(--bg-primary)' } : { flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column', background: 'var(--bg-primary)', minWidth: 0, ...(isElectron && !isAuthenticated ? { alignItems: 'center', justifyContent: 'center' } : {}) }}>
               {keyRotatedBanner && (
                 <div style={{ background: 'var(--bg-surface)', borderBottom: '1px solid var(--accent-amber)', padding: '6px 16px', display: 'flex', alignItems: 'center', gap: '12px', fontSize: '11px', color: 'var(--accent-amber)', flexShrink: 0 }}>
                   <span>Ingest key rotated. Update your Fluent Bit config and restart the agent.</span>
