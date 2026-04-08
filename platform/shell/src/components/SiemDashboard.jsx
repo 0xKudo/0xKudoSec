@@ -1014,7 +1014,7 @@ export function SiemDashboard({ onNavigate }) {
       </div>
 
       <div style={{ overflowX: 'auto' }}>
-        <table style={{ ...s.table, width: `${visibleIdxs.reduce((sum, i) => sum + widths[i], 0)}px` }}>
+        <table style={{ ...s.table, width: '100%', minWidth: `${visibleIdxs.reduce((sum, i) => sum + widths[i], 0)}px` }}>
           <colgroup>
             {visibleIdxs.map(i => <col key={i} style={{ width: `${widths[i]}px` }} />)}
           </colgroup>
