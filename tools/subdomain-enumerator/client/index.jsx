@@ -213,7 +213,7 @@ export default function SubdomainEnumerator() {
   return (
     <div style={styles.container}>
       <div style={styles.header}>
-        <h1 style={styles.title}>Subdomain Enumerator</h1>
+        <span style={styles.title}>Subdomain Enumerator</span>
         <p style={styles.subtitle}>
           Discover subdomains via Certificate Transparency logs, HackerTarget, SecurityTrails, and brute-force DNS resolution.
         </p>

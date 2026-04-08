@@ -244,7 +244,7 @@ export default function IncidentReportTool() {
   return (
     <div style={styles.container}>
       <div style={styles.header}>
-        <h1 style={styles.title}>Incident Report Generator</h1>
+        <span style={styles.title}>Incident Report Generator</span>
         <p style={styles.subtitle}>
           Generate a structured incident report from a raw alert or an imported Alert Triage result.
         </p>

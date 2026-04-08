@@ -313,7 +313,7 @@ export default function NetworkScanner() {
   return (
     <div style={styles.container}>
       <div style={styles.header}>
-        <h1 style={styles.title}>Network Scanner</h1>
+        <span style={styles.title}>Network Scanner</span>
         <p style={styles.subtitle}>
           Run nmap scans against a target. Only scan hosts and networks you own or have explicit authorization to test.
         </p>

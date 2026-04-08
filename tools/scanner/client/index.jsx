@@ -216,7 +216,7 @@ export default function Scanner() {
   return (
     <div style={styles.container}>
       <div style={styles.header}>
-        <h1 style={styles.title}>Vulnerability Scanner</h1>
+        <span style={styles.title}>Vulnerability Scanner</span>
         <p style={styles.subtitle}>
           Passive: checks headers, cookies, forms, and info leakage. Active: probes inputs with XSS and SQLi payloads.
         </p>

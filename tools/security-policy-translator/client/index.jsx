@@ -171,7 +171,7 @@ export default function SecurityPolicyTranslator() {
   return (
     <div style={styles.container}>
       <div style={styles.header}>
-        <h1 style={styles.title}>Security Policy Translator</h1>
+        <span style={styles.title}>Security Policy Translator</span>
         <p style={styles.subtitle}>
           Paste policy text from NIST, ISO 27001, CIS, SOC 2, HIPAA, PCI-DSS, GDPR, or internal docs. Claude translates into plain English and extracts required controls.
         </p>

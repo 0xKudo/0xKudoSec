@@ -237,7 +237,7 @@ export default function WordlistGenerator() {
   return (
     <div style={styles.container}>
       <div style={styles.header}>
-        <h1 style={styles.title}>Wordlist / Password Generator</h1>
+        <span style={styles.title}>Wordlist / Password Generator</span>
         <p style={styles.subtitle}>
           Generate wordlists from character sets or base words with mutation rules. Max 10,000 entries.
         </p>

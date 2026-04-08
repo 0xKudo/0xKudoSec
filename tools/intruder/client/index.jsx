@@ -238,7 +238,7 @@ export default function Intruder() {
   return (
     <div style={styles.container}>
       <div style={styles.header}>
-        <h1 style={styles.title}>Intruder</h1>
+        <span style={styles.title}>Intruder</span>
         <p style={styles.subtitle}>
           Mark injection points with §placeholders§ in your request template, supply payloads, and fire.
         </p>

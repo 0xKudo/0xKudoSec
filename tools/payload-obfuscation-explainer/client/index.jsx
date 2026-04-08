@@ -182,7 +182,7 @@ export default function PayloadObfuscationExplainer() {
   return (
     <div style={styles.container}>
       <div style={styles.header}>
-        <h1 style={styles.title}>Payload Obfuscation Explainer</h1>
+        <span style={styles.title}>Payload Obfuscation Explainer</span>
         <p style={styles.subtitle}>
           Paste an obfuscated or encoded payload. Claude decodes it and explains what it does in plain English.
         </p>

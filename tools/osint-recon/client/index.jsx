@@ -267,7 +267,7 @@ export default function OsintReconTool() {
   return (
     <div style={styles.container}>
       <div style={styles.header}>
-        <h1 style={styles.title}>OSINT Recon Dashboard</h1>
+        <span style={styles.title}>OSINT Recon Dashboard</span>
         <p style={styles.subtitle}>
           Enter a domain, IP address, or email. Aggregates data from Shodan, VirusTotal, Hunter.io, IPInfo, and WHOIS.
         </p>

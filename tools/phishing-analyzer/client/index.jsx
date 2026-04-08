@@ -262,7 +262,7 @@ export default function PhishingAnalyzerTool() {
   return (
     <div style={styles.container}>
       <div style={styles.header}>
-        <h1 style={styles.title}>Phishing Email Analyzer</h1>
+        <span style={styles.title}>Phishing Email Analyzer</span>
         <p style={styles.subtitle}>
           Paste the full email (including headers if available). Get a phishing verdict, indicators, and recommended actions.
         </p>

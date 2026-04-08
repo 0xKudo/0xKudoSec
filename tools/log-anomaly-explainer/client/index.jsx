@@ -203,7 +203,7 @@ export default function LogAnomalyExplainer() {
   return (
     <div style={styles.container}>
       <div style={styles.header}>
-        <h1 style={styles.title}>Log Anomaly Explainer</h1>
+        <span style={styles.title}>Log Anomaly Explainer</span>
         <p style={styles.subtitle}>
           Paste or upload system, auth, web server, or application logs. Claude identifies anomalies and explains them in plain English.
         </p>

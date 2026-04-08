@@ -226,7 +226,7 @@ export default function Decoder() {
   return (
     <div style={styles.container}>
       <div style={styles.header}>
-        <h1 style={styles.title}>Decoder</h1>
+        <span style={styles.title}>Decoder</span>
         <p style={styles.subtitle}>Encode and decode across URL, HTML, Base64, Hex, Binary, ROT13, Unicode, and JWT formats.</p>
       </div>
 

@@ -265,7 +265,7 @@ export default function HttpRepeater() {
   return (
     <div style={styles.container}>
       <div style={styles.header}>
-        <h1 style={styles.title}>HTTP Repeater</h1>
+        <span style={styles.title}>HTTP Repeater</span>
         <p style={styles.subtitle}>Craft and replay HTTP requests. Inspect the full response.</p>
       </div>
 

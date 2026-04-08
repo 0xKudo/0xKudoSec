@@ -208,7 +208,7 @@ export default function ReverseShellGenerator() {
   return (
     <div style={styles.container}>
       <div style={styles.header}>
-        <h1 style={styles.title}>Reverse Shell Generator</h1>
+        <span style={styles.title}>Reverse Shell Generator</span>
         <p style={styles.subtitle}>
           Generate ready-to-use reverse shell one-liners. Start your listener first, then run the payload on the target.
         </p>

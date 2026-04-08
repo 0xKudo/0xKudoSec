@@ -290,7 +290,7 @@ export default function ThreatIntelTool() {
   return (
     <div style={styles.container}>
       <div style={styles.header}>
-        <h1 style={styles.title}>Threat Intelligence Aggregator</h1>
+        <span style={styles.title}>Threat Intelligence Aggregator</span>
         <p style={styles.subtitle}>
           Enter an IP, domain, URL, or file hash. Aggregates data from AbuseIPDB, VirusTotal, Shodan, IPInfo, ThreatFox, URLhaus, and MalwareBazaar.
         </p>

@@ -134,7 +134,7 @@ export default function AlertTriageTool() {
   return (
     <div style={styles.container}>
       <div style={styles.header}>
-        <h1 style={styles.title}>Alert Triage Assistant</h1>
+        <span style={styles.title}>Alert Triage Assistant</span>
         <p style={styles.subtitle}>
           Paste a SIEM alert below. Get severity assessment, likely attack vector, and recommended next steps.
         </p>
