@@ -24,15 +24,22 @@ const INDICATOR_LABELS = {
 
 const styles = {
   container: { maxWidth: '800px' },
-  header: { marginBottom: '24px' },
-  title: { color: 'var(--text-primary)', fontSize: '13px', marginBottom: '4px' },
-  subtitle: { color: 'var(--text-muted)', fontSize: '13px' },
+  header: {
+    margin: '-24px -24px 20px -24px',
+    padding: '12px 20px',
+    borderBottom: '1px solid var(--border)',
+    background: 'var(--bg-surface)',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '2px',
+  },
+  title: { fontSize: '13px', color: 'var(--text-primary)', letterSpacing: '0.02em', margin: 0 },
+  subtitle: { color: 'var(--text-muted)', fontSize: '11px', margin: 0 },
   textarea: {
     width: '100%',
     minHeight: '200px',
-    background: 'var(--bg-surface)',
+    background: 'var(--bg-primary)',
     border: '1px solid var(--border)',
-    borderRadius: '4px',
     color: 'var(--text-primary)',
     fontFamily: 'var(--font)',
     fontSize: '13px',
@@ -45,7 +52,6 @@ const styles = {
     background: loading ? 'var(--bg-surface)' : 'var(--btn-primary-bg)',
     color: loading ? 'var(--text-muted)' : 'var(--btn-primary-text)',
     border: '1px solid var(--border)',
-    borderRadius: '4px',
     padding: '4px 12px',
     fontFamily: 'var(--font)',
     fontSize: '11px',
@@ -56,7 +62,6 @@ const styles = {
     marginTop: '24px',
     background: 'var(--bg-surface)',
     border: '1px solid var(--border)',
-    borderRadius: '4px',
     padding: '20px',
   },
   verdictRow: {
@@ -70,7 +75,6 @@ const styles = {
   verdictBadge: (verdict) => ({
     display: 'inline-block',
     padding: '4px 14px',
-    borderRadius: '4px',
     border: `1px solid ${VERDICT_COLORS[verdict] || 'var(--border)'}`,
     color: VERDICT_COLORS[verdict] || 'var(--text-muted)',
     fontSize: '11px',
@@ -132,8 +136,7 @@ const styles = {
   senderBox: {
     background: 'var(--bg-primary)',
     border: '1px solid var(--border)',
-    borderRadius: '4px',
-    padding: '8px 12px',
+    padding: '6px 10px',
     color: 'var(--severity-high)',
     fontFamily: 'var(--font)',
     fontSize: '13px',

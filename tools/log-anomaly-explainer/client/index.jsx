@@ -27,15 +27,22 @@ const LOG_SOURCES = [
 
 const styles = {
   container: { maxWidth: '900px' },
-  header: { marginBottom: '24px' },
-  title: { color: 'var(--text-primary)', fontSize: '13px', marginBottom: '4px' },
-  subtitle: { color: 'var(--text-muted)', fontSize: '13px' },
+  header: {
+    margin: '-24px -24px 20px -24px',
+    padding: '12px 20px',
+    borderBottom: '1px solid var(--border)',
+    background: 'var(--bg-surface)',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '2px',
+  },
+  title: { fontSize: '13px', color: 'var(--text-primary)', letterSpacing: '0.02em', margin: 0 },
+  subtitle: { color: 'var(--text-muted)', fontSize: '11px', margin: 0 },
   tabs: { display: 'flex', gap: '4px', marginBottom: '12px' },
   tab: (active) => ({
     background: active ? 'var(--btn-primary-bg)' : 'var(--bg-surface)',
     color: active ? 'var(--btn-primary-text)' : 'var(--text-muted)',
     border: '1px solid var(--border)',
-    borderRadius: '4px',
     padding: '6px 14px',
     fontFamily: 'var(--font)',
     fontSize: '12px',
@@ -43,20 +50,18 @@ const styles = {
   }),
   controlRow: { display: 'flex', gap: '8px', marginBottom: '12px', alignItems: 'center' },
   select: {
-    background: 'var(--bg-surface)',
+    background: 'var(--bg-primary)',
     border: '1px solid var(--border)',
-    borderRadius: '4px',
     color: 'var(--text-primary)',
     fontFamily: 'var(--font)',
-    fontSize: '13px',
-    padding: '8px 12px',
+    fontSize: '12px',
+    padding: '6px 10px',
     outline: 'none',
   },
   button: (loading) => ({
     background: loading ? 'var(--bg-surface)' : 'var(--btn-primary-bg)',
     color: loading ? 'var(--text-muted)' : 'var(--btn-primary-text)',
     border: '1px solid var(--border)',
-    borderRadius: '4px',
     padding: '8px 20px',
     fontFamily: 'var(--font)',
     fontSize: '11px',
@@ -68,7 +73,6 @@ const styles = {
     minHeight: '220px',
     background: 'var(--bg-surface)',
     border: '1px solid var(--border)',
-    borderRadius: '4px',
     color: 'var(--text-primary)',
     fontFamily: 'var(--font)',
     fontSize: '12px',
@@ -79,7 +83,6 @@ const styles = {
   },
   uploadBox: {
     border: '1px dashed var(--border)',
-    borderRadius: '4px',
     padding: '32px',
     textAlign: 'center',
     cursor: 'pointer',
@@ -93,7 +96,6 @@ const styles = {
   summaryCard: {
     background: 'var(--bg-surface)',
     border: '1px solid var(--border)',
-    borderRadius: '4px',
     padding: '20px',
     marginBottom: '16px',
   },
@@ -101,7 +103,6 @@ const styles = {
   badge: (level) => ({
     display: 'inline-block',
     padding: '4px 12px',
-    borderRadius: '4px',
     border: `1px solid ${SEVERITY_COLORS[level] || 'var(--border)'}`,
     color: SEVERITY_COLORS[level] || 'var(--text-muted)',
     fontSize: '12px',
@@ -121,7 +122,6 @@ const styles = {
   anomalyCard: {
     background: 'var(--bg-primary)',
     border: '1px solid var(--border)',
-    borderRadius: '4px',
     padding: '14px',
     marginBottom: '10px',
   },
@@ -133,7 +133,6 @@ const styles = {
   cleanBanner: {
     background: 'var(--bg-surface)',
     border: '1px solid var(--severity-low)',
-    borderRadius: '4px',
     padding: '16px',
     color: 'var(--severity-low)',
     fontSize: '13px',
