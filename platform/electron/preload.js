@@ -41,6 +41,7 @@ contextBridge.exposeInMainWorld('electron', {
 
   auth: {
     onCallback: (cb) => ipcRenderer.on('auth0:callback', (_e, url) => cb(url)),
+    getNonce: () => ipcRenderer.invoke('auth0:getNonce'),
   },
 
   window: {
