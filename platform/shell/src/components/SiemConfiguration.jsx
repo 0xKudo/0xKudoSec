@@ -322,7 +322,7 @@ export function SiemConfiguration() {
   const [configSaving, setConfigSaving] = useState(false);
   const [configMsg, setConfigMsg] = useState(null);
 
-  // PIN state: 'unset' | 'locked' | 'unlocked' | 'recovering'
+  // PIN state: 'unset' | 'locked' | 'unlocked' | 'recovering' | 'needs-recovery'
   const [pinState, setPinState] = useState('locked');
   const [pinInput, setPinInput] = useState('');
   const [pinNewInput, setPinNewInput] = useState('');
@@ -331,6 +331,7 @@ export function SiemConfiguration() {
   const [recoveryInput, setRecoveryInput] = useState('');
   const [pinRecoveryInput, setPinRecoveryInput] = useState('');
   const [pinRecoveryConfirmInput, setPinRecoveryConfirmInput] = useState('');
+  const [addRecoveryPin, setAddRecoveryPin] = useState('');
 
   useEffect(() => {
     if (!isElectron) return;
@@ -354,13 +355,16 @@ export function SiemConfiguration() {
       setPinRecoveryInput('');
       setPinRecoveryConfirmInput('');
       setRecoveryInput('');
+      setAddRecoveryPin('');
       setPinErr(null);
       setConfigText('');
       setConfigMsg(null);
       return;
     }
-    window.electron.settings.hasPin().then(has => {
-      setPinState(has ? 'locked' : 'unset');
+    window.electron.settings.hasPin().then(({ hasPin, hasRecovery }) => {
+      if (!hasPin) setPinState('unset');
+      else if (!hasRecovery) setPinState('needs-recovery');
+      else setPinState('locked');
     });
   }, [isConfigEditor, tab]);
 
@@ -392,6 +396,23 @@ export function SiemConfiguration() {
       setPinState('locked');
     } else {
       setPinErr(res.err);
+    }
+  };
+
+  const handleAddRecovery = async () => {
+    if (pinRecoveryInput.length < 8) { setPinErr('Recovery passphrase must be at least 8 characters'); return; }
+    if (pinRecoveryInput !== pinRecoveryConfirmInput) { setPinErr('Recovery passphrases do not match'); return; }
+    if (addRecoveryPin === pinRecoveryInput) { setPinErr('Recovery passphrase must differ from PIN'); return; }
+    const res = await window.electron.settings.addRecovery(addRecoveryPin, pinRecoveryInput);
+    if (res.ok) {
+      setAddRecoveryPin('');
+      setPinRecoveryInput('');
+      setPinRecoveryConfirmInput('');
+      setPinErr(null);
+      setPinState('locked');
+    } else {
+      setPinErr(res.err);
+      setAddRecoveryPin('');
     }
   };
 
@@ -954,6 +975,34 @@ winlogbeat.event_logs:
                     onKeyDown={e => { if (e.key === 'Enter') handleSetPin(); }}
                     style={{ ...s.input, width: '200px' }} />
                   <button style={s.btnPrimary} onClick={handleSetPin}>Set PIN</button>
+                </div>
+                {pinErr && (
+                  <div style={{ marginTop: '10px', fontSize: '11px', color: 'var(--severity-high)' }}>{pinErr}</div>
+                )}
+              </div>
+            )}
+
+            {/* PIN set but no recovery passphrase — prompt to add one */}
+            {pinState === 'needs-recovery' && (
+              <div style={{ marginTop: '24px', maxWidth: '320px' }}>
+                <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '16px' }}>
+                  Your PIN is set but no recovery passphrase exists. Enter your current PIN and set a recovery passphrase to continue.
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <input type="password" placeholder="Current PIN" value={addRecoveryPin}
+                    onChange={e => { setAddRecoveryPin(e.target.value); setPinErr(null); }}
+                    style={{ ...s.input, width: '200px' }} autoFocus />
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                    Recovery passphrase — used to reset your PIN if forgotten.
+                  </div>
+                  <input type="password" placeholder="Recovery passphrase" value={pinRecoveryInput}
+                    onChange={e => { setPinRecoveryInput(e.target.value); setPinErr(null); }}
+                    style={{ ...s.input, width: '200px' }} />
+                  <input type="password" placeholder="Confirm recovery passphrase" value={pinRecoveryConfirmInput}
+                    onChange={e => { setPinRecoveryConfirmInput(e.target.value); setPinErr(null); }}
+                    onKeyDown={e => { if (e.key === 'Enter') handleAddRecovery(); }}
+                    style={{ ...s.input, width: '200px' }} />
+                  <button style={s.btnPrimary} onClick={handleAddRecovery}>Save Recovery Passphrase</button>
                 </div>
                 {pinErr && (
                   <div style={{ marginTop: '10px', fontSize: '11px', color: 'var(--severity-high)' }}>{pinErr}</div>

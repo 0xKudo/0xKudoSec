@@ -35,6 +35,7 @@ contextBridge.exposeInMainWorld('electron', {
     hasPin: () => ipcRenderer.invoke('settings:hasPin'),
     setPin: (pin, recoveryPassphrase) => ipcRenderer.invoke('settings:setPin', pin, recoveryPassphrase),
     verifyPin: (pin) => ipcRenderer.invoke('settings:verifyPin', pin),
+    addRecovery: (pin, passphrase) => ipcRenderer.invoke('settings:addRecovery', pin, passphrase),
     resetWithPassphrase: (passphrase) => ipcRenderer.invoke('settings:resetWithPassphrase', passphrase),
   },
 

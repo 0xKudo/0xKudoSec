@@ -354,8 +354,11 @@ function hashPin(pin, salt) {
 }
 
 ipcMain.handle('settings:hasPin', (event) => {
-  if (!isValidSender(event)) return false;
-  return !!store.get('pinHash');
+  if (!isValidSender(event)) return { hasPin: false, hasRecovery: false };
+  return {
+    hasPin: !!store.get('pinHash'),
+    hasRecovery: !!store.get('recoveryHash'),
+  };
 });
 
 ipcMain.handle('settings:setPin', (event, pin, recoveryPassphrase) => {
@@ -374,6 +377,46 @@ ipcMain.handle('settings:setPin', (event, pin, recoveryPassphrase) => {
   const recoverySalt = randomBytes(16).toString('hex');
   store.set('pinSalt', pinSalt);
   store.set('pinHash', hashPin(pin, pinSalt));
+  store.set('recoverySalt', recoverySalt);
+  store.set('recoveryHash', hashPin(recoveryPassphrase, recoverySalt));
+  return { ok: true };
+});
+
+ipcMain.handle('settings:addRecovery', (event, pin, recoveryPassphrase) => {
+  if (!isValidSender(event)) return { ok: false, err: 'Unauthorized' };
+  if (typeof pin !== 'string' || pin.length > 256) return { ok: false, err: 'Invalid input' };
+  if (typeof recoveryPassphrase !== 'string' || recoveryPassphrase.length < 8 || recoveryPassphrase.length > 256) {
+    return { ok: false, err: 'Recovery passphrase must be between 8 and 256 characters' };
+  }
+  if (pin === recoveryPassphrase) return { ok: false, err: 'Recovery passphrase must differ from PIN' };
+
+  // Verify current PIN before allowing recovery passphrase to be set
+  if (pinAttempts.lockedUntil && Date.now() < pinAttempts.lockedUntil) {
+    const secsLeft = Math.ceil((pinAttempts.lockedUntil - Date.now()) / 1000);
+    return { ok: false, err: `Too many attempts. Try again in ${secsLeft} seconds.` };
+  }
+
+  const salt = store.get('pinSalt');
+  const storedHash = store.get('pinHash');
+  if (!salt || !storedHash) return { ok: false, err: 'No PIN set' };
+
+  const attemptHash = hashPin(pin, salt);
+  if (storedHash.length !== attemptHash.length) return { ok: false, err: 'PIN verification failed' };
+
+  const match = timingSafeEqual(Buffer.from(storedHash, 'hex'), Buffer.from(attemptHash, 'hex'));
+  if (!match) {
+    pinAttempts.count += 1;
+    if (pinAttempts.count >= PIN_MAX_ATTEMPTS) {
+      pinAttempts.lockedUntil = Date.now() + PIN_LOCKOUT_MS;
+      pinAttempts.count = 0;
+      return { ok: false, err: 'Too many attempts. Try again in 60 seconds.' };
+    }
+    return { ok: false, err: 'Incorrect PIN' };
+  }
+
+  pinAttempts.count = 0;
+  pinAttempts.lockedUntil = null;
+  const recoverySalt = randomBytes(16).toString('hex');
   store.set('recoverySalt', recoverySalt);
   store.set('recoveryHash', hashPin(recoveryPassphrase, recoverySalt));
   return { ok: true };
