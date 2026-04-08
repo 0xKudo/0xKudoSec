@@ -106,7 +106,7 @@ const styles = {
     border: `1px solid ${SEVERITY_COLORS[level] || 'var(--border)'}`,
     color: SEVERITY_COLORS[level] || 'var(--text-muted)',
     fontSize: '12px',
-    fontWeight: 'bold',
+    
     textTransform: 'uppercase',
   }),
   sourceLabel: { color: 'var(--text-muted)', fontSize: '12px' },
@@ -126,7 +126,7 @@ const styles = {
     marginBottom: '10px',
   },
   anomalyHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' },
-  anomalyTitle: { color: 'var(--text-primary)', fontSize: '13px', fontWeight: 'bold' },
+  anomalyTitle: { color: 'var(--text-primary)', fontSize: '13px',  },
   anomalyExplanation: { color: 'var(--text-primary)', fontSize: '13px', lineHeight: '1.6', marginBottom: '8px' },
   lineRefs: { color: 'var(--text-muted)', fontSize: '11px', fontStyle: 'italic' },
   listItem: { padding: '5px 0', color: 'var(--text-primary)', fontSize: '13px', borderBottom: '1px solid var(--border)' },

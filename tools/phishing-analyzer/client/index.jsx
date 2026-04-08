@@ -108,7 +108,7 @@ const styles = {
   indicatorType: {
     color: 'var(--severity-high)',
     fontSize: '10px',
-    fontWeight: 'bold',
+    
     textTransform: 'uppercase',
     whiteSpace: 'nowrap',
     minWidth: '160px',

@@ -49,7 +49,7 @@ const styles = {
     border: '1px solid var(--border)',
     padding: '16px',
   },
-  panelTitle: { color: 'var(--text-primary)', fontSize: '13px', fontWeight: 'bold', marginBottom: '14px' },
+  panelTitle: { color: 'var(--text-primary)', fontSize: '13px',  marginBottom: '14px' },
   label: { color: 'var(--text-muted)', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '6px', display: 'block' },
   row: { display: 'flex', gap: '8px', marginBottom: '12px', alignItems: 'flex-end' },
   select: {
@@ -122,7 +122,7 @@ const styles = {
     fontSize: '12px',
   },
   summaryItem: { color: 'var(--text-muted)' },
-  summaryVal: { color: 'var(--text-primary)', fontWeight: 'bold' },
+  summaryVal: { color: 'var(--text-primary)',  },
   flaggedBanner: {
     background: 'rgba(239,68,68,0.08)',
     border: '1px solid var(--severity-critical)',
@@ -148,7 +148,7 @@ const styles = {
     padding: '6px 10px',
     borderBottom: '1px solid var(--border)',
     color: STATUS_COLOR(status),
-    fontWeight: 'bold',
+    
   }),
 };
 

@@ -68,7 +68,7 @@ const styles = {
            method === 'POST' ? 'var(--severity-medium)' :
            method === 'DELETE' ? 'var(--severity-critical)' :
            'var(--severity-info)',
-    fontWeight: 'bold',
+    
     marginRight: '4px',
   }),
   clearBtn: {
@@ -136,7 +136,7 @@ const styles = {
     background: STATUS_COLOR(status),
     color: '#fff',
     fontSize: '12px',
-    fontWeight: 'bold',
+    
     padding: '2px 10px',
   }),
   durationBadge: {

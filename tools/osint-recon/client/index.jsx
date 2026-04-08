@@ -74,7 +74,7 @@ const styles = {
     border: `1px solid ${RISK_COLORS[level] || 'var(--border)'}`,
     color: RISK_COLORS[level] || 'var(--text-muted)',
     fontSize: '12px',
-    fontWeight: 'bold',
+    
     textTransform: 'uppercase',
   }),
   targetLabel: { color: 'var(--text-muted)', fontSize: '12px' },

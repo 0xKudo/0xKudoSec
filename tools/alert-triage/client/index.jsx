@@ -57,7 +57,7 @@ const styles = {
     border: `1px solid ${SEVERITY_COLORS[severity] || 'var(--border)'}`,
     color: SEVERITY_COLORS[severity] || 'var(--text-muted)',
     fontSize: '12px',
-    fontWeight: 'bold',
+    
     textTransform: 'uppercase',
     marginBottom: '16px',
   }),

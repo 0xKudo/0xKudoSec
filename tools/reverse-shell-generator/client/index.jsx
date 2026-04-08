@@ -127,7 +127,7 @@ const styles = {
     padding: '14px',
     marginBottom: '10px',
   },
-  listenerTitle: { color: 'var(--text-primary)', fontSize: '13px', fontWeight: 'bold', marginBottom: '10px' },
+  listenerTitle: { color: 'var(--text-primary)', fontSize: '13px',  marginBottom: '10px' },
   listenerRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' },
   listenerCode: {
     background: 'var(--bg-primary)',

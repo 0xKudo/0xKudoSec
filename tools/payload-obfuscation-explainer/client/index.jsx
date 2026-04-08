@@ -102,7 +102,7 @@ const styles = {
     border: `1px solid ${color}`,
     color,
     fontSize: '12px',
-    fontWeight: 'bold',
+    
     textTransform: 'uppercase',
   }),
   label: { color: 'var(--text-muted)', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '6px' },

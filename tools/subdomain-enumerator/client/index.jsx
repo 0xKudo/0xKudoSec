@@ -89,13 +89,13 @@ const styles = {
     background: RISK_COLORS[level] || RISK_COLORS.info,
     color: '#fff',
     fontSize: '10px',
-    fontWeight: 'bold',
+    
     padding: '2px 8px',
     textTransform: 'uppercase',
     letterSpacing: '0.06em',
     marginLeft: '10px',
   }),
-  cardTitle: { color: 'var(--text-primary)', fontSize: '14px', fontWeight: 'bold', marginBottom: '10px' },
+  cardTitle: { color: 'var(--text-primary)', fontSize: '14px',  marginBottom: '10px' },
   summary: { color: 'var(--text-primary)', fontSize: '13px', lineHeight: '1.6', marginBottom: '12px' },
   listLabel: { color: 'var(--text-muted)', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: '10px', marginBottom: '4px' },
   listItem: { color: 'var(--text-primary)', fontSize: '12px', lineHeight: '1.7', marginLeft: '12px' },
@@ -106,7 +106,7 @@ const styles = {
     padding: '6px 10px',
     opacity: skipped ? 0.5 : 1,
   }),
-  sourceTitle: { color: 'var(--text-primary)', fontSize: '12px', fontWeight: 'bold', marginBottom: '4px' },
+  sourceTitle: { color: 'var(--text-primary)', fontSize: '12px',  marginBottom: '4px' },
   sourceMeta: { color: 'var(--text-muted)', fontSize: '11px' },
   subdomainBox: {
     background: 'var(--bg-primary)',
@@ -122,7 +122,7 @@ const styles = {
   },
   resultHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' },
   resultMeta: { color: 'var(--text-muted)', fontSize: '12px' },
-  sectionHeader: { color: 'var(--text-primary)', fontSize: '14px', fontWeight: 'bold', marginBottom: '12px' },
+  sectionHeader: { color: 'var(--text-primary)', fontSize: '14px',  marginBottom: '12px' },
 };
 
 export default function SubdomainEnumerator() {

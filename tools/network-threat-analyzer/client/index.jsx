@@ -93,7 +93,7 @@ const styles = {
     border: `1px solid ${SEVERITY_COLORS[level] || 'var(--border)'}`,
     color: SEVERITY_COLORS[level] || 'var(--text-muted)',
     fontSize: '12px',
-    fontWeight: 'bold',
+    
     textTransform: 'uppercase',
   }),
   logTypeLabel: { color: 'var(--text-muted)', fontSize: '12px' },
@@ -113,7 +113,7 @@ const styles = {
     marginBottom: '8px',
   },
   threatHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' },
-  threatType: { color: 'var(--text-primary)', fontSize: '13px', fontWeight: 'bold' },
+  threatType: { color: 'var(--text-primary)', fontSize: '13px',  },
   threatDetail: { color: 'var(--text-muted)', fontSize: '12px', lineHeight: '1.5' },
   listItem: { padding: '5px 0', color: 'var(--text-primary)', fontSize: '13px', borderBottom: '1px solid var(--border)' },
   flagItem: { padding: '5px 0', color: 'var(--severity-high)', fontSize: '13px', borderBottom: '1px solid var(--border)' },

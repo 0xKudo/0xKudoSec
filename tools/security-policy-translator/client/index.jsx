@@ -96,7 +96,7 @@ const styles = {
     marginBottom: '10px',
   },
   controlHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px', gap: '8px' },
-  controlTitle: { color: 'var(--text-primary)', fontSize: '13px', fontWeight: 'bold' },
+  controlTitle: { color: 'var(--text-primary)', fontSize: '13px',  },
   controlId: { color: 'var(--text-muted)', fontSize: '11px', marginBottom: '6px' },
   controlPlain: { color: 'var(--text-primary)', fontSize: '13px', lineHeight: '1.6', marginBottom: '8px' },
   reqBadge: (req) => ({
@@ -105,7 +105,7 @@ const styles = {
     border: `1px solid ${REQ_COLORS[req] || 'var(--border)'}`,
     color: REQ_COLORS[req] || 'var(--text-muted)',
     fontSize: '11px',
-    fontWeight: 'bold',
+    
     whiteSpace: 'nowrap',
     flexShrink: 0,
   }),

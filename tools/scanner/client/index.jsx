@@ -65,7 +65,7 @@ const styles = {
     cursor: 'pointer',
     minWidth: '200px',
   }),
-  modeTitle: { color: 'var(--text-primary)', fontSize: '13px', fontWeight: 'bold', marginBottom: '4px' },
+  modeTitle: { color: 'var(--text-primary)', fontSize: '13px',  marginBottom: '4px' },
   modeDesc: { color: 'var(--text-muted)', fontSize: '11px', lineHeight: '1.5' },
   authBox: {
     background: 'rgba(239,68,68,0.06)',
@@ -86,13 +86,13 @@ const styles = {
     marginBottom: '20px',
   },
   analysisHeader: { display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' },
-  analysisTitle: { color: 'var(--text-primary)', fontSize: '14px', fontWeight: 'bold' },
+  analysisTitle: { color: 'var(--text-primary)', fontSize: '14px',  },
   riskBadge: (level) => ({
     display: 'inline-block',
     background: SEVERITY_COLOR[level] || SEVERITY_COLOR.info,
     color: '#fff',
     fontSize: '10px',
-    fontWeight: 'bold',
+    
     padding: '2px 8px',
     textTransform: 'uppercase',
   }),
@@ -104,7 +104,7 @@ const styles = {
     background: SEVERITY_COLOR[sev],
     color: '#fff',
     fontSize: '12px',
-    fontWeight: 'bold',
+    
     padding: '3px 10px',
   }),
   findingCard: (sev) => ({
@@ -113,14 +113,14 @@ const styles = {
     padding: '12px 14px',
     marginBottom: '8px',
   }),
-  findingTitle: { color: 'var(--text-primary)', fontSize: '13px', fontWeight: 'bold', marginBottom: '4px' },
+  findingTitle: { color: 'var(--text-primary)', fontSize: '13px',  marginBottom: '4px' },
   findingDetail: { color: 'var(--text-muted)', fontSize: '12px', lineHeight: '1.5' },
   severityChip: (sev) => ({
     display: 'inline-block',
     background: SEVERITY_COLOR[sev],
     color: '#fff',
     fontSize: '10px',
-    fontWeight: 'bold',
+    
     padding: '1px 6px',
     textTransform: 'uppercase',
     marginRight: '8px',

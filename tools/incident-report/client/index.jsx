@@ -104,14 +104,14 @@ const styles = {
     border: `1px solid ${SEVERITY_COLORS[severity] || 'var(--border)'}`,
     color: SEVERITY_COLORS[severity] || 'var(--text-muted)',
     fontSize: '12px',
-    fontWeight: 'bold',
+    
     textTransform: 'uppercase',
     marginBottom: '8px',
   }),
   reportTitle: {
     color: 'var(--text-primary)',
     fontSize: '16px',
-    fontWeight: 'bold',
+    
     margin: '8px 0 4px',
   },
   reportClassification: { color: 'var(--text-muted)', fontSize: '13px' },
