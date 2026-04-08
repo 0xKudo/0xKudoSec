@@ -20,6 +20,7 @@ import { RequireAuth } from './components/RequireAuth';
 import { LandingPage } from './pages/LandingPage';
 import { ElectronHome } from './pages/ElectronHome';
 import { PrivacyPage } from './pages/PrivacyPage';
+import { SecurityPage } from './pages/SecurityPage';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useIsMobile } from './hooks/useIsMobile';
 import './styles/theme.css';
@@ -66,7 +67,7 @@ function ToolLoader({ toolId }) {
   return <Component />;
 }
 
-const NO_AUTH_ROUTES = ['/decoder', '/reverse-shell-generator', '/wordlist-generator', '/payload-generator', '/privacy'];
+const NO_AUTH_ROUTES = ['/decoder', '/reverse-shell-generator', '/wordlist-generator', '/payload-generator', '/privacy', '/security'];
 const SIEM_VIEW_PATHS = {
   '/siem': 'dashboard',
   '/siem/alerts': 'alerts',
@@ -263,6 +264,7 @@ function AppInner() {
   }
 
   if (window.location.pathname === '/privacy') return <PrivacyPage />;
+  if (window.location.pathname === '/security') return <SecurityPage />;
 
   if (!isLoading && !isAuthenticated) {
     const path = window.location.pathname;
@@ -466,6 +468,7 @@ function AppInner() {
                 ))}
                 <Route path="/dashboard" element={isMobile ? <DashboardMobile /> : <Dashboard />} />
                 <Route path="/privacy" element={<PrivacyPage />} />
+                <Route path="/security" element={<SecurityPage />} />
                 <Route path="/siem/*" element={null} />
                 <Route path="*" element={isMobile ? <DashboardMobile /> : <Dashboard />} />
               </Routes>
@@ -480,7 +483,10 @@ function AppInner() {
           <a href="/privacy" style={{ color: 'var(--text-subtle)', textDecoration: 'none' }}
             onMouseEnter={e => e.currentTarget.style.color = 'var(--text-muted)'}
             onMouseLeave={e => e.currentTarget.style.color = 'var(--text-subtle)'}
-          >Privacy Policy</a>
+          >Privacy Policy</a>&nbsp;·&nbsp;<a href="/security" style={{ color: 'var(--text-subtle)', textDecoration: 'none' }}
+            onMouseEnter={e => e.currentTarget.style.color = 'var(--text-muted)'}
+            onMouseLeave={e => e.currentTarget.style.color = 'var(--text-subtle)'}
+          >Security Practices</a>
         </footer>
       )}
     </div>

@@ -62,8 +62,8 @@ const s = {
     fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em',
     display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0,
   },
-  tableWrap: { flex: 1, overflow: 'auto' },
-  table: { width: '100%', borderCollapse: 'collapse' },
+  tableWrap: { flex: 1, overflow: 'auto', width: '100%' },
+  table: { width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' },
   th: {
     textAlign: 'left', padding: '8px 14px', fontSize: '10px', letterSpacing: '0.08em',
     textTransform: 'uppercase', color: 'var(--text-muted)', borderBottom: '1px solid var(--border)',

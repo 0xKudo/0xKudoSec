@@ -85,11 +85,15 @@ const s = {
   muted: {
     color: 'var(--text-muted)',
   },
+  link: {
+    color: 'var(--text-primary)',
+    cursor: 'pointer',
+    textDecoration: 'underline',
+  },
 };
 
 export function PrivacyPage() {
   const navigate = useNavigate();
-
 
   return (
     <div style={s.page}>
@@ -100,11 +104,11 @@ export function PrivacyPage() {
 
       <div style={s.scrollArea}><div style={s.container}>
         <h1 style={s.h1}>Privacy Policy</h1>
-        <div style={s.updated}>Last updated: April 7, 2026</div>
+        <div style={s.updated}>Last updated: April 8, 2026</div>
 
         <p style={s.p}>
           0xKudoSec ("the platform") is a cybersecurity operations platform operated by Layne Kudo.
-          This policy explains what data is collected, how it is used, how long it is retained, and your rights.
+          This policy explains what data is collected, how it is used, how long it is retained, and your rights as a user.
         </p>
 
         <h2 style={s.h2}>What We Collect</h2>
@@ -113,7 +117,7 @@ export function PrivacyPage() {
           <li style={s.li}><strong>Account identity:</strong> your Auth0 user ID (an opaque identifier). We do not store your name or email address in our database; those remain with Auth0.</li>
           <li style={s.li}><strong>Security event logs:</strong> Windows event log data shipped from your own machines via the Fluent Bit agent or file upload. This may include hostnames, usernames, IP addresses, process names, file paths, and registry keys from your environment.</li>
           <li style={s.li}><strong>Detection rules, alerts, and cases:</strong> security content you create within the platform.</li>
-          <li style={s.li}><strong>Ingest API key:</strong> stored as a SHA-256 hash only. The plaintext key is shown once at creation and never stored.</li>
+          <li style={s.li}><strong>Ingest API key:</strong> stored as a hash only. The plaintext key is shown once at creation and never stored.</li>
           <li style={s.li}><strong>Audit log entries:</strong> a record of privileged actions (key rotation, rule changes, exports, account deletion) including your user ID, the action taken, and your IP address at the time.</li>
           <li style={s.li}><strong>Usage preferences:</strong> log retention settings you configure.</li>
         </ul>
@@ -148,16 +152,11 @@ export function PrivacyPage() {
         </ul>
 
         <h2 style={s.h2}>Data Security</h2>
-        <ul style={s.ul}>
-          <li style={s.li}>All data is stored in a PostgreSQL database with row-level security; each user's data is isolated at the database layer.</li>
-          <li style={s.li}>Database connections use TLS with certificate verification.</li>
-          <li style={s.li}>API keys are hashed (SHA-256) before storage.</li>
-          <li style={s.li}>Audit log rows include tamper-detection hashes verified nightly.</li>
-          <li style={s.li}>The server enforces HTTPS, strict CORS, and Content Security Policy headers on all responses.</li>
-          <li style={s.li}>All API endpoints are rate-limited and require authentication.</li>
-          <li style={s.li}>On the desktop app, locally stored application data (preferences and access credentials) is encrypted at rest using Windows DPAPI, which ties encryption to the operating system user account and machine. Access to sensitive configuration features is protected by a user-set PIN stored as a salted scrypt hash; the plaintext PIN is never stored.</li>
-          <li style={s.li}>Access to privileged configuration features is restricted by role-based access control enforced at both the application and API layers, in accordance with the principle of least privilege.</li>
-        </ul>
+        <p style={s.p}>
+          We use industry-standard technical and organizational controls to protect your data.
+          For a full description of the security measures in place, see our{' '}
+          <span style={s.link} onClick={() => navigate('/security')}>Security Practices</span> page.
+        </p>
 
         <h2 style={s.h2}>Your Rights</h2>
         <ul style={s.ul}>
