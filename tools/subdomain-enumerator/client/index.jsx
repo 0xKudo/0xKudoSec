@@ -27,7 +27,7 @@ const styles = {
     flexDirection: 'column',
     gap: '2px',
   },
-  title: { fontSize: '13px', color: 'var(--text-primary)', letterSpacing: '0.02em', margin: 0 },
+  title: { fontSize: '13px', color: 'var(--text-primary)', letterSpacing: '0.02em', margin: 0, fontWeight: 'normal' },
   subtitle: { color: 'var(--text-muted)', fontSize: '11px', margin: 0 },
   section: { marginBottom: '16px' },
   label: { color: 'var(--text-muted)', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px', display: 'block' },

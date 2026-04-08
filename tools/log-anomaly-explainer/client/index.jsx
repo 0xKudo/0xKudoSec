@@ -36,7 +36,7 @@ const styles = {
     flexDirection: 'column',
     gap: '2px',
   },
-  title: { fontSize: '13px', color: 'var(--text-primary)', letterSpacing: '0.02em', margin: 0 },
+  title: { fontSize: '13px', color: 'var(--text-primary)', letterSpacing: '0.02em', margin: 0, fontWeight: 'normal' },
   subtitle: { color: 'var(--text-muted)', fontSize: '11px', margin: 0 },
   tabs: { display: 'flex', borderBottom: '1px solid var(--border)', background: 'var(--bg-surface)', margin: '0 -24px', paddingLeft: '8px', marginBottom: '20px' },
   tab: (active) => ({

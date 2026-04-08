@@ -21,7 +21,7 @@ const styles = {
     flexDirection: 'column',
     gap: '2px',
   },
-  title: { fontSize: '13px', color: 'var(--text-primary)', letterSpacing: '0.02em', margin: 0 },
+  title: { fontSize: '13px', color: 'var(--text-primary)', letterSpacing: '0.02em', margin: 0, fontWeight: 'normal' },
   subtitle: { color: 'var(--text-muted)', fontSize: '11px', margin: 0 },
   textarea: {
     width: '100%',
