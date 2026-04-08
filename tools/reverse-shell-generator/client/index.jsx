@@ -109,6 +109,7 @@ const styles = {
     fontFamily: 'var(--font)',
     fontSize: '11px',
     cursor: 'pointer',
+    fontFamily: 'var(--font)',
   }),
   payloadCode: {
     background: 'var(--bg-primary)',

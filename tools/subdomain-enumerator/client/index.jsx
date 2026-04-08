@@ -75,6 +75,7 @@ const styles = {
     fontFamily: 'var(--font)',
     fontSize: '12px',
     cursor: 'pointer',
+    fontFamily: 'var(--font)',
   },
   error: { color: 'var(--severity-critical)', fontSize: '13px', marginTop: '8px' },
   results: { marginTop: '28px' },

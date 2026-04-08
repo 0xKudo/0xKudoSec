@@ -34,6 +34,7 @@ const styles = {
     fontFamily: 'var(--font)',
     fontSize: '12px',
     cursor: 'pointer',
+    fontFamily: 'var(--font)',
   }),
   controlRow: { display: 'flex', gap: '8px', marginBottom: '12px', alignItems: 'center' },
   select: {
@@ -73,6 +74,7 @@ const styles = {
     padding: '32px',
     textAlign: 'center',
     cursor: 'pointer',
+    fontFamily: 'var(--font)',
     color: 'var(--text-muted)',
     fontSize: '13px',
     marginBottom: '12px',

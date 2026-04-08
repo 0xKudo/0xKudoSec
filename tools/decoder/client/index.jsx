@@ -89,6 +89,7 @@ const styles = {
     fontSize: '11px',
     padding: '4px 10px',
     cursor: 'pointer',
+    fontFamily: 'var(--font)',
     whiteSpace: 'nowrap',
   }),
   mainPanel: {},
@@ -125,6 +126,7 @@ const styles = {
     fontFamily: 'var(--font)',
     fontSize: '12px',
     cursor: 'pointer',
+    fontFamily: 'var(--font)',
   },
   error: { color: 'var(--severity-critical)', fontSize: '13px', marginBottom: '10px' },
   outputLabel: { color: 'var(--text-muted)', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
@@ -158,6 +160,7 @@ function OpChip({ op, group, active, onClick }) {
         fontSize: '11px',
         padding: '4px 10px',
         cursor: 'pointer',
+    fontFamily: 'var(--font)',
         whiteSpace: 'nowrap',
         transition: 'background 0.1s, color 0.1s, border-color 0.1s',
       }}
@@ -242,6 +245,7 @@ export default function Decoder() {
                 fontSize: '12px',
                 padding: '5px 10px',
                 cursor: 'pointer',
+    fontFamily: 'var(--font)',
               }}
               onClick={() => { setOperation(op.value); setOutput(''); setError(null); }}
             >

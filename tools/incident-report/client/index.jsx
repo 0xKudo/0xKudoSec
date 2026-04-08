@@ -47,6 +47,7 @@ const styles = {
     fontFamily: 'var(--font)',
     fontSize: '12px',
     cursor: 'pointer',
+    fontFamily: 'var(--font)',
     marginRight: '8px',
   },
   textarea: {
@@ -138,6 +139,7 @@ const styles = {
     fontFamily: 'var(--font)',
     fontSize: '12px',
     cursor: 'pointer',
+    fontFamily: 'var(--font)',
   },
 };
 

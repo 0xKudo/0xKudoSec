@@ -63,6 +63,7 @@ const styles = {
     border: `1px solid ${active ? 'var(--text-primary)' : 'var(--border)'}`,
     padding: '6px 10px',
     cursor: 'pointer',
+    fontFamily: 'var(--font)',
     minWidth: '200px',
   }),
   modeTitle: { color: 'var(--text-primary)', fontSize: '13px',  marginBottom: '4px' },

@@ -71,6 +71,7 @@ const styles = {
     fontFamily: 'var(--font)',
     fontSize: '11px',
     cursor: 'pointer',
+    fontFamily: 'var(--font)',
     whiteSpace: 'nowrap',
   },
   stopBtn: {
@@ -81,6 +82,7 @@ const styles = {
     fontFamily: 'var(--font)',
     fontSize: '11px',
     cursor: 'pointer',
+    fontFamily: 'var(--font)',
     whiteSpace: 'nowrap',
   },
   error: { color: 'var(--severity-critical)', fontSize: '13px', marginTop: '12px' },
@@ -172,6 +174,7 @@ const styles = {
     fontFamily: 'var(--font)',
     fontSize: '12px',
     cursor: 'pointer',
+    fontFamily: 'var(--font)',
     marginBottom: '8px',
   },
 };

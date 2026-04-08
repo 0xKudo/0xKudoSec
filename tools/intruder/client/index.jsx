@@ -97,6 +97,7 @@ const styles = {
     fontSize: '11px',
     padding: '3px 8px',
     cursor: 'pointer',
+    fontFamily: 'var(--font)',
   },
   button: (disabled) => ({
     background: disabled ? 'var(--bg-surface)' : 'var(--btn-primary-bg)',

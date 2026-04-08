@@ -56,6 +56,7 @@ const styles = {
     fontSize: '11px',
     padding: '6px 8px',
     cursor: 'pointer',
+    fontFamily: 'var(--font)',
     width: '100%',
     textAlign: 'left',
     marginBottom: '2px',
@@ -78,6 +79,7 @@ const styles = {
     fontFamily: 'var(--font)',
     fontSize: '11px',
     cursor: 'pointer',
+    fontFamily: 'var(--font)',
     padding: '4px 0',
     marginTop: '8px',
   },
@@ -153,6 +155,7 @@ const styles = {
     fontSize: '12px',
     padding: '6px 14px',
     cursor: 'pointer',
+    fontFamily: 'var(--font)',
     marginBottom: '-1px',
   }),
   responseBox: {
