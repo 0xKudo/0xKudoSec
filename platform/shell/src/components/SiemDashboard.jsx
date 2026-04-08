@@ -40,12 +40,8 @@ const ALL_CATEGORIES = ['authentication', 'network', 'process', 'file', 'dns', '
 const s = {
   container: { padding: 0, flex: 1, minHeight: 0, overflow: 'auto' },
   pageHeader: {
-    padding: '12px 20px',
-    borderBottom: '1px solid var(--border)',
-    background: 'var(--bg-surface)',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '12px',
+    padding: '12px 20px', borderBottom: '1px solid var(--border)',
+    background: 'var(--bg-surface)', display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0,
   },
   pageTitle: { fontSize: '13px', color: 'var(--text-primary)', letterSpacing: '0.04em' },
   pageSub: { color: 'var(--text-muted)', fontSize: '11px' },

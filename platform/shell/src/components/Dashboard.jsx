@@ -163,7 +163,7 @@ const s = {
     flexDirection: 'column',
     gap: '4px',
   },
-  quickCardName: { fontSize: '12px', color: 'var(--text-primary)', fontWeight: 'bold' },
+  quickCardName: { fontSize: '12px', color: 'var(--text-primary)' },
   quickCardPhase: { fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' },
 };
 

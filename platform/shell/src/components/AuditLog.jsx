@@ -58,12 +58,8 @@ const ACTION_COLOR = {
 const styles = {
   page: { display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' },
   header: {
-    padding: '20px 24px 16px',
-    borderBottom: '1px solid var(--border)',
-    flexShrink: 0,
-    display: 'flex',
-    alignItems: 'center',
-    gap: '16px',
+    padding: '12px 20px', borderBottom: '1px solid var(--border)',
+    background: 'var(--bg-surface)', display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0,
   },
   title: { fontSize: '13px', color: 'var(--text-primary)', letterSpacing: '0.04em' },
   subtitle: { fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' },
