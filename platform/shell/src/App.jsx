@@ -173,6 +173,14 @@ function AppInner() {
   const [navLayout, setNavLayout] = useState(
     () => localStorage.getItem('cybertools_nav_layout') || 'topnav'
   );
+  const [theme, setTheme] = useState(
+    () => localStorage.getItem('cybertools_theme') || 'dark'
+  );
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('cybertools_theme', theme);
+  }, [theme]);
 
   function setNavLayoutAndPersist(value) {
     setNavLayout(value);
@@ -263,11 +271,11 @@ function AppInner() {
       if (activeApp === 'siem') {
         return (
           <div style={styles.layout}>
-            <TopNav activeApp="siem" onSwitchApp={setActiveApp} onMenuToggle={() => {}} menuOpen={false} />
+            <TopNav activeApp="siem" onSwitchApp={setActiveApp} theme={theme} setTheme={setTheme} onMenuToggle={() => {}} menuOpen={false} />
             <div style={{ ...styles.body, overflow: 'visible' }}>
               <ElectronCollapsibleSiemSidebar siemView={siemView} setSiemView={setSiemView} onSwitchToTools={() => setActiveApp('tools')} />
               <main style={{ flex: 1, minHeight: 0, overflow: siemView === 'configuration' ? 'hidden' : 'auto', display: 'flex', flexDirection: 'column', background: 'var(--bg-primary)', minWidth: 0, ...(siemView !== 'configuration' ? { alignItems: 'center', justifyContent: 'center' } : {}) }}>
-                {siemView === 'configuration' ? <SiemConfiguration navLayout={navLayout} setNavLayout={setNavLayoutAndPersist} /> : <RequireAuth />}
+                {siemView === 'configuration' ? <SiemConfiguration navLayout={navLayout} setNavLayout={setNavLayoutAndPersist} theme={theme} setTheme={setTheme} /> : <RequireAuth />}
               </main>
             </div>
           </div>
@@ -275,7 +283,7 @@ function AppInner() {
       }
       return (
         <div style={styles.layout}>
-          <TopNav activeApp="tools" onSwitchApp={setActiveApp} onMenuToggle={() => {}} menuOpen={false} />
+          <TopNav activeApp="tools" onSwitchApp={setActiveApp} theme={theme} setTheme={setTheme} onMenuToggle={() => {}} menuOpen={false} />
           <div style={{ flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
             <ElectronHome onNavigate={(route) => { setActiveApp('tools'); navigate(route); }} />
           </div>
@@ -333,7 +341,7 @@ function AppInner() {
   return (
     <div style={layoutStyle}>
       <div style={navStyle}>
-        <TopNav activeApp={activeApp} onSwitchApp={switchApp} onMenuToggle={() => setMenuOpen(o => !o)} menuOpen={menuOpen} />
+        <TopNav activeApp={activeApp} onSwitchApp={switchApp} theme={theme} setTheme={setTheme} onMenuToggle={() => setMenuOpen(o => !o)} menuOpen={menuOpen} />
         {navLayout === 'topnav' && !isMobile && activeApp === 'tools' && (
           <CategoryBar
             activeApp="tools"
@@ -409,7 +417,7 @@ function AppInner() {
                 </div>
               )}
               {isElectron && siemView === 'configuration'
-                ? <SiemConfiguration navLayout={navLayout} setNavLayout={setNavLayoutAndPersist} />
+                ? <SiemConfiguration navLayout={navLayout} setNavLayout={setNavLayoutAndPersist} theme={theme} setTheme={setTheme} />
                 : (
                   <RequireAuth>
                     {siemView === 'dashboard' && (isMobile ? <SiemDashboardMobile onNavigate={handleSiemNavigate} /> : <SiemDashboard onNavigate={handleSiemNavigate} />)}
@@ -417,7 +425,7 @@ function AppInner() {
                     {siemView === 'rules' && <DetectionRules onNavigate={handleSiemNavigate} />}
                     {siemView === 'logsearch' && <LogSearch />}
                     {siemView === 'cases' && <Cases onNavigate={handleSiemNavigate} />}
-                    {siemView === 'configuration' && <SiemConfiguration navLayout={navLayout} setNavLayout={setNavLayoutAndPersist} />}
+                    {siemView === 'configuration' && <SiemConfiguration navLayout={navLayout} setNavLayout={setNavLayoutAndPersist} theme={theme} setTheme={setTheme} />}
                     {siemView === 'auditlog' && <AuditLog />}
                     {!['dashboard','alerts','rules','logsearch','cases','configuration','auditlog'].includes(siemView) && (
                       <div style={{ padding: '40px', color: 'var(--text-muted)', fontSize: '13px' }}>

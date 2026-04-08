@@ -288,7 +288,7 @@ const FLUENT_BIT_CONFIG = (apiKey) => `[SERVICE]
     Header       Authorization Bearer ${apiKey}
     Header       Content-Type application/json`;
 
-export function SiemConfiguration({ navLayout, setNavLayout }) {
+export function SiemConfiguration({ navLayout, setNavLayout, theme, setTheme }) {
   const isMobile = useIsMobile();
   const { getAccessTokenSilently, user, isAuthenticated, logout } = useAuth0();
   const isElectronUnauth = typeof window !== 'undefined' && window.electron?.isElectron === true && !isAuthenticated;
@@ -923,6 +923,28 @@ winlogbeat.event_logs:
             <div style={s.sectionTitle}>Appearance</div>
             <div style={s.sectionDesc}>Choose your preferred navigation layout. This setting is saved locally and does not affect other users.</div>
             <div style={{ marginTop: '16px' }}>
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '10px', letterSpacing: '0.04em', textTransform: 'uppercase' }}>Theme</div>
+              <div style={{ display: 'flex', gap: '8px', marginBottom: '24px' }}>
+                {[{ value: 'dark', label: 'Dark' }, { value: 'light', label: 'Light' }].map(opt => {
+                  const active = (theme || 'dark') === opt.value;
+                  return (
+                    <button
+                      key={opt.value}
+                      onClick={() => setTheme && setTheme(opt.value)}
+                      style={{
+                        background: active ? 'var(--btn-primary-bg)' : 'none',
+                        color: active ? 'var(--btn-primary-text)' : 'var(--text-muted)',
+                        border: '1px solid var(--border)',
+                        fontFamily: 'var(--font)',
+                        fontSize: '11px',
+                        padding: '6px 18px',
+                        cursor: 'pointer',
+                        letterSpacing: '0.04em',
+                      }}
+                    >{opt.label}</button>
+                  );
+                })}
+              </div>
               <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '10px', letterSpacing: '0.04em', textTransform: 'uppercase' }}>Navigation Layout</div>
               <div style={{ display: 'flex', gap: '8px' }}>
                 {[{ value: 'topnav', label: 'Top Nav' }, { value: 'sidebar', label: 'Sidebar' }].map(opt => {

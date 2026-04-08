@@ -175,18 +175,10 @@ function UpdateBanner() {
   return null;
 }
 
-export function TopNav({ activeApp, onSwitchApp, onMenuToggle, menuOpen }) {
-  const [theme, setTheme] = useState(() => {
-    return localStorage.getItem('cybertools_theme') || 'dark';
-  });
+export function TopNav({ activeApp, onSwitchApp, onMenuToggle, menuOpen, theme, setTheme }) {
   const [closeHover, setCloseHover] = useState(false);
   const { isAuthenticated, user, loginWithRedirect, logout } = useAuth0();
   const isMobile = useIsMobile();
-
-  useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
-    localStorage.setItem('cybertools_theme', theme);
-  }, [theme]);
 
   const toggleTheme = () => setTheme(t => t === 'dark' ? 'light' : 'dark');
 
