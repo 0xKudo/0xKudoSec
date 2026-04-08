@@ -23,7 +23,7 @@ const INDICATOR_LABELS = {
 };
 
 const styles = {
-  container: { maxWidth: '800px' },
+  container: { padding: 0 },
   header: {
     margin: '-24px -24px 0 -24px',
     padding: '12px 20px',

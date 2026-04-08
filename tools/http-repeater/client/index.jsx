@@ -28,7 +28,7 @@ function saveHistory(history) {
 }
 
 const styles = {
-  container: { maxWidth: '1100px' },
+  container: { padding: 0 },
   header: {
     margin: '-24px -24px 0 -24px',
     padding: '12px 20px',
