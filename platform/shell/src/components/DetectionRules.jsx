@@ -26,7 +26,7 @@ const s = {
     padding: '12px 20px', borderBottom: '1px solid var(--border)',
     background: 'var(--bg-surface)', display: 'flex', alignItems: 'center', gap: '12px',
   },
-  title: { fontSize: '13px', color: 'var(--text-primary)', letterSpacing: '0.04em' },
+  title: { fontSize: '13px', fontWeight: 'bold', color: 'var(--text-primary)', letterSpacing: '0.04em' },
   sub: { color: 'var(--text-muted)', fontSize: '11px' },
   actions: { marginLeft: 'auto', display: 'flex', gap: '8px' },
   btn: {

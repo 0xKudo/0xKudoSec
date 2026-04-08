@@ -47,7 +47,7 @@ const s = {
     alignItems: 'center',
     gap: '12px',
   },
-  pageTitle: { fontSize: '13px', color: 'var(--text-primary)', letterSpacing: '0.04em' },
+  pageTitle: { fontSize: '13px', fontWeight: 'bold', color: 'var(--text-primary)', letterSpacing: '0.04em' },
   pageSub: { color: 'var(--text-muted)', fontSize: '11px' },
   actions: { marginLeft: 'auto', display: 'flex', gap: '8px', alignItems: 'center' },
   btn: {
