@@ -38,7 +38,7 @@ const SHELL_GROUPS = [
 const styles = {
   container: { maxWidth: '900px' },
   header: {
-    margin: '-24px -24px 0 -24px',
+    margin: '-24px -24px 20px -24px',
     padding: '12px 20px',
     borderBottom: '1px solid var(--border)',
     background: 'var(--bg-surface)',
