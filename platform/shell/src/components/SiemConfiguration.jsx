@@ -208,7 +208,7 @@ const s = {
   }),
 };
 
-const BASE_TABS = ['API Key', 'Connect a Source', 'Log Retention', 'Active Sources', 'Account'];
+const BASE_TABS = ['API Key', 'Connect a Source', 'Log Retention', 'Active Sources', 'Account', 'Appearance'];
 const SHIPPER_TABS = ['Fluent Bit', 'Winlogbeat 7', 'Manual API'];
 
 const FLUENT_BIT_CONFIG = (apiKey) => `[SERVICE]
@@ -288,11 +288,11 @@ const FLUENT_BIT_CONFIG = (apiKey) => `[SERVICE]
     Header       Authorization Bearer ${apiKey}
     Header       Content-Type application/json`;
 
-export function SiemConfiguration() {
+export function SiemConfiguration({ navLayout, setNavLayout }) {
   const isMobile = useIsMobile();
   const { getAccessTokenSilently, user, isAuthenticated, logout } = useAuth0();
   const isElectronUnauth = typeof window !== 'undefined' && window.electron?.isElectron === true && !isAuthenticated;
-  const [tab, setTab] = useState(isElectronUnauth ? 5 : 0);
+  const [tab, setTab] = useState(isElectronUnauth ? 6 : 0);
 
   // API Key state
   const [keyMeta, setKeyMeta] = useState(undefined);
@@ -346,7 +346,7 @@ export function SiemConfiguration() {
 
   // When Edit Config tab opens: check if PIN is set, reset lock state
   useEffect(() => {
-    if (!isConfigEditor || tab !== 6) {
+    if (!isConfigEditor || tab !== 7) {
       // Reset lock whenever user leaves the tab
       setPinState('locked');
       setPinInput('');
@@ -370,7 +370,7 @@ export function SiemConfiguration() {
 
   // Load config only when unlocked
   useEffect(() => {
-    if (!isConfigEditor || tab !== 6 || pinState !== 'unlocked') return;
+    if (!isConfigEditor || tab !== 7 || pinState !== 'unlocked') return;
     setConfigLoading(true);
     setConfigMsg(null);
     window.electron.fluentBit.readConfig().then(res => {
@@ -729,10 +729,10 @@ winlogbeat.event_logs:
         {(isElectronUnauth ? ['Desktop App'] : [...BASE_TABS, ...(isElectron ? ['Desktop App'] : []), ...(isConfigEditor ? ['Edit Config'] : [])]).map((t, i) => (
           <button
             key={t}
-            style={isMobile ? s.tabMobile(tab === (isElectronUnauth ? 5 : i)) : s.tab(tab === (isElectronUnauth ? 5 : i))}
-            onClick={() => setTab(isElectronUnauth ? 5 : i)}
-            onMouseEnter={e => { if (tab !== (isElectronUnauth ? 5 : i)) e.currentTarget.style.color = 'var(--text-primary)'; }}
-            onMouseLeave={e => { if (tab !== (isElectronUnauth ? 5 : i)) e.currentTarget.style.color = 'var(--text-muted)'; }}
+            style={isMobile ? s.tabMobile(tab === (isElectronUnauth ? 6 : i)) : s.tab(tab === (isElectronUnauth ? 6 : i))}
+            onClick={() => setTab(isElectronUnauth ? 6 : i)}
+            onMouseEnter={e => { if (tab !== (isElectronUnauth ? 6 : i)) e.currentTarget.style.color = 'var(--text-primary)'; }}
+            onMouseLeave={e => { if (tab !== (isElectronUnauth ? 6 : i)) e.currentTarget.style.color = 'var(--text-muted)'; }}
           >{t}</button>
         ))}
       </div>
@@ -917,8 +917,40 @@ winlogbeat.event_logs:
           </div>
         )}
 
-        {/* ── Tab 5: Desktop App (Electron only) ── */}
-        {isElectron && tab === 5 && (
+        {/* ── Tab 5: Appearance ── */}
+        {tab === 5 && (
+          <div style={s.section}>
+            <div style={s.sectionTitle}>Appearance</div>
+            <div style={s.sectionDesc}>Choose your preferred navigation layout. This setting is saved locally and does not affect other users.</div>
+            <div style={{ marginTop: '16px' }}>
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '10px', letterSpacing: '0.04em', textTransform: 'uppercase' }}>Navigation Layout</div>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                {[{ value: 'topnav', label: 'Top Nav' }, { value: 'sidebar', label: 'Sidebar' }].map(opt => {
+                  const active = (navLayout || 'topnav') === opt.value;
+                  return (
+                    <button
+                      key={opt.value}
+                      onClick={() => setNavLayout && setNavLayout(opt.value)}
+                      style={{
+                        background: active ? 'var(--btn-primary-bg)' : 'none',
+                        color: active ? 'var(--btn-primary-text)' : 'var(--text-muted)',
+                        border: '1px solid var(--border)',
+                        fontFamily: 'var(--font)',
+                        fontSize: '11px',
+                        padding: '6px 18px',
+                        cursor: 'pointer',
+                        letterSpacing: '0.04em',
+                      }}
+                    >{opt.label}</button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Tab 6: Desktop App (Electron only) ── */}
+        {isElectron && tab === 6 && (
           <div style={s.section}>
             <div style={s.sectionTitle}>Desktop App</div>
             <div style={s.sectionDesc}>Settings for the [ 0xKudoSec ] desktop application.</div>
@@ -942,8 +974,8 @@ winlogbeat.event_logs:
           </div>
         )}
 
-        {/* ── Tab 6: Edit Config (config-editor role + Electron only) ── */}
-        {isConfigEditor && tab === 6 && (
+        {/* ── Tab 7: Edit Config (config-editor role + Electron only) ── */}
+        {isConfigEditor && tab === 7 && (
           <div style={s.section}>
             <div style={s.sectionTitle}>Edit Config</div>
             <div style={s.sectionDesc}>

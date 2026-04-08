@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { ToolRegistryProvider, useTools } from './context/ToolRegistry';
 import { WorkspaceProvider } from './context/WorkspaceContext';
-import { TopNav } from './components/TopNav';
+import { TopNav, CategoryBar, ToolBar } from './components/TopNav';
 import { Sidebar } from './components/Sidebar';
 import { SiemSidebar } from './components/SiemSidebar';
 import { Dashboard, trackToolVisit } from './components/Dashboard';
@@ -170,6 +170,31 @@ function AppInner() {
   });
   const [menuOpen, setMenuOpen] = useState(false);
   const [keyRotatedBanner, setKeyRotatedBanner] = useState(false);
+  const [navLayout, setNavLayout] = useState(
+    () => localStorage.getItem('cybertools_nav_layout') || 'topnav'
+  );
+
+  function setNavLayoutAndPersist(value) {
+    setNavLayout(value);
+    localStorage.setItem('cybertools_nav_layout', value);
+  }
+
+  // Derive active category from current route
+  const ROUTE_TO_CATEGORY = {
+    '/alert-triage': 'detect', '/threat-intel': 'detect', '/log-anomaly-explainer': 'detect',
+    '/network-threat-analyzer': 'detect', '/phishing-analyzer': 'detect',
+    '/osint-recon': 'investigate', '/cve-exploit-mapper': 'investigate',
+    '/payload-obfuscation-explainer': 'investigate', '/decoder': 'investigate',
+    '/subdomain-enumerator': 'investigate', '/network-scanner': 'investigate',
+    '/incident-report': 'report',
+    '/security-policy-translator': 'compliance',
+    '/reverse-shell-generator': 'simulate', '/intruder': 'simulate', '/scanner': 'simulate',
+    '/wordlist-generator': 'simulate', '/http-repeater': 'simulate', '/payload-generator': 'simulate',
+    '/dashboard': 'dashboard',
+  };
+  const [activeCategory, setActiveCategory] = useState(
+    () => ROUTE_TO_CATEGORY[location.pathname] || 'dashboard'
+  );
 
   // Sync state from URL on navigation (back/forward buttons, direct URL load)
   useEffect(() => {
@@ -182,6 +207,7 @@ function AppInner() {
       setSiemView('dashboard');
     } else {
       setActiveApp('tools');
+      setActiveCategory(ROUTE_TO_CATEGORY[location.pathname] || 'dashboard');
     }
   }, [location.pathname]);
 
@@ -241,7 +267,7 @@ function AppInner() {
             <div style={{ ...styles.body, overflow: 'visible' }}>
               <ElectronCollapsibleSiemSidebar siemView={siemView} setSiemView={setSiemView} onSwitchToTools={() => setActiveApp('tools')} />
               <main style={{ flex: 1, minHeight: 0, overflow: siemView === 'configuration' ? 'hidden' : 'auto', display: 'flex', flexDirection: 'column', background: 'var(--bg-primary)', minWidth: 0, ...(siemView !== 'configuration' ? { alignItems: 'center', justifyContent: 'center' } : {}) }}>
-                {siemView === 'configuration' ? <SiemConfiguration /> : <RequireAuth />}
+                {siemView === 'configuration' ? <SiemConfiguration navLayout={navLayout} setNavLayout={setNavLayoutAndPersist} /> : <RequireAuth />}
               </main>
             </div>
           </div>
@@ -289,6 +315,7 @@ function AppInner() {
   const handleToolNavigate = (route) => {
     navigate(route);
     setMenuOpen(false);
+    setActiveCategory(ROUTE_TO_CATEGORY[route] || 'dashboard');
   };
 
   const layoutStyle = isMobile
@@ -307,6 +334,36 @@ function AppInner() {
     <div style={layoutStyle}>
       <div style={navStyle}>
         <TopNav activeApp={activeApp} onSwitchApp={switchApp} onMenuToggle={() => setMenuOpen(o => !o)} menuOpen={menuOpen} />
+        {navLayout === 'topnav' && !isMobile && activeApp === 'tools' && (
+          <CategoryBar
+            activeApp="tools"
+            activeCategory={activeCategory}
+            onSelectCategory={(cat) => {
+              setActiveCategory(cat);
+              if (cat === 'dashboard') navigate('/dashboard');
+            }}
+            onSiemNavigate={(view) => { switchApp('siem'); handleSiemNavigate(view); }}
+          />
+        )}
+        {navLayout === 'topnav' && !isMobile && activeApp === 'siem' && (
+          <CategoryBar
+            activeApp="siem"
+            activeCategory={null}
+            siemView={siemView}
+            onSiemNavigate={handleSiemNavigate}
+          />
+        )}
+        {navLayout === 'topnav' && !isMobile && activeApp === 'tools' &&
+          !['dashboard', 'config'].includes(activeCategory) && (
+          <ToolBar
+            activeCategory={activeCategory}
+            tools={tools}
+            onNavigate={(route) => {
+              navigate(route);
+              setActiveCategory(ROUTE_TO_CATEGORY[route] || activeCategory);
+            }}
+          />
+        )}
       </div>
 
       {/* Mobile slide-out drawer */}
@@ -340,7 +397,7 @@ function AppInner() {
 
         {activeApp === 'siem' && (
           <>
-            {!isMobile && (isElectron && !isAuthenticated
+            {navLayout === 'sidebar' && !isMobile && (isElectron && !isAuthenticated
               ? <ElectronCollapsibleSiemSidebar siemView={siemView} setSiemView={setSiemView} onSwitchToTools={() => switchApp('tools')} />
               : <SiemSidebar activeView={siemView} onNavigate={handleSiemNavigate} onSwitchToTools={() => switchApp('tools')} isAuthenticated={isAuthenticated} />
             )}
@@ -352,7 +409,7 @@ function AppInner() {
                 </div>
               )}
               {isElectron && siemView === 'configuration'
-                ? <SiemConfiguration />
+                ? <SiemConfiguration navLayout={navLayout} setNavLayout={setNavLayoutAndPersist} />
                 : (
                   <RequireAuth>
                     {siemView === 'dashboard' && (isMobile ? <SiemDashboardMobile onNavigate={handleSiemNavigate} /> : <SiemDashboard onNavigate={handleSiemNavigate} />)}
@@ -360,7 +417,7 @@ function AppInner() {
                     {siemView === 'rules' && <DetectionRules onNavigate={handleSiemNavigate} />}
                     {siemView === 'logsearch' && <LogSearch />}
                     {siemView === 'cases' && <Cases onNavigate={handleSiemNavigate} />}
-                    {siemView === 'configuration' && <SiemConfiguration />}
+                    {siemView === 'configuration' && <SiemConfiguration navLayout={navLayout} setNavLayout={setNavLayoutAndPersist} />}
                     {siemView === 'auditlog' && <AuditLog />}
                     {!['dashboard','alerts','rules','logsearch','cases','configuration','auditlog'].includes(siemView) && (
                       <div style={{ padding: '40px', color: 'var(--text-muted)', fontSize: '13px' }}>
@@ -376,7 +433,7 @@ function AppInner() {
 
         {activeApp === 'tools' && (
           <>
-            {!isMobile && (isElectron && !isAuthenticated
+            {navLayout === 'sidebar' && !isMobile && (isElectron && !isAuthenticated
               ? <ElectronCollapsibleToolsSidebar onSwitchToSiem={switchToSiem} onSwitchToSiemView={switchToSiemView} />
               : <Sidebar onSwitchToSiem={switchToSiem} onSwitchToSiemView={switchToSiemView} />
             )}
@@ -409,6 +466,15 @@ function AppInner() {
         )}
 
       </div>
+      {navLayout === 'topnav' && !isMobile && (
+        <footer style={{ flexShrink: 0, borderTop: '1px solid var(--border)', padding: '8px 0', textAlign: 'center', fontSize: '10px', color: 'var(--text-subtle)', letterSpacing: '0.04em' }}>
+          v{__APP_VERSION__}&nbsp;·&nbsp;{__BUILD_DATE__}&nbsp;·&nbsp;
+          <a href="/privacy" style={{ color: 'var(--text-subtle)', textDecoration: 'none' }}
+            onMouseEnter={e => e.currentTarget.style.color = 'var(--text-muted)'}
+            onMouseLeave={e => e.currentTarget.style.color = 'var(--text-subtle)'}
+          >Privacy Policy</a>
+        </footer>
+      )}
     </div>
   );
 }

@@ -13,6 +13,70 @@ Unified cybersecurity tools platform at `tools.laynekudo.com`. Monorepo — shar
 
 **All 19 tools complete. Auth complete. SIEM complete. Electron wrapper complete.**
 
+### Recently Completed (2026-04-07, TopNav navigation + Fira Code — implemented)
+
+**Navigation layout toggle + Fira Code font — fully implemented in live app.**
+
+- **Fira Code** loaded via Google Fonts `@import` in `platform/shell/src/styles/theme.css`. `--font` updated from `'Source Code Pro'` to `'Fira Code'`. Applies to all platforms including mobile.
+- **`navLayout` state** added to `App.jsx` (`AppInner`). Reads/writes `localStorage` under `cybertools_nav_layout` (`'topnav'` | `'sidebar'`). Default: `'topnav'`.
+- **TopNav layout (desktop only):**
+  - `CategoryBar` (Row 2) — renders below TopNav when `navLayout === 'topnav' && !isMobile`. Tools mode: Dashboard/Detect/Investigate/Report/Compliance/Simulate-Test/Config ↗. SIEM mode: SIEM view tabs.
+  - `ToolBar` (Row 3) — renders when a category with tools is selected. Lists tools in that category as tabs. Hidden for Dashboard/Config.
+  - Both exported from `platform/shell/src/components/TopNav.jsx`.
+- **Sidebar layout** — `Sidebar.jsx` and `SiemSidebar.jsx` (plus Electron collapsible wrappers) now gated by `navLayout === 'sidebar'`. Mobile hamburger drawer untouched.
+- **Footer** — shown when `navLayout === 'topnav' && !isMobile`. Version · build date · Privacy Policy, centered.
+- **Appearance tab** added to `SiemConfiguration.jsx` (tab index 5). Two-button toggle: `[ Top Nav ]  [ Sidebar ]`. Receives `navLayout` + `setNavLayout` props from App.jsx. Applies immediately, no save button.
+  - Desktop App tab shifted to index 6, Edit Config to index 7. All `tab === N` references and PIN gate `useEffect` checks updated.
+- **`activeCategory` state** in `App.jsx` — derived from route on mount and sync'd on navigation. Drives which ToolBar row to show.
+
+**Files changed:** `platform/shell/src/styles/theme.css`, `platform/shell/src/App.jsx`, `platform/shell/src/components/TopNav.jsx`, `platform/shell/src/components/SiemConfiguration.jsx`
+
+---
+
+### Recently Completed (2026-04-07, TopNav navigation redesign mockup)
+
+**Navigation redesign — mockup approved, not yet implemented in code.**
+
+Mockup: `mockups/topnav-navigation-mockup.html`
+
+Three-row navigation pattern replacing the sidebar:
+- **Row 1 (TopNav):** brand, SIEM | Tools app switcher (SIEM first), download button, user, logout, theme toggle
+- **Row 2 (Category bar):** Dashboard, Detect, Investigate, Report, Compliance, Simulate/Test, Config ↗ — flat tabs, amber underline on active
+- **Row 3 (Tool bar):** appears below Row 2 when a category is selected — lists all tools in that category as horizontal tabs, amber underline on active tool. Hidden for Dashboard and Config. Hidden entirely in SIEM mode.
+- **SIEM mode:** Row 2 becomes flat SIEM view tabs (Dashboard, Alerts, Detection Rules, Log Search, Cases, Configuration, Audit Log). Row 3 hidden.
+- **Footer:** version · build date · Privacy Policy, centered.
+- Sidebar is removed entirely in this pattern.
+
+**Also in this session:**
+- Active alerts dedup count badge fixed — was clipped by `overflow:hidden` on title span; moved to flex sibling with `flexShrink:0`
+- Domain migration spec created at `docs/specs/domain-migration.md` — full checklist for moving off `tools.laynekudo.com` including Epik DNS, Auth0, code, env vars, SSL, Electron rebuild
+- Font decision: **Fira Code weight 500** chosen to replace Source Code Pro. Reason: slashed zero (0̷) preferred for security UI. JetBrains Mono and Inconsolata also tested and rejected. Not yet applied to live app — will be implemented alongside the TopNav navigation redesign. Load via Google Fonts or self-host; update `--font` in `platform/shell/src/styles/theme.css`.
+- Navigation layout toggle spec written: `docs/specs/nav-layout-toggle.md`. Users will be able to switch between TopNav (default) and Sidebar from the Configuration Appearance section. State stored in localStorage under `cybertools_nav_layout`. Both sidebars kept as-is — conditionally rendered. Mobile unaffected.
+
+---
+
+### Recently Completed (2026-04-07, mobile UI fixes — no version bump)
+
+**Mobile SIEM dashboard parity:**
+- Auto-refresh every 15s with `loadingRef` guard (matches desktop)
+- Severity filter replaced with multi-select `sevFilters` Set — single sev passes `?severity=` to server, multiple sevs filter client-side
+- Collapsible "filter" button opens severity panel; button shows "filter (N)" when filters active
+- Time range buttons (1h/6h/24h/48h/7d) applied to all four API calls
+- Search bar with 300ms debounce, passes `?q=` to `/events/recent` — same as desktop
+- Recent Events header shows active sev + search context with single Clear button
+- Donut legend and event row badges both toggle sevFilters
+
+**Audit log mobile fix:**
+- Table was wider than viewport and draggable; root cause was `<main>` missing `minWidth:0` + `overflow:hidden` on mobile
+- Replaced table with card-per-row layout on mobile (action badge + timestamp + IP + detail), matching AlertQueue pattern
+- Desktop table unchanged
+
+**Files changed:** `platform/shell/src/components/SiemDashboardMobile.jsx`, `platform/shell/src/components/AuditLog.jsx`, `platform/shell/src/App.jsx`
+
+Full detail in `docs/specs/ui-improvements.md`.
+
+---
+
 ### Recently Completed (2026-04-07, Electron security audit continued — v1.1.0 → v1.2.5)
 
 **All actionable Electron security findings resolved. Current version: v1.2.5.**
@@ -781,3 +845,15 @@ POLL_INTERVAL_MS=60000
 BATCH_SIZE=50
 HOURS_BACK=24
 ```
+
+---
+
+## Domain Migration
+
+Full spec at `docs/specs/domain-migration.md`. Summary of what needs to change:
+- **Epik DNS:** A record for new domain → VPS IP; CNAME `auth.newdomain.com` → `dev-dk318hthn8qe0k7s.us.auth0.com`
+- **Auth0 dashboard:** API audience identifier, SPA callback/logout/origin URLs, custom domain verification, Post Login Action roles claim namespace
+- **Code:** `ROLES_CLAIM` in `requireAuth.js` + `SiemConfiguration.jsx`; ingest URLs in `LogSources.jsx`, `SiemConfiguration.jsx`, `siem.js`; `PRODUCTION_URL` in `electron/main.js`
+- **VPS `.env`:** `ALLOWED_ORIGIN`, `AUTH0_DOMAIN`, `AUTH0_AUDIENCE` — then `pm2 restart all --update-env`
+- **SSL:** new Let's Encrypt cert for new domain via Certbot
+- **Electron rebuild:** after cutover, rebuild and publish new installer with updated `PRODUCTION_URL`

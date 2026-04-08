@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useIsMobile } from '../hooks/useIsMobile';
+import { useLocation } from 'react-router-dom';
 
 const isElectron = typeof window !== 'undefined' && window.electron?.isElectron === true;
 
@@ -278,5 +279,140 @@ export function TopNav({ activeApp, onSwitchApp, onMenuToggle, menuOpen }) {
       )}
     </nav>
     </>
+  );
+}
+
+// ── Shared tab row styles ─────────────────────────────────────────────────────
+
+const rowStyles = {
+  row: {
+    background: 'var(--bg-sidebar)',
+    borderBottom: '1px solid var(--border)',
+    display: 'flex',
+    alignItems: 'stretch',
+    flexShrink: 0,
+    height: '36px',
+    overflowX: 'auto',
+    scrollbarWidth: 'none',
+  },
+  tab: (active) => ({
+    display: 'flex',
+    alignItems: 'center',
+    padding: '0 18px',
+    fontSize: '11px',
+    letterSpacing: '0.05em',
+    textTransform: 'uppercase',
+    color: active ? 'var(--accent-amber)' : 'var(--text-muted)',
+    cursor: 'pointer',
+    borderBottom: active ? '2px solid var(--accent-amber)' : '2px solid transparent',
+    whiteSpace: 'nowrap',
+    userSelect: 'none',
+    flexShrink: 0,
+    transition: 'color 0.1s',
+  }),
+};
+
+// ── SIEM view id → display label ─────────────────────────────────────────────
+
+const SIEM_TABS = [
+  { id: 'dashboard', label: 'Dashboard' },
+  { id: 'alerts',    label: 'Alerts' },
+  { id: 'rules',     label: 'Detection Rules' },
+  { id: 'logsearch', label: 'Log Search' },
+  { id: 'cases',     label: 'Cases' },
+  { id: 'configuration', label: 'Configuration' },
+  { id: 'auditlog',  label: 'Audit Log' },
+];
+
+const TOOL_CATEGORIES = [
+  { id: 'dashboard', label: 'Dashboard' },
+  { id: 'detect',    label: 'Detect' },
+  { id: 'investigate', label: 'Investigate' },
+  { id: 'report',    label: 'Report' },
+  { id: 'compliance', label: 'Compliance' },
+  { id: 'simulate',  label: 'Simulate / Test' },
+  { id: 'config',    label: 'Config ↗' },
+];
+
+// Row 2 — category / view tabs
+export function CategoryBar({ activeApp, activeCategory, siemView, onSelectCategory, onSiemNavigate }) {
+  const tabs = activeApp === 'siem' ? SIEM_TABS : TOOL_CATEGORIES;
+
+  return (
+    <div style={rowStyles.row}>
+      {tabs.map(tab => {
+        const active = activeApp === 'siem'
+          ? siemView === tab.id
+          : activeCategory === tab.id;
+        return (
+          <div
+            key={tab.id}
+            style={rowStyles.tab(active)}
+            onClick={() => {
+              if (activeApp === 'siem') {
+                onSiemNavigate(tab.id);
+              } else if (tab.id === 'config') {
+                onSiemNavigate('configuration');
+              } else {
+                onSelectCategory(tab.id);
+              }
+            }}
+            onMouseEnter={e => { if (!active) e.currentTarget.style.color = 'var(--text-primary)'; }}
+            onMouseLeave={e => { if (!active) e.currentTarget.style.color = 'var(--text-muted)'; }}
+          >
+            {tab.label}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// Phase id → tool routes (mirrors Sidebar.jsx PHASES)
+const PHASES = [
+  { id: 'detect',      routes: ['/alert-triage', '/threat-intel', '/log-anomaly-explainer', '/network-threat-analyzer', '/phishing-analyzer'] },
+  { id: 'investigate', routes: ['/osint-recon', '/cve-exploit-mapper', '/payload-obfuscation-explainer', '/decoder', '/subdomain-enumerator', '/network-scanner'] },
+  { id: 'report',      routes: ['/incident-report'] },
+  { id: 'compliance',  routes: ['/security-policy-translator'] },
+  { id: 'simulate',    routes: ['/reverse-shell-generator', '/intruder', '/scanner', '/wordlist-generator', '/http-repeater', '/payload-generator'], comingSoon: ['Proxy'] },
+];
+
+// Row 3 — tool tabs for the active category
+export function ToolBar({ activeCategory, tools, onNavigate }) {
+  const location = useLocation();
+  const phase = PHASES.find(p => p.id === activeCategory);
+  if (!phase) return null;
+
+  const phaseTabs = phase.routes.map(route => {
+    const tool = tools.find(t => t.route === route);
+    return tool ? { name: tool.name, route } : null;
+  }).filter(Boolean);
+
+  const comingSoonTabs = (phase.comingSoon || []).map(name => ({ name, route: null }));
+  const allTabs = [...phaseTabs, ...comingSoonTabs];
+
+  if (allTabs.length === 0) return null;
+
+  return (
+    <div style={{ ...rowStyles.row, background: 'var(--bg-primary)' }}>
+      {allTabs.map(tab => {
+        const active = tab.route && location.pathname === tab.route;
+        return (
+          <div
+            key={tab.name}
+            style={{
+              ...rowStyles.tab(active),
+              color: tab.route ? (active ? 'var(--accent-amber)' : 'var(--text-muted)') : 'var(--text-subtle)',
+              cursor: tab.route ? 'pointer' : 'default',
+            }}
+            onClick={() => tab.route && onNavigate(tab.route)}
+            onMouseEnter={e => { if (tab.route && !active) e.currentTarget.style.color = 'var(--text-primary)'; }}
+            onMouseLeave={e => { if (tab.route && !active) e.currentTarget.style.color = 'var(--text-muted)'; }}
+          >
+            {tab.name}{!tab.route ? ' (soon)' : ''}
+          </div>
+        );
+      })}
+    </div>
   );
 }
