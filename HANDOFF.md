@@ -43,7 +43,7 @@ Fixes by version:
 
 **Note on Finding 3 (Auth0 state):** Auth0 SDK validates state internally as part of PKCE — the callback server now also validates `code` + `state` presence and correct path before forwarding
 
-### Recently Completed (2026-04-07, security hardening continued — v1.2.6 → v1.2.10)
+### Recently Completed (2026-04-07, security hardening continued — v1.2.6 → v1.2.15)
 
 **Fluent Bit config editor (complete):**
 - `Edit Config` tab in SiemConfiguration — visible only to users with `config-editor` Auth0 role in Electron
@@ -54,30 +54,35 @@ Fixes by version:
 - PIN gate: user sets a PIN (4-64 chars) stored as scrypt hash + salt in DPAPI-encrypted electron-store. Must re-enter every tab visit. PIN never stored in plaintext.
 - PIN brute force lockout: 5 failed attempts triggers 60s lockout, tracked in memory (resets on app restart)
 - scrypt guards: input length cap (256 chars) before hash, `timingSafeEqual` hash length guard prevents crash on corrupted store
-- IPC handlers: `fluent-bit:read-config`, `fluent-bit:write-config`, `settings:hasPin`, `settings:setPin`, `settings:verifyPin`
+- PIN recovery passphrase: scrypt hash + salt stored separately in electron-store. Required at PIN setup. Used to reset PIN without reinstalling.
+- Existing PIN installs without recovery: `needs-recovery` state prompts user to add passphrase using current PIN
+- IPC handlers: `fluent-bit:read-config`, `fluent-bit:write-config`, `settings:hasPin`, `settings:setPin`, `settings:verifyPin`, `settings:addRecovery`, `settings:resetWithPassphrase`
 - Privacy policy updated: DPAPI encryption, scrypt PIN hashing, RBAC documented (Last updated: April 7, 2026)
 
-**Full security review pass — findings 23-35 added to `docs/specs/security-hardening.md`:**
+**Full security review pass — findings 23-36 added to `docs/specs/security-hardening.md`:**
 - 23: scrypt input length cap ✅ fixed in v1.2.8
 - 24: timingSafeEqual hash length guard ✅ fixed in v1.2.8
 - 25: PIN brute force lockout ✅ fixed in v1.2.8
 - 26: `executeJavaScript` in Auth0 callback replaced with typed IPC `auth0:callback` ✅ fixed in v1.2.9/v1.2.10
-- 27: Auth0 callback server session nonce — open
-- 28: PIN reset path — open
-- 29: WorkspaceContext unencrypted in localStorage — open (low)
-- 30: CORS no-origin bypass undocumented — open (low)
+- 27: Auth0 callback session nonce — deferred. Auth0 strips unknown params from redirects. appState approach documented in spec for future. Current posture: 127.0.0.1 binding + PKCE code+state validation.
+- 28: PIN reset via recovery passphrase ✅ fixed in v1.2.11/v1.2.12
+- 29: WorkspaceContext localStorage ✅ documented with intent comment in v1.2.13
+- 30: CORS no-origin bypass ✅ documented with intent comment in v1.2.13
 - 31: SRI on Vite build output ✅ fixed in v1.2.9 (`vite-plugin-subresource-integrity`)
-- 32: Auth0 token storage not explicitly locked to in-memory — open (low)
-- 33: SSRF risk if Repeater/Intruder move server-side — open (future)
-- 34: Raw system errors in IPC responses — open (low)
+- 32: Auth0 in-memory token storage ✅ documented with intent comment in v1.2.13
+- 33: SSRF risk if Repeater/Intruder move server-side — deferred (future)
+- 34: Raw system errors in IPC responses ✅ fixed in v1.2.13 (`fsErrMsg()` helper)
 - 35: Electron version upgrade (17+ CVEs in Electron <=39.x) — open (medium, pre-enterprise rollout)
+- 36: Fluent Bit bundled install + dynamic path + ACL + version check + GitHub Actions — open (large, pre-public release)
+
+**Em dash cleanup:** Replaced em dashes with colons/periods in all security comments added this session (v1.2.13+).
 
 **Splash-to-connecting flicker fix attempted and reverted:**
 - `showInactive()` + `app:ready` IPC approach caused black window on launch
 - Reverted to original `ready-to-show` handler in v1.2.10
 - Documented in `docs/specs/ui-improvements.md` for future investigation
 
-**Current version: v1.2.10**
+**Current version: v1.2.15**
 
 **VPS npm audit warnings:** electron-builder dep vulnerabilities are build-time only, not runtime. Electron CVEs not directly exploitable given current posture but tracked as finding 35.
 
