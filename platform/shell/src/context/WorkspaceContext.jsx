@@ -2,6 +2,13 @@ import { createContext, useContext, useState, useCallback } from 'react';
 
 const WORKSPACE_KEY = 'cybertools_workspace';
 
+// WorkspaceContext persists inter-tool data (e.g. alert triage results passed to incident report)
+// in localStorage as plaintext JSON. This is intentional — the data is transient, same-origin only,
+// and contains no long-term PII. localStorage is cleared when the user clears browser data.
+// Do not store sensitive secrets or credentials here.
+// Security note: same-origin scripts are already trusted under the platform's CSP.
+// If requirements change (e.g. multi-origin, sensitive fields), switch to sessionStorage
+// or encrypt values before storage.
 function loadFromStorage() {
   try {
     return JSON.parse(localStorage.getItem(WORKSPACE_KEY) || '[]');

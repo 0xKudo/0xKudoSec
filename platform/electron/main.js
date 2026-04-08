@@ -317,6 +317,14 @@ ipcMain.handle('fluent-bit:restart', async (event) => {
   return { ok: !err, err };
 });
 
+// Sanitize fs errors — in packaged app, never expose raw system messages with full paths
+function fsErrMsg(e) {
+  if (!app.isPackaged) return e.message;
+  if (e.code === 'ENOENT') return 'Config file not found. Check your Fluent Bit installation path.';
+  if (e.code === 'EACCES' || e.code === 'EPERM') return 'Permission denied. The app may need elevated access to read this file.';
+  return 'Failed to access config file.';
+}
+
 ipcMain.handle('fluent-bit:read-config', async (event) => {
   if (!isValidSender(event)) return { ok: false, err: 'Unauthorized' };
   const confPath = 'C:\\Program Files\\fluent-bit\\conf\\cybertools.conf';
@@ -324,7 +332,7 @@ ipcMain.handle('fluent-bit:read-config', async (event) => {
     const text = fs.readFileSync(confPath, 'utf8');
     return { ok: true, text };
   } catch (e) {
-    return { ok: false, err: e.message };
+    return { ok: false, err: fsErrMsg(e) };
   }
 });
 
@@ -336,13 +344,12 @@ ipcMain.handle('fluent-bit:write-config', async (event, configText) => {
   if (/\x00/.test(configText)) return { ok: false, err: 'Invalid config: null bytes not allowed' };
   if (/`|\$\(/.test(configText)) return { ok: false, err: 'Invalid config: shell expansion not allowed' };
 
-  const fs = require('fs');
   const confPath = 'C:\\Program Files\\fluent-bit\\conf\\cybertools.conf';
   try {
     fs.writeFileSync(confPath, configText, 'utf8');
     return { ok: true };
   } catch (e) {
-    return { ok: false, err: e.message };
+    return { ok: false, err: fsErrMsg(e) };
   }
 });
 
