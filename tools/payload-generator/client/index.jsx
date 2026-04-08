@@ -38,7 +38,7 @@ const s = {
   body: { padding: '20px', display: 'flex', flexDirection: 'column', gap: '20px' },
   tabs: { display: 'flex', borderBottom: '1px solid var(--border)', background: 'var(--bg-surface)' },
   tab: (active) => ({
-    padding: '10px 20px',
+    padding: '4px 12px',
     fontSize: '11px',
     letterSpacing: '0.08em',
     textTransform: 'uppercase',
