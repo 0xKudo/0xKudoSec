@@ -595,6 +595,25 @@ Findings from a comprehensive review of the Electron app, web application, and m
 - If `fluentBitPath` is set but the conf file is not accessible, replace the agent status indicator in both sidebars with: `Fluent Bit: Not found at configured path` in the same warning color as `STOPPED`
 - Link to the Desktop App tab in Configuration where the user can update the path
 
+**7. Fluent Bit version check + update notification**
+- On app launch, read the installed Fluent Bit version from the Windows registry:
+  - Key: `HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\` — find the entry where `DisplayName` contains `Fluent Bit`, read `DisplayVersion`
+  - Use `reg query` via `exec` — no subprocess spawn needed, fast and reliable
+- Compare against the version bundled with the current Electron installer (stored as a constant in `main.js`, e.g. `BUNDLED_FLUENT_BIT_VERSION`)
+- If installed version is older than bundled version, show an update notification in the Desktop App tab — same dismissible banner pattern as the Electron auto-updater:
+  - "Fluent Bit update available: vX.X.X → vX.X.X. Update now."
+  - "Update now" downloads the bundled `.msi` from the GitHub releases assets for the current Electron release, shows download progress, then launches the `.msi` with UAC elevation via `shell.openPath()`
+  - User can dismiss — stores `fluentBitUpdateDismissed: vX.X.X` in electron-store so it doesn't re-prompt for the same version
+- Check is non-blocking, fails silently if registry key not found or GitHub unreachable
+
+**8. Automated Fluent Bit release monitoring (GitHub Actions)**
+- Add a scheduled GitHub Actions workflow to `0xKudoSec-releases` repo that runs daily:
+  - Fetches latest release from `https://api.github.com/repos/fluent/fluent-bit/releases/latest`
+  - Compares against `BUNDLED_FLUENT_BIT_VERSION` stored in a tracked file (e.g. `.fluent-bit-version` in the releases repo)
+  - If a newer version exists, opens a GitHub issue: "Fluent Bit vX.X.X released — update bundled version"
+  - Issue includes a checklist: download new MSI, update `BUNDLED_FLUENT_BIT_VERSION` in `main.js`, update `.fluent-bit-version`, rebuild and publish new Electron release
+- This ensures new Fluent Bit releases are caught within 24 hours without manual monitoring
+
 **What could break:**
 - Existing installs at `C:\Program Files\fluent-bit` continue to work — default fallback path handles them
 - ACL step could fail silently if the Electron app doesn't have write access to the Fluent Bit directory — guarded with try/catch, non-blocking
