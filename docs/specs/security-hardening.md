@@ -530,6 +530,23 @@ Findings from a comprehensive review of the Electron app, web application, and m
 
 ---
 
+### 35. Electron Version Upgrade
+
+**Compliance:** PCI DSS 6.3.3, SOC 2 CC7, NIST SI-2 (flaw remediation)  
+**Gap:** The app currently runs Electron <=39.x, which has 17+ published CVEs including use-after-free bugs, renderer command-line switch injection, HTTP response header injection in custom protocol handlers, and an ASAR integrity bypass. Most are not directly exploitable given the current security posture (`contextIsolation: true`, `nodeIntegration: false`, no `executeJavaScript`, typed IPC only), but they remain unpatched known vulnerabilities. The fix requires upgrading to Electron 41+, which is a major version jump and may include breaking API changes.
+
+**Target:**
+- Upgrade `electron` and `electron-builder` to their latest stable versions in `platform/electron/package.json`
+- Run the app in dev mode and verify all IPC handlers, tray, auto-updater, safeStorage, and Auth0 callback flow still work
+- Rebuild and test the packaged installer end-to-end before publishing
+- Check Electron 40/41 release notes for any breaking changes affecting: `BrowserWindow`, `ipcMain`, `safeStorage`, `autoUpdater`, `Menu`, `Tray`
+
+**Priority:** Medium — not urgently exploitable but should be done before any public or enterprise rollout.
+
+**Files:** `platform/electron/package.json`
+
+---
+
 ## Compliance Coverage Summary
 
 | Requirement | Standard | Item # |
