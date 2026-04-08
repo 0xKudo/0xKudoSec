@@ -547,6 +547,65 @@ Findings from a comprehensive review of the Electron app, web application, and m
 
 ---
 
+### 36. Fluent Bit Bundled Install + Dynamic Path Management
+
+**Compliance:** SOC 2 CC6, operational security, defense in depth  
+**Gap:** The Electron app hardcodes `C:\Program Files\fluent-bit\conf\cybertools.conf` in three places in `main.js`. If a user installs Fluent Bit to a different path, the config editor, read-config, and write-config IPC handlers all silently fail. Additionally, ACL hardening and the config file detection rule cannot be applied automatically because the install path is unknown at build time.
+
+**Target:**
+
+**1. Bundle Fluent Bit installer inside the Electron NSIS installer**
+- Download the Fluent Bit Windows `.msi` (~15-20MB) and include it as a bundled resource in `electron-builder.yml`
+- NSIS installer presents an optional Fluent Bit install step with a directory picker, defaulting to `C:\Program Files\fluent-bit`
+- If the user opts out, show a warning: "You will need to install and configure Fluent Bit manually before log ingestion will work."
+- After Fluent Bit installs, write the chosen path to a known registry key or temp file that the Electron app reads on first launch and stores in electron-store as `fluentBitPath`
+
+**2. Replace all hardcoded Fluent Bit paths with store-based path**
+- `main.js`: read `fluentBitPath` from electron-store in `fluent-bit:read-config`, `fluent-bit:write-config`, and any other handlers that reference the conf path
+- Default to `C:\Program Files\fluent-bit` if not set (backwards compatibility for existing installs)
+- If the path is not accessible (ENOENT, EACCES), return a structured error so the UI can surface it
+
+**3. ACL hardening on config file**
+- On first run (flagged in electron-store as `aclApplied`), run via UAC-elevated exec:
+  ```
+  icacls "<fluentBitPath>\conf\cybertools.conf" /inheritance:r /grant:r "SYSTEM:(F)" /grant:r "Administrators:(F)"
+  ```
+- If the path is inaccessible (user installed Fluent Bit somewhere the app can't reach), skip and log a warning — do not block app startup
+- Store result in electron-store (`aclApplied: true/false`) so it only runs once
+
+**4. Drop cybertools.conf automatically after Fluent Bit install**
+- After Fluent Bit installs, write the default `cybertools.conf` to `<userPath>\conf\cybertools.conf`
+- Config template is bundled with the Electron app as a static asset
+- If the file already exists, do not overwrite — prompt the user
+
+**5. Config file detection rule (seeded per user)**
+- On first authenticated launch, seed a default detection rule if none named `Fluent Bit Config Modified` exists:
+  - Event ID: 4663
+  - Message contains: `cybertools.conf` (filename only — path-independent)
+  - Severity: High
+  - Action: Alert
+- This works regardless of install path since the filename is constant
+- Enable Windows file audit policy via UAC-elevated exec on first run:
+  ```
+  auditpol /set /subcategory:"File System" /success:enable
+  ```
+- Set audit ACE on the conf file to log write/delete by Everyone
+
+**6. Fluent Bit not detected — UI warning**
+- If `fluentBitPath` is set but the conf file is not accessible, replace the agent status indicator in both sidebars with: `Fluent Bit: Not found at configured path` in the same warning color as `STOPPED`
+- Link to the Desktop App tab in Configuration where the user can update the path
+
+**What could break:**
+- Existing installs at `C:\Program Files\fluent-bit` continue to work — default fallback path handles them
+- ACL step could fail silently if the Electron app doesn't have write access to the Fluent Bit directory — guarded with try/catch, non-blocking
+- Users who installed Fluent Bit to a protected directory (e.g. inside another program's folder) may need to update the path manually in the Desktop App tab
+
+**Priority:** High — required before public release. Every user who installs Fluent Bit to a non-default path currently has a broken config editor.
+
+**Files:** `platform/electron/main.js`, `platform/electron/electron-builder.yml`, `platform/electron/assets/cybertools.conf` (template), `platform/shell/src/components/SiemConfiguration.jsx`, `platform/shell/src/components/Sidebar.jsx`, `platform/shell/src/components/SiemSidebar.jsx`
+
+---
+
 ## Compliance Coverage Summary
 
 | Requirement | Standard | Item # |
