@@ -37,7 +37,7 @@ const s = {
   title: { fontSize: '13px', color: 'var(--text-primary)', letterSpacing: '0.02em' },
   titleSub: { color: 'var(--text-muted)', fontSize: '11px' },
   body: { padding: '20px', display: 'flex', flexDirection: 'column', gap: '20px' },
-  tabs: { display: 'flex', borderBottom: '1px solid var(--border)', background: 'var(--bg-surface)', margin: '0 -24px 0 -24px', paddingLeft: '20px' },
+  tabs: { display: 'flex', borderBottom: '1px solid var(--border)', background: 'var(--bg-surface)', margin: '0 -24px 0 -24px', paddingLeft: '8px' },
   tab: (active) => ({
     padding: '4px 12px',
     fontSize: '11px',
