@@ -131,7 +131,7 @@ function DateTimePicker({ value, onChange, label }) {
 const s = {
   container: { padding: 0, display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, width: '100%' },
   header: {
-    padding: '12px 20px', borderBottom: '1px solid var(--border)',
+    padding: '0 20px', height: '45px', borderBottom: '1px solid var(--border)',
     background: 'var(--bg-surface)', display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0,
   },
   title: { fontSize: '13px', color: 'var(--text-primary)', letterSpacing: '0.04em' },

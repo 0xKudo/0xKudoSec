@@ -45,7 +45,8 @@ const TYPE_LABELS = {
 const s = {
   container: { padding: 0 },
   header: {
-    padding: '12px 20px',
+    padding: '0 20px',
+    height: '45px',
     borderBottom: '1px solid var(--border)',
     background: 'var(--bg-surface)',
     display: 'flex',
