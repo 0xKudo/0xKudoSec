@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useWorkspace } from '../../../platform/shell/src/context/WorkspaceContext.jsx';
+import { useIsMobile } from '../../../platform/shell/src/hooks/useIsMobile.js';
 
 const SEVERITY_COLORS = {
   critical: 'var(--severity-critical)',
@@ -88,6 +89,7 @@ const styles = {
 };
 
 export default function AlertTriageTool() {
+  const isMobile = useIsMobile();
   const { getAccessTokenSilently } = useAuth0();
   const [alertText, setAlertText] = useState('');
   const [result, setResult] = useState(null);
@@ -131,7 +133,7 @@ export default function AlertTriageTool() {
 
   return (
     <div style={styles.container}>
-      <div style={styles.header}>
+      <div style={{ ...styles.header, margin: isMobile ? '0 0 20px 0' : '-24px -24px 20px -24px' }}>
         <span style={styles.title}>Alert Triage Assistant</span>
         <p style={styles.subtitle}>
           Paste a SIEM alert below. Get severity assessment, likely attack vector, and recommended next steps.

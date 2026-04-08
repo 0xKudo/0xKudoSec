@@ -201,7 +201,7 @@ export default function NetworkThreatAnalyzer() {
 
   return (
     <div style={styles.container}>
-      <div style={styles.header}>
+      <div style={{ ...styles.header, margin: isMobile ? '0 0 0 0' : '-24px -24px 0 -24px' }}>
         <span style={styles.title}>Network Threat Analyzer</span>
         <p style={styles.subtitle}>
           Paste or upload firewall logs, NetFlow, Zeek, Suricata, or syslog data. Claude analyzes for threats, anomalies, and suspicious activity.

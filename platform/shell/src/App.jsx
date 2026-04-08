@@ -455,7 +455,7 @@ function AppInner() {
                     path={t.route}
                     element={
                       <ErrorBoundary>
-                        <div style={{ padding: '24px' }}>
+                        <div style={{ padding: isMobile ? '16px' : '24px' }}>
                           {t.requiresAuth ? (
                             <RequireAuth><ToolLoader toolId={t.id} /></RequireAuth>
                           ) : (

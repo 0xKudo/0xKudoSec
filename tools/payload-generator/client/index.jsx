@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useWorkspace } from '../../../platform/shell/src/context/WorkspaceContext.jsx';
 import { useNavigate } from 'react-router-dom';
+import { useIsMobile } from '../../../platform/shell/src/hooks/useIsMobile.js';
 
 const SEND_TARGETS = [
   { id: 'intruder',     label: 'Send to Intruder',      route: '/intruder' },
@@ -260,6 +261,7 @@ function SendMenu({ payload }) {
 // ─── msfvenom tab ────────────────────────────────────────────────────────────
 
 function MsfTab() {
+  const isMobile = useIsMobile();
   const { push } = useWorkspace();
   const [payloads, setPayloads] = useState([]);
   const [encoders, setEncoders] = useState([]);
@@ -468,7 +470,7 @@ export default function PayloadGenerator() {
 
   return (
     <div style={s.container}>
-      <div style={s.header}>
+      <div style={{ ...s.header, margin: isMobile ? '0 0 0 0' : '-24px -24px 0 -24px' }}>
         <span style={s.title}>Payload Generator</span>
       </div>
 

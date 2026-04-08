@@ -13,6 +13,38 @@ Unified cybersecurity tools platform at `tools.laynekudo.com`. Monorepo — shar
 
 **All 19 tools complete. Auth complete. SIEM complete. Electron wrapper complete.**
 
+### Recently Completed (2026-04-08, mobile header margin fix + sidebar footer fix)
+
+**Tool header bars on mobile no longer use the negative margin escape.**
+
+- `App.jsx` tool wrapper: `padding: '16px'` on mobile (was `'24px'` same as desktop)
+- All 19 `tools/*/client/index.jsx`: header `style` spread with conditional margin:
+  `margin: isMobile ? '0 0 20px 0' : '-24px -24px 20px -24px'` (tab tools use `'0'` on mobile)
+- `alert-triage` and `payload-generator`: added `useIsMobile` import and `const isMobile = useIsMobile()` declaration (were the only two tools without it)
+- `Sidebar.jsx` footer: Privacy Policy and Security Practices links now each wrapped in `<div>` so they appear on separate lines
+- `docs/specs/ui-component-standards.md`: updated mobile section to document the header margin rule
+
+**Files changed:** `platform/shell/src/App.jsx`, all `tools/*/client/index.jsx`, `platform/shell/src/components/Sidebar.jsx`, `docs/specs/ui-component-standards.md`
+
+---
+
+### Recently Completed (2026-04-08, UI polish — tool font-weight normalization)
+
+**All tool components now render at correct weight (Fira Code 500, non-bold).**
+
+Root cause: browsers don't inherit `font-weight` from `body` for `<button>`, `<input>`, `<select>`, `<textarea>`, and `<label>` — they apply their own UA bold defaults. React inline styles also bypass CSS cascade, so setting `font-weight` on `body` alone is insufficient.
+
+Fixes applied:
+- `platform/shell/src/styles/theme.css`: added global reset `button, input, select, textarea, label { font-family: var(--font); font-weight: 500; }`
+- All tool `client/index.jsx` files: added `fontFamily: 'var(--font)'` to every button/tab style object (setting `fontFamily` inline forces the browser to re-resolve font properties from the cascade, picking up `font-weight: 500`)
+- All tool title style objects: added `fontWeight: 'normal'`
+- Checkbox label style objects (`checkItem`): added `fontWeight: 'normal'`
+- Duplicate `fontFamily` keys (introduced by sed) cleaned up — build is warning-free
+
+**Files changed:** `platform/shell/src/styles/theme.css`, all `tools/*/client/index.jsx`
+
+---
+
 ### Recently Completed (2026-04-07, TopNav navigation + Fira Code — implemented)
 
 **Navigation layout toggle + Fira Code font — fully implemented in live app.**

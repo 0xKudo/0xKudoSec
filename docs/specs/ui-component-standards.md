@@ -365,9 +365,22 @@ This is the same rule as tool tabs. There is one tab style standard for the enti
 | `minWidth` on items in flex rows | Set (e.g. `'160px'`) | `0` or `'unset'` |
 | Tables (audit log, results) | Full table | Card-per-row layout |
 
+### What changes on mobile (header bar)
+
+The negative margin escape (`margin: '-24px -24px Npx -24px'`) must NOT be used on mobile. The App.jsx tool wrapper uses `padding: '16px'` on mobile (vs `'24px'` on desktop), and the header sits flush — no negative margin. Apply conditionally:
+
+```jsx
+style={{ ...styles.header, margin: isMobile ? '0 0 20px 0' : '-24px -24px 20px -24px' }}
+```
+
+Tab-tool variant (0 bottom):
+```jsx
+style={{ ...styles.header, margin: isMobile ? '0' : '-24px -24px 0 -24px' }}
+```
+
 ### What never changes on mobile
 
-- Header bar structure, negative margin escape pattern, `padding: '12px 20px'`
+- Header `padding: '12px 20px'` and `background: 'var(--bg-surface)'`
 - Tab row pattern and amber active style
 - Font, colors, spacing tokens
 - Form control styles (inputs, buttons, selects)
