@@ -195,5 +195,6 @@ Do not reference or write to `public_html` or any other sibling directory.
 | `docs/specs/2026-03-30-auth-design.md` | Auth design spec (Auth0 + email/password) |
 | `docs/specs/ui-desktop-mobile.md` | Desktop/mobile UI split rules, feature parity checklist, deferral process |
 | `docs/specs/ui-improvements.md` | Pending UI/UX improvements — always use alongside ui-desktop-mobile.md |
+| `docs/specs/ui-component-standards.md` | Exact style values, patterns, and rules for every UI element — source of truth for all UI work |
 | `platform/shared/constants.js` | Severity levels, tag colors — shared by server and shell |
 | `.env.example` | Template for required environment variables |
