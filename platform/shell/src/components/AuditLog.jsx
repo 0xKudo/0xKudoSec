@@ -93,8 +93,8 @@ const styles = {
     cursor: 'pointer',
     marginLeft: 'auto',
   },
-  tableWrap: { flex: 1, overflow: 'auto' },
-  table: { width: '100%', borderCollapse: 'collapse', fontSize: '11px' },
+  tableWrap: { flex: 1, overflowX: 'auto', overflowY: 'auto', WebkitOverflowScrolling: 'touch' },
+  table: { width: '100%', minWidth: '600px', borderCollapse: 'collapse', fontSize: '11px' },
   th: {
     padding: '8px 16px',
     textAlign: 'left',

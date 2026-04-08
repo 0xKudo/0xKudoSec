@@ -1,5 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
+
+const HOURS_OPTIONS = [1, 6, 24, 48, 168];
+const HOURS_LABELS = { 1: '1h', 6: '6h', 24: '24h', 48: '48h', 168: '7d' };
+const ALL_CATEGORIES = ['authentication', 'network', 'process', 'file', 'dns', 'registry', 'system', 'firewall', 'account', 'policy'];
 
 function sevColor(sev) {
   const map = {
@@ -70,6 +74,34 @@ const s = {
     cursor: 'pointer', fontWeight: active ? 'bold' : 'normal',
     WebkitTapHighlightColor: 'transparent',
   }),
+  filterBar: {
+    display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center',
+    background: 'var(--bg-surface)', border: '1px solid var(--border)', padding: '10px 12px',
+  },
+  filterLabel: { fontSize: '9px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginRight: '2px' },
+  filterBtnGroup: { display: 'flex', gap: '4px', flexWrap: 'wrap' },
+  filterBtn: (active) => ({
+    background: active ? 'var(--btn-primary-bg)' : 'none',
+    border: '1px solid var(--border)',
+    color: active ? 'var(--btn-primary-text)' : 'var(--text-muted)',
+    fontFamily: 'var(--font)',
+    fontSize: '10px',
+    padding: '3px 9px',
+    cursor: 'pointer',
+    letterSpacing: '0.04em',
+    WebkitTapHighlightColor: 'transparent',
+  }),
+  filterSelect: {
+    background: 'var(--bg-surface)',
+    border: '1px solid var(--border)',
+    color: 'var(--text-primary)',
+    fontFamily: 'var(--font)',
+    fontSize: '10px',
+    padding: '3px 6px',
+    cursor: 'pointer',
+    flex: '1 1 auto',
+    minWidth: 0,
+  },
   overlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 1000 },
   modal: { background: 'var(--bg-primary)', border: '1px solid var(--border)', borderBottom: 'none', width: '100%', maxHeight: '80vh', display: 'flex', flexDirection: 'column' },
   modalHeader: { padding: '12px 16px', borderBottom: '1px solid var(--border)', background: 'var(--bg-surface)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 },
@@ -116,36 +148,71 @@ export function SiemDashboardMobile({ onNavigate }) {
   const [recentEvents, setRecentEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [sevFilter, setSevFilter] = useState(null);
+  const [hours, setHours] = useState(24);
+  const [catFilter, setCatFilter] = useState(null);
   const [selectedEvent, setSelectedEvent] = useState(null);
+  const loadingRef = useRef(false);
 
   const load = useCallback(async () => {
+    if (loadingRef.current) return;
+    loadingRef.current = true;
     try {
       const token = await getAccessTokenSilently();
       const h = { Authorization: `Bearer ${token}` };
+      const recentParams = new URLSearchParams({ hours });
+      if (sevFilter) recentParams.set('severity', sevFilter);
+      if (catFilter) recentParams.set('category', catFilter);
       const [statsRes, countsRes, sevRes, recentRes] = await Promise.all([
-        fetch('/api/siem/stats?hours=24', { headers: h }),
+        fetch(`/api/siem/stats?hours=${hours}`, { headers: h }),
         fetch('/api/siem/alerts/counts', { headers: h }),
-        fetch('/api/siem/events/by-severity?hours=24', { headers: h }),
-        fetch('/api/siem/events/recent?hours=24', { headers: h }),
+        fetch(`/api/siem/events/by-severity?hours=${hours}`, { headers: h }),
+        fetch(`/api/siem/events/recent?${recentParams}`, { headers: h }),
       ]);
-      const [s, c, sv, r] = await Promise.all([statsRes.json(), countsRes.json(), sevRes.json(), recentRes.json()]);
-      setStats(s);
+      const [st, c, sv, r] = await Promise.all([statsRes.json(), countsRes.json(), sevRes.json(), recentRes.json()]);
+      setStats(st);
       setAlertCounts(Array.isArray(c) ? c : []);
       setBySeverity(Array.isArray(sv) ? sv : []);
-      setRecentEvents(Array.isArray(r) ? r.slice(0, 20) : []);
+      setRecentEvents(Array.isArray(r) ? r.slice(0, 30) : []);
     } catch {}
+    loadingRef.current = false;
     setLoading(false);
-  }, [getAccessTokenSilently]);
+  }, [getAccessTokenSilently, hours, sevFilter, catFilter]);
 
+  // Initial load + reload when filters change
   useEffect(() => { load(); }, [load]);
 
-  const activeAlerts = alertCounts.find(r => r.status === 'new')?.count || 0;
-  const filteredEvents = sevFilter ? recentEvents.filter(e => (e.severity || 'info').toLowerCase() === sevFilter) : recentEvents;
+  // Auto-refresh every 15s (live data only)
+  useEffect(() => {
+    const interval = setInterval(load, 15000);
+    return () => clearInterval(interval);
+  }, [load]);
 
-  if (loading) return <div style={{ padding: '24px', color: 'var(--text-muted)', fontSize: '12px' }}>Loading...</div>;
+  const activeAlerts = alertCounts.find(r => r.status === 'new')?.count || 0;
+
+  if (loading && !stats) return <div style={{ padding: '24px', color: 'var(--text-muted)', fontSize: '12px' }}>Loading...</div>;
 
   return (
     <div style={s.container}>
+      {/* Filter bar */}
+      <div style={s.filterBar}>
+        <span style={s.filterLabel}>Time</span>
+        <div style={s.filterBtnGroup}>
+          {HOURS_OPTIONS.map(h => (
+            <button key={h} style={s.filterBtn(hours === h)} onClick={() => setHours(h)}>
+              {HOURS_LABELS[h]}
+            </button>
+          ))}
+        </div>
+        <select
+          style={s.filterSelect}
+          value={catFilter || ''}
+          onChange={e => setCatFilter(e.target.value || null)}
+        >
+          <option value="">All categories</option>
+          {ALL_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+        </select>
+      </div>
+
       {/* KPI cards */}
       <div style={s.kpiGrid}>
         <div style={s.kpiCard}>
@@ -168,7 +235,7 @@ export function SiemDashboardMobile({ onNavigate }) {
 
       {/* Severity donut */}
       <div style={s.panel}>
-        <div style={s.panelTitle}>Events by Severity — 24h</div>
+        <div style={s.panelTitle}>Events by Severity — {HOURS_LABELS[hours]}</div>
         <div style={s.donutWrap}>
           <Donut data={bySeverity} size={110} />
           <div style={s.legend}>
@@ -204,8 +271,8 @@ export function SiemDashboardMobile({ onNavigate }) {
             </span>
           )}
         </div>
-        {filteredEvents.length === 0 && <div style={s.muted}>No events{sevFilter ? ` for severity: ${sevFilter}` : ' in the last 24h'}.</div>}
-        {filteredEvents.map((e, i) => (
+        {recentEvents.length === 0 && <div style={s.muted}>No events{sevFilter ? ` for severity: ${sevFilter}` : ` in the last ${HOURS_LABELS[hours]}`}.</div>}
+        {recentEvents.map((e, i) => (
           <div key={i} style={s.eventRowTappable} onClick={() => setSelectedEvent(e)}>
             <div style={s.eventTop}>
               <span
