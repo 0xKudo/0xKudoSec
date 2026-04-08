@@ -21,7 +21,7 @@ const RULE_OPTIONS = [
 const styles = {
   container: { maxWidth: '900px' },
   header: {
-    margin: '-24px -24px 20px -24px',
+    margin: '-24px -24px 0 -24px',
     padding: '12px 20px',
     borderBottom: '1px solid var(--border)',
     background: 'var(--bg-surface)',
@@ -31,7 +31,7 @@ const styles = {
   },
   title: { fontSize: '13px', color: 'var(--text-primary)', letterSpacing: '0.02em', margin: 0 },
   subtitle: { color: 'var(--text-muted)', fontSize: '11px', margin: 0 },
-  tabs: { display: 'flex', borderBottom: '1px solid var(--border)', background: 'var(--bg-surface)', margin: '0 -24px', paddingLeft: '8px' },
+  tabs: { display: 'flex', borderBottom: '1px solid var(--border)', background: 'var(--bg-surface)', margin: '0 -24px', paddingLeft: '8px', marginBottom: '20px' },
   tab: (active) => ({
     background: 'none',
     border: 'none',

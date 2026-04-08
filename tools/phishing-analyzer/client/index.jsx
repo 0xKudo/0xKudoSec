@@ -25,7 +25,7 @@ const INDICATOR_LABELS = {
 const styles = {
   container: { maxWidth: '800px' },
   header: {
-    margin: '-24px -24px 20px -24px',
+    margin: '-24px -24px 0 -24px',
     padding: '12px 20px',
     borderBottom: '1px solid var(--border)',
     background: 'var(--bg-surface)',
@@ -143,7 +143,7 @@ const styles = {
     marginBottom: '20px',
     wordBreak: 'break-all',
   },
-  tabRow: { display: 'flex', borderBottom: '1px solid var(--border)', background: 'var(--bg-surface)', margin: '0 -24px', paddingLeft: '8px' },
+  tabRow: { display: 'flex', borderBottom: '1px solid var(--border)', background: 'var(--bg-surface)', margin: '0 -24px', paddingLeft: '8px', marginBottom: '20px' },
   tab: (active) => ({
     padding: '4px 12px',
     fontSize: '11px',
