@@ -170,13 +170,7 @@ function createMainWindow() {
     }
   });
 
-  // Show main window but keep it invisible until React signals it's painted.
-  // This prevents the flash between splash → blank → connecting screen.
   mainWindow.once('ready-to-show', () => {
-    mainWindow.showInactive(); // render offscreen, don't steal focus yet
-  });
-
-  ipcMain.once('app:ready', () => {
     if (splashWindow && !splashWindow.isDestroyed()) {
       splashWindow.destroy();
       splashWindow = null;
