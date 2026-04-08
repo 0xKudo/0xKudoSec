@@ -740,9 +740,9 @@ export function SiemDashboard({ onNavigate }) {
                 onMouseLeave={e => e.currentTarget.style.background = ''}
               >
                 <span style={s.sevBadge(sevColor(a.severity))}>{a.severity}</span>
-                <span style={{ color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {a.title}
-                  {a.count > 1 && <span style={{ marginLeft: '6px', fontSize: '10px', padding: '1px 5px', border: '1px solid var(--text-muted)', color: 'var(--text-muted)' }}>{a.count}×</span>}
+                <span style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden', minWidth: 0 }}>
+                  <span style={{ color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.title}</span>
+                  {a.count > 1 && <span style={{ fontSize: '10px', padding: '1px 5px', border: '1px solid var(--text-muted)', color: 'var(--text-muted)', whiteSpace: 'nowrap', flexShrink: 0 }}>{a.count}×</span>}
                 </span>
                 <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.host || '—'}</span>
                 <span style={{ fontSize: '11px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{new Date(a.created_at).toLocaleString()}</span>
