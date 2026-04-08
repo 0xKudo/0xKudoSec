@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
+import { useIsMobile } from '../hooks/useIsMobile';
 
 const ACTION_LABELS = {
   // Ingest key
@@ -55,7 +56,7 @@ const ACTION_COLOR = {
 };
 
 const styles = {
-  page: { display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' },
+  page: { display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' },
   header: {
     padding: '20px 24px 16px',
     borderBottom: '1px solid var(--border)',
@@ -93,8 +94,16 @@ const styles = {
     cursor: 'pointer',
     marginLeft: 'auto',
   },
-  tableWrap: { flex: 1, minHeight: 0, overflow: 'auto', WebkitOverflowScrolling: 'touch' },
-  table: { width: 'max-content', minWidth: '100%', borderCollapse: 'collapse', fontSize: '11px' },
+  tableWrap: { flex: 1, overflow: 'auto' },
+  table: { width: '100%', borderCollapse: 'collapse', fontSize: '11px' },
+  card: {
+    borderBottom: '1px solid var(--border-subtle)',
+    padding: '10px 16px',
+  },
+  cardTop: { display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' },
+  cardTime: { fontSize: '10px', color: 'var(--text-muted)', marginLeft: 'auto' },
+  cardMeta: { fontSize: '10px', color: 'var(--text-subtle)', wordBreak: 'break-all' },
+  cardIp: { fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' },
   th: {
     padding: '8px 16px',
     textAlign: 'left',
@@ -149,6 +158,7 @@ function formatTime(ts) {
 
 export function AuditLog() {
   const { getAccessTokenSilently } = useAuth0();
+  const isMobile = useIsMobile();
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [actionFilter, setActionFilter] = useState('');
@@ -220,6 +230,21 @@ export function AuditLog() {
           <div style={styles.empty}>Loading...</div>
         ) : rows.length === 0 ? (
           <div style={styles.empty}>No audit events found.</div>
+        ) : isMobile ? (
+          <div>
+            {rows.map(row => (
+              <div key={row.id} style={styles.card}>
+                <div style={styles.cardTop}>
+                  <span style={styles.actionBadge(row.action)}>
+                    {ACTION_LABELS[row.action] || row.action}
+                  </span>
+                  <span style={styles.cardTime}>{formatTime(row.created_at)}</span>
+                </div>
+                {row.ip && <div style={styles.cardIp}>{row.ip}</div>}
+                <div style={styles.cardMeta}>{formatMeta(row.meta)}</div>
+              </div>
+            ))}
+          </div>
         ) : (
           <table style={styles.table}>
             <colgroup>
@@ -246,7 +271,7 @@ export function AuditLog() {
                     </span>
                   </td>
                   <td style={styles.td}>{row.ip || '—'}</td>
-                  <td style={{ ...styles.td }}>
+                  <td style={styles.td}>
                     <span style={styles.meta}>{formatMeta(row.meta)}</span>
                   </td>
                 </tr>
