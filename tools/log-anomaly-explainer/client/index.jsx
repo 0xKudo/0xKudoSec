@@ -222,17 +222,6 @@ export default function LogAnomalyExplainer() {
         <button style={styles.tab(tab === 'upload')} onClick={() => setTab('upload')}>Upload File</button>
       </div>
 
-      {!isMobile && (
-        <div style={styles.controlRow}>
-          <select style={styles.select} value={logSource} onChange={e => setLogSource(e.target.value)} disabled={loading}>
-            {LOG_SOURCES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
-          </select>
-          <button style={styles.button(loading)} onClick={handleAnalyze} disabled={!canAnalyze}>
-            {loading ? 'Analyzing...' : 'Analyze'}
-          </button>
-        </div>
-      )}
-
       {tab === 'paste' ? (
         <textarea
           style={styles.textarea}
@@ -257,16 +246,14 @@ export default function LogAnomalyExplainer() {
         </>
       )}
 
-      {isMobile && (
-        <div style={{ ...styles.controlRow, flexWrap: 'wrap', marginTop: '8px' }}>
-          <select style={{ ...styles.select, alignSelf: 'flex-start' }} value={logSource} onChange={e => setLogSource(e.target.value)} disabled={loading}>
-            {LOG_SOURCES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
-          </select>
-          <button style={{ ...styles.button(loading), alignSelf: 'flex-start' }} onClick={handleAnalyze} disabled={!canAnalyze}>
-            {loading ? 'Analyzing...' : 'Analyze'}
-          </button>
-        </div>
-      )}
+      <div style={{ ...styles.controlRow, marginTop: '8px' }}>
+        <select style={styles.select} value={logSource} onChange={e => setLogSource(e.target.value)} disabled={loading}>
+          {LOG_SOURCES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+        </select>
+        <button style={styles.button(loading)} onClick={handleAnalyze} disabled={!canAnalyze}>
+          {loading ? 'Analyzing...' : 'Analyze'}
+        </button>
+      </div>
 
       {error && <p style={styles.error}>{error}</p>}
 
