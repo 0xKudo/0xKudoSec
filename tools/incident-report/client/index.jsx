@@ -269,7 +269,7 @@ export default function IncidentReportTool() {
         disabled={loading}
       />
 
-      <div style={{ ...styles.controlsRow, flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'stretch' : 'center' }}>
+      <div style={{ ...styles.controlsRow, flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-start' : 'center' }}>
         <select
           style={styles.select}
           value={severityOverride}
