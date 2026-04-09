@@ -68,6 +68,8 @@ export default function NoiseAdvisor() {
   const [saving, setSaving] = useState(false);
   const [running, setRunning] = useState(false);
   const [runResult, setRunResult] = useState(null);
+  const [pendingIds, setPendingIds] = useState(new Set());
+  const [actionBanner, setActionBanner] = useState(null);
 
   const authHeaders = useCallback(async () => {
     const token = await getAccessTokenSilently();
@@ -114,16 +116,25 @@ export default function NoiseAdvisor() {
   };
 
   const updateStatus = async (id, newStatus) => {
+    setPendingIds(prev => new Set([...prev, id]));
     const h = await authHeaders();
     await fetch(`${API}/candidates/${id}`, { method: 'PATCH', headers: h, body: JSON.stringify({ status: newStatus }) });
-    load();
+    setActionBanner(`${newStatus === 'approved' ? 'Suppression rule created.' : 'Candidate rejected.'}`);
+    setTimeout(() => setActionBanner(null), 3000);
+    await load();
+    setPendingIds(prev => { const n = new Set(prev); n.delete(id); return n; });
   };
 
   const bulkUpdate = async (newStatus) => {
+    const ids = [...selected];
+    setPendingIds(new Set(ids));
     const h = await authHeaders();
-    await fetch(`${API}/candidates/bulk`, { method: 'POST', headers: h, body: JSON.stringify({ ids: [...selected], status: newStatus }) });
+    await fetch(`${API}/candidates/bulk`, { method: 'POST', headers: h, body: JSON.stringify({ ids, status: newStatus }) });
     setSelected(new Set());
-    load();
+    setActionBanner(`${ids.length} candidate${ids.length !== 1 ? 's' : ''} ${newStatus === 'approved' ? 'approved — suppression rules created.' : 'rejected.'}`);
+    setTimeout(() => setActionBanner(null), 3000);
+    await load();
+    setPendingIds(new Set());
   };
 
   const undo = async (id) => {
@@ -187,6 +198,13 @@ export default function NoiseAdvisor() {
           <div style={{ padding: '8px 14px', marginBottom: '16px', background: 'var(--bg-surface)', border: '1px solid var(--border)', fontSize: '11px', color: 'var(--text-muted)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span>Not enough data yet — {Math.round(runResult.days_ingested ?? 0)} of 7 days, {parseInt(runResult.total_events ?? 0).toLocaleString()} of 10,000 events.</span>
             <button style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontFamily: 'var(--font)', fontSize: '11px', cursor: 'pointer' }} onClick={() => setRunResult(null)}>✕</button>
+          </div>
+        )}
+        {/* Action banner */}
+        {actionBanner && (
+          <div style={{ padding: '8px 14px', marginBottom: '16px', background: 'var(--bg-surface)', border: '1px solid var(--severity-low)', fontSize: '11px', color: 'var(--severity-low)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span>{actionBanner}</span>
+            <button style={{ background: 'none', border: 'none', color: 'var(--severity-low)', fontFamily: 'var(--font)', fontSize: '11px', cursor: 'pointer' }} onClick={() => setActionBanner(null)}>✕</button>
           </div>
         )}
         {/* Settings bar */}
@@ -257,28 +275,35 @@ export default function NoiseAdvisor() {
                   </tr>
                 </thead>
                 <tbody>
-                  {candidates.map(c => (
-                    <tr key={c.id}>
-                      <td style={s.td}><input type="checkbox" checked={selected.has(c.id)} onChange={() => toggleSelect(c.id)} /></td>
-                      <td style={s.td}>
-                        <div style={{ fontWeight: 600 }}>{c.field_signature.event_category}</div>
-                        <div style={{ color: 'var(--text-muted)', fontSize: '11px' }}>{c.field_signature.source} / {c.field_signature.host}</div>
-                      </td>
-                      <td style={s.td}>{parseFloat(c.daily_avg).toFixed(1)}/day</td>
-                      <td style={s.td}>
-                        <span style={s.badge(c.confidence === 'high' ? 'var(--severity-critical)' : 'var(--severity-medium)')}>
-                          {c.confidence.toUpperCase()}
-                        </span>
-                      </td>
-                      <td style={s.td}>{c.score}</td>
-                      <td style={s.td}>
-                        <div style={{ display: 'flex', gap: '6px' }}>
-                          <button style={s.btnSmall} onClick={() => updateStatus(c.id, 'approved')}>Approve</button>
-                          <button style={s.btnSmall} onClick={() => updateStatus(c.id, 'rejected')}>Reject</button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                  {candidates.map(c => {
+                    const pending = pendingIds.has(c.id);
+                    return (
+                      <tr key={c.id} style={{ opacity: pending ? 0.4 : 1, transition: 'opacity 0.2s' }}>
+                        <td style={s.td}><input type="checkbox" checked={selected.has(c.id)} onChange={() => toggleSelect(c.id)} disabled={pending} /></td>
+                        <td style={s.td}>
+                          <div style={{ fontWeight: 600 }}>{c.field_signature.event_category}</div>
+                          <div style={{ color: 'var(--text-muted)', fontSize: '11px' }}>{c.field_signature.source} / {c.field_signature.host}</div>
+                        </td>
+                        <td style={s.td}>{parseFloat(c.daily_avg).toFixed(1)}/day</td>
+                        <td style={s.td}>
+                          <span style={s.badge(c.confidence === 'high' ? 'var(--severity-critical)' : 'var(--severity-medium)')}>
+                            {c.confidence.toUpperCase()}
+                          </span>
+                        </td>
+                        <td style={s.td}>{c.score}</td>
+                        <td style={s.td}>
+                          {pending ? (
+                            <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Updating...</span>
+                          ) : (
+                            <div style={{ display: 'flex', gap: '6px' }}>
+                              <button style={s.btnSmall} onClick={() => updateStatus(c.id, 'approved')}>Approve</button>
+                              <button style={s.btnSmall} onClick={() => updateStatus(c.id, 'rejected')}>Reject</button>
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             )}
