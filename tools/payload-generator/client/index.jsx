@@ -466,6 +466,7 @@ function WebTab() {
 // ─── Root component ───────────────────────────────────────────────────────────
 
 export default function PayloadGenerator() {
+  const isMobile = useIsMobile();
   const [tab, setTab] = useState('msf');
 
   return (
@@ -474,7 +475,7 @@ export default function PayloadGenerator() {
         <span style={s.title}>Payload Generator</span>
       </div>
 
-      <div style={s.tabs}>
+      <div style={{ ...s.tabs, margin: isMobile ? '0 -16px' : '0 -24px' }}>
         <button style={s.tab(tab === 'msf')} onClick={() => setTab('msf')}>msfvenom</button>
         <button style={s.tab(tab === 'web')} onClick={() => setTab('web')}>Web Payloads</button>
       </div>
