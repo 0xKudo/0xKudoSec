@@ -15,6 +15,7 @@ import { LogSearch } from './components/LogSearch';
 import { Cases } from './components/Cases';
 import { SiemConfiguration } from './components/SiemConfiguration';
 import { AuditLog } from './components/AuditLog';
+import NoiseAdvisor from './components/NoiseAdvisor';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { RequireAuth } from './components/RequireAuth';
 import { LandingPage } from './pages/LandingPage';
@@ -76,6 +77,7 @@ const SIEM_VIEW_PATHS = {
   '/siem/cases': 'cases',
   '/siem/configuration': 'configuration',
   '/siem/auditlog': 'auditlog',
+  '/siem/noise': 'noise',
 };
 const SIEM_VIEW_TO_PATH = Object.fromEntries(Object.entries(SIEM_VIEW_PATHS).map(([k, v]) => [v, k]));
 const isElectron = typeof window !== 'undefined' && window.electron?.isElectron === true;
@@ -429,7 +431,8 @@ function AppInner() {
                     {siemView === 'cases' && <Cases onNavigate={handleSiemNavigate} />}
                     {siemView === 'configuration' && <SiemConfiguration navLayout={navLayout} setNavLayout={setNavLayoutAndPersist} theme={theme} setTheme={setTheme} />}
                     {siemView === 'auditlog' && <AuditLog />}
-                    {!['dashboard','alerts','rules','logsearch','cases','configuration','auditlog'].includes(siemView) && (
+                    {siemView === 'noise' && <NoiseAdvisor />}
+                    {!['dashboard','alerts','rules','logsearch','cases','configuration','auditlog','noise'].includes(siemView) && (
                       <div style={{ padding: '40px', color: 'var(--text-muted)', fontSize: '13px' }}>
                         {siemView.charAt(0).toUpperCase() + siemView.slice(1)} — coming soon
                       </div>

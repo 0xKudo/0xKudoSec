@@ -314,6 +314,7 @@ const SIEM_TABS = [
   { id: 'cases',     label: 'Cases' },
   { id: 'configuration', label: 'Configuration' },
   { id: 'auditlog',  label: 'Audit Log' },
+  { id: 'noise',     label: 'Noise Advisor' },
 ];
 
 const TOOL_CATEGORIES = [

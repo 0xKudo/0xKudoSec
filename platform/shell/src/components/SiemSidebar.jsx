@@ -84,6 +84,7 @@ const NAV = [
   { section: 'System', items: [
     { id: 'configuration', label: 'Configuration' },
     { id: 'auditlog', label: 'Audit Log' },
+    { id: 'noise', label: 'Noise Advisor' },
   ]},
 ];
 
