@@ -236,7 +236,7 @@ export default function Decoder() {
           return (
             <>
               {/* Top-level group tabs */}
-              <div style={{ display: 'flex', flexWrap: 'wrap', borderBottom: '1px solid var(--border)', margin: '0 -16px', paddingLeft: '8px', marginBottom: '0' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', borderBottom: '1px solid var(--border)', margin: '0 -16px', marginBottom: '0' }}>
                 {OPERATION_GROUPS.map(group => (
                   <button
                     key={group.label}
@@ -246,12 +246,11 @@ export default function Decoder() {
                       borderBottom: mobileGroup === group.label ? '2px solid var(--accent-amber)' : '2px solid transparent',
                       color: mobileGroup === group.label ? 'var(--accent-amber)' : 'var(--text-muted)',
                       fontSize: '12px',
-                      padding: '8px 12px',
+                      padding: '8px 4px',
                       cursor: 'pointer',
                       fontFamily: 'var(--font)',
                       fontWeight: 'normal',
-                      whiteSpace: 'nowrap',
-                      marginBottom: '-1px',
+                      textAlign: 'center',
                     }}
                     onClick={() => {
                       setMobileGroup(group.label);
