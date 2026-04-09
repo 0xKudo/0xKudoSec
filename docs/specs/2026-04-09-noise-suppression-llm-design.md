@@ -116,38 +116,66 @@ Every auto-created rule is written to the audit log with `noise.auto_suppress` a
 
 ### Model
 
-**Phi-3.5 Mini Instruct (Q4_K_M quantization)**
+Default: **Phi-3.5 Mini Instruct (Q4_K_M quantization)**
 - Size: ~2.2GB
 - RAM required: ~3GB during inference
 - Inference time: 3-8 seconds on modern CPU, 1-3 seconds with GPU offload
 - Source: Hugging Face `microsoft/Phi-3.5-mini-instruct` GGUF
 
+### Supported Models
+
+| Model | Size | Notes |
+|-------|------|-------|
+| Phi-3.5 Mini Q4 | ~2.2GB | **Default — recommended** |
+| Qwen2.5 1.5B Q4 | ~1GB | Faster, lighter, weaker CVE knowledge |
+| Llama 3.2 3B Q4 | ~2GB | Good general reasoning |
+| Custom GGUF | user-provided | Any llama.cpp-compatible GGUF file |
+
+The active model is selected in Configuration > Noise Advisor. Switching models unloads the current model and loads the new one on next analysis run.
+
+**Custom GGUF:** User browses to a local `.gguf` file via a file picker dialog. The app does not validate model quality — the user is responsible for selecting a compatible model. Path is stored in `user_settings` as `llm_custom_model_path`. SHA-256 is computed on first use and stored to detect if the file changes.
+
+### LLM Run Trigger
+
+Controlled by user toggle `noise_llm_trigger`:
+
+- `auto` — LLM runs automatically when Noise Advisor tab is opened and unanalyzed candidates exist
+- `manual` — LLM only runs when user clicks "Run Analysis" button
+
+Default: `manual` — avoids unexpected memory usage on first open.
+
 ### llama.cpp Integration
 
-The LLM runs as a child process inside Electron, managed by a dedicated `llmWorker.js` IPC handler. It is **never** loaded on startup — only when the Noise Advisor panel is opened and candidates are waiting for LLM review.
+The LLM runs as a child process inside Electron, managed by a dedicated `llmWorker.js` IPC handler. It is **never** loaded on startup — only triggered by the above conditions.
+
+After analysis completes the worker process exits and memory is freed. The ~3GB RAM spike is temporary.
 
 **IPC channels:**
 - `llm:analyze` — send candidates for analysis, returns explanation + CVE safety verdict
 - `llm:status` — returns `idle | loading | running | unavailable`
 - `llm:download-model` — triggers model download with progress events
 - `llm:check-update` — checks GitHub releases for newer model version
+- `llm:cancel` — cancel in-progress analysis
 
 ### Model Distribution
 
-The model is **not bundled** in the installer (too large). On first use:
+Managed models (Phi-3.5 Mini, Qwen2.5, Llama 3.2) are **not bundled** in the installer. On first use of a managed model:
 1. Noise Advisor detects model is not present
-2. Shows download prompt with size warning (~2.2GB)
+2. Shows download prompt with size warning
 3. Downloads from a pinned GitHub release URL in `0xKudoSec-releases`
 4. Verifies SHA-256 checksum before use
-5. Stores in `%APPDATA%\0xKudo\models\phi-3.5-mini-q4.gguf`
+5. Stores in `%APPDATA%\0xKudo\models\<model-name>.gguf`
+
+Custom GGUF models are loaded directly from the user-specified path — no download step.
 
 ### Model Update Check
 
-On Electron startup (non-blocking, background):
+On Electron startup (non-blocking, background), for managed models only:
 1. Fetch `models/manifest.json` from GitHub releases API
 2. Compare SHA-256 of installed model against manifest
-3. If mismatch: show unobtrusive badge on Noise Advisor icon — "Model update available"
+3. If mismatch: show unobtrusive badge on Noise Advisor — "Model update available"
 4. User clicks to update — same download flow as initial install
+5. Custom models: never checked for updates (user manages their own file)
 
 ### LLM Prompt Design
 
@@ -241,7 +269,11 @@ New tab in the SIEM navigation bar: **SIEM > Noise Advisor**
 **2. Auto-suppression settings** — inline panel at top
 - Toggle: Suggest only / Auto-create (high confidence) / Auto-create (all)
 - "LLM Analysis" toggle — enable/disable LLM checking
+- "LLM Run Trigger" toggle — Auto / Manual
+- Model selector: dropdown with Phi-3.5 Mini (default), Qwen2.5 1.5B, Llama 3.2 3B, Custom GGUF
+- Custom GGUF: file picker button, shows selected path
 - Model status: installed version, update available badge, download button
+- "Run Analysis" button — visible always, primary action when trigger is set to Manual
 
 **3. Activity log** — list of auto-created and manually approved suppressions with undo button (30-day window)
 
@@ -262,6 +294,9 @@ New keys in `user_settings`:
 |-----|------|---------|-------------|
 | `noise_auto_suppress` | enum | `off` | Auto-suppress behavior |
 | `noise_llm_enabled` | boolean | `true` | Enable LLM analysis |
+| `noise_llm_trigger` | enum | `manual` | `auto` or `manual` — when LLM runs |
+| `llm_model` | enum | `phi-3.5-mini-q4` | Active managed model |
+| `llm_custom_model_path` | string | `null` | Path to custom GGUF file (overrides `llm_model` if set) |
 | `noise_min_score` | integer | `40` | Minimum score to surface candidates |
 | `noise_learning_days` | integer | `7` | Learning period in days |
 | `noise_learning_events` | integer | `10000` | Learning period in events |
