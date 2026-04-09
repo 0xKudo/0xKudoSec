@@ -257,10 +257,10 @@ export default function Intruder() {
                 {METHODS.map(m => <option key={m} value={m}>{m}</option>)}
               </select>
             </div>
-            <div style={{ flex: 1 }}>
+            <div style={{ flex: 1, width: isMobile ? '100%' : undefined }}>
               <span style={styles.label}>URL Template</span>
               <input
-                style={styles.input}
+                style={isMobile ? { ...styles.input, width: '100%', boxSizing: 'border-box' } : styles.input}
                 placeholder="https://example.com/login?user=§admin§"
                 value={urlTemplate}
                 onChange={e => setUrlTemplate(e.target.value)}
