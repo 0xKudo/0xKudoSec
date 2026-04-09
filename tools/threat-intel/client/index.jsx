@@ -317,7 +317,7 @@ export default function ThreatIntelTool() {
           <option value="hash">File Hash</option>
         </select>
         <button
-          style={styles.button(loading)}
+          style={{ ...styles.button(loading), width: isMobile ? '100%' : undefined }}
           onClick={handleAnalyze}
           disabled={loading || !indicator.trim()}
         >

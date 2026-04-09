@@ -290,7 +290,7 @@ export default function WordlistGenerator() {
               <span style={styles.label}>Max Length</span>
               <input style={styles.input} type="number" min="1" max="16" value={maxLength} onChange={e => setMaxLength(e.target.value)} disabled={loading} />
             </div>
-            <button style={{ ...styles.button(!canGenerate), marginTop: isMobile ? '4px' : '18px' }} onClick={handleGenerate} disabled={!canGenerate}>
+            <button style={{ ...styles.button(!canGenerate), marginTop: isMobile ? '4px' : '18px', width: isMobile ? '100%' : undefined }} onClick={handleGenerate} disabled={!canGenerate}>
               {loading ? 'Generating...' : 'Generate'}
             </button>
           </div>
@@ -350,7 +350,7 @@ export default function WordlistGenerator() {
           )}
 
           <div style={styles.row}>
-            <button style={styles.button(!canGenerate)} onClick={handleGenerate} disabled={!canGenerate}>
+            <button style={{ ...styles.button(!canGenerate), width: isMobile ? '100%' : undefined }} onClick={handleGenerate} disabled={!canGenerate}>
               {loading ? 'Generating...' : 'Generate'}
             </button>
           </div>

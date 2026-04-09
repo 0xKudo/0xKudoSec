@@ -189,7 +189,7 @@ export default function SecurityPolicyTranslator() {
         <select style={isMobile ? { ...styles.select, width: '100%' } : styles.select} value={frameworkHint} onChange={e => setFrameworkHint(e.target.value)} disabled={loading}>
           {FRAMEWORK_HINTS.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
         </select>
-        <button style={styles.button(loading)} onClick={handleTranslate} disabled={loading || !policyText.trim()}>
+        <button style={{ ...styles.button(loading), width: isMobile ? '100%' : undefined }} onClick={handleTranslate} disabled={loading || !policyText.trim()}>
           {loading ? 'Translating...' : 'Translate'}
         </button>
       </div>

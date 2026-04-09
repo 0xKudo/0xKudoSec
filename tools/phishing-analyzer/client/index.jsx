@@ -280,7 +280,7 @@ export default function PhishingAnalyzerTool() {
             disabled={loading}
           />
           <button
-            style={styles.button(loading)}
+            style={{ ...styles.button(loading), width: isMobile ? '100%' : undefined }}
             onClick={handleAnalyze}
             disabled={loading || !emailText.trim()}
           >
@@ -306,7 +306,7 @@ export default function PhishingAnalyzerTool() {
             <div style={styles.fileChosen}>Selected: {selectedFile.name}</div>
           )}
           <button
-            style={styles.button(loading)}
+            style={{ ...styles.button(loading), width: isMobile ? '100%' : undefined }}
             onClick={handleUploadAnalyze}
             disabled={loading || !selectedFile}
           >

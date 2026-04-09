@@ -315,7 +315,7 @@ export default function HttpRepeater() {
                 disabled={loading}
                 onKeyDown={e => e.key === 'Enter' && canSend && handleSend()}
               />
-              <button style={styles.button(!canSend)} onClick={handleSend} disabled={!canSend}>
+              <button style={{ ...styles.button(!canSend), width: isMobile ? '100%' : undefined }} onClick={handleSend} disabled={!canSend}>
                 {loading ? 'Sending...' : 'Send'}
               </button>
             </div>
