@@ -127,7 +127,19 @@ export default function NoiseAdvisor() {
     setRunResult(null);
     setRunProgress(null);
     const h = await authHeaders();
-    const res = await fetch(`${API}/run`, { method: 'POST', headers: h });
+    let res;
+    try {
+      res = await fetch(`${API}/run`, { method: 'POST', headers: h });
+    } catch (err) {
+      setRunResult({ error: true });
+      setRunning(false);
+      return;
+    }
+    if (!res.ok || !res.body) {
+      setRunResult({ error: true });
+      setRunning(false);
+      return;
+    }
     const reader = res.body.getReader();
     const decoder = new TextDecoder();
     let buffer = '';
@@ -242,7 +254,13 @@ export default function NoiseAdvisor() {
 
       <div style={isMobile ? s.bodyMobile : s.body}>
         {/* Run result banner */}
-        {runResult && !runResult.skipped && (
+        {runResult?.error && (
+          <div style={{ padding: '8px 14px', marginBottom: '16px', background: 'var(--bg-surface)', border: '1px solid var(--severity-critical)', fontSize: '11px', color: 'var(--severity-critical)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span>Analysis failed. Check server logs.</span>
+            <button style={{ background: 'none', border: 'none', color: 'var(--severity-critical)', fontFamily: 'var(--font)', fontSize: '11px', cursor: 'pointer' }} onClick={() => setRunResult(null)}>✕</button>
+          </div>
+        )}
+        {runResult && !runResult.skipped && !runResult.error && (
           <div style={{ padding: '8px 14px', marginBottom: '16px', background: 'var(--bg-surface)', border: '1px solid var(--severity-low)', fontSize: '11px', color: 'var(--severity-low)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span>Analysis complete: {runResult.scored ?? 0} new candidate{runResult.scored !== 1 ? 's' : ''} found.</span>
             <button style={{ background: 'none', border: 'none', color: 'var(--severity-low)', fontFamily: 'var(--font)', fontSize: '11px', cursor: 'pointer' }} onClick={() => setRunResult(null)}>✕</button>
