@@ -236,7 +236,7 @@ export default function Decoder() {
           return (
             <>
               {/* Top-level group tabs */}
-              <div style={{ display: 'flex', overflowX: 'auto', borderBottom: '1px solid var(--border)', margin: '0 -16px', paddingLeft: '8px', marginBottom: '0' }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', borderBottom: '1px solid var(--border)', margin: '0 -16px', paddingLeft: '8px', marginBottom: '0' }}>
                 {OPERATION_GROUPS.map(group => (
                   <button
                     key={group.label}
