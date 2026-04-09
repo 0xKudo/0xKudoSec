@@ -222,7 +222,7 @@ export default function Scanner() {
         <span style={styles.label}>Target URL</span>
         <div style={{ ...styles.inputRow, flexDirection: isMobile ? 'column' : 'row' }}>
           <input
-            style={isMobile ? { ...styles.input, minWidth: 0 } : styles.input}
+            style={isMobile ? { ...styles.input, minWidth: 0, width: '100%', boxSizing: 'border-box' } : styles.input}
             placeholder="https://example.com"
             value={url}
             onChange={e => setUrl(e.target.value)}
