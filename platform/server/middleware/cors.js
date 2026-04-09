@@ -12,7 +12,7 @@ export const corsMiddleware = corsLib({
     if (!origin) {
       return callback(null, true);
     }
-    if (origin === allowedOrigin) {
+    if (origin.replace(/\/$/, '') === allowedOrigin.replace(/\/$/, '')) {
       return callback(null, true);
     }
     callback(new Error(`Origin ${origin} not allowed by CORS`));
