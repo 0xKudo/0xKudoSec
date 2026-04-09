@@ -13,6 +13,32 @@ Unified cybersecurity tools platform at `tools.laynekudo.com`. Monorepo — shar
 
 **All 19 tools complete. Auth complete. SIEM complete. Electron wrapper complete.**
 
+### Recently Completed (2026-04-08, mobile UI polish — inputs, buttons, controls)
+
+**Comprehensive mobile layout pass across all tools and SIEM components.**
+
+Key fixes applied:
+- **Header margin:** All 19 tool headers now use `-16px` escape on mobile: `margin: isMobile ? '-16px -16px 20px -16px' : '-24px -24px 20px -24px'`
+- **Buttons — natural width:** All primary buttons use natural width on mobile (no `width: '100%'`). Buttons in flex column containers use `alignSelf: 'flex-start'` to prevent stretch. `theme.css` has `button { width: auto; }` as a global baseline.
+- **Select dropdowns — natural width:** All select elements on mobile use natural width. Where a select sits in a flex column, `alignSelf: 'flex-start'` prevents stretch.
+- **Full-width inputs:** Inputs that should be full-width on mobile now have `width: '100%', boxSizing: 'border-box'` applied conditionally. Affected: osint-recon, threat-intel, cve-exploit-mapper, intruder (URL template).
+- **Tab amber active style:** All tool tabs (log-anomaly-explainer, network-threat-analyzer, wordlist-generator, http-repeater, payload-generator) updated to amber active: `color: 'var(--accent-amber)'` + `borderBottom: '2px solid var(--accent-amber)'`.
+- **Control row ordering:** log-anomaly-explainer and network-threat-analyzer — select + analyze button moved below the textarea/upload area on all screen sizes (was above on desktop, broken on mobile).
+- **SIEM headers:** DetectionRules, AlertQueue, Cases — mobile header is flexible height column layout; buttons don't clip.
+- **Log Search:** Severity filter row split into two rows on mobile (Time | Severity each on own row with label).
+- **Audit Log:** Mobile header flexible height, "retained N days" on own line; filter row compact.
+- **Sidebar/SiemSidebar footer:** Privacy Policy and Security Practices each on separate `<div>` lines.
+- **HTTP Repeater mobile:** URL full-width on row 1, method select + Send button on row 2.
+- **Payload Generator:** isMobile added to root component; web tab category grid 2-col on mobile.
+- **Decoder mobile:** Two-level tab UI — 4-column grid of group tabs (URL/HTML/Base64/Hex/Binary/ROT13/Unicode/JWT), sub-tabs as 2-column grid below (only shown when group has >1 op). No borderRadius.
+- **Reverse shell generator:** Generate button `alignSelf: 'flex-start'` on mobile (was `flex-end`, appeared right-aligned).
+- **Network scanner mobile:** Select and buttons use `alignSelf: 'flex-start'` (no `width: '100%'`).
+- **Intruder URL template:** Full-width on mobile, wrapper div also `width: '100%'` on mobile.
+
+**Files changed:** All `tools/*/client/index.jsx`, `platform/shell/src/App.jsx`, `platform/shell/src/styles/theme.css`, `platform/shell/src/components/Sidebar.jsx`, `platform/shell/src/components/SiemSidebar.jsx`, `platform/shell/src/components/DetectionRules.jsx`, `platform/shell/src/components/AlertQueue.jsx`, `platform/shell/src/components/Cases.jsx`, `platform/shell/src/components/LogSearch.jsx`, `platform/shell/src/components/AuditLog.jsx`
+
+---
+
 ### Recently Completed (2026-04-08, mobile header margin fix + sidebar footer fix)
 
 **Tool header bars on mobile no longer use the negative margin escape.**

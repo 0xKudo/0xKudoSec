@@ -367,16 +367,48 @@ This is the same rule as tool tabs. There is one tab style standard for the enti
 
 ### What changes on mobile (header bar)
 
-The negative margin escape (`margin: '-24px -24px Npx -24px'`) must NOT be used on mobile. The App.jsx tool wrapper uses `padding: '16px'` on mobile (vs `'24px'` on desktop), and the header sits flush — no negative margin. Apply conditionally:
+The App.jsx tool wrapper uses `padding: '16px'` on mobile (vs `'24px'` on desktop). Use the `-16px` escape on mobile:
 
 ```jsx
-style={{ ...styles.header, margin: isMobile ? '0 0 20px 0' : '-24px -24px 20px -24px' }}
+style={{ ...styles.header, margin: isMobile ? '-16px -16px 20px -16px' : '-24px -24px 20px -24px' }}
 ```
 
-Tab-tool variant (0 bottom):
+Tab-tool variant (0 bottom margin):
 ```jsx
-style={{ ...styles.header, margin: isMobile ? '0' : '-24px -24px 0 -24px' }}
+style={{ ...styles.header, margin: isMobile ? '-16px -16px 0 -16px' : '-24px -24px 0 -24px' }}
 ```
+
+Tab row margin (tab tools only):
+```jsx
+tabs: (isMobile) => ({ ..., margin: isMobile ? '0 -16px' : '0 -24px' })
+```
+
+### What changes on mobile (buttons)
+
+- Buttons must never be `width: '100%'` on mobile. `theme.css` has `button { width: auto; }` as a baseline.
+- In flex column containers (`flexDirection: 'column'`), buttons stretch by default due to `alignItems: stretch`. Fix with `alignSelf: 'flex-start'` on the button.
+- When a button sits alongside a full-width input in the same column, keep the container default (stretch for input), add `alignSelf: 'flex-start'` to the button only.
+- Buttons with `alignSelf: 'flex-end'` in their base style must override to `alignSelf: 'flex-start'` on mobile.
+
+```jsx
+<button style={{ ...styles.button(!disabled), alignSelf: isMobile ? 'flex-start' : 'flex-end' }} />
+// or simply:
+<button style={{ ...styles.button(!disabled), alignSelf: 'flex-start' }} />  // mobile-only context
+```
+
+### What changes on mobile (select dropdowns)
+
+- Select dropdowns must never be `width: '100%'` on mobile — use natural width.
+- In flex column containers, add `alignSelf: 'flex-start'` to prevent stretch.
+
+### What changes on mobile (inputs)
+
+- Primary search/query inputs should be `width: '100%', boxSizing: 'border-box'` on mobile so they fill the available width.
+- Narrower secondary inputs (port, year range, etc.) stay at their natural or fixed width.
+
+### What changes on mobile (control row ordering)
+
+Tools where a selector + button row controls a textarea or file upload should place the control row **below** the textarea/upload, not above it. This matches the expected flow: input first, then submit controls.
 
 ### What never changes on mobile
 
