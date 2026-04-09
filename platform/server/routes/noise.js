@@ -5,7 +5,7 @@ import { audit } from '../services/audit.js';
 
 const router = Router();
 const pool = () => db.getPool();
-const uid = req => req.user.sub;
+const uid = req => req.auth.sub;
 
 // GET /api/siem/noise/status
 router.get('/status', requireAuth, async (req, res) => {
