@@ -88,6 +88,7 @@ export default function NoiseAdvisor() {
   const [runResult, setRunResult] = useState(null);
   const [pendingIds, setPendingIds] = useState(new Set());
   const [actionBanner, setActionBanner] = useState(null);
+  const [undoingId, setUndoingId] = useState(null);
 
   const authHeaders = useCallback(async () => {
     const token = await getAccessTokenSilently();
@@ -156,9 +157,11 @@ export default function NoiseAdvisor() {
   };
 
   const undo = async (id) => {
+    setUndoingId(id);
     const h = await authHeaders();
     await fetch(`${API}/candidates/${id}/undo`, { method: 'POST', headers: h });
-    load();
+    await load();
+    setUndoingId(null);
   };
 
   const toggleSelect = (id) => {
@@ -168,6 +171,20 @@ export default function NoiseAdvisor() {
       return next;
     });
   };
+
+  const toggleSelectGroup = (items) => {
+    const ids = items.map(c => c.id);
+    const allSelected = ids.every(id => selected.has(id));
+    setSelected(prev => {
+      const next = new Set(prev);
+      if (allSelected) ids.forEach(id => next.delete(id));
+      else ids.forEach(id => next.add(id));
+      return next;
+    });
+  };
+
+  const selectAll = () => setSelected(new Set(candidates.map(c => c.id)));
+  const deselectAll = () => setSelected(new Set());
 
   if (loading) return <div style={s.empty}>Loading...</div>;
 
@@ -260,12 +277,15 @@ export default function NoiseAdvisor() {
         {/* Candidates tab */}
         {tab === 0 && (
           <>
-            {selected.size > 0 && (
-              <div style={s.bulkBar}>
+            {candidates.length > 0 && <div style={{ ...s.bulkBar, marginBottom: selected.size > 0 ? '0' : '12px' }}>
+              <button style={s.btnSmall} onClick={selected.size === candidates.length ? deselectAll : selectAll}>
+                {selected.size === candidates.length ? 'Deselect All' : `Select All ${candidates.length}`}
+              </button>
+              {selected.size > 0 && <>
                 <button style={s.btn} onClick={() => bulkUpdate('approved')}>Approve {selected.size}</button>
                 <button style={s.btnSmall} onClick={() => bulkUpdate('rejected')}>Reject {selected.size}</button>
-              </div>
-            )}
+              </>}
+            </div>}
             {candidates.length === 0 ? (
               <div style={s.empty}>
                 {thresholdMet
@@ -311,7 +331,7 @@ export default function NoiseAdvisor() {
                       <table style={s.table}>
                         <thead>
                           <tr>
-                            <th style={s.th}></th>
+                            <th style={s.th}><input type="checkbox" checked={items.every(c => selected.has(c.id))} ref={el => { if (el) el.indeterminate = items.some(c => selected.has(c.id)) && !items.every(c => selected.has(c.id)); }} onChange={() => toggleSelectGroup(items)} /></th>
                             <th style={s.th}>Pattern</th>
                             <th style={s.th}>Daily Avg</th>
                             <th style={s.th}>Confidence</th>
@@ -376,7 +396,9 @@ export default function NoiseAdvisor() {
                     <span style={{ marginLeft: '8px', fontSize: '11px', color: 'var(--text-muted)' }}>{new Date(c.updated_at).toLocaleDateString()}</span>
                   </div>
                   <div style={s.cardActions}>
-                    <button style={s.btnSmall} onClick={() => undo(c.id)}>Undo</button>
+                    <button style={s.btnSmall} onClick={() => undo(c.id)} disabled={undoingId === c.id}>
+                      {undoingId === c.id ? 'Undoing...' : 'Undo'}
+                    </button>
                   </div>
                 </div>
               ))
@@ -401,7 +423,7 @@ export default function NoiseAdvisor() {
                       <td style={s.td}>{c.rule_name || 'None'}</td>
                       <td style={s.td}><span style={s.badge('var(--severity-low)')}>{c.status}</span></td>
                       <td style={s.td}>{new Date(c.updated_at).toLocaleDateString()}</td>
-                      <td style={s.td}><button style={s.btnSmall} onClick={() => undo(c.id)}>Undo</button></td>
+                      <td style={s.td}><button style={s.btnSmall} onClick={() => undo(c.id)} disabled={undoingId === c.id}>{undoingId === c.id ? 'Undoing...' : 'Undo'}</button></td>
                     </tr>
                   ))}
                 </tbody>
