@@ -141,7 +141,7 @@ const styles = {
     marginBottom: '20px',
     wordBreak: 'break-all',
   },
-  tabRow: { display: 'flex', borderBottom: '1px solid var(--border)', background: 'var(--bg-surface)', margin: '0 -24px', paddingLeft: '8px', marginBottom: '20px' },
+  tabRow: (isMobile) => ({ display: 'flex', borderBottom: '1px solid var(--border)', background: 'var(--bg-surface)', margin: isMobile ? '0 -16px' : '0 -24px', paddingLeft: '8px', marginBottom: '20px' }),
   tab: (active) => ({
     padding: '4px 12px',
     fontSize: '11px',
@@ -265,7 +265,7 @@ export default function PhishingAnalyzerTool() {
         </p>
       </div>
 
-      <div style={styles.tabRow}>
+      <div style={styles.tabRow(isMobile)}>
         <button style={styles.tab(tab === 'paste')} onClick={() => setTab('paste')}>Paste Text</button>
         <button style={styles.tab(tab === 'upload')} onClick={() => setTab('upload')}>Upload .eml</button>
       </div>

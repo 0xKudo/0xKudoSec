@@ -38,15 +38,22 @@ const styles = {
   },
   title: { fontSize: '13px', color: 'var(--text-primary)', letterSpacing: '0.02em', margin: 0, fontWeight: 'normal' },
   subtitle: { color: 'var(--text-muted)', fontSize: '11px', margin: 0 },
-  tabs: { display: 'flex', borderBottom: '1px solid var(--border)', background: 'var(--bg-surface)', margin: '0 -24px', paddingLeft: '8px', marginBottom: '20px' },
+  tabs: (isMobile) => ({ display: 'flex', borderBottom: '1px solid var(--border)', background: 'var(--bg-surface)', margin: isMobile ? '0 -16px' : '0 -24px', paddingLeft: '8px', marginBottom: '20px' }),
   tab: (active) => ({
-    background: active ? 'var(--btn-primary-bg)' : 'var(--bg-surface)',
-    color: active ? 'var(--btn-primary-text)' : 'var(--text-muted)',
-    border: '1px solid var(--border)',
-    padding: '6px 14px',
-        fontSize: '12px',
+    padding: '4px 12px',
+    fontSize: '11px',
+    letterSpacing: '0.08em',
+    textTransform: 'uppercase',
     cursor: 'pointer',
+    color: active ? 'var(--accent-amber)' : 'var(--text-muted)',
+    borderBottom: active ? '2px solid var(--accent-amber)' : '2px solid transparent',
+    background: 'none',
+    border: 'none',
+    borderBottomWidth: '2px',
+    borderBottomStyle: 'solid',
+    borderBottomColor: active ? 'var(--accent-amber)' : 'transparent',
     fontFamily: 'var(--font)',
+    marginBottom: '-1px',
   }),
   controlRow: { display: 'flex', gap: '8px', marginBottom: '12px', alignItems: 'center' },
   select: {
@@ -210,7 +217,7 @@ export default function LogAnomalyExplainer() {
         </p>
       </div>
 
-      <div style={styles.tabs}>
+      <div style={styles.tabs(isMobile)}>
         <button style={styles.tab(tab === 'paste')} onClick={() => setTab('paste')}>Paste Logs</button>
         <button style={styles.tab(tab === 'upload')} onClick={() => setTab('upload')}>Upload File</button>
       </div>

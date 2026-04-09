@@ -31,7 +31,7 @@ const styles = {
   },
   title: { fontSize: '13px', color: 'var(--text-primary)', letterSpacing: '0.02em', margin: 0, fontWeight: 'normal' },
   subtitle: { color: 'var(--text-muted)', fontSize: '11px', margin: 0 },
-  tabs: { display: 'flex', borderBottom: '1px solid var(--border)', background: 'var(--bg-surface)', margin: '0 -24px', paddingLeft: '8px', marginBottom: '20px' },
+  tabs: (isMobile) => ({ display: 'flex', borderBottom: '1px solid var(--border)', background: 'var(--bg-surface)', margin: isMobile ? '0 -16px' : '0 -24px', paddingLeft: '8px', marginBottom: '20px' }),
   tab: (active) => ({
     background: 'none',
     border: 'none',
@@ -244,7 +244,7 @@ export default function WordlistGenerator() {
         </p>
       </div>
 
-      <div style={styles.tabs}>
+      <div style={styles.tabs(isMobile)}>
         <button style={styles.tab(activeTab === 'charset')} onClick={() => { setActiveTab('charset'); setResult(null); setError(null); }}>
           Character Set
         </button>

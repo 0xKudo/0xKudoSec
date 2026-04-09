@@ -143,7 +143,7 @@ const styles = {
     color: 'var(--text-muted)',
     fontSize: '12px',
   },
-  tabs: { display: 'flex', borderBottom: '1px solid var(--border)', background: 'var(--bg-surface)', margin: '0 -24px', paddingLeft: '8px', marginBottom: '20px' },
+  tabs: (isMobile) => ({ display: 'flex', borderBottom: '1px solid var(--border)', background: 'var(--bg-surface)', margin: isMobile ? '0 -16px' : '0 -24px', paddingLeft: '8px', marginBottom: '20px' }),
   tab: (active) => ({
     background: 'none',
     border: 'none',
@@ -360,7 +360,7 @@ export default function HttpRepeater() {
                 <span style={styles.durationBadge}>{response.byteLength} bytes</span>
               </div>
 
-              <div style={styles.tabs}>
+              <div style={styles.tabs(isMobile)}>
                 <button style={styles.tab(responseTab === 'body')} onClick={() => setResponseTab('body')}>Body</button>
                 <button style={styles.tab(responseTab === 'headers')} onClick={() => setResponseTab('headers')}>Headers</button>
               </div>
