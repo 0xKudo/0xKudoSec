@@ -236,7 +236,7 @@ export default function NoiseAdvisor() {
             <option value="all">Auto-create (all)</option>
           </select>
           <button
-            style={{ ...s.runBtn, marginLeft: 'auto', opacity: running ? 0.5 : 1 }}
+            style={{ ...s.runBtn, marginLeft: '8px', opacity: running ? 0.5 : 1 }}
             onClick={runAnalysis}
             disabled={running}
             onMouseEnter={e => { if (!running) e.currentTarget.style.color = 'var(--text-primary)'; }}
