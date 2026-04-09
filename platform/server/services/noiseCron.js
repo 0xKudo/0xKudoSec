@@ -82,7 +82,7 @@ export async function scoreNoiseCandidates(userId) {
       INSERT INTO noise_candidates
         (user_id, field_signature, score, confidence, daily_avg, first_seen, last_seen, event_count)
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-      ON CONFLICT DO NOTHING
+      ON CONFLICT (user_id, field_signature) DO NOTHING
     `, [
       userId,
       pattern.field_signature,
