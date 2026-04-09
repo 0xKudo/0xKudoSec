@@ -38,7 +38,7 @@ const styles = {
   },
   overlayDrawer: {
     display: 'flex', flexDirection: 'column', height: '100%',
-    background: 'var(--bg-sidebar)', overflowY: 'auto',
+    background: 'var(--bg-sidebar)', overflow: 'hidden',
   },
 };
 
@@ -386,7 +386,7 @@ function AppInner() {
                 <span style={{ fontSize: '12px', color: 'var(--text-muted)', letterSpacing: '0.04em' }}>Menu</span>
                 <button onClick={() => setMenuOpen(false)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '18px', cursor: 'pointer', padding: '0', lineHeight: 1 }}>✕</button>
               </div>
-              <div style={{ flex: 1, overflow: 'hidden' }}>
+              <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
                 {activeApp === 'siem' ? (
                   <SiemSidebar
                     activeView={siemView}

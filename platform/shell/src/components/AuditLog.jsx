@@ -192,16 +192,14 @@ export function AuditLog() {
       {isMobile ? (
         <div style={{ padding: '10px 16px', borderBottom: '1px solid var(--border)', background: 'var(--bg-surface)', flexShrink: 0 }}>
           <div style={styles.title}>Audit Log</div>
-          <div style={{ ...styles.subtitle, marginTop: '2px' }}>
-            Privileged user actions, append-only record
-            {retentionPolicy && (
-              <span style={{ color: retentionPolicy.enabled && retentionPolicy.days < 365 ? 'var(--severity-high)' : 'var(--text-subtle)' }}>
-                {' · '}{retentionPolicy.enabled
-                  ? `retained ${retentionPolicy.days} days`
-                  : 'auto-purge disabled'}
-              </span>
-            )}
-          </div>
+          <div style={{ ...styles.subtitle, marginTop: '2px' }}>Privileged user actions, append-only record</div>
+          {retentionPolicy && (
+            <div style={{ ...styles.subtitle, marginTop: '2px', color: retentionPolicy.enabled && retentionPolicy.days < 365 ? 'var(--severity-high)' : 'var(--text-subtle)' }}>
+              {retentionPolicy.enabled
+                ? `retained ${retentionPolicy.days} days`
+                : 'auto-purge disabled'}
+            </div>
+          )}
         </div>
       ) : (
         <div style={styles.header}>
