@@ -330,7 +330,7 @@ export default function NetworkScanner() {
             disabled={loading}
           />
           <select
-            style={{ ...styles.select, width: '100%', boxSizing: 'border-box' }}
+            style={styles.select}
             value={scanType}
             onChange={e => setScanType(e.target.value)}
             disabled={loading}
@@ -340,9 +340,9 @@ export default function NetworkScanner() {
             ))}
           </select>
           {loading ? (
-            <button style={{ ...styles.stopBtn, width: '100%' }} onClick={handleStop}>Stop</button>
+            <button style={{ ...styles.stopBtn, alignSelf: 'flex-start' }} onClick={handleStop}>Stop</button>
           ) : (
-            <button style={{ ...styles.scanBtn, width: '100%' }} onClick={handleScan} disabled={!target.trim()}>
+            <button style={{ ...styles.scanBtn, alignSelf: 'flex-start' }} onClick={handleScan} disabled={!target.trim()}>
               Scan
             </button>
           )}
