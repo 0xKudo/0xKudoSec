@@ -1,10 +1,10 @@
 import { Router } from 'express';
 import { requireAuth } from '../middleware/requireAuth.js';
-import { getPool } from '../services/db.js';
+import db from '../services/db.js';
 import { audit } from '../services/audit.js';
 
 const router = Router();
-const pool = () => getPool();
+const pool = () => db.getPool();
 const uid = req => req.user.sub;
 
 // GET /api/siem/noise/status

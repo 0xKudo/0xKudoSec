@@ -1,11 +1,11 @@
-import { getPool } from './db.js';
+import db from './db.js';
 import { audit } from './audit.js';
 
 const HIGH_THRESHOLD = 70;
 const MEDIUM_THRESHOLD = 40;
 
 async function scoreNoiseCandidates(userId) {
-  const pool = getPool();
+  const pool = db.getPool();
 
   const { rows: thresholdRows } = await pool.query(`
     SELECT
@@ -101,7 +101,7 @@ async function scoreNoiseCandidates(userId) {
 }
 
 async function runAutoSuppress(userId) {
-  const pool = getPool();
+  const pool = db.getPool();
 
   const { rows: settingRows } = await pool.query(
     `SELECT noise_auto_suppress FROM user_settings WHERE user_id = $1`,
@@ -161,7 +161,7 @@ async function runAutoSuppress(userId) {
 export async function scheduleNoiseCron() {
   const { CronJob } = await import('cron');
   new CronJob('0 30 2 * * *', async () => {
-    const pool = getPool();
+    const pool = db.getPool();
     const { rows: users } = await pool.query(`SELECT DISTINCT user_id FROM logs`);
     for (const { user_id } of users) {
       try {
