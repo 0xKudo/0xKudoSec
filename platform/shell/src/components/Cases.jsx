@@ -176,13 +176,23 @@ export function Cases({ onNavigate }) {
 
   return (
     <div style={s.container}>
-      <div style={isMobile ? { ...s.header, flexWrap: 'wrap', gap: '8px' } : s.header}>
-        <span style={s.title}>SIEM &nbsp;<span style={s.sub}>/ Cases</span></span>
-        <div style={isMobile ? { display: 'flex', gap: '8px' } : s.actions}>
-          <button style={s.btn} onClick={() => onNavigate('alerts')}>Alert Queue</button>
-          <button style={s.btnActive} onClick={() => setNewFormOpen(true)}>+ New Case</button>
+      {isMobile ? (
+        <div style={{ padding: '10px 16px', borderBottom: '1px solid var(--border)', background: 'var(--bg-surface)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <span style={s.title}>SIEM &nbsp;<span style={s.sub}>/ Cases</span></span>
+          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+            <button style={s.btn} onClick={() => onNavigate('alerts')}>Alert Queue</button>
+            <button style={s.btnActive} onClick={() => setNewFormOpen(true)}>+ New Case</button>
+          </div>
         </div>
-      </div>
+      ) : (
+        <div style={s.header}>
+          <span style={s.title}>SIEM &nbsp;<span style={s.sub}>/ Cases</span></span>
+          <div style={s.actions}>
+            <button style={s.btn} onClick={() => onNavigate('alerts')}>Alert Queue</button>
+            <button style={s.btnActive} onClick={() => setNewFormOpen(true)}>+ New Case</button>
+          </div>
+        </div>
+      )}
 
       <div style={isMobile ? { ...s.filterBar, flexWrap: 'wrap' } : s.filterBar}>
         {[null, ...STATUS_OPTIONS].map(st => (

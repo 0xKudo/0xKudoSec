@@ -45,8 +45,8 @@ const s = {
   tab: (active) => ({
     padding: '8px 20px', fontSize: '11px', letterSpacing: '0.06em', textTransform: 'uppercase',
     cursor: 'pointer', border: 'none', background: 'none', fontFamily: 'var(--font)',
-    color: active ? 'var(--text-primary)' : 'var(--text-muted)',
-    borderBottom: active ? '2px solid var(--text-primary)' : '2px solid transparent',
+    color: active ? 'var(--accent-amber)' : 'var(--text-muted)',
+    borderBottom: active ? '2px solid var(--accent-amber)' : '2px solid transparent',
     marginBottom: '-1px',
   }),
   table: { width: '100%', borderCollapse: 'collapse' },
@@ -291,16 +291,29 @@ export function DetectionRules({ onNavigate }) {
 
   return (
     <div style={s.container}>
-      <div style={isMobile ? { ...s.header, flexWrap: 'wrap', gap: '8px' } : s.header}>
-        <span style={s.title}>SIEM &nbsp;<span style={s.sub}>/ Detection Rules</span></span>
-        <div style={isMobile ? { display: 'flex', gap: '8px', flexWrap: 'wrap' } : s.actions}>
-          <button style={s.btn} onClick={() => onNavigate('alerts')}>Alert Queue</button>
-          <button style={s.btn} onClick={exportRules}>Export JSON</button>
-          <button style={s.btn} onClick={() => importRef.current?.click()}>Import JSON</button>
-          <input ref={importRef} type="file" accept=".json" style={{ display: 'none' }} onChange={handleImport} />
-          <button style={s.btnPrimary} onClick={openNew}>+ New Rule</button>
+      {isMobile ? (
+        <div style={{ padding: '10px 16px', borderBottom: '1px solid var(--border)', background: 'var(--bg-surface)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <span style={s.title}>SIEM &nbsp;<span style={s.sub}>/ Detection Rules</span></span>
+          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+            <button style={s.btn} onClick={() => onNavigate('alerts')}>Alert Queue</button>
+            <button style={s.btn} onClick={exportRules}>Export JSON</button>
+            <button style={s.btn} onClick={() => importRef.current?.click()}>Import JSON</button>
+            <input ref={importRef} type="file" accept=".json" style={{ display: 'none' }} onChange={handleImport} />
+            <button style={s.btnPrimary} onClick={openNew}>+ New Rule</button>
+          </div>
         </div>
-      </div>
+      ) : (
+        <div style={s.header}>
+          <span style={s.title}>SIEM &nbsp;<span style={s.sub}>/ Detection Rules</span></span>
+          <div style={s.actions}>
+            <button style={s.btn} onClick={() => onNavigate('alerts')}>Alert Queue</button>
+            <button style={s.btn} onClick={exportRules}>Export JSON</button>
+            <button style={s.btn} onClick={() => importRef.current?.click()}>Import JSON</button>
+            <input ref={importRef} type="file" accept=".json" style={{ display: 'none' }} onChange={handleImport} />
+            <button style={s.btnPrimary} onClick={openNew}>+ New Rule</button>
+          </div>
+        </div>
+      )}
 
       {/* Tabs */}
       <div style={s.tabs}>
