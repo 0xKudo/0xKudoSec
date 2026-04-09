@@ -126,12 +126,17 @@ export default function NoiseAdvisor() {
   const runAnalysis = async () => {
     setRunning(true);
     setRunResult(null);
-    const h = await authHeaders();
-    const res = await fetch(`${API}/run`, { method: 'POST', headers: h });
-    const data = await res.json();
-    setRunning(false);
-    setRunResult(data.result);
-    await load();
+    try {
+      const h = await authHeaders();
+      const res = await fetch(`${API}/run`, { method: 'POST', headers: h });
+      const data = await res.json();
+      setRunning(false);
+      setRunResult(data.result ?? { scored: 0, total: 0 });
+      await load();
+    } catch (err) {
+      setRunning(false);
+      setRunResult({ error: true });
+    }
   };
 
   const updateStatus = async (id, newStatus) => {
