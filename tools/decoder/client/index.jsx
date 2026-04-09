@@ -266,7 +266,7 @@ export default function Decoder() {
 
               {/* Sub-tabs — only if group has more than one op */}
               {activeGroup.ops.length > 1 && (
-                <div style={{ display: 'flex', overflowX: 'auto', borderBottom: '1px solid var(--border)', margin: '0 -16px', paddingLeft: '8px', marginBottom: '16px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(activeGroup.ops.length, 2)}, 1fr)`, borderBottom: '1px solid var(--border)', margin: '0 -16px', marginBottom: '16px' }}>
                   {activeGroup.ops.map(op => (
                     <button
                       key={op.value}
@@ -276,12 +276,11 @@ export default function Decoder() {
                         borderBottom: operation === op.value ? '2px solid var(--accent-amber)' : '2px solid transparent',
                         color: operation === op.value ? 'var(--accent-amber)' : 'var(--text-muted)',
                         fontSize: '11px',
-                        padding: '6px 12px',
+                        padding: '6px 4px',
                         cursor: 'pointer',
                         fontFamily: 'var(--font)',
                         fontWeight: 'normal',
-                        whiteSpace: 'nowrap',
-                        marginBottom: '-1px',
+                        textAlign: 'center',
                       }}
                       onClick={() => { setOperation(op.value); setOutput(''); setError(null); }}
                     >
