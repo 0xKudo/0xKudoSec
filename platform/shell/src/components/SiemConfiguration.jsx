@@ -1317,10 +1317,9 @@ winlogbeat.event_logs:
                         >{agentAction === 'restart' ? 'Restarting...' : 'Restart'}</button>
                       </div>
                     </div>
-                    {fbInfo && fbInfo.installed && (
-                      <div style={{ marginTop: '8px', fontSize: '11px', color: 'var(--text-muted)', display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-                        {fbInfo.version && <span>Version: <span style={{ color: 'var(--text-primary)' }}>v{fbInfo.version}</span></span>}
-                        {fbInfo.confPath && <span>Config: <span style={{ color: 'var(--text-primary)', fontFamily: 'var(--font)' }}>{fbInfo.confPath}</span></span>}
+                    {fbInfo && fbInfo.installed && fbInfo.version && (
+                      <div style={{ marginTop: '8px', fontSize: '11px', color: 'var(--text-muted)' }}>
+                        Version: <span style={{ color: 'var(--text-primary)' }}>v{fbInfo.version}</span>
                       </div>
                     )}
                     {agentStatus === 'NOT_INSTALLED' && !isMobile && (
