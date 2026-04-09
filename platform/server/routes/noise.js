@@ -66,18 +66,22 @@ router.patch('/candidates/:id', requireAuth, async (req, res) => {
 
   if (status === 'approved') {
     const sig = rows[0].field_signature;
-    const ruleName = `[Auto] Suppress ${sig.event_category} from ${sig.source}`;
+    const eventIdLabel = sig.event_id ? ` (Event ID ${sig.event_id})` : '';
+    const processLabel = sig.process_name ? ` [${sig.process_name}]` : '';
+    const ruleName = `[Auto] Suppress ${sig.event_category}${eventIdLabel}${processLabel} from ${sig.source}`;
     const { rows: ruleRows } = await pool().query(`
       INSERT INTO detection_rules
-        (user_id, name, description, action, enabled, match_category, match_host)
-      VALUES ($1, $2, $3, 'suppress', true, $4, $5)
+        (user_id, name, description, action, enabled, match_category, match_event_id, match_process, match_username)
+      VALUES ($1, $2, $3, 'suppress', true, $4, $5, $6, $7)
       RETURNING id
     `, [
       uid(req),
       ruleName,
       `Approved from Noise Advisor (score: ${rows[0].score})`,
       sig.event_category || null,
-      sig.host || null,
+      sig.event_id || null,
+      sig.process_name || null,
+      sig.username || null,
     ]);
     await pool().query(
       `UPDATE noise_candidates SET suppression_rule_id = $1 WHERE id = $2`,
@@ -114,16 +118,20 @@ router.post('/candidates/bulk', requireAuth, async (req, res) => {
     );
     for (const candidate of candidates) {
       const sig = candidate.field_signature;
+      const eventIdLabel = sig.event_id ? ` (Event ID ${sig.event_id})` : '';
+      const processLabel = sig.process_name ? ` [${sig.process_name}]` : '';
       const { rows: ruleRows } = await pool().query(`
-        INSERT INTO detection_rules (user_id, name, description, action, enabled, match_category, match_host)
-        VALUES ($1, $2, $3, 'suppress', true, $4, $5)
+        INSERT INTO detection_rules (user_id, name, description, action, enabled, match_category, match_event_id, match_process, match_username)
+        VALUES ($1, $2, $3, 'suppress', true, $4, $5, $6, $7)
         RETURNING id
       `, [
         uid(req),
-        `[Auto] Suppress ${sig.event_category || 'unknown'} from ${sig.source || 'unknown'}`,
+        `[Auto] Suppress ${sig.event_category || 'unknown'}${eventIdLabel}${processLabel} from ${sig.source || 'unknown'}`,
         `Approved from Noise Advisor (score: ${candidate.score})`,
         sig.event_category || null,
-        sig.host || null,
+        sig.event_id || null,
+        sig.process_name || null,
+        sig.username || null,
       ]);
       await pool().query(
         `UPDATE noise_candidates SET suppression_rule_id = $1 WHERE id = $2`,

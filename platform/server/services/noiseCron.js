@@ -24,8 +24,17 @@ export async function scoreNoiseCandidates(userId) {
     SELECT
       source,
       event_category,
+      event_id,
+      process_name,
+      username,
       host,
-      jsonb_build_object('source', source, 'event_category', event_category, 'host', host) AS field_signature,
+      jsonb_build_object(
+        'source', source,
+        'event_category', event_category,
+        'event_id', event_id,
+        'process_name', process_name,
+        'username', username
+      ) AS field_signature,
       COUNT(*) AS event_count,
       COUNT(*) / 7.0 AS daily_avg,
       MIN(timestamp) AS first_seen,
@@ -34,7 +43,7 @@ export async function scoreNoiseCandidates(userId) {
     FROM logs
     WHERE user_id = $1
       AND timestamp > NOW() - INTERVAL '7 days'
-    GROUP BY source, event_category, host
+    GROUP BY source, event_category, event_id, process_name, username, host
     HAVING COUNT(*) / 7.0 > 10
   `, [userId]);
 
@@ -133,19 +142,23 @@ export async function runAutoSuppress(userId) {
 
   for (const candidate of candidates) {
     const sig = candidate.field_signature;
-    const ruleName = `[Auto] Suppress ${sig.event_category} from ${sig.source}`;
+    const eventIdLabel = sig.event_id ? ` (Event ID ${sig.event_id})` : '';
+    const processLabel = sig.process_name ? ` [${sig.process_name}]` : '';
+    const ruleName = `[Auto] Suppress ${sig.event_category}${eventIdLabel}${processLabel} from ${sig.source}`;
 
     const { rows: ruleRows } = await pool.query(`
       INSERT INTO detection_rules
-        (user_id, name, description, action, enabled, match_category, match_host)
-      VALUES ($1, $2, $3, 'suppress', true, $4, $5)
+        (user_id, name, description, action, enabled, match_category, match_event_id, match_process, match_username)
+      VALUES ($1, $2, $3, 'suppress', true, $4, $5, $6, $7)
       RETURNING id
     `, [
       userId,
       ruleName,
       `Auto-created by Noise Advisor (score: ${candidate.score})`,
       sig.event_category || null,
-      sig.host || null,
+      sig.event_id || null,
+      sig.process_name || null,
+      sig.username || null,
     ]);
 
     const ruleId = ruleRows[0].id;
