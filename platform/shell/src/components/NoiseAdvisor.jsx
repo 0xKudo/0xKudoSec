@@ -128,9 +128,9 @@ export default function NoiseAdvisor() {
     const h = await authHeaders();
     const res = await fetch(`${API}/run`, { method: 'POST', headers: h });
     const data = await res.json();
-    await load();
     setRunning(false);
     setRunResult(data.result);
+    await load();
   };
 
   const updateStatus = async (id, newStatus) => {
