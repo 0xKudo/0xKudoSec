@@ -268,7 +268,7 @@ function LandingNav({ onLogin, onScrollToTools, isMobile }) {
   if (isMobile) {
     return (
       <nav style={s.navMobile}>
-        <div style={{ ...s.navBrand, borderRight: 'none', fontSize: '10px', padding: '0 14px', letterSpacing: '0.02em' }}>[ 0xKudo ]</div>
+        <div style={{ ...s.navBrand, borderRight: 'none', fontSize: '14px', padding: '0 14px', letterSpacing: '0.02em' }}>[ 0xKudo ]</div>
         <div style={{ display: 'flex', alignItems: 'stretch' }}>
           <div style={{ ...s.navTab(true), padding: '0 12px' }}>SIEM</div>
           <div style={{ ...s.navTab(false), padding: '0 12px' }} onClick={onScrollToTools}>Tools</div>
