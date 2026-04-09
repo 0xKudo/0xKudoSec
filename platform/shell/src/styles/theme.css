@@ -58,6 +58,11 @@ button, input, select, textarea, label {
   font-weight: 500;
 }
 
+button {
+  width: auto;
+  align-self: flex-start;
+}
+
 #root {
   height: 100%;
   zoom: 1.15;
