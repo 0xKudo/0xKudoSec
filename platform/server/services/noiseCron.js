@@ -38,9 +38,17 @@ export async function scoreNoiseCandidates(userId) {
     HAVING COUNT(*) / 7.0 > 10
   `, [userId]);
 
+  // Skip patterns already scored and actioned (approved, rejected, auto_created)
+  const { rows: existing } = await pool.query(`
+    SELECT field_signature FROM noise_candidates
+    WHERE user_id = $1 AND status IN ('approved', 'rejected', 'auto_created')
+  `, [userId]);
+  const existingSigs = new Set(existing.map(r => JSON.stringify(r.field_signature)));
+  const newPatterns = patterns.filter(p => !existingSigs.has(JSON.stringify(p.field_signature)));
+
   let scored = 0;
 
-  for (const pattern of patterns) {
+  for (const pattern of newPatterns) {
     let score = 0;
 
     if (parseFloat(pattern.daily_avg) > 50) score += 30;
