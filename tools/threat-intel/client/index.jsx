@@ -297,7 +297,7 @@ export default function ThreatIntelTool() {
 
       <div style={{ ...styles.inputRow, flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-start' : undefined }}>
         <input
-          style={styles.input}
+          style={isMobile ? { ...styles.input, width: '100%', boxSizing: 'border-box' } : styles.input}
           placeholder="1.2.3.4, example.com, https://..., or md5/sha256 hash"
           value={indicator}
           onChange={e => setIndicator(e.target.value)}
