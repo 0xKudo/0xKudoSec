@@ -164,14 +164,14 @@ export async function runAutoSuppress(userId) {
     const { rows: ruleRows } = await pool.query(`
       INSERT INTO detection_rules
         (user_id, name, description, action, enabled, match_category, match_event_id, match_process, match_username)
-      VALUES ($1, $2, $3, 'suppress', true, $4, $5, $6, $7)
+      VALUES ($1, $2, $3, 'suppress', true, $4, $5::integer, $6, $7)
       RETURNING id
     `, [
       userId,
       ruleName,
       `Auto-created by Noise Advisor (score: ${candidate.score})`,
       sig.event_category || null,
-      sig.event_id || null,
+      sig.event_id ?? null,
       sig.process_name || null,
       sig.username || null,
     ]);

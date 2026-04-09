@@ -72,14 +72,14 @@ router.patch('/candidates/:id', requireAuth, async (req, res) => {
     const { rows: ruleRows } = await pool().query(`
       INSERT INTO detection_rules
         (user_id, name, description, action, enabled, match_category, match_event_id, match_process, match_username)
-      VALUES ($1, $2, $3, 'suppress', true, $4, $5, $6, $7)
+      VALUES ($1, $2, $3, 'suppress', true, $4, $5::integer, $6, $7)
       RETURNING id
     `, [
       uid(req),
       ruleName,
       `Approved from Noise Advisor (score: ${rows[0].score})`,
       sig.event_category || null,
-      sig.event_id || null,
+      sig.event_id ?? null,
       sig.process_name || null,
       sig.username || null,
     ]);
@@ -122,14 +122,14 @@ router.post('/candidates/bulk', requireAuth, async (req, res) => {
       const processLabel = sig.process_name ? ` [${sig.process_name}]` : '';
       const { rows: ruleRows } = await pool().query(`
         INSERT INTO detection_rules (user_id, name, description, action, enabled, match_category, match_event_id, match_process, match_username)
-        VALUES ($1, $2, $3, 'suppress', true, $4, $5, $6, $7)
+        VALUES ($1, $2, $3, 'suppress', true, $4, $5::integer, $6, $7)
         RETURNING id
       `, [
         uid(req),
         `[Auto] Suppress ${sig.event_category || 'unknown'}${eventIdLabel}${processLabel} from ${sig.source || 'unknown'}`,
         `Approved from Noise Advisor (score: ${candidate.score})`,
         sig.event_category || null,
-        sig.event_id || null,
+        sig.event_id ?? null,
         sig.process_name || null,
         sig.username || null,
       ]);
