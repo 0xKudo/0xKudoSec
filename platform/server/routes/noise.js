@@ -112,9 +112,10 @@ router.post('/candidates/bulk', requireAuth, async (req, res) => {
   );
 
   if (status === 'approved') {
+    const selectPlaceholders = safeIds.map((_, i) => `$${i + 2}`).join(',');
     const { rows: candidates } = await pool().query(
-      `SELECT * FROM noise_candidates WHERE id IN (${placeholders}) AND user_id = $2`,
-      [...safeIds, uid(req)]
+      `SELECT * FROM noise_candidates WHERE user_id = $1 AND id IN (${selectPlaceholders})`,
+      [uid(req), ...safeIds]
     );
     for (const candidate of candidates) {
       const sig = candidate.field_signature;
