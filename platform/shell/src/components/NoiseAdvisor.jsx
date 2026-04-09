@@ -290,7 +290,7 @@ export default function NoiseAdvisor() {
                     >
                       <span style={{ fontSize: '10px', fontFamily: 'var(--font)', color, letterSpacing: '0.1em', textTransform: 'uppercase' }}>{sev}</span>
                       <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontFamily: 'var(--font)' }}>{items.length}</span>
-                      <span style={{ marginLeft: 'auto', fontSize: '10px', color: 'var(--text-muted)', fontFamily: 'var(--font)' }}>{collapsed ? '▶' : '▼'}</span>
+                      <span style={{ marginLeft: 'auto', fontSize: '10px', color: 'var(--text-muted)', fontFamily: 'var(--font)' }}>{collapsed ? '+' : '−'}</span>
                     </button>
                     {!collapsed && (isMobile ? (
                       items.map(c => (
