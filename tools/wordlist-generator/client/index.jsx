@@ -35,8 +35,8 @@ const styles = {
   tab: (active) => ({
     background: 'none',
     border: 'none',
-    borderBottom: active ? '2px solid var(--text-primary)' : '2px solid transparent',
-    color: active ? 'var(--text-primary)' : 'var(--text-muted)',
+    borderBottom: active ? '2px solid var(--accent-amber)' : '2px solid transparent',
+    color: active ? 'var(--accent-amber)' : 'var(--text-muted)',
         fontSize: '13px',
     padding: '8px 16px',
     cursor: 'pointer',
