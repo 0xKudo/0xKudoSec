@@ -330,7 +330,7 @@ export default function NetworkScanner() {
             disabled={loading}
           />
           <select
-            style={styles.select}
+            style={{ ...styles.select, alignSelf: 'flex-start' }}
             value={scanType}
             onChange={e => setScanType(e.target.value)}
             disabled={loading}
