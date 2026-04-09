@@ -189,37 +189,71 @@ export function AuditLog() {
 
   return (
     <div style={styles.page}>
-      <div style={styles.header}>
-        <div>
+      {isMobile ? (
+        <div style={{ padding: '10px 16px', borderBottom: '1px solid var(--border)', background: 'var(--bg-surface)', flexShrink: 0 }}>
           <div style={styles.title}>Audit Log</div>
-          <div style={styles.subtitle}>
+          <div style={{ ...styles.subtitle, marginTop: '2px' }}>
             Privileged user actions, append-only record
             {retentionPolicy && (
-              <span style={{ marginLeft: '12px', color: retentionPolicy.enabled && retentionPolicy.days < 365 ? 'var(--severity-high)' : 'var(--text-subtle)' }}>
-                {retentionPolicy.enabled
-                  ? `· retained ${retentionPolicy.days} days${retentionPolicy.days < 365 ? ' (below PCI DSS minimum)' : ''}`
-                  : '· auto-purge disabled, retained indefinitely'}
+              <span style={{ color: retentionPolicy.enabled && retentionPolicy.days < 365 ? 'var(--severity-high)' : 'var(--text-subtle)' }}>
+                {' · '}{retentionPolicy.enabled
+                  ? `retained ${retentionPolicy.days} days`
+                  : 'auto-purge disabled'}
               </span>
             )}
           </div>
         </div>
-      </div>
+      ) : (
+        <div style={styles.header}>
+          <div>
+            <div style={styles.title}>Audit Log</div>
+            <div style={styles.subtitle}>
+              Privileged user actions, append-only record
+              {retentionPolicy && (
+                <span style={{ marginLeft: '12px', color: retentionPolicy.enabled && retentionPolicy.days < 365 ? 'var(--severity-high)' : 'var(--text-subtle)' }}>
+                  {retentionPolicy.enabled
+                    ? `· retained ${retentionPolicy.days} days${retentionPolicy.days < 365 ? ' (below PCI DSS minimum)' : ''}`
+                    : '· auto-purge disabled, retained indefinitely'}
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
-      <div style={styles.filterRow}>
-        <select style={styles.select} value={actionFilter} onChange={e => setActionFilter(e.target.value)}>
-          <option value="">All actions</option>
-          {Object.entries(ACTION_LABELS).map(([k, v]) => (
-            <option key={k} value={k}>{v}</option>
-          ))}
-        </select>
-        <select style={styles.select} value={limitFilter} onChange={e => setLimitFilter(e.target.value)}>
-          <option value="50">Last 50</option>
-          <option value="100">Last 100</option>
-          <option value="250">Last 250</option>
-          <option value="500">Last 500</option>
-        </select>
-        <button style={styles.refreshBtn} onClick={load}>↻ Refresh</button>
-      </div>
+      {isMobile ? (
+        <div style={{ padding: '10px 16px', borderBottom: '1px solid var(--border)', display: 'flex', gap: '8px', alignItems: 'center', flexShrink: 0 }}>
+          <select style={{ ...styles.select, flex: 1 }} value={actionFilter} onChange={e => setActionFilter(e.target.value)}>
+            <option value="">All actions</option>
+            {Object.entries(ACTION_LABELS).map(([k, v]) => (
+              <option key={k} value={k}>{v}</option>
+            ))}
+          </select>
+          <select style={styles.select} value={limitFilter} onChange={e => setLimitFilter(e.target.value)}>
+            <option value="50">Last 50</option>
+            <option value="100">Last 100</option>
+            <option value="250">Last 250</option>
+            <option value="500">Last 500</option>
+          </select>
+          <button style={{ ...styles.refreshBtn, marginLeft: 0 }} onClick={load}>↻</button>
+        </div>
+      ) : (
+        <div style={styles.filterRow}>
+          <select style={styles.select} value={actionFilter} onChange={e => setActionFilter(e.target.value)}>
+            <option value="">All actions</option>
+            {Object.entries(ACTION_LABELS).map(([k, v]) => (
+              <option key={k} value={k}>{v}</option>
+            ))}
+          </select>
+          <select style={styles.select} value={limitFilter} onChange={e => setLimitFilter(e.target.value)}>
+            <option value="50">Last 50</option>
+            <option value="100">Last 100</option>
+            <option value="250">Last 250</option>
+            <option value="500">Last 500</option>
+          </select>
+          <button style={styles.refreshBtn} onClick={load}>↻ Refresh</button>
+        </div>
+      )}
 
       <div style={styles.tableWrap}>
         {loading ? (
