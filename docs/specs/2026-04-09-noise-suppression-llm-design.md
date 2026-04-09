@@ -166,7 +166,42 @@ Managed models (Phi-3.5 Mini, Qwen2.5, Llama 3.2) are **not bundled** in the ins
 4. Verifies SHA-256 checksum before use
 5. Stores in `%APPDATA%\0xKudo\models\<model-name>.gguf`
 
-Custom GGUF models are loaded directly from the user-specified path — no download step.
+### Custom Model UI
+
+A dedicated panel in Configuration > Noise Advisor > Model Library. Custom models are never blocked — all warnings are informational only. The user decides.
+
+**Adding a model — two methods:**
+
+1. **Browse local file** — file picker filtered to `.gguf` files, selects a file already on disk
+2. **Download by URL** — paste a Hugging Face model URL or direct download URL, app fetches the file into `%APPDATA%\0xKudo\models\` with a progress bar
+
+**Compatibility check** — runs automatically after file is selected or download completes. Reads the GGUF file header to determine:
+
+| Check | Pass | Warning (not a block) |
+|-------|------|-----------------------|
+| Valid GGUF format | Header magic bytes match | "Not a valid GGUF file" |
+| Quantization type | Q4, Q5, Q6, Q8, F16, F32 | "Q2/Q3 quantization may produce poor reasoning quality" |
+| Model type | instruct/chat model | "This may be an embedding model. It may not produce useful analysis." |
+| RAM estimate | File size x 1.05 fits in available RAM | "This model requires approximately XGB of RAM. Your system has YGB available. You can still use it." |
+
+**Model library table** — lists all added models (managed + custom):
+
+| Column | Description |
+|--------|-------------|
+| Name | Model filename or user-assigned name |
+| Type | Managed / Custom |
+| Size | File size on disk |
+| RAM Est. | Estimated RAM during inference |
+| Quantization | Q4, F32, etc. |
+| Status | Ready / Downloading / Incompatible / Update available |
+| Actions | Set as active, Remove |
+
+Multiple models can be saved. Only one is active at a time. Removing a managed model deletes the `.gguf` file from AppData. Removing a custom model removes it from the library only — the original file is not deleted.
+
+**IPC additions:**
+- `llm:add-custom` — validate and register a custom GGUF path
+- `llm:download-url` — download a model from a URL with progress events
+- `llm:remove-model` — remove a model from the library
 
 ### Model Update Check
 
