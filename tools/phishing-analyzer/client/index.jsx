@@ -339,7 +339,7 @@ export default function PhishingAnalyzerTool() {
               <div style={styles.label}>Indicators ({result.indicators.length})</div>
               <div style={styles.indicatorList}>
                 {result.indicators.map((ind, i) => (
-                  <div key={i} style={{ ...styles.indicatorItem, flexDirection: isMobile ? 'column' : 'row' }}>
+                  <div key={i} style={{ ...styles.indicatorItem, flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-start' : undefined }}>
                     <span style={{ ...styles.indicatorType, minWidth: isMobile ? 0 : '160px' }}>
                       {INDICATOR_LABELS[ind.type] || ind.type}
                     </span>

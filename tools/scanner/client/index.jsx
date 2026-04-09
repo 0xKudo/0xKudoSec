@@ -220,7 +220,7 @@ export default function Scanner() {
 
       <div style={styles.section}>
         <span style={styles.label}>Target URL</span>
-        <div style={{ ...styles.inputRow, flexDirection: isMobile ? 'column' : 'row' }}>
+        <div style={{ ...styles.inputRow, flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-start' : undefined }}>
           <input
             style={isMobile ? { ...styles.input, minWidth: 0, width: '100%', boxSizing: 'border-box' } : styles.input}
             placeholder="https://example.com"
@@ -237,7 +237,7 @@ export default function Scanner() {
 
       <div style={styles.section}>
         <span style={styles.label}>Scan Mode</span>
-        <div style={{ ...styles.modeRow, flexDirection: isMobile ? 'column' : 'row' }}>
+        <div style={{ ...styles.modeRow, flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-start' : undefined }}>
           <div style={styles.modeCard(!activeMode)} onClick={() => { setActiveMode(false); setAuthorized(false); }}>
             <div style={styles.modeTitle}>Passive</div>
             <div style={styles.modeDesc}>Headers, cookies, forms, info leakage. No attack traffic sent.</div>

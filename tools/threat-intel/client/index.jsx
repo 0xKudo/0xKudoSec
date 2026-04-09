@@ -295,7 +295,7 @@ export default function ThreatIntelTool() {
         </p>
       </div>
 
-      <div style={{ ...styles.inputRow, flexDirection: isMobile ? 'column' : 'row' }}>
+      <div style={{ ...styles.inputRow, flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-start' : undefined }}>
         <input
           style={styles.input}
           placeholder="1.2.3.4, example.com, https://..., or md5/sha256 hash"

@@ -300,7 +300,7 @@ export default function IncidentReportTool() {
             <div style={styles.reportClassification}>{report.classification}</div>
           </div>
 
-          <div style={{ ...styles.timelineRow, flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? '12px' : '24px' }}>
+          <div style={{ ...styles.timelineRow, flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-start' : undefined, gap: isMobile ? '12px' : '24px' }}>
             <div>
               <div style={styles.label}>Detected At</div>
               <div style={{ ...styles.value, marginBottom: 0 }}>{report.detectedAt || '—'}</div>

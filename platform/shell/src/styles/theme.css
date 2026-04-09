@@ -60,7 +60,6 @@ button, input, select, textarea, label {
 
 button {
   width: auto;
-  align-self: flex-start;
 }
 
 #root {

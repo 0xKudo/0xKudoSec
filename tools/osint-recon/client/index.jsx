@@ -272,7 +272,7 @@ export default function OsintReconTool() {
         </p>
       </div>
 
-      <div style={{ ...styles.inputRow, flexDirection: isMobile ? 'column' : 'row' }}>
+      <div style={{ ...styles.inputRow, flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-start' : undefined }}>
         <input
           style={styles.input}
           placeholder="example.com, 192.168.1.1, or user@example.com"

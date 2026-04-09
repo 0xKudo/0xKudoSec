@@ -250,7 +250,7 @@ export default function Intruder() {
         <div style={styles.panel}>
           <div style={styles.panelTitle}>Request Template</div>
 
-          <div style={{ ...styles.row, flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-start' : 'flex-end' }}>
+          <div style={{ ...styles.row, flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-start' : undefined, alignItems: isMobile ? 'flex-start' : 'flex-end' }}>
             <div>
               <span style={styles.label}>Method</span>
               <select style={styles.select} value={method} onChange={e => setMethod(e.target.value)} disabled={loading}>
