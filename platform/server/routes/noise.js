@@ -235,25 +235,13 @@ router.patch('/settings', requireAuth, async (req, res) => {
   res.json({ ok: true });
 });
 
-// POST /api/siem/noise/run — manual trigger for scoring job (streams NDJSON progress)
+// POST /api/siem/noise/run — manual trigger for scoring job
 router.post('/run', requireAuth, async (req, res) => {
   const userId = uid(req);
-
-  res.setHeader('Content-Type', 'application/x-ndjson');
-  res.setHeader('Transfer-Encoding', 'chunked');
-  res.setHeader('Cache-Control', 'no-cache');
-
-  const send = (obj) => res.write(JSON.stringify(obj) + '\n');
-
-  const result = await scoreNoiseCandidates(userId, ({ checked, total, scored }) => {
-    send({ type: 'progress', checked, total, scored });
-  });
-
+  const result = await scoreNoiseCandidates(userId);
   await runAutoSuppress(userId);
   await audit(userId, 'noise.manual_run', result || {}, req.ip);
-
-  send({ type: 'done', result });
-  res.end();
+  res.json({ ok: true, result });
 });
 
 export default router;

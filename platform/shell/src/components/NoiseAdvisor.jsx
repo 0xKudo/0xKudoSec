@@ -126,54 +126,18 @@ export default function NoiseAdvisor() {
     setRunning(true);
     setRunResult(null);
     setRunProgress(null);
-    const h = await authHeaders();
-    let res;
     try {
-      res = await fetch(`${API}/run`, { method: 'POST', headers: h });
+      const h = await authHeaders();
+      const res = await fetch(`${API}/run`, { method: 'POST', headers: h });
+      const data = await res.json();
+      await load();
+      setRunResult(data.result);
     } catch (err) {
       setRunResult({ error: true });
+    } finally {
       setRunning(false);
-      return;
+      setRunProgress(null);
     }
-    if (!res.ok || !res.body) {
-      setRunResult({ error: true });
-      setRunning(false);
-      return;
-    }
-    const reader = res.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = '';
-    const processLines = (text) => {
-      buffer += text;
-      const lines = buffer.split('\n');
-      buffer = lines.pop();
-      for (const line of lines) {
-        if (!line.trim()) continue;
-        try {
-          const msg = JSON.parse(line);
-          if (msg.type === 'progress') setRunProgress(msg);
-          if (msg.type === 'done') setRunResult(msg.result);
-        } catch {}
-      }
-    };
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) {
-        // flush any remaining buffered data
-        if (buffer.trim()) {
-          try {
-            const msg = JSON.parse(buffer);
-            if (msg.type === 'progress') setRunProgress(msg);
-            if (msg.type === 'done') setRunResult(msg.result);
-          } catch {}
-        }
-        break;
-      }
-      processLines(decoder.decode(value, { stream: true }));
-    }
-    await load();
-    setRunning(false);
-    setRunProgress(null);
   };
 
   const updateStatus = async (id, newStatus) => {
@@ -238,17 +202,11 @@ export default function NoiseAdvisor() {
         ))}
       </div>
 
-      {/* Live progress bar — shown while running */}
+      {/* Running indicator */}
       {running && (
         <div style={{ padding: '10px 20px', background: 'var(--bg-surface)', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
-          <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '6px' }}>
-            {runProgress
-              ? `Analyzing patterns: ${runProgress.checked} / ${runProgress.total} checked, ${runProgress.scored} new candidate${runProgress.scored !== 1 ? 's' : ''} found...`
-              : 'Starting analysis...'}
-          </div>
-          <div style={s.progress}>
-            <div style={s.progressFill(runProgress ? (runProgress.checked / Math.max(runProgress.total, 1)) * 100 : 0)} />
-          </div>
+          <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Analyzing patterns...</div>
+          <div style={s.progress}><div style={s.progressFill(100)} /></div>
         </div>
       )}
 
@@ -298,11 +256,7 @@ export default function NoiseAdvisor() {
             onMouseEnter={e => { if (!running) e.currentTarget.style.color = 'var(--text-primary)'; }}
             onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; }}
           >
-            {running
-              ? runProgress
-                ? `${runProgress.checked} / ${runProgress.total}`
-                : 'Starting...'
-              : 'Run Analysis'}
+            {running ? 'Running...' : 'Run Analysis'}
           </button>
         </div>
 
