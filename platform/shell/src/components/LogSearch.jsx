@@ -192,31 +192,43 @@ export function LogSearch() {
         )}
       </div>
 
-      <div style={{ ...s.filterRow, flexWrap: 'wrap' }}>
-        <span style={s.filterLabel}>Time</span>
-        {HOURS_OPTIONS.map(h => (
-          <button key={h} style={hours === h ? s.btnActive : s.btn} onClick={() => { setHours(h); if (searched) search(query, h, sevFilters); }}>
-            {h < 24 ? `${h}h` : h === 24 ? '24h' : h === 48 ? '48h' : '7d'}
-          </button>
-        ))}
-        <span style={{ ...s.filterLabel, marginLeft: isMobile ? 0 : '12px' }}>Severity</span>
-        {['critical', 'high', 'medium', 'low', 'info'].map(sev => (
-          <button
-            key={sev}
-            style={{
-              background: sevFilters.has(sev) ? sevColor(sev) : 'none',
-              border: `1px solid ${sevColor(sev)}`,
-              color: sevFilters.has(sev) ? 'var(--bg-primary)' : sevColor(sev),
-              fontFamily: 'var(--font)', fontSize: '10px', padding: '2px 8px',
-              cursor: 'pointer', letterSpacing: '0.04em', textTransform: 'uppercase',
-            }}
-            onClick={() => toggleSev(sev)}
-          >{sev}</button>
-        ))}
-        {sevFilters.size > 0 && (
-          <button style={{ ...s.btn, fontSize: '10px', padding: '2px 8px' }} onClick={() => { setSevFilters(new Set()); if (searched) search(query, hours, new Set()); }}>Clear</button>
-        )}
-      </div>
+      {isMobile ? (
+        <div style={{ ...s.filterRow, flexDirection: 'column', alignItems: 'flex-start', gap: '8px' }}>
+          <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <span style={s.filterLabel}>Time</span>
+            {HOURS_OPTIONS.map(h => (
+              <button key={h} style={hours === h ? s.btnActive : s.btn} onClick={() => { setHours(h); if (searched) search(query, h, sevFilters); }}>
+                {h < 24 ? `${h}h` : h === 24 ? '24h' : h === 48 ? '48h' : '7d'}
+              </button>
+            ))}
+          </div>
+          <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <span style={s.filterLabel}>Severity</span>
+            {['critical', 'high', 'medium', 'low', 'info'].map(sev => (
+              <button key={sev} style={{ background: sevFilters.has(sev) ? sevColor(sev) : 'none', border: `1px solid ${sevColor(sev)}`, color: sevFilters.has(sev) ? 'var(--bg-primary)' : sevColor(sev), fontFamily: 'var(--font)', fontSize: '10px', padding: '2px 8px', cursor: 'pointer', letterSpacing: '0.04em', textTransform: 'uppercase' }} onClick={() => toggleSev(sev)}>{sev}</button>
+            ))}
+            {sevFilters.size > 0 && (
+              <button style={{ ...s.btn, fontSize: '10px', padding: '2px 8px' }} onClick={() => { setSevFilters(new Set()); if (searched) search(query, hours, new Set()); }}>Clear</button>
+            )}
+          </div>
+        </div>
+      ) : (
+        <div style={{ ...s.filterRow, flexWrap: 'wrap' }}>
+          <span style={s.filterLabel}>Time</span>
+          {HOURS_OPTIONS.map(h => (
+            <button key={h} style={hours === h ? s.btnActive : s.btn} onClick={() => { setHours(h); if (searched) search(query, h, sevFilters); }}>
+              {h < 24 ? `${h}h` : h === 24 ? '24h' : h === 48 ? '48h' : '7d'}
+            </button>
+          ))}
+          <span style={{ ...s.filterLabel, marginLeft: '12px' }}>Severity</span>
+          {['critical', 'high', 'medium', 'low', 'info'].map(sev => (
+            <button key={sev} style={{ background: sevFilters.has(sev) ? sevColor(sev) : 'none', border: `1px solid ${sevColor(sev)}`, color: sevFilters.has(sev) ? 'var(--bg-primary)' : sevColor(sev), fontFamily: 'var(--font)', fontSize: '10px', padding: '2px 8px', cursor: 'pointer', letterSpacing: '0.04em', textTransform: 'uppercase' }} onClick={() => toggleSev(sev)}>{sev}</button>
+          ))}
+          {sevFilters.size > 0 && (
+            <button style={{ ...s.btn, fontSize: '10px', padding: '2px 8px' }} onClick={() => { setSevFilters(new Set()); if (searched) search(query, hours, new Set()); }}>Clear</button>
+          )}
+        </div>
+      )}
 
       <div style={{ ...s.hintsRow, flexWrap: 'wrap' }}>
         <span style={{ ...s.filterLabel, flexShrink: 0 }}>Field syntax</span>
