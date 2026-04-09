@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { requireAuth } from '../middleware/requireAuth.js';
 import db from '../services/db.js';
 import { audit } from '../services/audit.js';
+import { scoreNoiseCandidates, runAutoSuppress } from '../services/noiseCron.js';
 
 const router = Router();
 const pool = () => db.getPool();
@@ -199,6 +200,15 @@ router.patch('/settings', requireAuth, async (req, res) => {
 
   await audit(uid(req), 'noise.settings_update', updates, req.ip);
   res.json({ ok: true });
+});
+
+// POST /api/siem/noise/run — manual trigger for scoring job
+router.post('/run', requireAuth, async (req, res) => {
+  const userId = uid(req);
+  const result = await scoreNoiseCandidates(userId);
+  await runAutoSuppress(userId);
+  await audit(userId, 'noise.manual_run', result || {}, req.ip);
+  res.json({ ok: true, result });
 });
 
 export default router;

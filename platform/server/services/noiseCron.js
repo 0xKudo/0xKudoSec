@@ -4,7 +4,7 @@ import { audit } from './audit.js';
 const HIGH_THRESHOLD = 70;
 const MEDIUM_THRESHOLD = 40;
 
-async function scoreNoiseCandidates(userId) {
+export async function scoreNoiseCandidates(userId) {
   const pool = db.getPool();
 
   const { rows: thresholdRows } = await pool.query(`
@@ -100,7 +100,7 @@ async function scoreNoiseCandidates(userId) {
   return { scored };
 }
 
-async function runAutoSuppress(userId) {
+export async function runAutoSuppress(userId) {
   const pool = db.getPool();
 
   const { rows: settingRows } = await pool.query(

@@ -7,9 +7,18 @@ const API = '/api/siem/noise';
 const s = {
   container: { padding: '24px', fontFamily: 'var(--font)' },
   containerMobile: { padding: '16px', fontFamily: 'var(--font)' },
-  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '8px' },
-  title: { fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', letterSpacing: '0.06em', textTransform: 'uppercase' },
-  tabRow: { display: 'flex', gap: '4px' },
+  header: {
+    padding: '0 20px', height: '45px', borderBottom: '1px solid var(--border)',
+    background: 'var(--bg-surface)', display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0,
+    margin: '-24px -24px 20px -24px',
+  },
+  headerMobile: {
+    padding: '0 16px', height: '45px', borderBottom: '1px solid var(--border)',
+    background: 'var(--bg-surface)', display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0,
+    margin: '-16px -16px 16px -16px',
+  },
+  title: { fontSize: '13px', color: 'var(--text-primary)', letterSpacing: '0.04em' },
+  tabRow: { display: 'flex', gap: '4px', marginLeft: 'auto' },
   tabBtn: (active) => ({
     background: 'none',
     border: 'none',
@@ -55,6 +64,7 @@ export default function NoiseAdvisor() {
   const [selected, setSelected] = useState(new Set());
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [running, setRunning] = useState(false);
 
   const authHeaders = useCallback(async () => {
     const token = await getAccessTokenSilently();
@@ -108,6 +118,14 @@ export default function NoiseAdvisor() {
     load();
   };
 
+  const runAnalysis = async () => {
+    setRunning(true);
+    const h = await authHeaders();
+    await fetch(`${API}/run`, { method: 'POST', headers: h });
+    await load();
+    setRunning(false);
+  };
+
   const toggleSelect = (id) => {
     setSelected(prev => {
       const next = new Set(prev);
@@ -124,8 +142,11 @@ export default function NoiseAdvisor() {
 
   return (
     <div style={isMobile ? s.containerMobile : s.container}>
-      <div style={s.header}>
+      <div style={isMobile ? s.headerMobile : s.header}>
         <div style={s.title}>Noise Advisor</div>
+        <button style={{ ...s.btnSmall, marginLeft: '8px', opacity: running ? 0.5 : 1 }} onClick={runAnalysis} disabled={running}>
+          {running ? 'Running...' : 'Run Analysis'}
+        </button>
         <div style={s.tabRow}>
           <button style={s.tabBtn(view === 'candidates')} onClick={() => setView('candidates')}>Candidates</button>
           <button style={s.tabBtn(view === 'activity')} onClick={() => setView('activity')}>Activity Log</button>
