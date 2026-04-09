@@ -131,7 +131,7 @@ export default function NoiseAdvisor() {
     const h = await authHeaders();
     await fetch(`${API}/candidates/bulk`, { method: 'POST', headers: h, body: JSON.stringify({ ids, status: newStatus }) });
     setSelected(new Set());
-    setActionBanner(`${ids.length} candidate${ids.length !== 1 ? 's' : ''} ${newStatus === 'approved' ? 'approved — suppression rules created.' : 'rejected.'}`);
+    setActionBanner(`${ids.length} candidate${ids.length !== 1 ? 's' : ''} ${newStatus === 'approved' ? 'approved: suppression rules created.' : 'rejected.'}`);
     setTimeout(() => setActionBanner(null), 3000);
     await load();
     setPendingIds(new Set());
@@ -189,14 +189,14 @@ export default function NoiseAdvisor() {
       <div style={isMobile ? s.bodyMobile : s.body}>
         {/* Run result banner */}
         {runResult && !runResult.skipped && (
-          <div style={{ padding: '8px 14px', marginBottom: '16px', background: 'var(--bg-surface)', border: '1px solid var(--border)', fontSize: '11px', color: 'var(--text-muted)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span>Analysis complete — {runResult.scored ?? 0} new candidate{runResult.scored !== 1 ? 's' : ''} found.</span>
-            <button style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontFamily: 'var(--font)', fontSize: '11px', cursor: 'pointer' }} onClick={() => setRunResult(null)}>✕</button>
+          <div style={{ padding: '8px 14px', marginBottom: '16px', background: 'var(--bg-surface)', border: '1px solid var(--severity-low)', fontSize: '11px', color: 'var(--severity-low)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span>Analysis complete: {runResult.scored ?? 0} new candidate{runResult.scored !== 1 ? 's' : ''} found.</span>
+            <button style={{ background: 'none', border: 'none', color: 'var(--severity-low)', fontFamily: 'var(--font)', fontSize: '11px', cursor: 'pointer' }} onClick={() => setRunResult(null)}>✕</button>
           </div>
         )}
         {runResult?.skipped && (
           <div style={{ padding: '8px 14px', marginBottom: '16px', background: 'var(--bg-surface)', border: '1px solid var(--border)', fontSize: '11px', color: 'var(--text-muted)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span>Not enough data yet — {Math.round(runResult.days_ingested ?? 0)} of 7 days, {parseInt(runResult.total_events ?? 0).toLocaleString()} of 10,000 events.</span>
+            <span>Not enough data yet: {Math.round(runResult.days_ingested ?? 0)} of 7 days, {parseInt(runResult.total_events ?? 0).toLocaleString()} of 10,000 events.</span>
             <button style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontFamily: 'var(--font)', fontSize: '11px', cursor: 'pointer' }} onClick={() => setRunResult(null)}>✕</button>
           </div>
         )}
@@ -209,7 +209,7 @@ export default function NoiseAdvisor() {
         )}
         {/* Settings bar */}
         <div style={s.settingsBar}>
-          <span style={s.label}>Auto-suppress{saving ? ' — saving...' : ''}</span>
+          <span style={s.label}>Auto-suppress{saving ? ' saving...' : ''}</span>
           <select
             style={s.select}
             value={settings.noise_auto_suppress}
@@ -251,7 +251,7 @@ export default function NoiseAdvisor() {
               candidates.map(c => (
                 <div key={c.id} style={s.card}>
                   <div style={s.cardTitle}>{c.field_signature.event_category}</div>
-                  <div style={s.cardMeta}>{c.field_signature.source} / {c.field_signature.host} — {parseFloat(c.daily_avg).toFixed(1)}/day</div>
+                  <div style={s.cardMeta}>{c.field_signature.source} / {c.field_signature.host}, {parseFloat(c.daily_avg).toFixed(1)}/day</div>
                   <div style={{ marginBottom: '8px' }}>
                     <span style={s.badge(c.confidence === 'high' ? 'var(--severity-critical)' : 'var(--severity-medium)')}>{c.confidence.toUpperCase()}</span>
                     <span style={{ marginLeft: '8px', fontSize: '11px', color: 'var(--text-muted)' }}>score {c.score}</span>
@@ -319,7 +319,7 @@ export default function NoiseAdvisor() {
               activity.map(c => (
                 <div key={c.id} style={s.card}>
                   <div style={s.cardTitle}>{c.field_signature.event_category}</div>
-                  <div style={s.cardMeta}>{c.field_signature.source} — {c.rule_name || 'No rule'}</div>
+                  <div style={s.cardMeta}>{c.field_signature.source}, {c.rule_name || 'No rule'}</div>
                   <div style={{ marginBottom: '8px' }}>
                     <span style={s.badge('var(--severity-low)')}>{c.status}</span>
                     <span style={{ marginLeft: '8px', fontSize: '11px', color: 'var(--text-muted)' }}>{new Date(c.updated_at).toLocaleDateString()}</span>
