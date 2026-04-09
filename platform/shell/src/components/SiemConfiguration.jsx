@@ -209,7 +209,7 @@ const s = {
 };
 
 const BASE_TABS = ['API Key', 'Connect a Source', 'Log Retention', 'Active Sources', 'Account', 'Appearance'];
-const SHIPPER_TABS = ['Fluent Bit', 'Winlogbeat 7', 'Manual API'];
+const SHIPPER_TABS = ['Fluent Bit', 'Winlogbeat 7', 'Manual API', 'Wireshark'];
 
 const FLUENT_BIT_CONFIG = (apiKey) => `[SERVICE]
     Flush        2
@@ -311,6 +311,8 @@ export function SiemConfiguration({ navLayout, setNavLayout, theme, setTheme }) 
   const [agentAction, setAgentAction] = useState(null);
   const [trayOnClose, setTrayOnClose] = useState(true);
   const [fbInfo, setFbInfo] = useState(null); // { installed, version, confPath }
+  const [fbInstalling, setFbInstalling] = useState(false);
+  const [fbInstallMsg, setFbInstallMsg] = useState(null);
 
   // Role-based access
   const ROLES_CLAIM = 'https://tools.laynekudo.com/roles';
@@ -1271,9 +1273,10 @@ winlogbeat.event_logs:
             )}
 
             <div style={{ display: 'flex', gap: 0, marginBottom: '14px', borderBottom: '1px solid var(--border)' }}>
-              {SHIPPER_TABS.map((t, i) => (
-                <button key={t} style={s.shipperTab(shipperTab === i)} onClick={() => { setShipperTab(i); setConfigCopied(false); }}>{t}</button>
-              ))}
+              {SHIPPER_TABS.filter(t => !isMobile || t !== 'Wireshark').map((t, i) => {
+                const idx = SHIPPER_TABS.indexOf(t);
+                return <button key={t} style={s.shipperTab(shipperTab === idx)} onClick={() => { setShipperTab(idx); setConfigCopied(false); }}>{t}</button>;
+              })}
             </div>
 
             {shipperTab === 0 && (
@@ -1320,9 +1323,33 @@ winlogbeat.event_logs:
                         {fbInfo.confPath && <span>Config: <span style={{ color: 'var(--text-primary)', fontFamily: 'var(--font)' }}>{fbInfo.confPath}</span></span>}
                       </div>
                     )}
-                    {agentStatus === 'NOT_INSTALLED' && (
-                      <div style={{ marginTop: '8px', fontSize: '11px', color: 'var(--text-muted)' }}>
-                        Fluent Bit is not installed. Follow the setup instructions below to install it as a Windows service.
+                    {agentStatus === 'NOT_INSTALLED' && !isMobile && (
+                      <div style={{ marginTop: '10px', display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                          Fluent Bit is not installed.{isElectron ? ' Install it now or follow the manual setup below.' : ' Follow the setup instructions below.'}
+                        </span>
+                        {isElectron && (
+                          <>
+                            <button
+                              style={s.btnPrimary}
+                              disabled={fbInstalling}
+                              onClick={async () => {
+                                setFbInstalling(true);
+                                setFbInstallMsg(null);
+                                const res = await window.electron.fluentBit.install();
+                                setFbInstalling(false);
+                                if (res.ok) {
+                                  setFbInstallMsg({ ok: true, text: 'Installer launched. Complete the Fluent Bit setup, then return here — the status will update automatically.' });
+                                } else {
+                                  setFbInstallMsg({ ok: false, text: res.err });
+                                }
+                              }}
+                            >{fbInstalling ? 'Launching...' : 'Install Fluent Bit'}</button>
+                            {fbInstallMsg && (
+                              <span style={{ fontSize: '11px', color: fbInstallMsg.ok ? '#16a34a' : '#ef4444' }}>{fbInstallMsg.text}</span>
+                            )}
+                          </>
+                        )}
                       </div>
                     )}
                   </div>
@@ -1370,6 +1397,19 @@ winlogbeat.event_logs:
                   2. Replace <code>winlogbeat.yml</code> with the config above<br />
                   3. Run as Administrator: <code>.\install-service-winlogbeat.ps1</code><br />
                   4. Start the service: <code>Start-Service winlogbeat</code>
+                </div>
+              </div>
+            )}
+
+            {shipperTab === 3 && !isMobile && (
+              <div>
+                <div style={s.note}>
+                  <strong style={{ color: 'var(--text-primary)' }}>Wireshark</strong> packet capture and analysis is available as a dedicated section in the desktop app.<br /><br />
+                  {isElectron ? (
+                    <>Switch to the <strong>WIRESHARK</strong> section in the top navigation to capture live traffic or import PCAP files. If Wireshark is not installed, an install prompt will appear there.</>
+                  ) : (
+                    <>Packet capture requires the desktop app. <a href="https://github.com/0xKudoX/0xKudoSec-releases/releases/latest" style={{ color: 'var(--accent-amber)' }} onClick={e => { e.preventDefault(); window.open('https://github.com/0xKudoX/0xKudoSec-releases/releases/latest'); }}>Download the desktop app</a> to use Wireshark integration.</>
+                  )}
                 </div>
               </div>
             )}

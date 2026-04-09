@@ -322,6 +322,20 @@ ipcMain.handle('fluent-bit:restart', async (event) => {
   return { ok: !err, err };
 });
 
+ipcMain.handle('fluent-bit:install', async (event) => {
+  if (!isValidSender(event)) return { ok: false, err: 'Unauthorized' };
+  const installerPath = path.join(process.resourcesPath, 'assets', 'fluent-bit-installer.exe');
+  if (!fs.existsSync(installerPath)) return { ok: false, err: 'Bundled installer not found. Re-install 0xKudo Security Toolkit to get the latest version.' };
+  try {
+    // Run installer interactively (no /S) so the user sees the Fluent Bit install wizard
+    const { exec } = require('child_process');
+    exec(`"${installerPath}"`, { windowsHide: false });
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, err: 'Failed to launch installer.' };
+  }
+});
+
 // ── Fluent Bit path detection ─────────────────────────────────────────────
 // Returns the full path to cybertools.conf, or null if Fluent Bit is not installed.
 function findFluentBitConfPath() {
