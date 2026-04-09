@@ -4,7 +4,7 @@ import { audit } from './audit.js';
 const HIGH_THRESHOLD = 70;
 const MEDIUM_THRESHOLD = 40;
 
-export async function scoreNoiseCandidates(userId) {
+export async function scoreNoiseCandidates(userId, onProgress = null) {
   const pool = db.getPool();
 
   const { rows: thresholdRows } = await pool.query(`
@@ -56,8 +56,11 @@ export async function scoreNoiseCandidates(userId) {
   const newPatterns = patterns.filter(p => !existingSigs.has(JSON.stringify(p.field_signature)));
 
   let scored = 0;
+  const total = newPatterns.length;
+  let checked = 0;
 
   for (const pattern of newPatterns) {
+    checked++;
     let score = 0;
 
     if (parseFloat(pattern.daily_avg) > 50) score += 30;
@@ -112,9 +115,10 @@ export async function scoreNoiseCandidates(userId) {
     ]);
 
     if (rowCount > 0) scored++;
+    if (onProgress) onProgress({ checked, total, scored });
   }
 
-  return { scored };
+  return { scored, total };
 }
 
 export async function runAutoSuppress(userId) {

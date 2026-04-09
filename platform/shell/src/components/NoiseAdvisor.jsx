@@ -67,6 +67,7 @@ export default function NoiseAdvisor() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [running, setRunning] = useState(false);
+  const [runProgress, setRunProgress] = useState(null);
   const [runResult, setRunResult] = useState(null);
   const [pendingIds, setPendingIds] = useState(new Set());
   const [actionBanner, setActionBanner] = useState(null);
@@ -107,12 +108,30 @@ export default function NoiseAdvisor() {
   const runAnalysis = async () => {
     setRunning(true);
     setRunResult(null);
+    setRunProgress(null);
     const h = await authHeaders();
     const res = await fetch(`${API}/run`, { method: 'POST', headers: h });
-    const data = await res.json();
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop();
+      for (const line of lines) {
+        if (!line.trim()) continue;
+        try {
+          const msg = JSON.parse(line);
+          if (msg.type === 'progress') setRunProgress(msg);
+          if (msg.type === 'done') setRunResult(msg.result);
+        } catch {}
+      }
+    }
     await load();
     setRunning(false);
-    setRunResult(data.result);
+    setRunProgress(null);
   };
 
   const updateStatus = async (id, newStatus) => {
@@ -169,7 +188,11 @@ export default function NoiseAdvisor() {
           onMouseEnter={e => { if (!running) e.currentTarget.style.color = 'var(--text-primary)'; }}
           onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; }}
         >
-          {running ? 'Running...' : 'Run Analysis'}
+          {running
+            ? runProgress
+              ? `${runProgress.checked} / ${runProgress.total}`
+              : 'Starting...'
+            : 'Run Analysis'}
         </button>
       </div>
 
@@ -185,6 +208,20 @@ export default function NoiseAdvisor() {
           >{t}</button>
         ))}
       </div>
+
+      {/* Live progress bar — shown while running */}
+      {running && (
+        <div style={{ padding: '10px 20px', background: 'var(--bg-surface)', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
+          <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '6px' }}>
+            {runProgress
+              ? `Analyzing patterns: ${runProgress.checked} / ${runProgress.total} checked, ${runProgress.scored} new candidate${runProgress.scored !== 1 ? 's' : ''} found...`
+              : 'Starting analysis...'}
+          </div>
+          <div style={s.progress}>
+            <div style={s.progressFill(runProgress ? (runProgress.checked / Math.max(runProgress.total, 1)) * 100 : 0)} />
+          </div>
+        </div>
+      )}
 
       <div style={isMobile ? s.bodyMobile : s.body}>
         {/* Run result banner */}
