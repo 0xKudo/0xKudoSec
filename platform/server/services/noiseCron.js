@@ -33,8 +33,7 @@ export async function scoreNoiseCandidates(userId, onProgress = null) {
         'event_category', event_category,
         'event_id', event_id,
         'process_name', process_name,
-        'username', username,
-        'dominant_severity', MODE() WITHIN GROUP (ORDER BY severity)
+        'username', username
       ) AS field_signature,
       COUNT(*) AS event_count,
       COUNT(*) / 7.0 AS daily_avg,
