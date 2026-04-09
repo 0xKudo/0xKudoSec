@@ -195,13 +195,6 @@ export default function NoiseAdvisor() {
         ))}
       </div>
 
-      {/* Running indicator */}
-      {running && (
-        <div style={{ padding: '10px 20px', background: 'var(--bg-surface)', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
-          <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Analyzing patterns...</div>
-          <div style={s.progress}><div style={s.progressFill(100)} /></div>
-        </div>
-      )}
 
       <div style={isMobile ? s.bodyMobile : s.body}>
         {/* Run result banner */}
