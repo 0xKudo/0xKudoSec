@@ -54,6 +54,22 @@ const s = {
 };
 
 const TABS = ['Candidates', 'Activity Log'];
+const SEV_ORDER = ['critical', 'high', 'medium', 'low', 'info', null];
+const SEV_COLOR = { critical: 'var(--severity-critical)', high: 'var(--severity-high)', medium: 'var(--severity-medium)', low: 'var(--severity-low)', info: 'var(--severity-info)' };
+
+function groupBySeverity(candidates) {
+  const groups = {};
+  for (const c of candidates) {
+    const sev = c.field_signature?.dominant_severity || null;
+    const key = sev || 'unknown';
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(c);
+  }
+  return SEV_ORDER.map(sev => {
+    const key = sev || 'unknown';
+    return groups[key] ? { sev: key, items: groups[key] } : null;
+  }).filter(Boolean);
+}
 
 export default function NoiseAdvisor() {
   const { getAccessTokenSilently } = useAuth0();
@@ -68,6 +84,7 @@ export default function NoiseAdvisor() {
   const [saving, setSaving] = useState(false);
   const [running, setRunning] = useState(false);
   const [runProgress, setRunProgress] = useState(null);
+  const [collapsedSev, setCollapsedSev] = useState(new Set());
   const [runResult, setRunResult] = useState(null);
   const [pendingIds, setPendingIds] = useState(new Set());
   const [actionBanner, setActionBanner] = useState(null);
@@ -284,67 +301,91 @@ export default function NoiseAdvisor() {
                   ? 'No noise candidates found. Check back after the next daily analysis or click Run Analysis.'
                   : 'Candidates will appear here once the learning threshold is met.'}
               </div>
-            ) : isMobile ? (
-              candidates.map(c => (
-                <div key={c.id} style={s.card}>
-                  <div style={s.cardTitle}>{c.field_signature.event_category}</div>
-                  <div style={s.cardMeta}>{[c.field_signature.source, c.field_signature.event_id ? `Event ID ${c.field_signature.event_id}` : null, c.field_signature.process_name, c.field_signature.username].filter(Boolean).join(' / ')}, {parseFloat(c.daily_avg).toFixed(1)}/day</div>
-                  <div style={{ marginBottom: '8px' }}>
-                    <span style={s.badge(c.confidence === 'high' ? 'var(--severity-critical)' : 'var(--severity-medium)')}>{c.confidence.toUpperCase()}</span>
-                    <span style={{ marginLeft: '8px', fontSize: '11px', color: 'var(--text-muted)' }}>score {c.score}</span>
-                  </div>
-                  <div style={s.cardActions}>
-                    <button style={s.btnSmall} onClick={() => updateStatus(c.id, 'approved')}>Approve</button>
-                    <button style={s.btnSmall} onClick={() => updateStatus(c.id, 'rejected')}>Reject</button>
-                  </div>
-                </div>
-              ))
             ) : (
-              <table style={s.table}>
-                <thead>
-                  <tr>
-                    <th style={s.th}></th>
-                    <th style={s.th}>Pattern</th>
-                    <th style={s.th}>Daily Avg</th>
-                    <th style={s.th}>Confidence</th>
-                    <th style={s.th}>Score</th>
-                    <th style={s.th}>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {candidates.map(c => {
-                    const pending = pendingIds.has(c.id);
-                    return (
-                      <tr key={c.id} style={{ opacity: pending ? 0.4 : 1, transition: 'opacity 0.2s' }}>
-                        <td style={s.td}><input type="checkbox" checked={selected.has(c.id)} onChange={() => toggleSelect(c.id)} disabled={pending} /></td>
-                        <td style={s.td}>
-                          <div style={{ fontWeight: 600 }}>{c.field_signature.event_category}</div>
-                          <div style={{ color: 'var(--text-muted)', fontSize: '11px' }}>
-                            {[c.field_signature.source, c.field_signature.event_id ? `Event ID ${c.field_signature.event_id}` : null, c.field_signature.process_name, c.field_signature.username].filter(Boolean).join(' / ')}
+              groupBySeverity(candidates).map(({ sev, items }) => {
+                const collapsed = collapsedSev.has(sev);
+                const color = SEV_COLOR[sev] || 'var(--text-muted)';
+                const toggle = () => setCollapsedSev(prev => {
+                  const next = new Set(prev);
+                  next.has(sev) ? next.delete(sev) : next.add(sev);
+                  return next;
+                });
+                return (
+                  <div key={sev} style={{ marginBottom: '16px' }}>
+                    {/* Severity group header */}
+                    <button
+                      onClick={toggle}
+                      style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', background: 'none', border: 'none', borderBottom: `1px solid ${color}`, padding: '6px 0', cursor: 'pointer', marginBottom: collapsed ? 0 : '8px' }}
+                    >
+                      <span style={{ fontSize: '10px', fontFamily: 'var(--font)', color, letterSpacing: '0.1em', textTransform: 'uppercase' }}>{sev}</span>
+                      <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontFamily: 'var(--font)' }}>{items.length}</span>
+                      <span style={{ marginLeft: 'auto', fontSize: '10px', color: 'var(--text-muted)', fontFamily: 'var(--font)' }}>{collapsed ? '▶' : '▼'}</span>
+                    </button>
+                    {!collapsed && (isMobile ? (
+                      items.map(c => (
+                        <div key={c.id} style={s.card}>
+                          <div style={s.cardTitle}>{c.field_signature.event_category}</div>
+                          <div style={s.cardMeta}>{[c.field_signature.source, c.field_signature.event_id ? `Event ID ${c.field_signature.event_id}` : null, c.field_signature.process_name, c.field_signature.username].filter(Boolean).join(' / ')}, {parseFloat(c.daily_avg).toFixed(1)}/day</div>
+                          <div style={{ marginBottom: '8px' }}>
+                            <span style={s.badge(c.confidence === 'high' ? 'var(--severity-critical)' : 'var(--severity-medium)')}>{c.confidence.toUpperCase()}</span>
+                            <span style={{ marginLeft: '8px', fontSize: '11px', color: 'var(--text-muted)' }}>score {c.score}</span>
                           </div>
-                        </td>
-                        <td style={s.td}>{parseFloat(c.daily_avg).toFixed(1)}/day</td>
-                        <td style={s.td}>
-                          <span style={s.badge(c.confidence === 'high' ? 'var(--severity-critical)' : 'var(--severity-medium)')}>
-                            {c.confidence.toUpperCase()}
-                          </span>
-                        </td>
-                        <td style={s.td}>{c.score}</td>
-                        <td style={s.td}>
-                          {pending ? (
-                            <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Updating...</span>
-                          ) : (
-                            <div style={{ display: 'flex', gap: '6px' }}>
-                              <button style={s.btnSmall} onClick={() => updateStatus(c.id, 'approved')}>Approve</button>
-                              <button style={s.btnSmall} onClick={() => updateStatus(c.id, 'rejected')}>Reject</button>
-                            </div>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                          <div style={s.cardActions}>
+                            <button style={s.btnSmall} onClick={() => updateStatus(c.id, 'approved')}>Approve</button>
+                            <button style={s.btnSmall} onClick={() => updateStatus(c.id, 'rejected')}>Reject</button>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <table style={s.table}>
+                        <thead>
+                          <tr>
+                            <th style={s.th}></th>
+                            <th style={s.th}>Pattern</th>
+                            <th style={s.th}>Daily Avg</th>
+                            <th style={s.th}>Confidence</th>
+                            <th style={s.th}>Score</th>
+                            <th style={s.th}>Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {items.map(c => {
+                            const pending = pendingIds.has(c.id);
+                            return (
+                              <tr key={c.id} style={{ opacity: pending ? 0.4 : 1, transition: 'opacity 0.2s' }}>
+                                <td style={s.td}><input type="checkbox" checked={selected.has(c.id)} onChange={() => toggleSelect(c.id)} disabled={pending} /></td>
+                                <td style={s.td}>
+                                  <div style={{ fontWeight: 600 }}>{c.field_signature.event_category}</div>
+                                  <div style={{ color: 'var(--text-muted)', fontSize: '11px' }}>
+                                    {[c.field_signature.source, c.field_signature.event_id ? `Event ID ${c.field_signature.event_id}` : null, c.field_signature.process_name, c.field_signature.username].filter(Boolean).join(' / ')}
+                                  </div>
+                                </td>
+                                <td style={s.td}>{parseFloat(c.daily_avg).toFixed(1)}/day</td>
+                                <td style={s.td}>
+                                  <span style={s.badge(c.confidence === 'high' ? 'var(--severity-critical)' : 'var(--severity-medium)')}>
+                                    {c.confidence.toUpperCase()}
+                                  </span>
+                                </td>
+                                <td style={s.td}>{c.score}</td>
+                                <td style={s.td}>
+                                  {pending ? (
+                                    <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Updating...</span>
+                                  ) : (
+                                    <div style={{ display: 'flex', gap: '6px' }}>
+                                      <button style={s.btnSmall} onClick={() => updateStatus(c.id, 'approved')}>Approve</button>
+                                      <button style={s.btnSmall} onClick={() => updateStatus(c.id, 'rejected')}>Reject</button>
+                                    </div>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    ))}
+                  </div>
+                );
+              })
             )}
           </>
         )}
