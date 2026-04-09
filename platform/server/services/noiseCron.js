@@ -159,8 +159,8 @@ async function runAutoSuppress(userId) {
 }
 
 export async function scheduleNoiseCron() {
-  const { CronJob } = await import('cron');
-  new CronJob('0 30 2 * * *', async () => {
+  const cron = (await import('node-cron')).default;
+  cron.schedule('30 2 * * *', async () => {
     const pool = db.getPool();
     const { rows: users } = await pool.query(`SELECT DISTINCT user_id FROM logs`);
     for (const { user_id } of users) {
@@ -171,7 +171,7 @@ export async function scheduleNoiseCron() {
         console.error(`[noise] Error processing user ${user_id}:`, err.message);
       }
     }
-  }, null, true);
+  });
 
   console.log('[noise] Noise scoring cron scheduled (daily at 02:30)');
 }
