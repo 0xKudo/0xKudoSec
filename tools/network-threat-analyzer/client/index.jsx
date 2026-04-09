@@ -220,14 +220,16 @@ export default function NetworkThreatAnalyzer() {
         <button style={styles.tab(tab === 'upload')} onClick={() => setTab('upload')}>Upload File</button>
       </div>
 
-      <div style={{ ...styles.controlRow, flexWrap: isMobile ? 'wrap' : 'nowrap' }}>
-        <select style={styles.select} value={logType} onChange={e => setLogType(e.target.value)} disabled={loading}>
-          {LOG_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-        </select>
-        <button style={styles.button(loading)} onClick={handleAnalyze} disabled={!canAnalyze}>
-          {loading ? 'Analyzing...' : 'Analyze'}
-        </button>
-      </div>
+      {!isMobile && (
+        <div style={styles.controlRow}>
+          <select style={styles.select} value={logType} onChange={e => setLogType(e.target.value)} disabled={loading}>
+            {LOG_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+          </select>
+          <button style={styles.button(loading)} onClick={handleAnalyze} disabled={!canAnalyze}>
+            {loading ? 'Analyzing...' : 'Analyze'}
+          </button>
+        </div>
+      )}
 
       {tab === 'paste' ? (
         <textarea
@@ -254,6 +256,17 @@ export default function NetworkThreatAnalyzer() {
           />
           {file && <div style={styles.fileName}>Selected: {file.name} ({(file.size / 1024).toFixed(1)} kb)</div>}
         </>
+      )}
+
+      {isMobile && (
+        <div style={{ ...styles.controlRow, flexWrap: 'wrap', marginTop: '8px' }}>
+          <select style={styles.select} value={logType} onChange={e => setLogType(e.target.value)} disabled={loading}>
+            {LOG_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+          </select>
+          <button style={{ ...styles.button(loading), alignSelf: 'flex-start' }} onClick={handleAnalyze} disabled={!canAnalyze}>
+            {loading ? 'Analyzing...' : 'Analyze'}
+          </button>
+        </div>
       )}
 
       {error && <p style={styles.error}>{error}</p>}
