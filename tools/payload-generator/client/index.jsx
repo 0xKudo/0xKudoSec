@@ -367,7 +367,7 @@ function MsfTab() {
           </div>
 
           {error && <div style={s.error}>{error}</div>}
-          <button style={{ ...s.generateBtn, width: isMobile ? '100%' : undefined }} onClick={generate}>Generate</button>
+          <button style={s.generateBtn} onClick={generate}>Generate</button>
         </div>
       </div>
 

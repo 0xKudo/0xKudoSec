@@ -224,7 +224,7 @@ export default function NetworkThreatAnalyzer() {
         <select style={isMobile ? { ...styles.select, width: '100%' } : styles.select} value={logType} onChange={e => setLogType(e.target.value)} disabled={loading}>
           {LOG_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
         </select>
-        <button style={{ ...styles.button(loading), width: isMobile ? '100%' : undefined }} onClick={handleAnalyze} disabled={!canAnalyze}>
+        <button style={styles.button(loading)} onClick={handleAnalyze} disabled={!canAnalyze}>
           {loading ? 'Analyzing...' : 'Analyze'}
         </button>
       </div>

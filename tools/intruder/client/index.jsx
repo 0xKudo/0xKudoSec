@@ -318,7 +318,7 @@ export default function Intruder() {
           />
           <div style={styles.hint}>{payloadCount} payload{payloadCount !== 1 ? 's' : ''} loaded</div>
 
-          <button style={{ ...styles.button(!canAttack), width: isMobile ? '100%' : undefined }} onClick={handleAttack} disabled={!canAttack}>
+          <button style={styles.button(!canAttack)} onClick={handleAttack} disabled={!canAttack}>
             {loading ? `Attacking... (${payloadCount} payloads)` : 'Start Attack'}
           </button>
         </div>

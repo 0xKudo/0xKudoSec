@@ -149,7 +149,7 @@ export default function AlertTriageTool() {
       />
 
       <button
-        style={{ ...styles.button(loading), width: isMobile ? '100%' : undefined }}
+        style={styles.button(loading)}
         onClick={handleAnalyze}
         disabled={loading || !alertText.trim()}
       >

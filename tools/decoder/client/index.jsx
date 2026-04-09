@@ -277,7 +277,7 @@ export default function Decoder() {
           />
 
           <div style={styles.actionRow}>
-            <button style={{ ...styles.button(!canTransform), width: isMobile ? '100%' : undefined }} onClick={handleTransform} disabled={!canTransform}>
+            <button style={styles.button(!canTransform)} onClick={handleTransform} disabled={!canTransform}>
               {loading ? 'Processing...' : 'Transform'}
             </button>
             <button style={styles.secondaryBtn} onClick={() => { setInput(''); setOutput(''); setError(null); }}>

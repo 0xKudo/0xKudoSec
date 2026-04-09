@@ -242,7 +242,7 @@ export default function SubdomainEnumerator() {
               disabled={loading}
               onKeyDown={e => e.key === 'Enter' && canEnumerate && handleEnumerate()}
             />
-            <button style={{ ...styles.button(!canEnumerate), width: isMobile ? '100%' : undefined }} onClick={handleEnumerate} disabled={!canEnumerate}>
+            <button style={styles.button(!canEnumerate)} onClick={handleEnumerate} disabled={!canEnumerate}>
               {loading ? 'Enumerating...' : 'Enumerate'}
             </button>
           </div>

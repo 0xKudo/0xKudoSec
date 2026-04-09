@@ -226,7 +226,7 @@ export default function LogAnomalyExplainer() {
         <select style={isMobile ? { ...styles.select, width: '100%' } : styles.select} value={logSource} onChange={e => setLogSource(e.target.value)} disabled={loading}>
           {LOG_SOURCES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
         </select>
-        <button style={{ ...styles.button(loading), width: isMobile ? '100%' : undefined }} onClick={handleAnalyze} disabled={!canAnalyze}>
+        <button style={styles.button(loading)} onClick={handleAnalyze} disabled={!canAnalyze}>
           {loading ? 'Analyzing...' : 'Analyze'}
         </button>
       </div>

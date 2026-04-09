@@ -282,7 +282,7 @@ export default function IncidentReportTool() {
           ))}
         </select>
         <button
-          style={{ ...styles.button(loading), width: isMobile ? '100%' : undefined }}
+          style={styles.button(loading)}
           onClick={handleGenerate}
           disabled={loading || !incidentText.trim()}
         >

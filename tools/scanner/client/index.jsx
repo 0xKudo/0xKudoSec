@@ -229,7 +229,7 @@ export default function Scanner() {
             disabled={loading}
             onKeyDown={e => e.key === 'Enter' && canScan && handleScan()}
           />
-          <button style={{ ...styles.button(!canScan), width: isMobile ? '100%' : undefined }} onClick={handleScan} disabled={!canScan}>
+          <button style={styles.button(!canScan)} onClick={handleScan} disabled={!canScan}>
             {loading ? 'Scanning...' : 'Scan'}
           </button>
         </div>

@@ -293,7 +293,7 @@ export default function OsintReconTool() {
           <option value="email">Email</option>
         </select>
         <button
-          style={{ ...styles.button(loading), width: isMobile ? '100%' : undefined }}
+          style={styles.button(loading)}
           onClick={handleAnalyze}
           disabled={loading || !target.trim()}
         >
