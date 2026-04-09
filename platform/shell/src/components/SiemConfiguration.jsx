@@ -279,7 +279,7 @@ const FLUENT_BIT_CONFIG = (apiKey) => `[SERVICE]
 [OUTPUT]
     Name         http
     Match        *
-    Host         tools.laynekudo.com
+    Host         0xkudo.com
     Port         443
     URI          /api/ingest/beats
     Format       json
@@ -315,7 +315,7 @@ export function SiemConfiguration({ navLayout, setNavLayout, theme, setTheme }) 
   const [fbInstallMsg, setFbInstallMsg] = useState(null);
 
   // Role-based access
-  const ROLES_CLAIM = 'https://tools.laynekudo.com/roles';
+  const ROLES_CLAIM = 'https://0xkudo.com/roles';
   const userRoles = user?.[ROLES_CLAIM] ?? [];
   const isConfigEditor = isElectron && userRoles.includes('config-editor');
 
@@ -656,7 +656,7 @@ export function SiemConfiguration({ navLayout, setNavLayout, theme, setTheme }) 
   }
 
   const apiKey = newKey || 'YOUR_API_KEY_HERE';
-  const ingestUrl = 'https://tools.laynekudo.com/api/ingest/beats';
+  const ingestUrl = 'https://0xkudo.com/api/ingest/beats';
   const fluentBitConfig = FLUENT_BIT_CONFIG(apiKey);
   const winlogbeatConfig = `output.elasticsearch:
   enabled: false
@@ -979,7 +979,7 @@ winlogbeat.event_logs:
         {isElectron && tab === 6 && (
           <div style={s.section}>
             <div style={s.sectionTitle}>Desktop App</div>
-            <div style={s.sectionDesc}>Settings for the [ 0xKudoSec ] desktop application.</div>
+            <div style={s.sectionDesc}>Settings for the [ 0xKudo ] desktop application.</div>
             <div style={{ borderTop: '1px solid var(--border)', marginTop: '20px', paddingTop: '20px' }}>
               <div style={s.sectionTitle}>Window Behavior</div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '12px' }}>

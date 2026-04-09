@@ -194,7 +194,7 @@ export function TopNav({ activeApp, onSwitchApp, onMenuToggle, menuOpen, theme, 
           >
             {menuOpen ? '✕' : '☰'}
           </button>
-          <div style={{ ...styles.brand, borderRight: 'none', fontSize: '12px', padding: '0 6px', letterSpacing: '0.02em' }}>[ 0xKudoSec ]</div>
+          <div style={{ ...styles.brand, borderRight: 'none', fontSize: '12px', padding: '0 6px', letterSpacing: '0.02em' }}>[ 0xKudo ]</div>
           <div style={{ display: 'flex', alignItems: 'stretch' }}>
             {['siem', 'tools'].map(app => (
               <div key={app} style={{ ...styles.appTab(activeApp === app), padding: '0 12px' }} onClick={() => onSwitchApp(app)}>
@@ -213,7 +213,7 @@ export function TopNav({ activeApp, onSwitchApp, onMenuToggle, menuOpen, theme, 
         </>
       ) : (
         <>
-          <div style={styles.brand}>[ 0xKudoSec ]</div>
+          <div style={styles.brand}>[ 0xKudo ]</div>
           <div style={{ display: 'flex', alignItems: 'stretch', WebkitAppRegion: 'no-drag' }}>
             {['siem', 'tools'].map(app => (
               <div

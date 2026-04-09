@@ -268,7 +268,7 @@ function LandingNav({ onLogin, onScrollToTools, isMobile }) {
   if (isMobile) {
     return (
       <nav style={s.navMobile}>
-        <div style={{ ...s.navBrand, borderRight: 'none', fontSize: '10px', padding: '0 14px', letterSpacing: '0.02em' }}>[ 0xKudoSec ]</div>
+        <div style={{ ...s.navBrand, borderRight: 'none', fontSize: '10px', padding: '0 14px', letterSpacing: '0.02em' }}>[ 0xKudo ]</div>
         <div style={{ display: 'flex', alignItems: 'stretch' }}>
           <div style={{ ...s.navTab(true), padding: '0 12px' }}>SIEM</div>
           <div style={{ ...s.navTab(false), padding: '0 12px' }} onClick={onScrollToTools}>Tools</div>
@@ -283,7 +283,7 @@ function LandingNav({ onLogin, onScrollToTools, isMobile }) {
 
   return (
     <nav style={s.nav}>
-      <div style={s.navBrand}>[ 0xKudoSec ]</div>
+      <div style={s.navBrand}>[ 0xKudo ]</div>
       <div style={{ display: 'flex', alignItems: 'stretch' }}>
         <div style={s.navTab(true)}>SIEM</div>
         <div
@@ -572,7 +572,7 @@ function DesktopLanding({ onLogin }) {
 
       {/* Footer */}
       <footer style={s.footer}>
-        <span style={s.footerBrand}>[ 0xKudoSec ]</span>
+        <span style={s.footerBrand}>[ 0xKudo ]</span>
         <div style={s.footerLinks}>
           {[['Tools', e => { e.preventDefault(); scrollToTools(); }], ['SIEM', null], ['Sign In', e => { e.preventDefault(); onLogin(); }], ['Privacy', e => { e.preventDefault(); window.location.href = '/privacy'; }]].map(([label, handler]) => (
             <a
@@ -714,7 +714,7 @@ function MobileLanding({ onLogin }) {
 
       {/* Footer */}
       <footer style={s.footerMobile}>
-        <span style={s.footerBrand}>[ 0xKudoSec ]</span>
+        <span style={s.footerBrand}>[ 0xKudo ]</span>
         <div style={s.footerLinks}>
           {[['Tools', e => { e.preventDefault(); scrollToTools(); }], ['SIEM', null], ['Sign In', e => { e.preventDefault(); onLogin(); }], ['Privacy', e => { e.preventDefault(); window.location.href = '/privacy'; }]].map(([label, handler]) => (
             <a

@@ -10,7 +10,7 @@ const { autoUpdater } = require('electron-updater');
 // Override userData path before app is ready so electron-store and all
 // Chromium profile data land in a folder named after the app, not the
 // package name (@cybertools/electron → "electron")
-app.setPath('userData', path.join(app.getPath('appData'), '0xKudoSec'));
+app.setPath('userData', path.join(app.getPath('appData'), '0xKudo'));
 
 let store = null;
 
@@ -41,7 +41,7 @@ function initStore() {
 const SHELL_PORT = 5173;
 const SERVER_PORT = 4000;
 const isDev = process.env.NODE_ENV !== 'production' && !app.isPackaged;
-const PRODUCTION_URL = 'https://tools.laynekudo.com';
+const PRODUCTION_URL = 'https://0xkudo.com';
 
 let mainWindow = null;
 let splashWindow = null;

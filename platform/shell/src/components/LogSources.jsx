@@ -415,7 +415,7 @@ export function LogSources() {
       {/* Shipper Setup — shown whenever a key exists */}
       {(keyMeta?.exists || newKey) && (() => {
         const apiKey = newKey || 'YOUR_API_KEY_HERE';
-        const ingestUrl = 'https://tools.laynekudo.com/api/ingest/beats';
+        const ingestUrl = 'https://0xkudo.com/api/ingest/beats';
 
         const fluentBitConfig = `[SERVICE]
     Flush        10
@@ -437,7 +437,7 @@ export function LogSources() {
 [OUTPUT]
     Name         http
     Match        *
-    Host         tools.laynekudo.com
+    Host         0xkudo.com
     Port         443
     URI          /api/ingest/beats
     Format       json

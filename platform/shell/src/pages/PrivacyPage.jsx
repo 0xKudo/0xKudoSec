@@ -98,7 +98,7 @@ export function PrivacyPage() {
   return (
     <div style={s.page}>
       <nav style={s.nav}>
-        <span style={s.brand} onClick={() => navigate('/')}>[ 0xKudoSec ]</span>
+        <span style={s.brand} onClick={() => navigate('/')}>[ 0xKudo ]</span>
         <button style={s.back} onClick={() => navigate(-1)}>← Back</button>
       </nav>
 
@@ -107,7 +107,7 @@ export function PrivacyPage() {
         <div style={s.updated}>Last updated: April 8, 2026</div>
 
         <p style={s.p}>
-          0xKudoSec ("the platform") is a cybersecurity operations platform operated by Layne Kudo.
+          0xKudo ("the platform") is a cybersecurity operations platform operated by Layne Kudo.
           This policy explains what data is collected, how it is used, how long it is retained, and your rights as a user.
         </p>
 

@@ -561,7 +561,7 @@ router.get('/shipper-download', wrap(async (req, res) => {
   const apiKey = rows[0].api_key;
   const ingestUrl = process.env.ALLOWED_ORIGIN
     ? process.env.ALLOWED_ORIGIN.replace(/\/$/, '').replace(/^http:/, 'https:') + '/api/ingest/beats'
-    : 'https://tools.laynekudo.com/api/ingest/beats';
+    : 'https://0xkudo.com/api/ingest/beats';
 
   const shipperDir = resolve(__dirname, '../../../shipper');
   const indexJs = readFileSync(resolve(shipperDir, 'index.js'), 'utf8');

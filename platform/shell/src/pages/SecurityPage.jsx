@@ -93,7 +93,7 @@ export function SecurityPage() {
   return (
     <div style={s.page}>
       <nav style={s.nav}>
-        <span style={s.brand} onClick={() => navigate('/')}>[ 0xKudoSec ]</span>
+        <span style={s.brand} onClick={() => navigate('/')}>[ 0xKudo ]</span>
         <button style={s.back} onClick={() => navigate(-1)}>← Back</button>
       </nav>
 
@@ -102,7 +102,7 @@ export function SecurityPage() {
         <div style={s.updated}>Last updated: April 8, 2026</div>
 
         <p style={s.p}>
-          This page describes the technical and organizational security controls in place for the 0xKudoSec platform.
+          This page describes the technical and organizational security controls in place for the 0xKudo platform.
           These controls are designed to meet the requirements of PCI DSS v4.0, SOC 2 Type II, and NIST SP 800-53.
         </p>
 
