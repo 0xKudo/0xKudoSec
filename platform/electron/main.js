@@ -322,6 +322,49 @@ ipcMain.handle('fluent-bit:restart', async (event) => {
   return { ok: !err, err };
 });
 
+// ── Fluent Bit path detection ─────────────────────────────────────────────
+// Returns the full path to cybertools.conf, or null if Fluent Bit is not installed.
+function findFluentBitConfPath() {
+  // 1. Registry — respects non-default install locations
+  try {
+    const { execSync } = require('child_process');
+    const result = execSync(
+      'reg query "HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\fluent-bit" /v InstallLocation',
+      { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }
+    );
+    const match = result.match(/InstallLocation\s+REG_SZ\s+(.+)/);
+    if (match) {
+      const installDir = match[1].trim();
+      return path.join(installDir, 'conf', 'cybertools.conf');
+    }
+  } catch (_) {}
+
+  // 2. Default install path fallback
+  const defaultConf = 'C:\\Program Files\\fluent-bit\\conf\\cybertools.conf';
+  if (fs.existsSync(path.dirname(defaultConf))) return defaultConf;
+
+  return null;
+}
+
+ipcMain.handle('fluent-bit:info', async (event) => {
+  if (!isValidSender(event)) return { ok: false, err: 'Unauthorized' };
+
+  const confPath = findFluentBitConfPath();
+  if (!confPath) return { ok: true, installed: false, version: null, confPath: null };
+
+  let version = null;
+  try {
+    const { execSync } = require('child_process');
+    // Derive bin path from conf path (e.g. C:\Program Files\fluent-bit\conf\ → bin\fluent-bit.exe)
+    const binPath = path.join(path.dirname(path.dirname(confPath)), 'bin', 'fluent-bit.exe');
+    const out = execSync(`"${binPath}" --version`, { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] });
+    const match = out.match(/v?(\d+\.\d+\.\d+)/);
+    if (match) version = match[1];
+  } catch (_) {}
+
+  return { ok: true, installed: true, version, confPath };
+});
+
 // Sanitize fs errors — in packaged app, never expose raw system messages with full paths
 function fsErrMsg(e) {
   if (!app.isPackaged) return e.message;
@@ -332,7 +375,8 @@ function fsErrMsg(e) {
 
 ipcMain.handle('fluent-bit:read-config', async (event) => {
   if (!isValidSender(event)) return { ok: false, err: 'Unauthorized' };
-  const confPath = 'C:\\Program Files\\fluent-bit\\conf\\cybertools.conf';
+  const confPath = findFluentBitConfPath();
+  if (!confPath) return { ok: false, err: 'Fluent Bit is not installed.' };
   try {
     const text = fs.readFileSync(confPath, 'utf8');
     return { ok: true, text };
@@ -349,7 +393,8 @@ ipcMain.handle('fluent-bit:write-config', async (event, configText) => {
   if (/\x00/.test(configText)) return { ok: false, err: 'Invalid config: null bytes not allowed' };
   if (/`|\$\(/.test(configText)) return { ok: false, err: 'Invalid config: shell expansion not allowed' };
 
-  const confPath = 'C:\\Program Files\\fluent-bit\\conf\\cybertools.conf';
+  const confPath = findFluentBitConfPath();
+  if (!confPath) return { ok: false, err: 'Fluent Bit is not installed.' };
   try {
     fs.writeFileSync(confPath, configText, 'utf8');
     return { ok: true };

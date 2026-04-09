@@ -14,3 +14,4 @@ docs/
 detection-rules.json
 *.csv
 platform/server/tests/
+platform/electron/assets/fluent-bit-installer.exe

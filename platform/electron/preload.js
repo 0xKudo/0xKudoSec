@@ -25,6 +25,7 @@ contextBridge.exposeInMainWorld('electron', {
     start: () => ipcRenderer.invoke('fluent-bit:start'),
     stop: () => ipcRenderer.invoke('fluent-bit:stop'),
     restart: () => ipcRenderer.invoke('fluent-bit:restart'),
+    info: () => ipcRenderer.invoke('fluent-bit:info'),
     readConfig: () => ipcRenderer.invoke('fluent-bit:read-config'),
     writeConfig: (configText) => ipcRenderer.invoke('fluent-bit:write-config', configText),
   },

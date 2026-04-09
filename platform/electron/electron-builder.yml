@@ -19,13 +19,17 @@ win:
 
 nsis:
   oneClick: false
-  allowToChangeInstallationDirectory: true
+  allowToChangeInstallationDirectory: false
   installerIcon: assets/icon.ico
   uninstallerIcon: assets/icon.ico
   shortcutName: 0xKudo Security Toolkit
   createDesktopShortcut: true
   createStartMenuShortcut: true
   include: installer.nsh
+
+extraResources:
+  - from: "assets/fluent-bit-installer.exe"
+    to: "assets/fluent-bit-installer.exe"
 
 # Files to include in the package
 files:

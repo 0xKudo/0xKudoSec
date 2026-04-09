@@ -310,6 +310,7 @@ export function SiemConfiguration({ navLayout, setNavLayout, theme, setTheme }) 
   const [agentStatus, setAgentStatus] = useState('UNKNOWN');
   const [agentAction, setAgentAction] = useState(null);
   const [trayOnClose, setTrayOnClose] = useState(true);
+  const [fbInfo, setFbInfo] = useState(null); // { installed, version, confPath }
 
   // Role-based access
   const ROLES_CLAIM = 'https://tools.laynekudo.com/roles';
@@ -336,6 +337,7 @@ export function SiemConfiguration({ navLayout, setNavLayout, theme, setTheme }) 
   useEffect(() => {
     if (!isElectron) return;
     window.electron.settings.getTrayOnClose().then(val => setTrayOnClose(val));
+    window.electron.fluentBit.info().then(res => { if (res.ok) setFbInfo(res); });
     function pollAgent() {
       window.electron.fluentBit.getStatus().then(s => setAgentStatus(s));
     }
@@ -1312,6 +1314,12 @@ winlogbeat.event_logs:
                         >{agentAction === 'restart' ? 'Restarting...' : 'Restart'}</button>
                       </div>
                     </div>
+                    {fbInfo && fbInfo.installed && (
+                      <div style={{ marginTop: '8px', fontSize: '11px', color: 'var(--text-muted)', display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+                        {fbInfo.version && <span>Version: <span style={{ color: 'var(--text-primary)' }}>v{fbInfo.version}</span></span>}
+                        {fbInfo.confPath && <span>Config: <span style={{ color: 'var(--text-primary)', fontFamily: 'var(--font)' }}>{fbInfo.confPath}</span></span>}
+                      </div>
+                    )}
                     {agentStatus === 'NOT_INSTALLED' && (
                       <div style={{ marginTop: '8px', fontSize: '11px', color: 'var(--text-muted)' }}>
                         Fluent Bit is not installed. Follow the setup instructions below to install it as a Windows service.
