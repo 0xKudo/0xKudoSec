@@ -288,7 +288,7 @@ export default function NoiseAdvisor() {
               candidates.map(c => (
                 <div key={c.id} style={s.card}>
                   <div style={s.cardTitle}>{c.field_signature.event_category}</div>
-                  <div style={s.cardMeta}>{c.field_signature.source} / {c.field_signature.host}, {parseFloat(c.daily_avg).toFixed(1)}/day</div>
+                  <div style={s.cardMeta}>{[c.field_signature.source, c.field_signature.event_id ? `Event ID ${c.field_signature.event_id}` : null, c.field_signature.process_name, c.field_signature.username].filter(Boolean).join(' / ')}, {parseFloat(c.daily_avg).toFixed(1)}/day</div>
                   <div style={{ marginBottom: '8px' }}>
                     <span style={s.badge(c.confidence === 'high' ? 'var(--severity-critical)' : 'var(--severity-medium)')}>{c.confidence.toUpperCase()}</span>
                     <span style={{ marginLeft: '8px', fontSize: '11px', color: 'var(--text-muted)' }}>score {c.score}</span>
@@ -319,7 +319,9 @@ export default function NoiseAdvisor() {
                         <td style={s.td}><input type="checkbox" checked={selected.has(c.id)} onChange={() => toggleSelect(c.id)} disabled={pending} /></td>
                         <td style={s.td}>
                           <div style={{ fontWeight: 600 }}>{c.field_signature.event_category}</div>
-                          <div style={{ color: 'var(--text-muted)', fontSize: '11px' }}>{c.field_signature.source} / {c.field_signature.host}</div>
+                          <div style={{ color: 'var(--text-muted)', fontSize: '11px' }}>
+                            {[c.field_signature.source, c.field_signature.event_id ? `Event ID ${c.field_signature.event_id}` : null, c.field_signature.process_name, c.field_signature.username].filter(Boolean).join(' / ')}
+                          </div>
                         </td>
                         <td style={s.td}>{parseFloat(c.daily_avg).toFixed(1)}/day</td>
                         <td style={s.td}>
