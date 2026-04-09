@@ -1,9 +1,8 @@
 import corsLib from 'cors';
 
-const allowedOrigin = process.env.ALLOWED_ORIGIN || 'http://localhost:5173';
-
 export const corsMiddleware = corsLib({
   origin: (origin, callback) => {
+    const allowedOrigin = process.env.ALLOWED_ORIGIN || 'http://localhost:5173';
     // Allow requests with no origin (same-origin browser requests, server-side tools, curl).
     // This is intentional for the current single-server deployment where all API endpoints
     // still require JWT auth. If the architecture becomes multi-server or multi-tenant,
