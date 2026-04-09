@@ -207,7 +207,7 @@ export default function ReverseShellGenerator() {
 
   return (
     <div style={styles.container}>
-      <div style={{ ...styles.header, margin: isMobile ? '0 0 20px 0' : '-24px -24px 20px -24px' }}>
+      <div style={{ ...styles.header, margin: isMobile ? '-16px -16px 20px -16px' : '-24px -24px 20px -24px' }}>
         <span style={styles.title}>Reverse Shell Generator</span>
         <p style={styles.subtitle}>
           Generate ready-to-use reverse shell one-liners. Start your listener first, then run the payload on the target.

@@ -237,7 +237,7 @@ export default function WordlistGenerator() {
 
   return (
     <div style={styles.container}>
-      <div style={{ ...styles.header, margin: isMobile ? '0 0 0 0' : '-24px -24px 0 -24px' }}>
+      <div style={{ ...styles.header, margin: isMobile ? '-16px -16px 0 -16px' : '-24px -24px 0 -24px' }}>
         <span style={styles.title}>Wordlist / Password Generator</span>
         <p style={styles.subtitle}>
           Generate wordlists from character sets or base words with mutation rules. Max 10,000 entries.

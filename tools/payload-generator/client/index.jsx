@@ -470,7 +470,7 @@ export default function PayloadGenerator() {
 
   return (
     <div style={s.container}>
-      <div style={{ ...s.header, margin: isMobile ? '0 0 0 0' : '-24px -24px 0 -24px' }}>
+      <div style={{ ...s.header, margin: isMobile ? '-16px -16px 0 -16px' : '-24px -24px 0 -24px' }}>
         <span style={s.title}>Payload Generator</span>
       </div>
 

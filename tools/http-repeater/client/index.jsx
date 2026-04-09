@@ -262,7 +262,7 @@ export default function HttpRepeater() {
 
   return (
     <div style={styles.container}>
-      <div style={{ ...styles.header, margin: isMobile ? '0 0 0 0' : '-24px -24px 0 -24px' }}>
+      <div style={{ ...styles.header, margin: isMobile ? '-16px -16px 0 -16px' : '-24px -24px 0 -24px' }}>
         <span style={styles.title}>HTTP Repeater</span>
         <p style={styles.subtitle}>Craft and replay HTTP requests. Inspect the full response.</p>
       </div>

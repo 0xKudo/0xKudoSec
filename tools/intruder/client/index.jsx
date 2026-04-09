@@ -234,7 +234,7 @@ export default function Intruder() {
 
   return (
     <div style={styles.container}>
-      <div style={{ ...styles.header, margin: isMobile ? '0 0 20px 0' : '-24px -24px 20px -24px' }}>
+      <div style={{ ...styles.header, margin: isMobile ? '-16px -16px 20px -16px' : '-24px -24px 20px -24px' }}>
         <span style={styles.title}>Intruder</span>
         <p style={styles.subtitle}>
           Mark injection points with §placeholders§ in your request template, supply payloads, and fire.

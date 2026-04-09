@@ -181,7 +181,7 @@ export default function PayloadObfuscationExplainer() {
 
   return (
     <div style={styles.container}>
-      <div style={{ ...styles.header, margin: isMobile ? '0 0 20px 0' : '-24px -24px 20px -24px' }}>
+      <div style={{ ...styles.header, margin: isMobile ? '-16px -16px 20px -16px' : '-24px -24px 20px -24px' }}>
         <span style={styles.title}>Payload Obfuscation Explainer</span>
         <p style={styles.subtitle}>
           Paste an obfuscated or encoded payload. Claude decodes it and explains what it does in plain English.

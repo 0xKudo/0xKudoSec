@@ -308,7 +308,7 @@ export default function NetworkScanner() {
 
   return (
     <div style={styles.container}>
-      <div style={{ ...styles.header, margin: isMobile ? '0 0 20px 0' : '-24px -24px 20px -24px' }}>
+      <div style={{ ...styles.header, margin: isMobile ? '-16px -16px 20px -16px' : '-24px -24px 20px -24px' }}>
         <span style={styles.title}>Network Scanner</span>
         <p style={styles.subtitle}>
           Run nmap scans against a target. Only scan hosts and networks you own or have explicit authorization to test.

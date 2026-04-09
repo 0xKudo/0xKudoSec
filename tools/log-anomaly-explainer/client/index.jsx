@@ -203,7 +203,7 @@ export default function LogAnomalyExplainer() {
 
   return (
     <div style={styles.container}>
-      <div style={{ ...styles.header, margin: isMobile ? '0 0 0 0' : '-24px -24px 0 -24px' }}>
+      <div style={{ ...styles.header, margin: isMobile ? '-16px -16px 0 -16px' : '-24px -24px 0 -24px' }}>
         <span style={styles.title}>Log Anomaly Explainer</span>
         <p style={styles.subtitle}>
           Paste or upload system, auth, web server, or application logs. Claude identifies anomalies and explains them in plain English.

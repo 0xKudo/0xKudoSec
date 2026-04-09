@@ -258,7 +258,7 @@ export default function PhishingAnalyzerTool() {
 
   return (
     <div style={styles.container}>
-      <div style={{ ...styles.header, margin: isMobile ? '0 0 0 0' : '-24px -24px 0 -24px' }}>
+      <div style={{ ...styles.header, margin: isMobile ? '-16px -16px 0 -16px' : '-24px -24px 0 -24px' }}>
         <span style={styles.title}>Phishing Email Analyzer</span>
         <p style={styles.subtitle}>
           Paste the full email (including headers if available). Get a phishing verdict, indicators, and recommended actions.
