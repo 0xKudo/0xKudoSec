@@ -173,6 +173,7 @@ function OpChip({ op, group, active, onClick }) {
 export default function Decoder() {
   const isMobile = useIsMobile();
   const [operation, setOperation] = useState('base64-decode');
+  const [mobileGroup, setMobileGroup] = useState('Base64');
   const [input, setInput] = useState('');
   const [output, setOutput] = useState('');
   const [error, setError] = useState(null);
@@ -229,26 +230,75 @@ export default function Decoder() {
       </div>
 
       {isMobile ? (
-        /* Mobile: original chip layout */
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '6px', padding: '6px 10px', marginBottom: '16px' }}>
-          {OPERATION_GROUPS.map(group => group.ops.map(op => (
-            <button
-              key={op.value}
-              style={{
-                background: operation === op.value ? 'var(--border)' : 'none',
-                border: '1px solid var(--border)',
-                color: operation === op.value ? 'var(--text-primary)' : 'var(--text-muted)',
-                                fontSize: '12px',
-                padding: '5px 10px',
-                cursor: 'pointer',
-    fontFamily: 'var(--font)',
-              }}
-              onClick={() => { setOperation(op.value); setOutput(''); setError(null); }}
-            >
-              {group.label} {op.label}
-            </button>
-          )))}
-        </div>
+        /* Mobile: two-level tab UI */
+        (() => {
+          const activeGroup = OPERATION_GROUPS.find(g => g.label === mobileGroup) || OPERATION_GROUPS[0];
+          return (
+            <>
+              {/* Top-level group tabs */}
+              <div style={{ display: 'flex', overflowX: 'auto', borderBottom: '1px solid var(--border)', margin: '0 -16px', paddingLeft: '8px', marginBottom: '0' }}>
+                {OPERATION_GROUPS.map(group => (
+                  <button
+                    key={group.label}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      borderBottom: mobileGroup === group.label ? '2px solid var(--accent-amber)' : '2px solid transparent',
+                      color: mobileGroup === group.label ? 'var(--accent-amber)' : 'var(--text-muted)',
+                      fontSize: '12px',
+                      padding: '8px 12px',
+                      cursor: 'pointer',
+                      fontFamily: 'var(--font)',
+                      fontWeight: 'normal',
+                      whiteSpace: 'nowrap',
+                      marginBottom: '-1px',
+                    }}
+                    onClick={() => {
+                      setMobileGroup(group.label);
+                      setOperation(group.ops[0].value);
+                      setOutput('');
+                      setError(null);
+                    }}
+                  >
+                    {group.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Sub-tabs — only if group has more than one op */}
+              {activeGroup.ops.length > 1 && (
+                <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', margin: '0 -16px', paddingLeft: '8px', marginBottom: '16px' }}>
+                  {activeGroup.ops.map(op => (
+                    <button
+                      key={op.value}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        borderBottom: operation === op.value ? '2px solid var(--accent-amber)' : '2px solid transparent',
+                        color: operation === op.value ? 'var(--accent-amber)' : 'var(--text-muted)',
+                        fontSize: '11px',
+                        padding: '6px 12px',
+                        cursor: 'pointer',
+                        fontFamily: 'var(--font)',
+                        fontWeight: 'normal',
+                        whiteSpace: 'nowrap',
+                        marginBottom: '-1px',
+                      }}
+                      onClick={() => { setOperation(op.value); setOutput(''); setError(null); }}
+                    >
+                      {op.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* Single-op groups: just add bottom margin */}
+              {activeGroup.ops.length === 1 && (
+                <div style={{ marginBottom: '16px' }} />
+              )}
+            </>
+          );
+        })()
       ) : (
         /* Desktop: flat chips across the top */
         <div style={styles.opPanel}>
