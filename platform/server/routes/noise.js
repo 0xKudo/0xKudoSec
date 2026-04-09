@@ -107,6 +107,31 @@ router.post('/candidates/bulk', requireAuth, async (req, res) => {
     [status, uid(req), ...safeIds]
   );
 
+  if (status === 'approved') {
+    const { rows: candidates } = await pool().query(
+      `SELECT * FROM noise_candidates WHERE id IN (${placeholders}) AND user_id = $2`,
+      [...safeIds, uid(req)]
+    );
+    for (const candidate of candidates) {
+      const sig = candidate.field_signature;
+      const { rows: ruleRows } = await pool().query(`
+        INSERT INTO detection_rules (user_id, name, description, action, enabled, match_category, match_host)
+        VALUES ($1, $2, $3, 'suppress', true, $4, $5)
+        RETURNING id
+      `, [
+        uid(req),
+        `[Auto] Suppress ${sig.event_category || 'unknown'} from ${sig.source || 'unknown'}`,
+        `Approved from Noise Advisor (score: ${candidate.score})`,
+        sig.event_category || null,
+        sig.host || null,
+      ]);
+      await pool().query(
+        `UPDATE noise_candidates SET suppression_rule_id = $1 WHERE id = $2`,
+        [ruleRows[0].id, candidate.id]
+      );
+    }
+  }
+
   await audit(uid(req), `noise.bulk_${status}`, { count: safeIds.length }, req.ip);
   res.json({ updated: safeIds.length });
 });
