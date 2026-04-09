@@ -254,7 +254,7 @@ export default function ReverseShellGenerator() {
           </select>
         </div>
 
-        <button style={styles.button(!canGenerate)} onClick={handleGenerate} disabled={!canGenerate}>
+        <button style={{ ...styles.button(!canGenerate), alignSelf: isMobile ? 'flex-start' : 'flex-end' }} onClick={handleGenerate} disabled={!canGenerate}>
           Generate
         </button>
       </div>
