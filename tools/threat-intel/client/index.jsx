@@ -305,7 +305,7 @@ export default function ThreatIntelTool() {
           disabled={loading}
         />
         <select
-          style={isMobile ? { ...styles.select, width: '100%' } : styles.select}
+          style={styles.select}
           value={indicatorType}
           onChange={e => setIndicatorType(e.target.value)}
           disabled={loading}

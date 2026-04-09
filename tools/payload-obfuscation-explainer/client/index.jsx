@@ -205,7 +205,7 @@ export default function PayloadObfuscationExplainer() {
       />
 
       <div style={{ ...styles.controlRow, flexWrap: isMobile ? 'wrap' : 'nowrap' }}>
-        <select style={isMobile ? { ...styles.select, width: '100%' } : styles.select} value={encodingHint} onChange={e => setEncodingHint(e.target.value)} disabled={loading}>
+        <select style={styles.select} value={encodingHint} onChange={e => setEncodingHint(e.target.value)} disabled={loading}>
           {ENCODING_HINTS.map(h => <option key={h.value} value={h.value}>{h.label}</option>)}
         </select>
         <button style={styles.button(loading)} onClick={handleAnalyze} disabled={loading || !payload.trim()}>

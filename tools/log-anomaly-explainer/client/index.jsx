@@ -223,7 +223,7 @@ export default function LogAnomalyExplainer() {
       </div>
 
       <div style={{ ...styles.controlRow, flexWrap: isMobile ? 'wrap' : 'nowrap' }}>
-        <select style={isMobile ? { ...styles.select, width: '100%' } : styles.select} value={logSource} onChange={e => setLogSource(e.target.value)} disabled={loading}>
+        <select style={styles.select} value={logSource} onChange={e => setLogSource(e.target.value)} disabled={loading}>
           {LOG_SOURCES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
         </select>
         <button style={styles.button(loading)} onClick={handleAnalyze} disabled={!canAnalyze}>

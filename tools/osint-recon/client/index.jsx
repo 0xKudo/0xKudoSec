@@ -282,7 +282,7 @@ export default function OsintReconTool() {
           disabled={loading}
         />
         <select
-          style={isMobile ? { ...styles.select, width: '100%' } : styles.select}
+          style={styles.select}
           value={targetType}
           onChange={e => setTargetType(e.target.value)}
           disabled={loading}

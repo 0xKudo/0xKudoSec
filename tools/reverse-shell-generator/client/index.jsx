@@ -218,7 +218,7 @@ export default function ReverseShellGenerator() {
         AUTHORIZED USE ONLY — Only use against systems you own or have explicit written permission to test. Unauthorized access is illegal.
       </div>
 
-      <div style={{ ...styles.formRow, flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'stretch' : 'flex-end' }}>
+      <div style={{ ...styles.formRow, flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-start' : 'flex-end' }}>
         <div style={styles.fieldGroup}>
           <span style={styles.label}>Attacker IP (LHOST)</span>
           <input
@@ -243,7 +243,7 @@ export default function ReverseShellGenerator() {
 
         <div style={styles.fieldGroup}>
           <span style={styles.label}>Shell Type</span>
-          <select style={isMobile ? { ...styles.select, width: '100%' } : styles.select} value={shellType} onChange={e => setShellType(e.target.value)} disabled={loading}>
+          <select style={styles.select} value={shellType} onChange={e => setShellType(e.target.value)} disabled={loading}>
             {SHELL_GROUPS.map(group => (
               <optgroup key={group.label} label={group.label}>
                 {group.types.map(t => (

@@ -221,7 +221,7 @@ export default function NetworkThreatAnalyzer() {
       </div>
 
       <div style={{ ...styles.controlRow, flexWrap: isMobile ? 'wrap' : 'nowrap' }}>
-        <select style={isMobile ? { ...styles.select, width: '100%' } : styles.select} value={logType} onChange={e => setLogType(e.target.value)} disabled={loading}>
+        <select style={styles.select} value={logType} onChange={e => setLogType(e.target.value)} disabled={loading}>
           {LOG_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
         </select>
         <button style={styles.button(loading)} onClick={handleAnalyze} disabled={!canAnalyze}>
