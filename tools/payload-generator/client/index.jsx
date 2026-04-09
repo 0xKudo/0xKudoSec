@@ -401,6 +401,7 @@ function MsfTab() {
 // ─── Web payloads tab ─────────────────────────────────────────────────────────
 
 function WebTab() {
+  const isMobile = useIsMobile();
   const [categories, setCategories] = useState([]);
   const [activeCategory, setActiveCategory] = useState('');
   const [payloads, setPayloads] = useState([]);
@@ -429,7 +430,7 @@ function WebTab() {
 
       <div style={s.panel}>
         <div style={s.panelHeader}>Category</div>
-        <div style={s.catGrid}>
+        <div style={{ ...s.catGrid, gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)' }}>
           {categories.map(cat => (
             <div
               key={cat.id}
