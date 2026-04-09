@@ -67,6 +67,7 @@ export default function NoiseAdvisor() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [running, setRunning] = useState(false);
+  const [runResult, setRunResult] = useState(null);
 
   const authHeaders = useCallback(async () => {
     const token = await getAccessTokenSilently();
@@ -103,10 +104,13 @@ export default function NoiseAdvisor() {
 
   const runAnalysis = async () => {
     setRunning(true);
+    setRunResult(null);
     const h = await authHeaders();
-    await fetch(`${API}/run`, { method: 'POST', headers: h });
+    const res = await fetch(`${API}/run`, { method: 'POST', headers: h });
+    const data = await res.json();
     await load();
     setRunning(false);
+    setRunResult(data.result);
   };
 
   const updateStatus = async (id, newStatus) => {
@@ -172,6 +176,19 @@ export default function NoiseAdvisor() {
       </div>
 
       <div style={isMobile ? s.bodyMobile : s.body}>
+        {/* Run result banner */}
+        {runResult && !runResult.skipped && (
+          <div style={{ padding: '8px 14px', marginBottom: '16px', background: 'var(--bg-surface)', border: '1px solid var(--border)', fontSize: '11px', color: 'var(--text-muted)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span>Analysis complete — {runResult.scored ?? 0} new candidate{runResult.scored !== 1 ? 's' : ''} found.</span>
+            <button style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontFamily: 'var(--font)', fontSize: '11px', cursor: 'pointer' }} onClick={() => setRunResult(null)}>✕</button>
+          </div>
+        )}
+        {runResult?.skipped && (
+          <div style={{ padding: '8px 14px', marginBottom: '16px', background: 'var(--bg-surface)', border: '1px solid var(--border)', fontSize: '11px', color: 'var(--text-muted)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span>Not enough data yet — {Math.round(runResult.days_ingested ?? 0)} of 7 days, {parseInt(runResult.total_events ?? 0).toLocaleString()} of 10,000 events.</span>
+            <button style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontFamily: 'var(--font)', fontSize: '11px', cursor: 'pointer' }} onClick={() => setRunResult(null)}>✕</button>
+          </div>
+        )}
         {/* Settings bar */}
         <div style={s.settingsBar}>
           <span style={s.label}>Auto-suppress{saving ? ' — saving...' : ''}</span>
