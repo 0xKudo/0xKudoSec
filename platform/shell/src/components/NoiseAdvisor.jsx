@@ -198,19 +198,6 @@ export default function NoiseAdvisor() {
       {/* Header — matches SiemConfiguration */}
       <div style={isMobile ? { ...s.header, flexWrap: 'wrap' } : s.header}>
         <span style={s.title}>Noise Advisor</span>
-        <button
-          style={{ ...s.runBtn, opacity: running ? 0.5 : 1 }}
-          onClick={runAnalysis}
-          disabled={running}
-          onMouseEnter={e => { if (!running) e.currentTarget.style.color = 'var(--text-primary)'; }}
-          onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; }}
-        >
-          {running
-            ? runProgress
-              ? `${runProgress.checked} / ${runProgress.total}`
-              : 'Starting...'
-            : 'Run Analysis'}
-        </button>
       </div>
 
       {/* Tab bar — matches SiemConfiguration */}
@@ -273,6 +260,19 @@ export default function NoiseAdvisor() {
             <option value="high_only">Auto-create (high confidence)</option>
             <option value="all">Auto-create (all)</option>
           </select>
+          <button
+            style={{ ...s.runBtn, marginLeft: 'auto', opacity: running ? 0.5 : 1 }}
+            onClick={runAnalysis}
+            disabled={running}
+            onMouseEnter={e => { if (!running) e.currentTarget.style.color = 'var(--text-primary)'; }}
+            onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; }}
+          >
+            {running
+              ? runProgress
+                ? `${runProgress.checked} / ${runProgress.total}`
+                : 'Starting...'
+              : 'Run Analysis'}
+          </button>
         </div>
 
         {/* Threshold progress */}
