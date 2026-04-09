@@ -266,7 +266,7 @@ export default function Decoder() {
 
               {/* Sub-tabs — only if group has more than one op */}
               {activeGroup.ops.length > 1 && (
-                <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', marginBottom: '16px' }}>
+                <div style={{ display: 'flex', overflowX: 'auto', borderBottom: '1px solid var(--border)', margin: '0 -16px', paddingLeft: '8px', marginBottom: '16px' }}>
                   {activeGroup.ops.map(op => (
                     <button
                       key={op.value}
