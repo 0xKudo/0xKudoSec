@@ -574,7 +574,7 @@ function DesktopLanding({ onLogin }) {
       <footer style={s.footer}>
         <span style={s.footerBrand}>[ 0xKudo ]</span>
         <div style={s.footerLinks}>
-          {[['Tools', e => { e.preventDefault(); scrollToTools(); }], ['SIEM', null], ['Sign In', e => { e.preventDefault(); onLogin(); }], ['Privacy', e => { e.preventDefault(); window.location.href = '/privacy'; }]].map(([label, handler]) => (
+          {[['Tools', e => { e.preventDefault(); scrollToTools(); }], ['SIEM', null], ['Sign In', e => { e.preventDefault(); onLogin(); }], ['Privacy', e => { e.preventDefault(); window.location.href = '/privacy'; }], ['Security', e => { e.preventDefault(); window.location.href = '/security'; }]].map(([label, handler]) => (
             <a
               key={label}
               href="#"
@@ -716,7 +716,7 @@ function MobileLanding({ onLogin }) {
       <footer style={s.footerMobile}>
         <span style={s.footerBrand}>[ 0xKudo ]</span>
         <div style={s.footerLinks}>
-          {[['Tools', e => { e.preventDefault(); scrollToTools(); }], ['SIEM', null], ['Sign In', e => { e.preventDefault(); onLogin(); }], ['Privacy', e => { e.preventDefault(); window.location.href = '/privacy'; }]].map(([label, handler]) => (
+          {[['Tools', e => { e.preventDefault(); scrollToTools(); }], ['SIEM', null], ['Sign In', e => { e.preventDefault(); onLogin(); }], ['Privacy', e => { e.preventDefault(); window.location.href = '/privacy'; }], ['Security', e => { e.preventDefault(); window.location.href = '/security'; }]].map(([label, handler]) => (
             <a
               key={label}
               href="#"
