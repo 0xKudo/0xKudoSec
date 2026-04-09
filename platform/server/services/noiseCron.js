@@ -78,7 +78,7 @@ export async function scoreNoiseCandidates(userId) {
 
     const confidence = score >= HIGH_THRESHOLD ? 'high' : 'medium';
 
-    await pool.query(`
+    const { rowCount } = await pool.query(`
       INSERT INTO noise_candidates
         (user_id, field_signature, score, confidence, daily_avg, first_seen, last_seen, event_count)
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
@@ -94,7 +94,7 @@ export async function scoreNoiseCandidates(userId) {
       pattern.event_count,
     ]);
 
-    scored++;
+    if (rowCount > 0) scored++;
   }
 
   return { scored };
