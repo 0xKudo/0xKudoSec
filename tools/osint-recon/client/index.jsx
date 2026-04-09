@@ -274,7 +274,7 @@ export default function OsintReconTool() {
 
       <div style={{ ...styles.inputRow, flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-start' : undefined }}>
         <input
-          style={styles.input}
+          style={isMobile ? { ...styles.input, width: '100%', boxSizing: 'border-box' } : styles.input}
           placeholder="example.com, 192.168.1.1, or user@example.com"
           value={target}
           onChange={e => setTarget(e.target.value)}
@@ -293,7 +293,7 @@ export default function OsintReconTool() {
           <option value="email">Email</option>
         </select>
         <button
-          style={styles.button(loading)}
+          style={{ ...styles.button(loading), alignSelf: 'flex-start' }}
           onClick={handleAnalyze}
           disabled={loading || !target.trim()}
         >
