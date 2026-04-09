@@ -147,8 +147,8 @@ const styles = {
   tab: (active) => ({
     background: 'none',
     border: 'none',
-    borderBottom: active ? '2px solid var(--text-primary)' : '2px solid transparent',
-    color: active ? 'var(--text-primary)' : 'var(--text-muted)',
+    borderBottom: active ? '2px solid var(--accent-amber)' : '2px solid transparent',
+    color: active ? 'var(--accent-amber)' : 'var(--text-muted)',
         fontSize: '12px',
     padding: '6px 14px',
     cursor: 'pointer',
@@ -298,27 +298,53 @@ export default function HttpRepeater() {
         <div style={styles.main}>
           {/* Request bar */}
           <div style={styles.section}>
-            <div style={{ ...styles.requestBar, flexWrap: isMobile ? 'wrap' : 'nowrap' }}>
-              <select
-                style={styles.select}
-                value={method}
-                onChange={e => setMethod(e.target.value)}
-                disabled={loading}
-              >
-                {METHODS.map(m => <option key={m} value={m}>{m}</option>)}
-              </select>
-              <input
-                style={{ ...styles.urlInput, minWidth: 0 }}
-                placeholder="https://example.com/api/endpoint"
-                value={url}
-                onChange={e => setUrl(e.target.value)}
-                disabled={loading}
-                onKeyDown={e => e.key === 'Enter' && canSend && handleSend()}
-              />
-              <button style={styles.button(!canSend)} onClick={handleSend} disabled={!canSend}>
-                {loading ? 'Sending...' : 'Send'}
-              </button>
-            </div>
+            {isMobile ? (
+              <>
+                <input
+                  style={{ ...styles.urlInput, width: '100%', marginBottom: '8px', boxSizing: 'border-box' }}
+                  placeholder="https://example.com/api/endpoint"
+                  value={url}
+                  onChange={e => setUrl(e.target.value)}
+                  disabled={loading}
+                  onKeyDown={e => e.key === 'Enter' && canSend && handleSend()}
+                />
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <select
+                    style={styles.select}
+                    value={method}
+                    onChange={e => setMethod(e.target.value)}
+                    disabled={loading}
+                  >
+                    {METHODS.map(m => <option key={m} value={m}>{m}</option>)}
+                  </select>
+                  <button style={styles.button(!canSend)} onClick={handleSend} disabled={!canSend}>
+                    {loading ? 'Sending...' : 'Send'}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div style={styles.requestBar}>
+                <select
+                  style={styles.select}
+                  value={method}
+                  onChange={e => setMethod(e.target.value)}
+                  disabled={loading}
+                >
+                  {METHODS.map(m => <option key={m} value={m}>{m}</option>)}
+                </select>
+                <input
+                  style={{ ...styles.urlInput, minWidth: 0 }}
+                  placeholder="https://example.com/api/endpoint"
+                  value={url}
+                  onChange={e => setUrl(e.target.value)}
+                  disabled={loading}
+                  onKeyDown={e => e.key === 'Enter' && canSend && handleSend()}
+                />
+                <button style={styles.button(!canSend)} onClick={handleSend} disabled={!canSend}>
+                  {loading ? 'Sending...' : 'Send'}
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Headers */}
