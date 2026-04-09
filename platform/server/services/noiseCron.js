@@ -60,6 +60,8 @@ export async function scoreNoiseCandidates(userId, onProgress = null) {
   const total = newPatterns.length;
   let checked = 0;
 
+  if (onProgress) onProgress({ checked: 0, total, scored: 0 });
+
   for (const pattern of newPatterns) {
     checked++;
     let score = 0;

@@ -131,10 +131,8 @@ export default function NoiseAdvisor() {
     const reader = res.body.getReader();
     const decoder = new TextDecoder();
     let buffer = '';
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      buffer += decoder.decode(value, { stream: true });
+    const processLines = (text) => {
+      buffer += text;
       const lines = buffer.split('\n');
       buffer = lines.pop();
       for (const line of lines) {
@@ -145,6 +143,21 @@ export default function NoiseAdvisor() {
           if (msg.type === 'done') setRunResult(msg.result);
         } catch {}
       }
+    };
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) {
+        // flush any remaining buffered data
+        if (buffer.trim()) {
+          try {
+            const msg = JSON.parse(buffer);
+            if (msg.type === 'progress') setRunProgress(msg);
+            if (msg.type === 'done') setRunResult(msg.result);
+          } catch {}
+        }
+        break;
+      }
+      processLines(decoder.decode(value, { stream: true }));
     }
     await load();
     setRunning(false);
