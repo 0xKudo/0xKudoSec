@@ -72,7 +72,7 @@ process.on('message', async ({ type, modelPath, candidates }) => {
   let llama, model;
   try {
     log('INFO', 'Loading model:', modelPath);
-    llama = await getLlama({ gpu: 'off' });
+    llama = await getLlama({ gpu: false });
     model = await llama.loadModel({ modelPath });
     log('INFO', 'Model loaded');
   } catch (e) {
