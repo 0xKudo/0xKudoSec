@@ -287,6 +287,8 @@ export default function NoiseAdvisor() {
         body: JSON.stringify({ llm_explanation: r.explanation, llm_cve_safe: r.cve_safe, llm_cve_note: r.cve_note }),
       })
     ));
+    // Clear local llmResults so table re-renders from fresh server data
+    setLlmResults({});
     await load();
   };
 

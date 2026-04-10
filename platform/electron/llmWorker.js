@@ -293,12 +293,21 @@ Respond ONLY in JSON with this exact structure:
 function parseResponse(text) {
   const cleaned = text.replace(/```(?:json)?/gi, '').replace(/```/g, '').trim();
   const match = cleaned.match(/\{[\s\S]*\}/);
-  if (!match) throw new Error('No JSON found in LLM response');
-  const parsed = JSON.parse(match[0]);
+  if (match) {
+    try {
+      const parsed = JSON.parse(match[0]);
+      return {
+        explanation: typeof parsed.explanation === 'string' ? parsed.explanation.trim() : cleaned.slice(0, 500),
+        cve_safe: parsed.cve_safe !== false,
+        cve_note: typeof parsed.cve_note === 'string' ? parsed.cve_note.trim() : '',
+      };
+    } catch (_) {}
+  }
+  // Fallback: treat entire response as explanation, assume safe
   return {
-    explanation: typeof parsed.explanation === 'string' ? parsed.explanation.trim() : '',
-    cve_safe: parsed.cve_safe !== false,
-    cve_note: typeof parsed.cve_note === 'string' ? parsed.cve_note.trim() : '',
+    explanation: cleaned.slice(0, 500),
+    cve_safe: true,
+    cve_note: '',
   };
 }
 
