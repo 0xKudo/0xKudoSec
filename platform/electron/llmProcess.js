@@ -44,10 +44,23 @@ Respond ONLY in JSON with this exact structure:
 
 function parseResponse(text) {
   const cleaned = text.replace(/```(?:json)?/gi, '').replace(/```/g, '').trim();
-  const match = cleaned.match(/\{[\s\S]*\}/);
+  // Find the first complete JSON object — non-greedy to avoid matching continuation text
+  const match = cleaned.match(/\{[^{}]*\}/);
   if (match) {
     try {
       const parsed = JSON.parse(match[0]);
+      return {
+        explanation: typeof parsed.explanation === 'string' ? parsed.explanation.trim() : cleaned.slice(0, 500),
+        cve_safe: parsed.cve_safe !== false,
+        cve_note: typeof parsed.cve_note === 'string' ? parsed.cve_note.trim() : '',
+      };
+    } catch (_) {}
+  }
+  // Greedy fallback — try full match in case explanation contains nested text
+  const greedyMatch = cleaned.match(/\{[\s\S]*\}/);
+  if (greedyMatch) {
+    try {
+      const parsed = JSON.parse(greedyMatch[0]);
       return {
         explanation: typeof parsed.explanation === 'string' ? parsed.explanation.trim() : cleaned.slice(0, 500),
         cve_safe: parsed.cve_safe !== false,
@@ -89,7 +102,10 @@ process.on('message', async ({ type, modelPath, candidates }) => {
       const completion = new LlamaCompletion({ contextSequence: sequence });
       const prompt = buildPrompt(candidate);
       log('INFO', 'Calling generateCompletion');
-      const responseText = await completion.generateCompletion(prompt, { maxTokens: 256 });
+      const responseText = await completion.generateCompletion(prompt, {
+        maxTokens: 256,
+        customStopTriggers: ['<|end|>', '<|user|>', '<|system|>'],
+      });
       log('INFO', 'Response:', responseText);
       const parsed = parseResponse(responseText);
       process.send({ type: 'result', id: candidate.id, ...parsed, error: null });
