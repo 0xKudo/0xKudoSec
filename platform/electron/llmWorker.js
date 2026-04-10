@@ -330,9 +330,9 @@ function parseResponse(text) {
 
 async function runAnalysis(modelFilePath, candidates, mainWindow) {
   // node-llama-cpp v3 is ESM-only
-  let getLlama, LlamaChatSession;
+  let getLlama, LlamaChatSession, LlamaCompletion;
   try {
-    ({ getLlama, LlamaChatSession } = await import('node-llama-cpp'));
+    ({ getLlama, LlamaChatSession, LlamaCompletion } = await import('node-llama-cpp'));
   } catch (e) {
     llmStatus = 'unavailable';
     emitStatus(mainWindow, 'unavailable');
@@ -369,11 +369,21 @@ async function runAnalysis(modelFilePath, candidates, mainWindow) {
       try {
         llmLog('INFO', 'Analyzing candidate:', candidate.id);
         context = await model.createContext({ contextSize: 2048 });
-        const sequence = context.getSequence();
-        const session = new LlamaChatSession({ contextSequence: sequence, autoDisposeSequence: true });
         const prompt = buildPrompt(candidate, null);
-        llmLog('INFO', 'Prompt built, calling session.prompt()');
-        const responseText = await session.prompt(prompt, { maxTokens: 256 });
+        llmLog('INFO', 'Prompt built, attempting LlamaChatSession');
+        const sequence = context.getSequence();
+        let responseText;
+        try {
+          const session = new LlamaChatSession({ contextSequence: sequence, autoDisposeSequence: false });
+          responseText = await session.prompt(prompt, { maxTokens: 256 });
+          llmLog('INFO', 'LlamaChatSession succeeded');
+        } catch (chatErr) {
+          llmLog('WARN', 'LlamaChatSession failed, falling back to LlamaCompletion:', chatErr.message);
+          // Fall back to raw completion — no chat template, plain text in/out
+          const completion = new LlamaCompletion({ contextSequence: sequence });
+          responseText = await completion.generateCompletion(prompt, { maxTokens: 256 });
+          llmLog('INFO', 'LlamaCompletion succeeded');
+        }
         llmLog('INFO', 'Raw response:', responseText);
         const parsed = parseResponse(responseText);
         llmLog('INFO', 'Parsed result:', parsed);
