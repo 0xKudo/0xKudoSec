@@ -6,7 +6,7 @@ import { useLocation } from 'react-router-dom';
 const isElectron = typeof window !== 'undefined' && window.electron?.isElectron === true;
 
 // ── Update this URL with each Electron release ────────────────────────────────
-const DESKTOP_DOWNLOAD_URL = 'https://github.com/0xKudoX/0xKudoSec-releases/releases/download/v1.2.28/0xKudo-Security-Toolkit-Setup-1.2.28.exe';
+const DESKTOP_DOWNLOAD_URL = 'https://github.com/0xKudoX/0xKudoSec-releases/releases/download/v1.2.29/0xKudo-Security-Toolkit-Setup-1.2.29.exe';
 
 const styles = {
   nav: {
