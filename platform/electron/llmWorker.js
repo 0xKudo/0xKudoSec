@@ -349,11 +349,22 @@ async function runAnalysis(modelFilePath, candidates, mainWindow) {
     const scriptPath = getLlmProcessScript();
     llmLog('INFO', 'llmProcess script path:', scriptPath);
 
+    // node_modules lives in app.asar.unpacked — pass it explicitly so the child
+    // process can resolve node-llama-cpp and all its dependencies
+    const nodeModulesPath = path.join(
+      __dirname.replace('app.asar', 'app.asar.unpacked'),
+      'node_modules'
+    );
+
     let child;
     try {
       child = fork(scriptPath, [], {
         execArgv: ['--experimental-vm-modules'],
         stdio: ['pipe', 'pipe', 'pipe', 'ipc'],
+        env: {
+          ...process.env,
+          NODE_PATH: nodeModulesPath,
+        },
       });
     } catch (e) {
       llmStatus = 'unavailable';

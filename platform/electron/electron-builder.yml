@@ -43,8 +43,8 @@ files:
   - "node_modules/**"
   - "package.json"
 
-# Native modules must be unpacked from asar — they cannot run from inside the archive
-# llmProcess.js is forked as a child process and must also be outside the asar
+# Unpack all node_modules — llmProcess.js runs as a child process and needs to resolve
+# ESM imports (node-llama-cpp and all its deps) from the filesystem, not inside app.asar
 asarUnpack:
-  - "node_modules/node-llama-cpp/**"
+  - "node_modules/**"
   - "llmProcess.js"
