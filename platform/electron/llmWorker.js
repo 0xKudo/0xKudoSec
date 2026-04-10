@@ -318,61 +318,50 @@ async function runAnalysis(modelFilePath, candidates, mainWindow) {
   llmStatus = 'loading';
   emitStatus(mainWindow, 'loading');
 
-  let llama, model;
-  try {
-    llama = await getLlama({ gpu: 'off' });
-    model = await llama.loadModel({ modelPath: modelFilePath });
-  } catch (e) {
-    llmStatus = 'unavailable';
-    emitStatus(mainWindow, 'unavailable');
-    throw new Error(`Failed to load model: ${e.message}`);
-  }
-
   llmStatus = 'running';
   emitStatus(mainWindow, 'running');
 
   const results = [];
 
-  try {
-    for (const candidate of candidates) {
-      if (cancelRequested) break;
+  // Fully recreate llama + model + context per candidate.
+  // node-llama-cpp does not reliably support reusing a disposed context or model.
+  for (const candidate of candidates) {
+    if (cancelRequested) break;
 
-      // Create a fresh context for each candidate and dispose after — one at a time to avoid OOM
-      let candidateContext;
-      let result;
-      try {
-        candidateContext = await model.createContext({ contextSize: 2048 });
-        const seq = candidateContext.getSequence();
-        const session = new LlamaChatSession({ contextSequence: seq });
-        const prompt = buildPrompt(candidate, null); // KB context slotted in Phase 3
-        const responseText = await session.prompt(prompt, { maxTokens: 256 });
-        await session.dispose?.();
-        const parsed = parseResponse(responseText);
-        result = { id: candidate.id, ...parsed, error: null };
-      } catch (e) {
-        result = {
-          id: candidate.id,
-          explanation: 'Analysis failed: could not parse LLM response.',
-          cve_safe: true,
-          cve_note: '',
-          error: e.message,
-        };
-      } finally {
-        try { await candidateContext?.dispose(); } catch (_) {}
-      }
-
-      results.push(result);
-
-      if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.webContents.send('llm:candidate-result', result);
-      }
+    let llama, model, candidateContext;
+    let result;
+    try {
+      llama = await getLlama({ gpu: 'off' });
+      model = await llama.loadModel({ modelPath: modelFilePath });
+      candidateContext = await model.createContext({ contextSize: 2048 });
+      const session = new LlamaChatSession({ contextSequence: candidateContext.getSequence() });
+      const prompt = buildPrompt(candidate, null); // KB context slotted in Phase 3
+      const responseText = await session.prompt(prompt, { maxTokens: 256 });
+      const parsed = parseResponse(responseText);
+      result = { id: candidate.id, ...parsed, error: null };
+    } catch (e) {
+      result = {
+        id: candidate.id,
+        explanation: 'Analysis failed: could not parse LLM response.',
+        cve_safe: true,
+        cve_note: '',
+        error: e.message,
+      };
+    } finally {
+      try { await candidateContext?.dispose(); } catch (_) {}
+      try { await model?.dispose(); } catch (_) {}
+      try { await llama?.dispose(); } catch (_) {}
     }
-  } finally {
-    try { await model.dispose(); } catch (_) {}
-    try { await llama.dispose(); } catch (_) {}
-    llmStatus = 'idle';
-    emitStatus(mainWindow, 'idle');
+
+    results.push(result);
+
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('llm:candidate-result', result);
+    }
   }
+
+  llmStatus = 'idle';
+  emitStatus(mainWindow, 'idle');
 
   return results;
 }
