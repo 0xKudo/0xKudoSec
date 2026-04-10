@@ -112,7 +112,7 @@ export async function scoreNoiseCandidates(userId, onProgress = null) {
     const { rowCount } = await pool.query(`
       INSERT INTO noise_candidates
         (user_id, field_signature, score, confidence, daily_avg, first_seen, last_seen, event_count)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      VALUES ($1, $2::jsonb, $3, $4, $5, $6, $7, $8)
       ON CONFLICT (user_id, field_signature) DO NOTHING
     `, [
       userId,
