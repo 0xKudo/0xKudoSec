@@ -49,11 +49,55 @@ router.get('/candidates', requireAuth, async (req, res) => {
   res.json(rows);
 });
 
+// PATCH /api/siem/noise/candidates/:id/llm-result
+// Called by Electron after LLM analysis completes — writes explanation + CVE verdict back to the server.
+router.patch('/candidates/:id/llm-result', requireAuth, async (req, res) => {
+  const { llm_explanation, llm_cve_safe, llm_cve_note } = req.body;
+
+  if (typeof llm_explanation !== 'string' || llm_explanation.length > 2000) {
+    return res.status(400).json({ error: 'llm_explanation must be a string under 2000 chars' });
+  }
+  if (typeof llm_cve_safe !== 'boolean') {
+    return res.status(400).json({ error: 'llm_cve_safe must be a boolean' });
+  }
+
+  const note = typeof llm_cve_note === 'string' ? llm_cve_note.slice(0, 1000) : null;
+
+  const { rows } = await pool().query(`
+    UPDATE noise_candidates
+    SET llm_explanation = $1,
+        llm_cve_safe = $2,
+        llm_cve_note = $3,
+        llm_checked_at = NOW(),
+        updated_at = NOW()
+    WHERE id = $4 AND user_id = $5
+    RETURNING id, llm_cve_safe
+  `, [llm_explanation, llm_cve_safe, note, req.params.id, uid(req)]);
+
+  if (!rows.length) return res.status(404).json({ error: 'not found' });
+  res.json({ ok: true, id: rows[0].id, llm_cve_safe: rows[0].llm_cve_safe });
+});
+
 // PATCH /api/siem/noise/candidates/:id
 router.patch('/candidates/:id', requireAuth, async (req, res) => {
   const { status } = req.body;
   if (!['approved', 'rejected'].includes(status)) {
     return res.status(400).json({ error: 'status must be approved or rejected' });
+  }
+
+  // Fetch the candidate first — we need to check CVE safety before approving
+  const { rows: existing } = await pool().query(
+    `SELECT * FROM noise_candidates WHERE id = $1 AND user_id = $2`,
+    [req.params.id, uid(req)]
+  );
+  if (!existing.length) return res.status(404).json({ error: 'not found' });
+
+  // Hard block: CVE-flagged candidates cannot be approved regardless of user action
+  if (status === 'approved' && existing[0].llm_cve_safe === false) {
+    return res.status(409).json({
+      error: 'This pattern was flagged as CVE-unsafe by LLM analysis and cannot be suppressed.',
+      llm_cve_note: existing[0].llm_cve_note || null,
+    });
   }
 
   const { rows } = await pool().query(`
@@ -104,18 +148,39 @@ router.post('/candidates/bulk', requireAuth, async (req, res) => {
   const safeIds = ids.filter(id => typeof id === 'string' && /^[0-9a-f-]{36}$/.test(id));
   if (!safeIds.length) return res.status(400).json({ error: 'no valid ids' });
 
-  const placeholders = safeIds.map((_, i) => `$${i + 3}`).join(',');
+  // For approvals, strip out any CVE-flagged candidates before touching the DB
+  let approveIds = safeIds;
+  const cveBlocked = [];
+  if (status === 'approved') {
+    const selectPh = safeIds.map((_, i) => `$${i + 2}`).join(',');
+    const { rows: candidates } = await pool().query(
+      `SELECT id FROM noise_candidates WHERE user_id = $1 AND id IN (${selectPh}) AND llm_cve_safe = false`,
+      [uid(req), ...safeIds]
+    );
+    const blockedSet = new Set(candidates.map(r => r.id));
+    cveBlocked.push(...blockedSet);
+    approveIds = safeIds.filter(id => !blockedSet.has(id));
+  }
+
+  if (!approveIds.length && status === 'approved') {
+    return res.status(409).json({
+      error: 'All selected candidates were flagged as CVE-unsafe and cannot be suppressed.',
+      cve_blocked: cveBlocked,
+    });
+  }
+
+  const placeholders = approveIds.map((_, i) => `$${i + 3}`).join(',');
   await pool().query(
     `UPDATE noise_candidates SET status = $1, updated_at = NOW()
      WHERE user_id = $2 AND id IN (${placeholders})`,
-    [status, uid(req), ...safeIds]
+    [status, uid(req), ...approveIds]
   );
 
   if (status === 'approved') {
-    const selectPlaceholders = safeIds.map((_, i) => `$${i + 2}`).join(',');
+    const selectPlaceholders = approveIds.map((_, i) => `$${i + 2}`).join(',');
     const { rows: candidates } = await pool().query(
       `SELECT * FROM noise_candidates WHERE user_id = $1 AND id IN (${selectPlaceholders})`,
-      [uid(req), ...safeIds]
+      [uid(req), ...approveIds]
     );
     for (const candidate of candidates) {
       const sig = candidate.field_signature;
@@ -141,8 +206,8 @@ router.post('/candidates/bulk', requireAuth, async (req, res) => {
     }
   }
 
-  await audit(uid(req), `noise.bulk_${status}`, { count: safeIds.length }, req.ip);
-  res.json({ updated: safeIds.length });
+  await audit(uid(req), `noise.bulk_${status}`, { count: approveIds.length, cve_blocked: cveBlocked.length }, req.ip);
+  res.json({ updated: approveIds.length, cve_blocked: cveBlocked });
 });
 
 // POST /api/siem/noise/candidates/:id/undo

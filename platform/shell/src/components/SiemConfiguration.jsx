@@ -977,27 +977,7 @@ winlogbeat.event_logs:
 
         {/* ── Tab 6: Desktop App (Electron only) ── */}
         {isElectron && tab === 6 && (
-          <div style={s.section}>
-            <div style={s.sectionTitle}>Desktop App</div>
-            <div style={s.sectionDesc}>Settings for the [ 0xKudo ] desktop application.</div>
-            <div style={{ borderTop: '1px solid var(--border)', marginTop: '20px', paddingTop: '20px' }}>
-              <div style={s.sectionTitle}>Window Behavior</div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '12px' }}>
-                <label style={{ fontSize: '12px', color: 'var(--text-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <input
-                    type="checkbox"
-                    checked={trayOnClose}
-                    onChange={e => handleTrayOnCloseToggle(e.target.checked)}
-                    style={{ cursor: 'pointer' }}
-                  />
-                  Minimize to tray when window is closed
-                </label>
-              </div>
-              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px' }}>
-                When enabled, closing the window keeps the app running in the system tray. Right-click the tray icon to quit.
-              </div>
-            </div>
-          </div>
+          <DesktopAppTab s={s} trayOnClose={trayOnClose} handleTrayOnCloseToggle={handleTrayOnCloseToggle} />
         )}
 
         {/* ── Tab 7: Edit Config (config-editor role + Electron only) ── */}
@@ -1517,6 +1497,268 @@ winlogbeat.event_logs:
           </div>
         )}
 
+      </div>
+    </div>
+  );
+}
+
+// ── DesktopAppTab ─────────────────────────────────────────────────────────────
+
+function DesktopAppTab({ s, trayOnClose, handleTrayOnCloseToggle }) {
+  const [library, setLibrary] = useState([]);
+  const [libraryLoading, setLibraryLoading] = useState(true);
+  const [downloadProgress, setDownloadProgress] = useState({}); // modelKey/filename → percent
+  const [downloading, setDownloading] = useState(null);
+  const [removeConfirm, setRemoveConfirm] = useState(null);
+  const [actionMsg, setActionMsg] = useState(null); // { text, color }
+  const [urlInput, setUrlInput] = useState('');
+  const [urlLoading, setUrlLoading] = useState(false);
+
+  const loadLibrary = async () => {
+    const res = await window.electron.llm.getLibrary();
+    if (res.ok) setLibrary(res.models);
+    setLibraryLoading(false);
+  };
+
+  useEffect(() => {
+    loadLibrary();
+    window.electron.llm.onDownloadProgress(info => {
+      const key = info.modelKey || info.filename;
+      setDownloadProgress(prev => ({ ...prev, [key]: info.percent ?? 0 }));
+    });
+  }, []);
+
+  const flash = (text, color = 'var(--severity-low)') => {
+    setActionMsg({ text, color });
+    setTimeout(() => setActionMsg(null), 4000);
+  };
+
+  const handleSetActive = async (filename) => {
+    const res = await window.electron.llm.setActive(filename);
+    if (res.ok) { flash('Active model updated.'); await loadLibrary(); }
+    else flash(res.err, 'var(--severity-critical)');
+  };
+
+  const handleDownload = async (modelKey) => {
+    setDownloading(modelKey);
+    setDownloadProgress(prev => ({ ...prev, [modelKey]: 0 }));
+    const res = await window.electron.llm.downloadModel(modelKey);
+    setDownloading(null);
+    setDownloadProgress(prev => { const n = { ...prev }; delete n[modelKey]; return n; });
+    if (!res.ok) flash(res.err, 'var(--severity-critical)');
+    else { flash('Model downloaded successfully.'); await loadLibrary(); }
+  };
+
+  const handleRemove = async (filename) => {
+    const res = await window.electron.llm.removeModel(filename);
+    setRemoveConfirm(null);
+    if (!res.ok) flash(res.err, 'var(--severity-critical)');
+    else { flash('Model removed.'); await loadLibrary(); }
+  };
+
+  const handleAddCustom = async () => {
+    // Use showOpenDialog via a hidden file input (Electron doesn't expose dialog via contextBridge here)
+    // Fall back to a file input that the user selects
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.gguf';
+    input.onchange = async (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      const res = await window.electron.llm.addCustom(file.path);
+      if (!res.ok) flash(res.err, 'var(--severity-critical)');
+      else {
+        const warn = res.warnings?.length ? ` Warnings: ${res.warnings.join('; ')}` : '';
+        flash(`Model added.${warn}`, res.warnings?.length ? 'var(--severity-medium)' : 'var(--severity-low)');
+        await loadLibrary();
+      }
+    };
+    input.click();
+  };
+
+  const handleDownloadUrl = async () => {
+    const url = urlInput.trim();
+    if (!url) return;
+    setUrlLoading(true);
+    const res = await window.electron.llm.downloadUrl(url);
+    setUrlLoading(false);
+    if (!res.ok) flash(res.err, 'var(--severity-critical)');
+    else {
+      const warn = res.warnings?.length ? ` Warnings: ${res.warnings.join('; ')}` : '';
+      flash(`Model downloaded.${warn}`, res.warnings?.length ? 'var(--severity-medium)' : 'var(--severity-low)');
+      setUrlInput('');
+      await loadLibrary();
+    }
+  };
+
+  const fmtSize = (bytes) => {
+    if (!bytes) return '—';
+    if (bytes >= 1e9) return `${(bytes / 1e9).toFixed(1)}GB`;
+    return `${Math.round(bytes / 1e6)}MB`;
+  };
+
+  const statusLabel = (m) => {
+    if (downloading === m.modelKey) return 'downloading...';
+    if (m.status === 'not-downloaded') return 'not downloaded';
+    if (m.status === 'missing') return 'file missing';
+    if (m.status === 'incompatible') return 'incompatible';
+    if (m.status === 'ready') return 'ready';
+    return m.status || '—';
+  };
+
+  const statusColor = (m) => {
+    if (m.status === 'ready') return 'var(--severity-low)';
+    if (m.status === 'incompatible' || m.status === 'missing') return 'var(--severity-critical)';
+    return 'var(--text-muted)';
+  };
+
+  return (
+    <div style={s.section}>
+      <div style={s.sectionTitle}>Desktop App</div>
+      <div style={s.sectionDesc}>Settings for the [ 0xKudo ] desktop application.</div>
+
+      {/* Window Behavior */}
+      <div style={{ borderTop: '1px solid var(--border)', marginTop: '20px', paddingTop: '20px' }}>
+        <div style={s.sectionTitle}>Window Behavior</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '12px' }}>
+          <label style={{ fontSize: '12px', color: 'var(--text-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <input type="checkbox" checked={trayOnClose} onChange={e => handleTrayOnCloseToggle(e.target.checked)} style={{ cursor: 'pointer' }} />
+            Minimize to tray when window is closed
+          </label>
+        </div>
+        <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px' }}>
+          When enabled, closing the window keeps the app running in the system tray. Right-click the tray icon to quit.
+        </div>
+      </div>
+
+      {/* Noise Advisor — Model Library */}
+      <div style={{ borderTop: '1px solid var(--border)', marginTop: '28px', paddingTop: '20px' }}>
+        <div style={s.sectionTitle}>Noise Advisor — Model Library</div>
+        <div style={s.sectionDesc}>
+          Models are stored in %APPDATA%\0xKudo\models. Managed models are downloaded on demand.
+          Custom models are registered from your local files and never deleted when removed from the library.
+        </div>
+
+        {actionMsg && (
+          <div style={{ padding: '8px 12px', marginBottom: '14px', border: `1px solid ${actionMsg.color}`, fontSize: '11px', color: actionMsg.color }}>
+            {actionMsg.text}
+          </div>
+        )}
+
+        {/* Model library table */}
+        {libraryLoading ? (
+          <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '16px' }}>Loading model library...</div>
+        ) : (
+          <table style={{ ...s.table, marginBottom: '20px' }}>
+            <thead>
+              <tr>
+                <th style={s.th}>Name</th>
+                <th style={s.th}>Type</th>
+                <th style={s.th}>Size</th>
+                <th style={s.th}>RAM Est.</th>
+                <th style={s.th}>Quant.</th>
+                <th style={s.th}>Status</th>
+                <th style={s.th}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {library.map(m => {
+                const progressKey = m.modelKey || m.filename;
+                const pct = downloadProgress[progressKey];
+                const isDownloading = downloading === m.modelKey;
+                return (
+                  <tr key={m.filename} style={{ background: m.active ? 'color-mix(in srgb, var(--accent-amber) 5%, transparent)' : undefined }}>
+                    <td style={s.td}>
+                      <span style={{ color: 'var(--text-primary)' }}>{m.displayName || m.filename}</span>
+                      {m.active && <span style={{ marginLeft: '8px', fontSize: '10px', color: 'var(--accent-amber)', letterSpacing: '0.06em' }}>ACTIVE</span>}
+                    </td>
+                    <td style={s.td}>{m.type === 'managed' ? 'Managed' : 'Custom'}</td>
+                    <td style={s.td}>{fmtSize(m.sizeBytes)}</td>
+                    <td style={s.td}>{fmtSize(m.ramEstimateBytes)}</td>
+                    <td style={s.td}>{m.quantization || '—'}</td>
+                    <td style={s.td}>
+                      <span style={{ color: statusColor(m), fontSize: '11px' }}>{statusLabel(m)}</span>
+                      {isDownloading && pct !== undefined && (
+                        <div style={{ marginTop: '4px', width: '80px', height: '3px', background: 'var(--border)' }}>
+                          <div style={{ height: '100%', width: `${pct}%`, background: 'var(--accent-amber)', transition: 'width 0.3s' }} />
+                        </div>
+                      )}
+                    </td>
+                    <td style={s.td}>
+                      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                        {m.status === 'ready' && !m.active && (
+                          <button style={{ ...s.btnPrimary, marginRight: 0 }} onClick={() => handleSetActive(m.filename)}>
+                            Set Active
+                          </button>
+                        )}
+                        {m.type === 'managed' && m.status === 'not-downloaded' && !isDownloading && (
+                          <button style={{ ...s.btnPrimary, marginRight: 0 }} onClick={() => handleDownload(m.modelKey)}>
+                            Download
+                          </button>
+                        )}
+                        {isDownloading && (
+                          <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{pct ?? 0}%</span>
+                        )}
+                        {m.status !== 'not-downloaded' && (
+                          removeConfirm === m.filename ? (
+                            <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              {m.type === 'managed' ? 'Delete file?' : 'Remove from library?'}
+                              <button style={{ ...s.btnPrimary, marginRight: 0, background: 'none', border: '1px solid var(--severity-critical)', color: 'var(--severity-critical)' }} onClick={() => handleRemove(m.filename)}>Yes</button>
+                              <button style={{ ...s.btnPrimary, marginRight: 0, background: 'none', border: '1px solid var(--border)', color: 'var(--text-muted)' }} onClick={() => setRemoveConfirm(null)}>Cancel</button>
+                            </span>
+                          ) : (
+                            <button
+                              style={{ background: 'none', border: '1px solid var(--border)', color: 'var(--text-muted)', fontFamily: 'var(--font)', fontSize: '11px', padding: '4px 10px', cursor: 'pointer' }}
+                              onClick={() => setRemoveConfirm(m.filename)}
+                            >
+                              Remove
+                            </button>
+                          )
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+              {library.length === 0 && (
+                <tr>
+                  <td colSpan={7} style={{ ...s.td, textAlign: 'center', color: 'var(--text-muted)', padding: '20px' }}>
+                    No models in library. Download a managed model or add a custom GGUF below.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        )}
+
+        {/* Add custom model — browse local file */}
+        <div style={{ marginBottom: '16px' }}>
+          <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Add Custom Model</div>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <button style={{ ...s.btnPrimary, marginRight: 0 }} onClick={handleAddCustom}>
+              Browse local .gguf file
+            </button>
+            <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>or paste a download URL:</span>
+            <input
+              type="text"
+              placeholder="https://huggingface.co/.../model.gguf"
+              value={urlInput}
+              onChange={e => setUrlInput(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter' && !urlLoading) handleDownloadUrl(); }}
+              style={{ ...s.input, width: '320px' }}
+            />
+            <button
+              style={{ ...s.btnPrimary, marginRight: 0, opacity: urlLoading || !urlInput.trim() ? 0.5 : 1 }}
+              disabled={urlLoading || !urlInput.trim()}
+              onClick={handleDownloadUrl}
+            >
+              {urlLoading ? 'Downloading...' : 'Download'}
+            </button>
+          </div>
+          <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px', lineHeight: 1.6 }}>
+            Custom models are validated for GGUF format and RAM requirements. Warnings are informational only — you decide whether to use them.
+          </div>
+        </div>
       </div>
     </div>
   );

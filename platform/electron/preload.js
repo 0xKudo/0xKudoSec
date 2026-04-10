@@ -64,4 +64,32 @@ contextBridge.exposeInMainWorld('electron', {
     install: () => ipcRenderer.invoke('update:install'),
     dismiss: () => ipcRenderer.invoke('update:dismiss'),
   },
+
+  llm: {
+    // Query / control
+    getStatus: () => ipcRenderer.invoke('llm:status'),
+    cancel: () => ipcRenderer.invoke('llm:cancel'),
+
+    // Analysis
+    analyze: (candidates, modelKey) => ipcRenderer.invoke('llm:analyze', candidates, modelKey),
+
+    // Model library
+    getLibrary: () => ipcRenderer.invoke('llm:get-library'),
+    setActive: (filename) => ipcRenderer.invoke('llm:set-active', filename),
+    removeModel: (filename) => ipcRenderer.invoke('llm:remove-model', filename),
+
+    // Managed model download + update check
+    downloadModel: (modelKey) => ipcRenderer.invoke('llm:download-model', modelKey),
+    checkUpdate: (modelKey) => ipcRenderer.invoke('llm:check-update', modelKey),
+
+    // Custom model — local file or URL
+    addCustom: (filePath) => ipcRenderer.invoke('llm:add-custom', filePath),
+    downloadUrl: (url) => ipcRenderer.invoke('llm:download-url', url),
+
+    // Push events from main → renderer
+    onStatusChange: (cb) => ipcRenderer.on('llm:status-change', (_e, s) => cb(s)),
+    onCandidateResult: (cb) => ipcRenderer.on('llm:candidate-result', (_e, result) => cb(result)),
+    onDownloadProgress: (cb) => ipcRenderer.on('llm:download-progress', (_e, info) => cb(info)),
+    onUpdateAvailable: (cb) => ipcRenderer.on('llm:update-available', (_e, info) => cb(info)),
+  },
 });

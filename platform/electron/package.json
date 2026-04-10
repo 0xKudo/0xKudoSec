@@ -11,7 +11,8 @@
   },
   "dependencies": {
     "electron-store": "^8.2.0",
-    "electron-updater": "^6.8.3"
+    "electron-updater": "^6.8.3",
+    "node-llama-cpp": "^3.6.0"
   },
   "devDependencies": {
     "app-builder-bin": "^4.2.0",

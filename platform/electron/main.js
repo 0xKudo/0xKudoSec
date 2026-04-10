@@ -709,6 +709,11 @@ app.whenReady().then(async () => {
   const { createTray } = require('./tray');
   tray = createTray(mainWindow, store, navigateTo, runSc);
 
+  // LLM IPC — registered after mainWindow exists so progress events can be sent
+  const { setupLlmIpc, scheduleStartupUpdateCheck } = require('./llmWorker');
+  setupLlmIpc(mainWindow);
+  scheduleStartupUpdateCheck(mainWindow);
+
   setupAutoUpdater();
 });
 
