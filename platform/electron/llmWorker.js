@@ -337,14 +337,16 @@ async function runAnalysis(modelFilePath, candidates, mainWindow) {
     for (const candidate of candidates) {
       if (cancelRequested) break;
 
-      // Fresh context + session per candidate — sequences are not reliably released on dispose
+      // Create a fresh context for each candidate and dispose after — one at a time to avoid OOM
       let candidateContext;
       let result;
       try {
         candidateContext = await model.createContext({ contextSize: 2048 });
-        const session = new LlamaChatSession({ contextSequence: candidateContext.getSequence() });
+        const seq = candidateContext.getSequence();
+        const session = new LlamaChatSession({ contextSequence: seq });
         const prompt = buildPrompt(candidate, null); // KB context slotted in Phase 3
         const responseText = await session.prompt(prompt, { maxTokens: 256 });
+        await session.dispose?.();
         const parsed = parseResponse(responseText);
         result = { id: candidate.id, ...parsed, error: null };
       } catch (e) {
@@ -366,7 +368,6 @@ async function runAnalysis(modelFilePath, candidates, mainWindow) {
       }
     }
   } finally {
-    try { await context.dispose(); } catch (_) {}
     try { await model.dispose(); } catch (_) {}
     try { await llama.dispose(); } catch (_) {}
     llmStatus = 'idle';
