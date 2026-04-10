@@ -356,12 +356,14 @@ async function runAnalysis(modelFilePath, candidates, mainWindow) {
         const session = new LlamaChatSession({ contextSequence: sequence });
         const prompt = buildPrompt(candidate, null); // KB context slotted in Phase 3
         const responseText = await session.prompt(prompt, { maxTokens: 256 });
+        console.log('[llm] raw response:', responseText);
         const parsed = parseResponse(responseText);
         result = { id: candidate.id, ...parsed, error: null };
       } catch (e) {
+        console.error('[llm] candidate error:', e.message, e.stack);
         result = {
           id: candidate.id,
-          explanation: 'Analysis failed: could not parse LLM response.',
+          explanation: e.message || 'Analysis failed.',
           cve_safe: true,
           cve_note: '',
           error: e.message,

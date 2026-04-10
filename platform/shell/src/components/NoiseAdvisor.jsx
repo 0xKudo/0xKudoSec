@@ -280,7 +280,7 @@ export default function NoiseAdvisor() {
 
     // Write results back to server and refresh
     const h = await authHeaders();
-    await Promise.all(res.results.map(r =>
+    await Promise.all(res.results.filter(r => !r.error).map(r =>
       fetch(`${API}/candidates/${r.id}/llm-result`, {
         method: 'PATCH',
         headers: h,
