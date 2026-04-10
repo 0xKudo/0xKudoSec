@@ -188,12 +188,21 @@ export default function NoiseAdvisor() {
     load();
     loadModelLibrary();
 
-    // Get initial LLM status
+    // Get initial LLM status — restore llmRunning if analysis was in progress when we navigated away
     if (isElectron) {
-      window.electron.llm.getStatus().then(s => { if (isMountedRef.current) setLlmStatus(s); });
+      window.electron.llm.getStatus().then(s => {
+        if (isMountedRef.current) {
+          setLlmStatus(s);
+          if (s === 'running' || s === 'loading') setLlmRunning(true);
+        }
+      });
 
       // Push events from main process
-      window.electron.llm.onStatusChange(s => { if (isMountedRef.current) setLlmStatus(s); });
+      window.electron.llm.onStatusChange(s => {
+        if (!isMountedRef.current) return;
+        setLlmStatus(s);
+        if (s === 'idle' || s === 'unavailable') setLlmRunning(false);
+      });
       window.electron.llm.onUpdateAvailable(info => { if (isMountedRef.current) setModelUpdateAvailable(info); });
       window.electron.llm.onDownloadProgress(info => {
         if (isMountedRef.current) setDownloadProgress(info);
