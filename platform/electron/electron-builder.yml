@@ -36,6 +36,7 @@ files:
   - "main.js"
   - "preload.js"
   - "llmWorker.js"
+  - "llmProcess.js"
   - "tray.js"
   - "splash.html"
   - "assets/**"
@@ -43,5 +44,7 @@ files:
   - "package.json"
 
 # Native modules must be unpacked from asar — they cannot run from inside the archive
+# llmProcess.js is forked as a child process and must also be outside the asar
 asarUnpack:
   - "node_modules/node-llama-cpp/**"
+  - "llmProcess.js"

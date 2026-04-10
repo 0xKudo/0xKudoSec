@@ -26,6 +26,7 @@ const fs = require('fs');
 const https = require('https');
 const crypto = require('crypto');
 const os = require('os');
+const { fork } = require('child_process');
 
 // ── File logger ───────────────────────────────────────────────────────────
 
@@ -331,91 +332,91 @@ function parseResponse(text) {
   };
 }
 
-// ── Inference ─────────────────────────────────────────────────────────────
+// ── Inference (isolated child process) ───────────────────────────────────
+
+function getLlmProcessScript() {
+  // In packaged builds __dirname points inside app.asar — use app.asar.unpacked equivalent
+  const base = __dirname.replace('app.asar', 'app.asar.unpacked');
+  return path.join(base, 'llmProcess.js');
+}
 
 async function runAnalysis(modelFilePath, candidates, mainWindow) {
-  // node-llama-cpp v3 is ESM-only
-  let getLlama, LlamaCompletion;
-  try {
-    ({ getLlama, LlamaCompletion } = await import('node-llama-cpp'));
-  } catch (e) {
-    llmStatus = 'unavailable';
-    emitStatus(mainWindow, 'unavailable');
-    throw new Error(`node-llama-cpp failed to load: ${e.message}`);
-  }
-
   llmStatus = 'loading';
   emitStatus(mainWindow, 'loading');
+  llmLog('INFO', 'Spawning llmProcess for', candidates.length, 'candidates');
 
-  let llama, model;
-  try {
-    llmLog('INFO', 'Loading model:', modelFilePath);
-    llama = await getLlama({ gpu: 'off' });
-    model = await llama.loadModel({ modelPath: modelFilePath });
-    llmLog('INFO', 'Model loaded');
-  } catch (e) {
-    llmLog('ERROR', 'Failed to load model:', e.message, e.stack);
-    llmStatus = 'unavailable';
-    emitStatus(mainWindow, 'unavailable');
-    throw new Error(`Failed to load model: ${e.message}`);
-  }
+  return new Promise((resolve, reject) => {
+    const scriptPath = getLlmProcessScript();
+    llmLog('INFO', 'llmProcess script path:', scriptPath);
 
-  llmStatus = 'running';
-  emitStatus(mainWindow, 'running');
-
-  const results = [];
-
-  try {
-    for (const candidate of candidates) {
-      if (cancelRequested) break;
-
-      let context;
-      let result;
-      try {
-        llmLog('INFO', 'Analyzing candidate:', candidate.id);
-        context = await model.createContext({ contextSize: 2048 });
-        const prompt = buildPrompt(candidate, null);
-        llmLog('INFO', 'Prompt built, attempting LlamaChatSession');
-        const sequence = context.getSequence();
-        // Use LlamaCompletion with pre-formatted Phi-3.5 chat template in the prompt.
-        // LlamaChatSession triggers Jinja template resolution which throws invalid unordered_map key
-        // on this model in this Electron environment. Raw completion bypasses that entirely.
-        const completion = new LlamaCompletion({ contextSequence: sequence });
-        const responseText = await completion.generateCompletion(prompt, { maxTokens: 256 });
-        llmLog('INFO', 'LlamaCompletion response received');
-        llmLog('INFO', 'Raw response:', responseText);
-        const parsed = parseResponse(responseText);
-        llmLog('INFO', 'Parsed result:', parsed);
-        result = { id: candidate.id, ...parsed, error: null };
-      } catch (e) {
-        llmLog('ERROR', 'Candidate error:', e.message, e.stack);
-        result = {
-          id: candidate.id,
-          explanation: e.message || 'Analysis failed.',
-          cve_safe: true,
-          cve_note: '',
-          error: e.message,
-        };
-      } finally {
-        try { await context?.dispose(); } catch (e) { llmLog('WARN', 'context dispose error:', e.message); }
-      }
-
-      results.push(result);
-
-      if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.webContents.send('llm:candidate-result', result);
-      }
+    let child;
+    try {
+      child = fork(scriptPath, [], {
+        execArgv: ['--experimental-vm-modules'],
+        stdio: ['pipe', 'pipe', 'pipe', 'ipc'],
+      });
+    } catch (e) {
+      llmStatus = 'unavailable';
+      emitStatus(mainWindow, 'unavailable');
+      llmLog('ERROR', 'Failed to fork llmProcess:', e.message);
+      return reject(new Error(`Failed to start inference process: ${e.message}`));
     }
-  } finally {
-    llmLog('INFO', 'Disposing model/llama');
-    try { await model?.dispose(); } catch (e) { llmLog('WARN', 'model dispose error:', e.message); }
-    try { await llama?.dispose(); } catch (e) { llmLog('WARN', 'llama dispose error:', e.message); }
-    llmStatus = 'idle';
-    emitStatus(mainWindow, 'idle');
-    llmLog('INFO', 'Analysis complete, status: idle');
-  }
 
-  return results;
+    const results = [];
+
+    child.stderr?.on('data', (d) => llmLog('CHILD_ERR', d.toString().trim()));
+    child.stdout?.on('data', (d) => llmLog('CHILD_OUT', d.toString().trim()));
+
+    child.on('message', (msg) => {
+      if (msg.type === 'log') {
+        llmLog(msg.level, '[child]', msg.msg);
+        return;
+      }
+      if (msg.type === 'result') {
+        const { type: _, ...result } = msg;
+        results.push(result);
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('llm:candidate-result', result);
+        }
+        return;
+      }
+      if (msg.type === 'done') {
+        llmLog('INFO', 'Child process done');
+        llmStatus = 'idle';
+        emitStatus(mainWindow, 'idle');
+        resolve(results);
+        return;
+      }
+      if (msg.type === 'error') {
+        llmLog('ERROR', 'Child process error:', msg.msg);
+        llmStatus = 'unavailable';
+        emitStatus(mainWindow, 'unavailable');
+        reject(new Error(msg.msg));
+      }
+    });
+
+    child.on('exit', (code, signal) => {
+      llmLog('INFO', `Child exited code=${code} signal=${signal}`);
+      if (llmStatus === 'loading' || llmStatus === 'running') {
+        llmStatus = 'idle';
+        emitStatus(mainWindow, 'idle');
+        // Resolve with whatever results we got before crash
+        resolve(results);
+      }
+    });
+
+    child.on('error', (e) => {
+      llmLog('ERROR', 'Child process spawn error:', e.message);
+      llmStatus = 'unavailable';
+      emitStatus(mainWindow, 'unavailable');
+      reject(e);
+    });
+
+    llmStatus = 'running';
+    emitStatus(mainWindow, 'running');
+
+    child.send({ type: 'analyze', modelPath: modelFilePath, candidates });
+  });
 }
 
 function emitStatus(mainWindow, s) {
