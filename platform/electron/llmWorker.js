@@ -27,6 +27,21 @@ const https = require('https');
 const crypto = require('crypto');
 const os = require('os');
 
+// ── File logger ───────────────────────────────────────────────────────────
+
+const getLogsDir = () => path.join(app.getPath('userData'), 'logs');
+
+function llmLog(level, ...args) {
+  try {
+    const logsDir = getLogsDir();
+    if (!fs.existsSync(logsDir)) fs.mkdirSync(logsDir, { recursive: true });
+    const line = `[${new Date().toISOString()}] [${level}] ${args.map(a =>
+      typeof a === 'object' ? JSON.stringify(a) : String(a)
+    ).join(' ')}\n`;
+    fs.appendFileSync(path.join(logsDir, 'llm.log'), line, 'utf8');
+  } catch (_) {}
+}
+
 // ── Constants ─────────────────────────────────────────────────────────────
 
 // Lazy — app.getPath() must not be called at module load time in packaged builds
@@ -329,13 +344,14 @@ async function runAnalysis(modelFilePath, candidates, mainWindow) {
 
   let llama, model, context, sequence;
   try {
+    llmLog('INFO', 'Loading model:', modelFilePath);
     llama = await getLlama({ gpu: 'off' });
     model = await llama.loadModel({ modelPath: modelFilePath });
-    // sequences: 1 is the default but explicit — only one sequence slot needed
     context = await model.createContext({ contextSize: 2048, sequences: 1 });
-    // Acquire the single sequence once and reuse it for all candidates
     sequence = context.getSequence();
+    llmLog('INFO', 'Model loaded, sequence acquired');
   } catch (e) {
+    llmLog('ERROR', 'Failed to load model:', e.message, e.stack);
     llmStatus = 'unavailable';
     emitStatus(mainWindow, 'unavailable');
     throw new Error(`Failed to load model: ${e.message}`);
@@ -352,15 +368,17 @@ async function runAnalysis(modelFilePath, candidates, mainWindow) {
 
       let result;
       try {
-        // New session per candidate reusing the same sequence — clears chat history automatically
+        llmLog('INFO', 'Analyzing candidate:', candidate.id);
         const session = new LlamaChatSession({ contextSequence: sequence });
-        const prompt = buildPrompt(candidate, null); // KB context slotted in Phase 3
+        const prompt = buildPrompt(candidate, null);
+        llmLog('INFO', 'Prompt built, calling session.prompt()');
         const responseText = await session.prompt(prompt, { maxTokens: 256 });
-        console.log('[llm] raw response:', responseText);
+        llmLog('INFO', 'Raw response:', responseText);
         const parsed = parseResponse(responseText);
+        llmLog('INFO', 'Parsed result:', parsed);
         result = { id: candidate.id, ...parsed, error: null };
       } catch (e) {
-        console.error('[llm] candidate error:', e.message, e.stack);
+        llmLog('ERROR', 'Candidate error:', e.message, e.stack);
         result = {
           id: candidate.id,
           explanation: e.message || 'Analysis failed.',
@@ -377,11 +395,13 @@ async function runAnalysis(modelFilePath, candidates, mainWindow) {
       }
     }
   } finally {
-    try { await context?.dispose(); } catch (_) {}
-    try { await model?.dispose(); } catch (_) {}
-    try { await llama?.dispose(); } catch (_) {}
+    llmLog('INFO', 'Disposing context/model/llama');
+    try { await context?.dispose(); } catch (e) { llmLog('WARN', 'context dispose error:', e.message); }
+    try { await model?.dispose(); } catch (e) { llmLog('WARN', 'model dispose error:', e.message); }
+    try { await llama?.dispose(); } catch (e) { llmLog('WARN', 'llama dispose error:', e.message); }
     llmStatus = 'idle';
     emitStatus(mainWindow, 'idle');
+    llmLog('INFO', 'Analysis complete, status: idle');
   }
 
   return results;
