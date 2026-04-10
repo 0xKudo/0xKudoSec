@@ -63,15 +63,20 @@ Checked by a daily scheduled job (`noiseCron.js`) alongside the existing retenti
 
 ### Candidate Scoring Algorithm
 
-For each unique `(source, event_type, field_signature)` combination in the past 7 days:
+For each unique `(source, event_category, event_id, process_name, username, host)` combination in the past 7 days (having > 10 events/day average):
 
 | Signal | Weight |
 |--------|--------|
 | Fires > 50 times/day on average | +30 |
-| Fires at consistent time intervals (±5 min) | +25 |
+| Fires > 20 times/day on average | +15 |
+| Fires at consistent time intervals (stddev < 5 min within hour) | +25 |
 | Zero analyst actions taken (no case, no alert acknowledgement) | +20 |
-| Same host/process/user every time | +15 |
-| No severity escalation in past 30 days | +10 |
+| Grouped by host (consistent host) | +15 |
+| No high/critical severity events in 30 days for this category | +10 |
+
+`field_signature` JSONB stores: `source`, `event_category`, `event_id`, `process_name`, `username`, `dominant_severity` (computed via `MAX(CASE severity...)` array lookup — avoids slow ordered-set aggregates).
+
+Suppression rules created from candidates use `match_category + match_event_id + match_process + match_username` — intentionally excludes `match_host` so rules target the specific process/event pattern rather than a host-scoped blanket suppression.
 
 **Score 70+** = high confidence candidate
 **Score 40-69** = medium confidence candidate
@@ -94,7 +99,7 @@ CREATE TABLE noise_candidates (
   llm_cve_safe BOOLEAN,               -- populated by LLM in Phase 2
   llm_checked_at TIMESTAMPTZ,
   status TEXT NOT NULL DEFAULT 'pending', -- 'pending' | 'approved' | 'rejected' | 'auto_created'
-  suppression_rule_id UUID,            -- FK to detection_rules if created
+  suppression_rule_id INTEGER,         -- FK to detection_rules (SERIAL id) if created
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -146,16 +151,35 @@ Default: `manual` — avoids unexpected memory usage on first open.
 
 ### llama.cpp Integration
 
-The LLM runs as a child process inside Electron, managed by a dedicated `llmWorker.js` IPC handler. It is **never** loaded on startup — only triggered by the above conditions.
+The LLM runs in a **fully isolated Node.js child process** (`llmProcess.js`) forked from `llmWorker.js` via `child_process.fork()`. It is **never** loaded on startup — only triggered by the above conditions.
 
-After analysis completes the worker process exits and memory is freed. The ~3GB RAM spike is temporary.
+After analysis completes the child process exits and memory is freed. The ~3GB RAM spike is temporary. If the child crashes, the Electron app is unaffected.
+
+**Why isolated child process:** node-llama-cpp's native CUDA/Vulkan binaries crash when loaded in the Electron main process on some systems. Running in a separate Node.js process completely isolates native failures. The child communicates via IPC messages (`process.send` / `process.on('message')`).
+
+**GPU:** Currently forced CPU-only (`NODE_LLAMA_CPP_GPU=false`) because the prebuilt CUDA binary was incompatible with this system's configuration and Vulkan failed with `ErrorOutOfHostMemory` on the D3D12 adapter. CUDA support is planned once the native binary issue is resolved.
+
+**Inference approach:** Uses `LlamaCompletion.generateCompletion()` (not `LlamaChatSession`) with a pre-formatted Phi-3.5 chat template embedded in the prompt string. `LlamaChatSession` triggers Jinja template token resolution which crashes on this environment. Stop triggers `['<|end|>', '<|user|>', '<|system|>']` prevent the model from generating past the JSON response.
+
+**Per-candidate write-back:** Each result is written to the server immediately via `PATCH /candidates/:id/llm-result` as soon as it arrives in `onCandidateResult`, not in a batch at the end. This means results survive navigation away from Noise Advisor mid-run.
+
+**Global progress banner:** A `LlmAnalysisBanner` component in `TopNav.jsx` listens for `llm:status-change`, `llm:analysis-started`, and `llm:candidate-result` events. It shows an amber progress bar with percentage complete and a Cancel button, visible on all SIEM views while analysis runs. Cancel kills the child process immediately.
+
+**All node_modules unpacked from asar:** `electron-builder.yml` uses `asarUnpack: ["node_modules/**", "llmProcess.js"]` so the forked child process can resolve ESM imports from the filesystem (required by node-llama-cpp v3).
 
 **IPC channels:**
 - `llm:analyze` — send candidates for analysis, returns explanation + CVE safety verdict
 - `llm:status` — returns `idle | loading | running | unavailable`
 - `llm:download-model` — triggers model download with progress events
 - `llm:check-update` — checks GitHub releases for newer model version
-- `llm:cancel` — cancel in-progress analysis
+- `llm:cancel` — cancel in-progress analysis, kills child process
+
+**Push events:**
+- `llm:status-change` — emitted on every status transition
+- `llm:candidate-result` — emitted per candidate as results arrive
+- `llm:analysis-started` — emitted when run begins, carries `{ total }` count
+- `llm:download-progress` — emitted during model download
+- `llm:update-available` — emitted on startup if managed model has newer version
 
 ### Model Distribution
 

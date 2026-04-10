@@ -202,24 +202,31 @@ function LlmAnalysisBanner() {
 
   if (!isElectron || !running) return null;
 
+  const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
+
   const bannerStyle = {
     background: 'var(--bg-surface)',
-    borderBottom: '1px solid var(--border)',
+    borderBottom: '1px solid var(--accent-amber)',
     padding: '6px 16px',
     display: 'flex',
     alignItems: 'center',
     gap: '12px',
     fontSize: '11px',
-    color: 'var(--text-muted)',
+    color: 'var(--accent-amber)',
     flexShrink: 0,
   };
 
   return (
     <div style={bannerStyle}>
-      <span style={{ color: 'var(--accent-amber)' }}>LLM</span>
-      <span>Analyzing noise candidates{total > 0 ? ` — ${completed}/${total} complete` : completed > 0 ? ` — ${completed} complete` : '...'}</span>
+      <span>LLM</span>
+      <span>Analyzing noise candidates{total > 0 ? ` — ${percent}%` : '...'}</span>
+      {total > 0 && (
+        <div style={{ flex: 1, maxWidth: '120px', height: '3px', background: 'var(--border)', borderRadius: '2px' }}>
+          <div style={{ width: `${percent}%`, height: '100%', background: 'var(--accent-amber)', borderRadius: '2px', transition: 'width 0.3s' }} />
+        </div>
+      )}
       <button
-        style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontFamily: 'var(--font)', fontSize: '11px', cursor: 'pointer', marginLeft: 'auto' }}
+        style={{ background: 'none', border: 'none', color: 'var(--accent-amber)', fontFamily: 'var(--font)', fontSize: '11px', cursor: 'pointer', marginLeft: 'auto', opacity: 0.7 }}
         onClick={() => window.electron.llm.cancel()}
       >Cancel</button>
     </div>

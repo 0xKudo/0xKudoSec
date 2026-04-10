@@ -2,7 +2,7 @@
 
 ## What This Is
 
-Unified cybersecurity tools platform at `tools.laynekudo.com`. Monorepo — shared Express/React platform, 19+ isolated tool modules.
+Unified cybersecurity tools platform at `0xkudo.com`. Monorepo — shared Express/React platform, 19+ isolated tool modules.
 
 **Spec:** `docs/specs/2026-03-26-cybertools-platform-design.md`
 **Plan:** `docs/plans/2026-03-26-cybertools-platform.md`
@@ -11,9 +11,133 @@ Unified cybersecurity tools platform at `tools.laynekudo.com`. Monorepo — shar
 
 ## Current Status
 
-**All 19 tools complete. Auth complete. SIEM complete. Electron wrapper complete.**
+**All 19 tools complete. Auth complete. SIEM complete. Electron wrapper complete. Noise Advisor Phase 1 complete. Noise Advisor Phase 2 (LLM integration) fully operational — shipped in v1.2.40.**
 
-### Recently Completed (2026-04-08, mobile UI polish — inputs, buttons, controls)
+### Recently Completed (2026-04-10, Noise Advisor LLM — production fixes v1.2.32–v1.2.40)
+
+**LLM inference is now fully working end-to-end in the packaged Electron app.**
+
+Core problem: node-llama-cpp's native binaries cannot run inside the Electron main process due to CUDA/Vulkan pipeline failures and token vocabulary lookup crashes (`invalid unordered_map<K, T> key`). The fix was to run all inference in an **isolated Node.js child process** (`llmProcess.js`) forked from `llmWorker.js` via `child_process.fork()`. This completely isolates native crashes from the Electron app.
+
+**Key fixes applied (in order):**
+
+- **v1.2.32:** Added `llmLog()` file logger to `llmWorker.js`. Logs written to `%APPDATA%\0xKudo\logs\llm.log`. All inference steps logged with timestamps.
+- **v1.2.33–34:** Attempted single-sequence reuse and `LlamaCompletion` fallback — both failed with same native error.
+- **v1.2.35:** Bypassed `LlamaChatSession` entirely, used `LlamaCompletion` with pre-formatted Phi-3.5 chat template (`<|system|>...<|end|><|user|>...<|end|><|assistant|>`). Still crashed.
+- **v1.2.36:** Created `llmProcess.js` — all node-llama-cpp inference runs in isolated child process via `fork()`. App no longer crashes when inference fails. `electron-builder.yml` updated: `asarUnpack: ["node_modules/**", "llmProcess.js"]` to unpack all deps for child process ESM resolution.
+- **v1.2.37:** Added `NODE_PATH` env var pointing to unpacked `node_modules` so child process resolves all ESM imports correctly.
+- **v1.2.38:** Identified root cause from logs: CUDA binary incompatible with system, falls back to Vulkan, Vulkan fails with `ErrorOutOfHostMemory` on D3D12 adapter. Fixed by adding `NODE_LLAMA_CPP_GPU: 'false'` env var to child process fork. CPU inference works correctly. Set `gpu: false` in `llmProcess.js`.
+- **v1.2.39:** Added `customStopTriggers: ['<|end|>', '<|user|>', '<|system|>']` to `generateCompletion` to stop model from continuing past JSON. Fixed JSON parser to use non-greedy `\{[^{}]*\}` regex first, greedy as fallback. Output now parses correctly.
+- **v1.2.40:** Per-candidate server write-back in `onCandidateResult` handler — each result is persisted immediately, surviving navigation away from Noise Advisor. Removed batch write-back at end of run. Cancel now kills the child process (`activeChild.kill()`). Global `LlmAnalysisBanner` added to TopNav showing amber progress bar + `X%` complete + Cancel button — visible on all SIEM views while analysis runs. `llm:analysis-started` IPC event carries total candidate count. `onAnalysisStarted` exposed in preload.
+
+**Architecture (final):**
+```
+llmWorker.js (Electron main process)
+  → fork() → llmProcess.js (isolated Node.js child)
+               → import('node-llama-cpp')
+               → getLlama({ gpu: false })
+               → LlamaCompletion.generateCompletion()
+               → process.send({ type: 'result', ... })
+  ← onCandidateResult → PATCH /api/siem/noise/candidates/:id/llm-result (immediate)
+```
+
+**Key files:**
+- `platform/electron/llmWorker.js` — IPC handler, forks child, handles cancel/progress
+- `platform/electron/llmProcess.js` — isolated inference worker (node-llama-cpp only)
+- `platform/electron/preload.js` — exposes `onAnalysisStarted` IPC event
+- `platform/shell/src/components/NoiseAdvisor.jsx` — per-candidate write-back in `onCandidateResult`
+- `platform/shell/src/components/TopNav.jsx` — `LlmAnalysisBanner` global progress component
+- `platform/electron/electron-builder.yml` — `asarUnpack: ["node_modules/**", "llmProcess.js"]`
+
+**Known limitations:**
+- CPU-only inference (~3-8 min per candidate on Phi-3.5 Mini Q4). GPU (CUDA) pending — RTX 4060 Laptop GPU should support it but prebuilt CUDA binary was incompatible. Next step: try `gpu: 'cuda'` or build from source.
+- Table overflow in Noise Advisor (pattern column wraps outside window) — pending fix.
+
+### Recently Completed (2026-04-10, Noise Advisor Phase 2 — LLM integration)
+
+**Embedded LLM support for Noise Advisor — live in Electron v1.2.18.**
+
+- **`platform/electron/llmWorker.js`** (new): node-llama-cpp v3 IPC handler. 10 IPC channels: `llm:status`, `llm:analyze`, `llm:get-library`, `llm:set-active`, `llm:remove-model`, `llm:download-model`, `llm:check-update`, `llm:add-custom`, `llm:download-url`, `llm:cancel`. Push events: `llm:status-change`, `llm:candidate-result`, `llm:download-progress`, `llm:update-available`. Model lifecycle: lazy-load only when analysis triggered, dispose all (context + model + llama) after run so ~3GB RAM spike is temporary. Model library persisted to `%APPDATA%\0xKudo\model-library.json`. Models stored in `%APPDATA%\0xKudo\models\`.
+- **`platform/electron/main.js`**: Wires `setupLlmIpc(mainWindow)` and `scheduleStartupUpdateCheck(mainWindow)` after window creation.
+- **`platform/electron/preload.js`**: Exposes `window.electron.llm.*` for all 10 channels + 4 push event listeners.
+- **`platform/server/routes/noise.js`**: Added `PATCH /candidates/:id/llm-result` write-back endpoint (Electron calls this after analysis). Single approve blocks with HTTP 409 if `llm_cve_safe = false`. Bulk approve filters CVE-unsafe candidates before update, returns `{ updated, cve_blocked }`.
+- **`platform/shell/src/components/NoiseAdvisor.jsx`**: LLM settings bar (enabled/disabled, manual/auto trigger, model selector), CVE Safe + LLM Analysis columns (Electron only), per-row analyzing state, download model prompt banner, LLM unavailable banner, 409 CVE-block handling in approve actions, auto-trigger on tab open when trigger=auto.
+- **`platform/shell/src/components/SiemConfiguration.jsx`**: Desktop App tab refactored to `DesktopAppTab` component. Added Noise Advisor — Model Library section: managed model table with download/remove/set-active, custom GGUF via file picker, download by URL, compatibility warnings (GGUF magic, quantization quality, RAM estimate).
+- **DB migration:** `ALTER TABLE noise_candidates ADD COLUMN IF NOT EXISTS llm_cve_note TEXT` — run directly via psql on VPS (docs/ is gitignored, ran inline).
+- **node-llama-cpp v3** added to `platform/electron/package.json`. Requires `npx @electron/rebuild` before each Electron build to compile native bindings for Electron 34.
+
+**Pending for Phase 2 to be fully operational:**
+- Set `GITHUB_MODEL_MANIFEST_URL` in `llmWorker.js` once models are published to `0xKudoSec-releases`
+- Publish GGUF models to `0xKudoSec-releases` and set `downloadUrl` + `sha256` per model in `MANAGED_MODELS`
+- Until then: "Check for an app update to enable downloads" banner shows in Noise Advisor (expected)
+
+**Key gotchas:**
+- node-llama-cpp v3 is ESM-only — all imports use dynamic `import()` inside `runAnalysis`
+- `context.getSequence()` returns a `LlamaContextSequence` — passed as `{ contextSequence }` to `LlamaChatSession`
+- Fresh `LlamaChatSession` per candidate keeps context clean between analyses
+- `llm_cve_safe = false` is a hard block — cannot be overridden by user settings anywhere in the stack
+- `file.path` on the file input element gives the filesystem path in Electron (not available in web browsers)
+
+### Recently Completed (2026-04-09, Noise Advisor Phase 1)
+
+**Server-side noise candidate scoring, Noise Advisor UI, manual trigger, and auto-suppression — live at 0xkudo.com.**
+
+- **DB migration:** `noise_candidates` table + 9 new columns on `user_settings` (noise_auto_suppress, noise_llm_enabled, noise_llm_trigger, llm_model, llm_custom_model_path, noise_min_score, noise_learning_days, noise_learning_events, kb_auto_update). Run via psql heredoc on VPS.
+- **`platform/server/services/noiseCron.js`:** Daily scoring job (node-cron, 02:30). Queries `logs` table grouped by `source, event_category, host`. Scores patterns on 5 signals (frequency, time consistency, zero analyst actions, no high/critical severity, same host). Score 70+ = high, 40-69 = medium. Exports `scoreNoiseCandidates` and `runAutoSuppress` for manual trigger.
+- **`platform/server/routes/noise.js`:** Mounted at `/api/siem/noise` (before `/api/siem` in index.js — order matters). Routes: GET status, GET candidates, PATCH candidate, POST bulk, POST undo, GET activity, GET/PATCH settings, POST run (manual trigger). Uses `req.auth.sub` (express-jwt sets `req.auth`, not `req.user`).
+- **`platform/server/index.js`:** Imports `noiseRoutes` and `scheduleNoiseCron`. Noise routes mounted before siem routes.
+- **`platform/shell/src/components/NoiseAdvisor.jsx`:** Full desktop + mobile UI. Header matches SiemConfiguration (45px, bg-surface, border-bottom). Tab bar below header (Candidates / Activity Log) matches SiemConfiguration tab style. Settings bar with auto-suppress dropdown. Run Analysis button in header (right side). Result banner after run completes showing candidate count or threshold-not-met message. Action banner (green) after approve/reject with 3s auto-dismiss. Rows dim with "Updating..." during pending actions. Threshold progress bars when under 7 days / 10k events.
+- **`platform/shell/src/components/TopNav.jsx`:** Noise Advisor added to SIEM_TABS.
+- **`platform/shell/src/components/SiemSidebar.jsx`:** Noise Advisor added to System section.
+- **`platform/shell/src/App.jsx`:** `/siem/noise` path added to SIEM_VIEW_PATHS, `<NoiseAdvisor />` wired to `siemView === 'noise'`.
+
+**Post-launch fixes:**
+- **Bulk approve missing rule creation:** `POST /candidates/bulk` was only updating status, not creating suppression rules. Fixed to loop candidates and create a `detection_rules` row for each approved one, matching the single-approve behavior.
+- **Duplicate candidates:** `ON CONFLICT DO NOTHING` had no conflict target — added `UNIQUE (user_id, field_signature)` constraint to `noise_candidates` and fixed the upsert to use it. Duplicates removed via SQL, constraint added via psql on VPS.
+- **10 missing suppression rules backfilled:** Created via direct SQL INSERT/UPDATE on VPS for already-approved candidates that had no rule.
+- **Suppression confirmed working:** Dashboard shows 0 events last 24h with suppression rules active. Existing alerts persist (expected — suppression is not retroactive).
+- **Suppression rules too broad (match_category + match_host only):** Rules were suppressing entire event categories. Fixed — `field_signature` now groups by `source, event_category, event_id, process_name, username, host` and rules use `match_category + match_event_id + match_process + match_username` (no `match_host`). `dominant_severity` added to signature via `MAX(CASE severity...)` array lookup (avoids slow `MODE() WITHIN GROUP` ordered-set aggregate that caused nginx timeouts).
+- **42P18 indeterminate datatype:** `match_event_id` null parameter couldn't be typed by PostgreSQL — fixed with `$5::integer` cast and `sig.event_id ?? null` in all three rule creation paths.
+- **Bulk approve placeholder mismatch:** SELECT after bulk update used wrong `$N` offsets — fixed with separate `selectPlaceholders` using `$2+` offset and params `[uid(req), ...safeIds]`.
+- **runAnalysis stuck in Running state:** No try/catch — if fetch/parse threw, `setRunning(false)` never fired. Wrapped in try/catch, always resets state. Shows "0 new candidates found" banner on clean re-runs.
+- **UI improvements:** Candidates grouped by dominant severity (critical → high → medium → low → info → unknown) with collapsible sections and +/− indicators. Run Analysis button moved to settings bar next to auto-suppress dropdown. Select All button + per-severity-group header checkbox (with indeterminate state). Undo button shows "Undoing..." with disabled state while in flight.
+
+**Key gotchas:**
+- `db.js` uses `export default { getPool, ... }` — import as `import db from './db.js'` and call `db.getPool()`
+- `express-jwt` sets `req.auth`, not `req.user` — `uid = req => req.auth.sub`
+- `cron` package not installed — use `node-cron` (same as retentionCron)
+- Noise routes must be mounted before `/api/siem` or Express catches them first
+- Detection rules use `match_category`, `match_event_id`, `match_process`, `match_username` — no `match_host`, no JSONB conditions column
+- `detection_rules.id` is SERIAL (integer), not UUID — `suppression_rule_id` in noise_candidates is INTEGER
+- `match_event_id` requires `$N::integer` cast when value may be null — PostgreSQL cannot infer type from null alone
+- `MODE() WITHIN GROUP (ORDER BY severity)` causes nginx timeout on large datasets — use `MAX(CASE severity WHEN ... THEN N END)` with array lookup instead
+- Streaming (`res.write()` NDJSON) breaks Electron's fetch — always use simple `res.json()` for `/run` endpoint
+
+**First run results:** 10 candidates found from backlog — dns (6114/day HIGH), file (1833/day HIGH), process (50062/day MEDIUM), registry, authentication, wmi, powershell, system, network, and one unlabeled source. All approved by user, suppression rules created.
+
+**Spec:** `docs/specs/2026-04-09-noise-suppression-llm-design.md`
+**Plans:** `docs/plans/2026-04-09-noise-suppression-phase1.md` (complete), phase2.md, phase3.md (pending)
+
+---
+
+### Recently Completed (2026-04-08, domain migration + rebrand)
+
+**Full domain migration from `tools.laynekudo.com` to `0xkudo.com` and rebrand to `[ 0xKudo ]`.**
+
+- Epik DNS: A record `@` → VPS IP, CNAME `auth` → Auth0 edge tenant
+- Auth0: SPA URLs updated, custom domain `auth.0xkudo.com` verified, roles claim updated to `https://0xkudo.com/roles`
+- Code: ROLES_CLAIM, ingest URLs, PRODUCTION_URL all updated to `0xkudo.com`
+- Brand title `[ 0xKudoSec ]` → `[ 0xKudo ]` across all surfaces
+- New app icon + favicon deployed
+- VPS: nginx config for `0xkudo.com`, SSL cert via Certbot, PM2 restarted from ecosystem.config.cjs
+- Auth0 API identifier left as `https://tools.laynekudo.com/api` (immutable, not user-visible)
+- Electron rebuild (Phase 6) pending — do before next desktop release
+
+**Electron rebuild complete — v1.2.17 published to 0xKudoSec-releases with new icon and 0xkudo.com domain**
+
+---
+
+### Previously Completed (2026-04-08, mobile UI polish — inputs, buttons, controls)
 
 **Comprehensive mobile layout pass across all tools and SIEM components.**
 
@@ -195,7 +319,7 @@ Fixes by version:
 - 33: SSRF risk if Repeater/Intruder move server-side — deferred (future)
 - 34: Raw system errors in IPC responses ✅ fixed in v1.2.13 (`fsErrMsg()` helper)
 - 35: Electron version upgrade (17+ CVEs in Electron <=39.x) — open (medium, pre-enterprise rollout)
-- 36: Fluent Bit bundled install + dynamic path + ACL + version check + GitHub Actions — open (large, pre-public release)
+- 36: Fluent Bit bundled install + dynamic path + ACL + version check ✅ complete in v1.2.16
 
 **Em dash cleanup:** Replaced em dashes with colons/periods in all security comments added this session (v1.2.13+).
 
@@ -204,7 +328,21 @@ Fixes by version:
 - Reverted to original `ready-to-show` handler in v1.2.10
 - Documented in `docs/specs/ui-improvements.md` for future investigation
 
-**Current version: v1.2.15**
+**v1.2.16 (2026-04-08) — Fluent Bit bundled install + in-app install prompt:**
+- `findFluentBitConfPath()` in main.js: registry-first detection, fallback to default path, returns null if not installed
+- `fluent-bit:info` IPC handler: returns installed status and version (conf path known internally, not displayed)
+- `fluent-bit:install` IPC handler: launches bundled installer interactively from `process.resourcesPath/assets/`
+- `fluent-bit:read-config` and `fluent-bit:write-config` use dynamic path (no longer hardcoded)
+- `preload.js`: `fluentBit.info()` and `fluentBit.install()` exposed
+- `SiemConfiguration.jsx` Connect a Source tab:
+  - Fluent Bit tab: version badge in Agent Status panel; "Install Fluent Bit" button when not installed (Electron only, desktop + web, not mobile)
+  - Wireshark tab added (desktop + web only, hidden on mobile): points to WIRESHARK nav in Electron, download link on web
+  - Conf path intentionally not displayed — app uses it internally, user edits via Edit Config tab (role-gated)
+- `installer.nsh`: optional Fluent Bit install page during NSIS install (checkbox, checked by default, skipped if already installed), `icacls` ACL grant on conf dir
+- `electron-builder.yml`: `allowToChangeInstallationDirectory: false` (closes Electron audit Finding 14), `extraResources` for bundled installer
+- Specs: `docs/specs/fluent-bit-bundled-install.md`, `docs/specs/wireshark-tshark-tool.md` (Wireshark not yet implemented)
+
+**Current version: v1.2.16**
 
 **VPS npm audit warnings:** electron-builder dep vulnerabilities are build-time only, not runtime. Electron CVEs not directly exploitable given current posture but tracked as finding 35.
 
