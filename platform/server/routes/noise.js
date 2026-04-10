@@ -66,7 +66,7 @@ router.patch('/candidates/:id/llm-result', requireAuth, async (req, res) => {
   const { rows } = await pool().query(`
     UPDATE noise_candidates
     SET llm_explanation = $1,
-        llm_cve_safe = $2,
+        llm_cve_safe = $2::boolean,
         llm_cve_note = $3,
         llm_checked_at = NOW(),
         updated_at = NOW()
