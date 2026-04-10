@@ -320,7 +320,7 @@ async function runAnalysis(modelFilePath, candidates, mainWindow) {
 
   let llama, model;
   try {
-    llama = await getLlama({ gpu: 'auto' });
+    llama = await getLlama({ gpu: 'off' });
     model = await llama.loadModel({ modelPath: modelFilePath });
   } catch (e) {
     llmStatus = 'unavailable';
