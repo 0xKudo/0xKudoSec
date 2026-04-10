@@ -342,14 +342,12 @@ async function runAnalysis(modelFilePath, candidates, mainWindow) {
   llmStatus = 'loading';
   emitStatus(mainWindow, 'loading');
 
-  let llama, model, context, sequence;
+  let llama, model;
   try {
     llmLog('INFO', 'Loading model:', modelFilePath);
     llama = await getLlama({ gpu: 'off' });
     model = await llama.loadModel({ modelPath: modelFilePath });
-    context = await model.createContext({ contextSize: 2048, sequences: 1 });
-    sequence = context.getSequence();
-    llmLog('INFO', 'Model loaded, sequence acquired');
+    llmLog('INFO', 'Model loaded');
   } catch (e) {
     llmLog('ERROR', 'Failed to load model:', e.message, e.stack);
     llmStatus = 'unavailable';
@@ -366,10 +364,13 @@ async function runAnalysis(modelFilePath, candidates, mainWindow) {
     for (const candidate of candidates) {
       if (cancelRequested) break;
 
+      let context;
       let result;
       try {
         llmLog('INFO', 'Analyzing candidate:', candidate.id);
-        const session = new LlamaChatSession({ contextSequence: sequence });
+        context = await model.createContext({ contextSize: 2048 });
+        const sequence = context.getSequence();
+        const session = new LlamaChatSession({ contextSequence: sequence, autoDisposeSequence: true });
         const prompt = buildPrompt(candidate, null);
         llmLog('INFO', 'Prompt built, calling session.prompt()');
         const responseText = await session.prompt(prompt, { maxTokens: 256 });
@@ -386,6 +387,8 @@ async function runAnalysis(modelFilePath, candidates, mainWindow) {
           cve_note: '',
           error: e.message,
         };
+      } finally {
+        try { await context?.dispose(); } catch (e) { llmLog('WARN', 'context dispose error:', e.message); }
       }
 
       results.push(result);
@@ -395,8 +398,7 @@ async function runAnalysis(modelFilePath, candidates, mainWindow) {
       }
     }
   } finally {
-    llmLog('INFO', 'Disposing context/model/llama');
-    try { await context?.dispose(); } catch (e) { llmLog('WARN', 'context dispose error:', e.message); }
+    llmLog('INFO', 'Disposing model/llama');
     try { await model?.dispose(); } catch (e) { llmLog('WARN', 'model dispose error:', e.message); }
     try { await llama?.dispose(); } catch (e) { llmLog('WARN', 'llama dispose error:', e.message); }
     llmStatus = 'idle';
