@@ -208,7 +208,7 @@ const s = {
   }),
 };
 
-const BASE_TABS = ['API Key', 'Connect a Source', 'Log Retention', 'Active Sources', 'Account', 'Appearance'];
+const BASE_TABS = ['API Key', 'Connect a Source', 'Log Retention', 'Active Sources', 'Account', 'App Settings'];
 const SHIPPER_TABS = ['Fluent Bit', 'Winlogbeat 7', 'Manual API', 'Wireshark'];
 
 const FLUENT_BIT_CONFIG = (apiKey) => `[SERVICE]
@@ -730,7 +730,7 @@ winlogbeat.event_logs:
       </div>
 
       <div style={isMobile ? s.tabsMobile : s.tabs}>
-        {(isElectronUnauth ? ['Desktop App'] : [...BASE_TABS, ...(isElectron ? ['Desktop App'] : []), ...(isConfigEditor ? ['Edit Config'] : [])]).map((t, i) => (
+        {(isElectronUnauth ? ['Noise Advisor Models'] : [...BASE_TABS, ...(isElectron ? ['Noise Advisor Models'] : []), ...(isConfigEditor ? ['Edit Config'] : [])]).map((t, i) => (
           <button
             key={t}
             style={isMobile ? s.tabMobile(tab === (isElectronUnauth ? 6 : i)) : s.tab(tab === (isElectronUnauth ? 6 : i))}
@@ -921,11 +921,11 @@ winlogbeat.event_logs:
           </div>
         )}
 
-        {/* ── Tab 5: Appearance ── */}
+        {/* ── Tab 5: App Settings ── */}
         {tab === 5 && (
           <div style={s.section}>
-            <div style={s.sectionTitle}>Appearance</div>
-            <div style={s.sectionDesc}>Choose your preferred navigation layout. This setting is saved locally and does not affect other users.</div>
+            <div style={s.sectionTitle}>App Settings</div>
+            <div style={s.sectionDesc}>Display and behavior settings. These are saved locally and do not affect other users.</div>
             <div style={{ marginTop: '16px' }}>
               <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '10px', letterSpacing: '0.04em', textTransform: 'uppercase' }}>Theme</div>
               <div style={{ display: 'flex', gap: '8px', marginBottom: '24px' }}>
@@ -950,7 +950,7 @@ winlogbeat.event_logs:
                 })}
               </div>
               <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '10px', letterSpacing: '0.04em', textTransform: 'uppercase' }}>Navigation Layout</div>
-              <div style={{ display: 'flex', gap: '8px' }}>
+              <div style={{ display: 'flex', gap: '8px', marginBottom: '24px' }}>
                 {[{ value: 'topnav', label: 'Top Nav' }, { value: 'sidebar', label: 'Sidebar' }].map(opt => {
                   const active = (navLayout || 'topnav') === opt.value;
                   return (
@@ -971,13 +971,27 @@ winlogbeat.event_logs:
                   );
                 })}
               </div>
+              {isElectron && (
+                <>
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '10px', letterSpacing: '0.04em', textTransform: 'uppercase' }}>Window Behavior</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <label style={{ fontSize: '12px', color: 'var(--text-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <input type="checkbox" checked={trayOnClose} onChange={e => handleTrayOnCloseToggle(e.target.checked)} style={{ cursor: 'pointer' }} />
+                      Minimize to tray when window is closed
+                    </label>
+                  </div>
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px' }}>
+                    When enabled, closing the window keeps the app running in the system tray. Right-click the tray icon to quit.
+                  </div>
+                </>
+              )}
             </div>
           </div>
         )}
 
-        {/* ── Tab 6: Desktop App (Electron only) ── */}
+        {/* ── Tab 6: Noise Advisor Models (Electron only) ── */}
         {isElectron && tab === 6 && (
-          <DesktopAppTab s={s} trayOnClose={trayOnClose} handleTrayOnCloseToggle={handleTrayOnCloseToggle} />
+          <NoiseAdvisorModelsTab s={s} />
         )}
 
         {/* ── Tab 7: Edit Config (config-editor role + Electron only) ── */}
@@ -1003,7 +1017,7 @@ winlogbeat.event_logs:
                     onChange={e => { setPinConfirmInput(e.target.value); setPinErr(null); }}
                     style={{ ...s.input, width: '200px' }} />
                   <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '8px' }}>
-                    Recovery passphrase — used to reset your PIN if forgotten. Store it somewhere safe.
+                    Recovery passphrase: used to reset your PIN if forgotten. Store it somewhere safe.
                   </div>
                   <input type="password" placeholder="Recovery passphrase" value={pinRecoveryInput}
                     onChange={e => { setPinRecoveryInput(e.target.value); setPinErr(null); }}
@@ -1031,7 +1045,7 @@ winlogbeat.event_logs:
                     onChange={e => { setAddRecoveryPin(e.target.value); setPinErr(null); }}
                     style={{ ...s.input, width: '200px' }} autoFocus />
                   <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
-                    Recovery passphrase — used to reset your PIN if forgotten.
+                    Recovery passphrase: used to reset your PIN if forgotten.
                   </div>
                   <input type="password" placeholder="Recovery passphrase" value={pinRecoveryInput}
                     onChange={e => { setPinRecoveryInput(e.target.value); setPinErr(null); }}
@@ -1318,7 +1332,7 @@ winlogbeat.event_logs:
                                 const res = await window.electron.fluentBit.install();
                                 setFbInstalling(false);
                                 if (res.ok) {
-                                  setFbInstallMsg({ ok: true, text: 'Installer launched. Complete the Fluent Bit setup, then return here — the status will update automatically.' });
+                                  setFbInstallMsg({ ok: true, text: 'Installer launched. Complete the Fluent Bit setup, then return here. The status will update automatically.' });
                                 } else {
                                   setFbInstallMsg({ ok: false, text: res.err });
                                 }
@@ -1502,9 +1516,9 @@ winlogbeat.event_logs:
   );
 }
 
-// ── DesktopAppTab ─────────────────────────────────────────────────────────────
+// ── NoiseAdvisorModelsTab ─────────────────────────────────────────────────────
 
-function DesktopAppTab({ s, trayOnClose, handleTrayOnCloseToggle }) {
+function NoiseAdvisorModelsTab({ s }) {
   const [library, setLibrary] = useState([]);
   const [libraryLoading, setLibraryLoading] = useState(true);
   const [downloadProgress, setDownloadProgress] = useState({}); // modelKey/filename → percent
@@ -1614,26 +1628,8 @@ function DesktopAppTab({ s, trayOnClose, handleTrayOnCloseToggle }) {
 
   return (
     <div style={s.section}>
-      <div style={s.sectionTitle}>Desktop App</div>
-      <div style={s.sectionDesc}>Settings for the [ 0xKudo ] desktop application.</div>
-
-      {/* Window Behavior */}
-      <div style={{ borderTop: '1px solid var(--border)', marginTop: '20px', paddingTop: '20px' }}>
-        <div style={s.sectionTitle}>Window Behavior</div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '12px' }}>
-          <label style={{ fontSize: '12px', color: 'var(--text-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <input type="checkbox" checked={trayOnClose} onChange={e => handleTrayOnCloseToggle(e.target.checked)} style={{ cursor: 'pointer' }} />
-            Minimize to tray when window is closed
-          </label>
-        </div>
-        <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px' }}>
-          When enabled, closing the window keeps the app running in the system tray. Right-click the tray icon to quit.
-        </div>
-      </div>
-
-      {/* Noise Advisor — Model Library */}
-      <div style={{ borderTop: '1px solid var(--border)', marginTop: '28px', paddingTop: '20px' }}>
-        <div style={s.sectionTitle}>Noise Advisor — Model Library</div>
+      <div style={s.sectionTitle}>Noise Advisor: Model Library</div>
+      <div style={{ marginTop: '0' }}>
         <div style={s.sectionDesc}>
           Models are stored in %APPDATA%\0xKudo\models. Managed models are downloaded on demand.
           Custom models are registered from your local files and never deleted when removed from the library.
@@ -1756,7 +1752,7 @@ function DesktopAppTab({ s, trayOnClose, handleTrayOnCloseToggle }) {
             </button>
           </div>
           <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px', lineHeight: 1.6 }}>
-            Custom models are validated for GGUF format and RAM requirements. Warnings are informational only — you decide whether to use them.
+            Custom models are validated for GGUF format and RAM requirements. Warnings are informational only. You decide whether to use them.
           </div>
         </div>
       </div>

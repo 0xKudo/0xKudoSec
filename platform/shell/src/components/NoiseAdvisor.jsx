@@ -319,7 +319,7 @@ export default function NoiseAdvisor() {
       });
       if (res.status === 409) {
         const data = await res.json();
-        setActionBanner({ text: data.llm_cve_note ? `CVE unsafe: ${data.llm_cve_note}` : 'Cannot suppress — this pattern is flagged as CVE-unsafe.', color: 'var(--severity-critical)' });
+        setActionBanner({ text: data.llm_cve_note ? `CVE unsafe: ${data.llm_cve_note}` : 'Cannot suppress: this pattern is flagged as CVE-unsafe.', color: 'var(--severity-critical)' });
         setTimeout(() => setActionBanner(null), 6000);
       } else {
         setActionBanner({ text: newStatus === 'approved' ? 'Suppression rule created.' : 'Candidate rejected.', color: 'var(--severity-low)' });
@@ -437,7 +437,7 @@ export default function NoiseAdvisor() {
         {/* LLM unavailable banner */}
         {llmUnavailable && (
           <div style={s.banner('var(--severity-medium)')}>
-            <span>LLM engine unavailable — candidates are shown without CVE analysis. This may be due to low memory or a model load error.</span>
+            <span>LLM engine unavailable. Candidates are shown without CVE analysis. This may be due to low memory or a model load error.</span>
             <button style={s.bannerClose('var(--severity-medium)')} onClick={() => setLlmStatus('idle')}>✕</button>
           </div>
         )}
@@ -706,7 +706,7 @@ export default function NoiseAdvisor() {
                                       <button
                                         style={{ ...s.btnSmall, opacity: unsafe ? 0.4 : 1, cursor: unsafe ? 'not-allowed' : 'pointer' }}
                                         disabled={unsafe}
-                                        title={unsafe ? (llmResults[c.id]?.cve_note || c.llm_cve_note || 'CVE-unsafe — suppression blocked') : undefined}
+                                        title={unsafe ? (llmResults[c.id]?.cve_note || c.llm_cve_note || 'CVE-unsafe: suppression blocked') : undefined}
                                         onClick={() => !unsafe && updateStatus(c.id, 'approved')}
                                       >Approve</button>
                                       <button style={s.btnSmall} onClick={() => updateStatus(c.id, 'rejected')}>Reject</button>

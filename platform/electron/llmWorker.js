@@ -241,7 +241,13 @@ function downloadFile(url, destPath, onProgress) {
         });
         res.on('end', () => {
           file.end(() => {
-            fs.renameSync(tmp, destPath);
+            try {
+              fs.renameSync(tmp, destPath);
+            } catch (_) {
+              // renameSync can fail across volume/path boundaries; fall back to copy+delete
+              fs.copyFileSync(tmp, destPath);
+              try { fs.unlinkSync(tmp); } catch (_2) {}
+            }
             resolve();
           });
         });
