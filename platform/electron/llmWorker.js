@@ -29,8 +29,9 @@ const os = require('os');
 
 // ── Constants ─────────────────────────────────────────────────────────────
 
-const MODELS_DIR = path.join(app.getPath('userData'), 'models');
-const MODEL_LIBRARY_FILE = path.join(app.getPath('userData'), 'model-library.json');
+// Lazy — app.getPath() must not be called at module load time in packaged builds
+const getModelsDir = () => path.join(app.getPath('userData'), 'models');
+const getModelLibraryFile = () => path.join(app.getPath('userData'), 'model-library.json');
 
 // GitHub releases manifest URL — set this when publishing model releases.
 // Expected format: { "models": { "<modelKey>": { "sha256": "...", "downloadUrl": "...", "version": "..." } } }
@@ -81,15 +82,15 @@ let cancelRequested = false;
 
 function loadLibrary() {
   try {
-    if (fs.existsSync(MODEL_LIBRARY_FILE)) {
-      return JSON.parse(fs.readFileSync(MODEL_LIBRARY_FILE, 'utf8'));
+    if (fs.existsSync(getModelLibraryFile())) {
+      return JSON.parse(fs.readFileSync(getModelLibraryFile(), 'utf8'));
     }
   } catch (_) {}
   return { models: [] };
 }
 
 function saveLibrary(library) {
-  fs.writeFileSync(MODEL_LIBRARY_FILE, JSON.stringify(library, null, 2), 'utf8');
+  fs.writeFileSync(getModelLibraryFile(), JSON.stringify(library, null, 2), 'utf8');
 }
 
 function upsertLibraryModel(entry) {
@@ -109,11 +110,11 @@ function removeLibraryModel(filename) {
 // ── Utilities ─────────────────────────────────────────────────────────────
 
 function ensureModelsDir() {
-  if (!fs.existsSync(MODELS_DIR)) fs.mkdirSync(MODELS_DIR, { recursive: true });
+  if (!fs.existsSync(getModelsDir())) fs.mkdirSync(getModelsDir(), { recursive: true });
 }
 
 function modelPath(filename) {
-  return path.join(MODELS_DIR, filename);
+  return path.join(getModelsDir(), filename);
 }
 
 function computeSha256(filePath) {
