@@ -383,7 +383,8 @@ function isValidSender(event) {
   return (
     url.startsWith('http://localhost:') ||
     url.startsWith('http://127.0.0.1:') ||
-    url.startsWith('https://0xkudo.com')
+    url.startsWith('https://0xkudo.com') ||
+    url.startsWith('https://tools.laynekudo.com')
   );
 }
 
