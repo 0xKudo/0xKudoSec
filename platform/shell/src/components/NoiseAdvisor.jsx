@@ -230,6 +230,11 @@ export default function NoiseAdvisor() {
     try {
       const h = await authHeaders();
       const res = await fetch(`${API}/run`, { method: 'POST', headers: h });
+      if (!res.ok) {
+        setRunning(false);
+        setRunResult({ error: true });
+        return;
+      }
       const data = await res.json();
       setRunning(false);
       setRunResult(data.result ?? { scored: 0, total: 0 });
