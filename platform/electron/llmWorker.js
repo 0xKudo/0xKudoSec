@@ -287,10 +287,14 @@ function buildPrompt(candidate, kbContext) {
 
   const kbSection = kbContext && kbContext.length > 0
     ? '\nRecent vulnerabilities relevant to this pattern:\n' +
-      kbContext.map(v => `- ${v.id}: ${v.title} — ${v.affected_products}`).join('\n') + '\n'
+      kbContext.map(v => `- ${v.id}: ${v.title} - ${v.affected_products}`).join('\n') + '\n'
     : '';
 
-  return `You are a security analyst assistant. Analyze this SIEM event pattern and answer two questions:
+  // Phi-3.5 chat template format — avoids Jinja special token resolution errors
+  return `<|system|>
+You are a security analyst assistant.<|end|>
+<|user|>
+Analyze this SIEM event pattern and answer two questions:
 
 Pattern: ${sig}
 Frequency: ${candidate.daily_avg || 0} events/day over ${candidate.days || 7} days
@@ -299,10 +303,11 @@ ${kbSection}
 1. Is this likely noise? Give a one-sentence explanation.
 2. Does this pattern match any known CVE or active attack technique?
    If yes, name the CVE or technique and explain why suppression would be dangerous.
-   If no, say "No known CVE match — safe to suppress."
+   If no, say "No known CVE match - safe to suppress."
 
 Respond ONLY in JSON with this exact structure:
-{"explanation": "...", "cve_safe": true, "cve_note": "..."}`;
+{"explanation": "...", "cve_safe": true, "cve_note": "..."}<|end|>
+<|assistant|>`;
 }
 
 function parseResponse(text) {
@@ -330,9 +335,9 @@ function parseResponse(text) {
 
 async function runAnalysis(modelFilePath, candidates, mainWindow) {
   // node-llama-cpp v3 is ESM-only
-  let getLlama, LlamaChatSession, LlamaCompletion;
+  let getLlama, LlamaCompletion;
   try {
-    ({ getLlama, LlamaChatSession, LlamaCompletion } = await import('node-llama-cpp'));
+    ({ getLlama, LlamaCompletion } = await import('node-llama-cpp'));
   } catch (e) {
     llmStatus = 'unavailable';
     emitStatus(mainWindow, 'unavailable');
@@ -372,18 +377,12 @@ async function runAnalysis(modelFilePath, candidates, mainWindow) {
         const prompt = buildPrompt(candidate, null);
         llmLog('INFO', 'Prompt built, attempting LlamaChatSession');
         const sequence = context.getSequence();
-        let responseText;
-        try {
-          const session = new LlamaChatSession({ contextSequence: sequence, autoDisposeSequence: false });
-          responseText = await session.prompt(prompt, { maxTokens: 256 });
-          llmLog('INFO', 'LlamaChatSession succeeded');
-        } catch (chatErr) {
-          llmLog('WARN', 'LlamaChatSession failed, falling back to LlamaCompletion:', chatErr.message);
-          // Fall back to raw completion — no chat template, plain text in/out
-          const completion = new LlamaCompletion({ contextSequence: sequence });
-          responseText = await completion.generateCompletion(prompt, { maxTokens: 256 });
-          llmLog('INFO', 'LlamaCompletion succeeded');
-        }
+        // Use LlamaCompletion with pre-formatted Phi-3.5 chat template in the prompt.
+        // LlamaChatSession triggers Jinja template resolution which throws invalid unordered_map key
+        // on this model in this Electron environment. Raw completion bypasses that entirely.
+        const completion = new LlamaCompletion({ contextSequence: sequence });
+        const responseText = await completion.generateCompletion(prompt, { maxTokens: 256 });
+        llmLog('INFO', 'LlamaCompletion response received');
         llmLog('INFO', 'Raw response:', responseText);
         const parsed = parseResponse(responseText);
         llmLog('INFO', 'Parsed result:', parsed);
