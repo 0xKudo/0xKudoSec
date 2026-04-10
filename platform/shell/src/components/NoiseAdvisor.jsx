@@ -198,9 +198,21 @@ export default function NoiseAdvisor() {
       window.electron.llm.onDownloadProgress(info => {
         if (isMountedRef.current) setDownloadProgress(info);
       });
-      window.electron.llm.onCandidateResult(result => {
-        if (!isMountedRef.current) return;
-        setLlmResults(prev => ({ ...prev, [result.id]: result.error ? null : result }));
+      window.electron.llm.onCandidateResult(async result => {
+        if (!result.error) {
+          // Write to server immediately so results survive navigation
+          try {
+            const h = await authHeaders();
+            await fetch(`${API}/candidates/${result.id}/llm-result`, {
+              method: 'PATCH',
+              headers: h,
+              body: JSON.stringify({ llm_explanation: result.explanation, llm_cve_safe: result.cve_safe, llm_cve_note: result.cve_note }),
+            });
+          } catch (_) {}
+        }
+        if (isMountedRef.current) {
+          setLlmResults(prev => ({ ...prev, [result.id]: result.error ? null : result }));
+        }
       });
     }
 
@@ -278,16 +290,7 @@ export default function NoiseAdvisor() {
       return;
     }
 
-    // Write results back to server and refresh
-    const h = await authHeaders();
-    await Promise.all(res.results.filter(r => !r.error).map(r =>
-      fetch(`${API}/candidates/${r.id}/llm-result`, {
-        method: 'PATCH',
-        headers: h,
-        body: JSON.stringify({ llm_explanation: r.explanation, llm_cve_safe: r.cve_safe, llm_cve_note: r.cve_note }),
-      })
-    ));
-    // Clear local llmResults so table re-renders from fresh server data
+    // Results were written to server per-candidate in onCandidateResult — just refresh
     setLlmResults({});
     await load();
   };

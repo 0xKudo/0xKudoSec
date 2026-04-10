@@ -6,7 +6,7 @@ import { useLocation } from 'react-router-dom';
 const isElectron = typeof window !== 'undefined' && window.electron?.isElectron === true;
 
 // ── Update this URL with each Electron release ────────────────────────────────
-const DESKTOP_DOWNLOAD_URL = 'https://github.com/0xKudoX/0xKudoSec-releases/releases/download/v1.2.39/0xKudo-Security-Toolkit-Setup-1.2.39.exe';
+const DESKTOP_DOWNLOAD_URL = 'https://github.com/0xKudoX/0xKudoSec-releases/releases/download/v1.2.40/0xKudo-Security-Toolkit-Setup-1.2.40.exe';
 
 const styles = {
   nav: {
@@ -175,6 +175,57 @@ function UpdateBanner() {
   return null;
 }
 
+function LlmAnalysisBanner() {
+  const [running, setRunning] = useState(false);
+  const [completed, setCompleted] = useState(0);
+  const [total, setTotal] = useState(0);
+
+  useEffect(() => {
+    if (!isElectron || !window.electron?.llm) return;
+    window.electron.llm.onStatusChange(s => {
+      if (s === 'running' || s === 'loading') {
+        setRunning(true);
+      } else {
+        setRunning(false);
+        setCompleted(0);
+        setTotal(0);
+      }
+    });
+    window.electron.llm.onAnalysisStarted(info => {
+      setCompleted(0);
+      setTotal(info.total);
+    });
+    window.electron.llm.onCandidateResult(() => {
+      setCompleted(prev => prev + 1);
+    });
+  }, []);
+
+  if (!isElectron || !running) return null;
+
+  const bannerStyle = {
+    background: 'var(--bg-surface)',
+    borderBottom: '1px solid var(--border)',
+    padding: '6px 16px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+    fontSize: '11px',
+    color: 'var(--text-muted)',
+    flexShrink: 0,
+  };
+
+  return (
+    <div style={bannerStyle}>
+      <span style={{ color: 'var(--accent-amber)' }}>LLM</span>
+      <span>Analyzing noise candidates{total > 0 ? ` — ${completed}/${total} complete` : completed > 0 ? ` — ${completed} complete` : '...'}</span>
+      <button
+        style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontFamily: 'var(--font)', fontSize: '11px', cursor: 'pointer', marginLeft: 'auto' }}
+        onClick={() => window.electron.llm.cancel()}
+      >Cancel</button>
+    </div>
+  );
+}
+
 export function TopNav({ activeApp, onSwitchApp, onMenuToggle, menuOpen, theme, setTheme }) {
   const [closeHover, setCloseHover] = useState(false);
   const { isAuthenticated, user, loginWithRedirect, logout } = useAuth0();
@@ -185,6 +236,7 @@ export function TopNav({ activeApp, onSwitchApp, onMenuToggle, menuOpen, theme, 
   return (
     <>
     <UpdateBanner />
+    <LlmAnalysisBanner />
     <nav style={styles.nav}>
       {isMobile ? (
         <>

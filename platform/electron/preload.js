@@ -89,6 +89,7 @@ contextBridge.exposeInMainWorld('electron', {
     // Push events from main → renderer
     onStatusChange: (cb) => ipcRenderer.on('llm:status-change', (_e, s) => cb(s)),
     onCandidateResult: (cb) => ipcRenderer.on('llm:candidate-result', (_e, result) => cb(result)),
+    onAnalysisStarted: (cb) => ipcRenderer.on('llm:analysis-started', (_e, info) => cb(info)),
     onDownloadProgress: (cb) => ipcRenderer.on('llm:download-progress', (_e, info) => cb(info)),
     onUpdateAvailable: (cb) => ipcRenderer.on('llm:update-available', (_e, info) => cb(info)),
   },

@@ -93,6 +93,7 @@ const GGUF_MAGIC = Buffer.from([0x47, 0x47, 0x55, 0x46]);
 
 let llmStatus = 'idle'; // 'idle' | 'loading' | 'running' | 'unavailable'
 let cancelRequested = false;
+let activeChild = null; // reference to the running inference child process
 
 // ── Model library persistence ─────────────────────────────────────────────
 
@@ -376,6 +377,7 @@ async function runAnalysis(modelFilePath, candidates, mainWindow) {
       return reject(new Error(`Failed to start inference process: ${e.message}`));
     }
 
+    activeChild = child;
     const results = [];
 
     child.stderr?.on('data', (d) => llmLog('CHILD_ERR', d.toString().trim()));
@@ -411,16 +413,17 @@ async function runAnalysis(modelFilePath, candidates, mainWindow) {
 
     child.on('exit', (code, signal) => {
       llmLog('INFO', `Child exited code=${code} signal=${signal}`);
+      activeChild = null;
       if (llmStatus === 'loading' || llmStatus === 'running') {
         llmStatus = 'idle';
         emitStatus(mainWindow, 'idle');
-        // Resolve with whatever results we got before crash
         resolve(results);
       }
     });
 
     child.on('error', (e) => {
       llmLog('ERROR', 'Child process spawn error:', e.message);
+      activeChild = null;
       llmStatus = 'unavailable';
       emitStatus(mainWindow, 'unavailable');
       reject(e);
@@ -428,6 +431,9 @@ async function runAnalysis(modelFilePath, candidates, mainWindow) {
 
     llmStatus = 'running';
     emitStatus(mainWindow, 'running');
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('llm:analysis-started', { total: candidates.length });
+    }
 
     child.send({ type: 'analyze', modelPath: modelFilePath, candidates });
   });
@@ -466,6 +472,10 @@ function setupLlmIpc(mainWindow) {
   ipcMain.handle('llm:cancel', (event) => {
     if (!isValidSender(event)) return;
     cancelRequested = true;
+    if (activeChild) {
+      try { activeChild.kill(); } catch (_) {}
+      activeChild = null;
+    }
   });
 
   // llm:analyze ────────────────────────────────────────────────────────────
