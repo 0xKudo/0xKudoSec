@@ -41,13 +41,13 @@ const GITHUB_MODEL_MANIFEST_URL = null;
 // Set downloadUrl + sha256 when publishing models to 0xKudoSec-releases.
 const MANAGED_MODELS = {
   'phi-3.5-mini-q4': {
-    filename: 'phi-3.5-mini-instruct-q4_k_m.gguf',
+    filename: 'Phi-3.5-mini-instruct-Q4_K_M.gguf',
     displayName: 'Phi-3.5 Mini Q4',
     sizeBytes: 2370000000,    // ~2.2 GB
     ramEstimateBytes: 3221225472, // ~3 GB
     quantization: 'Q4_K_M',
-    downloadUrl: null,        // set when model is published
-    sha256: null,
+    downloadUrl: 'https://huggingface.co/0xKudoX/noise-advisor-models/resolve/main/Phi-3.5-mini-instruct-Q4_K_M.gguf',
+    sha256: 'e4165e3a71af97f1b4820da61079826d8752a2088e313af0c7d346796c38eff5',
   },
   'qwen2.5-1.5b-q4': {
     filename: 'qwen2.5-1.5b-instruct-q4_k_m.gguf',
