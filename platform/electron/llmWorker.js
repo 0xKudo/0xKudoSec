@@ -318,11 +318,14 @@ async function runAnalysis(modelFilePath, candidates, mainWindow) {
   llmStatus = 'loading';
   emitStatus(mainWindow, 'loading');
 
-  let llama, model, context;
+  let llama, model, context, sequence;
   try {
     llama = await getLlama({ gpu: 'off' });
     model = await llama.loadModel({ modelPath: modelFilePath });
-    context = await model.createContext({ contextSize: 2048 });
+    // sequences: 1 is the default but explicit — only one sequence slot needed
+    context = await model.createContext({ contextSize: 2048, sequences: 1 });
+    // Acquire the single sequence once and reuse it for all candidates
+    sequence = context.getSequence();
   } catch (e) {
     llmStatus = 'unavailable';
     emitStatus(mainWindow, 'unavailable');
@@ -340,12 +343,10 @@ async function runAnalysis(modelFilePath, candidates, mainWindow) {
 
       let result;
       try {
-        // Reuse context but reset chat history between candidates
-        const session = new LlamaChatSession({ contextSequence: context.getSequence() });
+        // New session per candidate reusing the same sequence — clears chat history automatically
+        const session = new LlamaChatSession({ contextSequence: sequence });
         const prompt = buildPrompt(candidate, null); // KB context slotted in Phase 3
         const responseText = await session.prompt(prompt, { maxTokens: 256 });
-        // Reset session state before next candidate
-        await session.setChatHistory([]);
         const parsed = parseResponse(responseText);
         result = { id: candidate.id, ...parsed, error: null };
       } catch (e) {
