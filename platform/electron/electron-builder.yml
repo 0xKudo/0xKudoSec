@@ -35,8 +35,13 @@ extraResources:
 files:
   - "main.js"
   - "preload.js"
+  - "llmWorker.js"
   - "tray.js"
   - "splash.html"
   - "assets/**"
   - "node_modules/**"
   - "package.json"
+
+# Native modules must be unpacked from asar — they cannot run from inside the archive
+asarUnpack:
+  - "node_modules/node-llama-cpp/**"
