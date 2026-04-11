@@ -192,7 +192,7 @@ export async function syncCisa() {
   let upserted = 0;
 
   while (startIndex < totalResults) {
-    const url = `https://services.nvd.nist.gov/rest/json/cves/2.0?hasKev=true&startIndex=${startIndex}&resultsPerPage=${pageSize}`;
+    const url = `https://services.nvd.nist.gov/rest/json/cves/2.0?hasKev&startIndex=${startIndex}&resultsPerPage=${pageSize}`;
     const data = await fetchJson(url);
     totalResults = data.totalResults ?? 0;
 
