@@ -271,7 +271,7 @@ Candidates flagged as `cve_safe: false` are **never** auto-suppressed regardless
 
 ---
 
-## Phase 3 — Vulnerability Knowledge Base
+## Phase 4 — Vulnerability Knowledge Base
 
 ### Purpose
 
@@ -279,48 +279,80 @@ Supplement the LLM's training cutoff with recent CVEs and attack patterns. The K
 
 ### Storage
 
-SQLite database at `%APPDATA%\0xKudo\vuln-kb\kb.db` — local to the Electron app, not on the VPS.
+PostgreSQL table on the VPS — same database as all other SIEM data. This allows all users (web and Electron) to benefit from the KB, and positions the server to query it directly for Phase 5 real-time analysis without needing to push KB data to Electron.
 
 ```sql
-CREATE TABLE vulnerabilities (
-  id TEXT PRIMARY KEY,          -- CVE-YYYY-NNNNN or custom pattern ID
-  source TEXT NOT NULL,         -- 'nvd' | 'mitre' | 'manual'
+CREATE TABLE vuln_kb (
+  id TEXT PRIMARY KEY,               -- CVE-YYYY-NNNNN or MITRE technique ID (e.g. T1059)
+  source TEXT NOT NULL,              -- 'nvd' | 'mitre' | 'cisa'
   title TEXT,
   description TEXT,
-  severity TEXT,
-  affected_products TEXT,       -- JSON array
-  attack_patterns TEXT,         -- JSON array of field signatures to watch for
+  severity TEXT,                     -- 'critical' | 'high' | 'medium' | 'low' | 'none'
+  cvss_score NUMERIC(4,1),
+  affected_products JSONB,           -- array of product/vendor strings
+  attack_patterns JSONB,             -- array of process names, event IDs, categories to watch for
   published_at TIMESTAMPTZ,
-  ingested_at TIMESTAMPTZ DEFAULT NOW()
+  ingested_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+CREATE INDEX vuln_kb_source_idx ON vuln_kb(source);
+CREATE INDEX vuln_kb_published_idx ON vuln_kb(published_at);
 ```
+
+**No per-user isolation** -- the KB is global, shared across all users on the platform. CVEs are public data.
 
 ### Data Sources (free, no API key required)
 
-| Source | Feed | Update frequency |
-|--------|------|-----------------|
-| NVD | `https://services.nvd.nist.gov/rest/json/cves/2.0` | Daily |
-| MITRE ATT&CK | STIX JSON bundle on GitHub | Weekly |
-| CISA KEV | `https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json` | Daily |
+| Source | Feed | Update frequency | Notes |
+|--------|------|-----------------|-------|
+| NVD | `https://services.nvd.nist.gov/rest/json/cves/2.0` | Daily | 90-day rolling window, ~3,000-5,000 entries |
+| MITRE ATT&CK | STIX JSON bundle on GitHub | Weekly | Filtered to relevant fields, ~2-5MB |
+| CISA KEV | `https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json` | Daily | Full catalog ~1,200 entries, ~1MB |
 
-### KB Update Schedule
+**Estimated total DB size: 10-20MB** -- trivial for PostgreSQL.
 
-- Background sync daily at 03:00 (after retention cron)
-- Pulls only CVEs published in the last 90 days on each run
-- Full resync available manually from Configuration
-- KB size stays small: 90-day rolling window, ~5-15MB
+### KB Sync
+
+A `kbCron.js` module runs on the VPS server alongside `noiseCron.js`:
+
+- Daily sync at 03:30 (after noise cron at 02:30, after retention cron)
+- NVD + CISA: pulls only entries published/updated in the last 90 days per run
+- MITRE: full bundle re-sync weekly (Tuesdays), incremental update check daily
+- Upserts on `id` -- re-syncing an existing entry updates `updated_at` but does not duplicate
+- Old NVD/CISA entries outside the 90-day window are purged on each run
+- MITRE entries are never purged (techniques don't expire)
+- Manual full resync available via `POST /api/siem/kb/sync` (admin only)
 
 ### KB → LLM Context Injection
 
-Before each LLM analysis run, query the KB for CVEs matching the candidate's source type and event fields. Inject top 5 matches as additional context in the prompt:
+The existing `/api/siem/noise/context` endpoint (used by `llmProcess.js` before each candidate analysis) is extended to also query `vuln_kb` for relevant entries:
+
+```
+GET /api/siem/noise/context?event_category=X&source=Y&process_name=Z
+```
+
+Returns both analyst decision context (existing) and KB matches (new). The `llmProcess.js` child injects both into the system prompt:
 
 ```
 Recent vulnerabilities relevant to this pattern:
-- CVE-2025-XXXX: [title] — [affected products]
-- ...
+- CVE-2025-XXXX (Critical, CVSS 9.8): [title] — affects [products]
+- T1059.001 (MITRE): PowerShell execution — commonly used for lateral movement
 ```
 
-This keeps the model's CVE knowledge current without retraining.
+**Matching logic:**
+- Match `attack_patterns` JSONB against candidate `event_category`, `process_name`, `event_id`
+- Prefer CISA KEV matches (actively exploited) over NVD-only matches
+- Limit to 5 most relevant entries to stay within context window
+- If no KB matches, omit the section entirely (don't inject empty context)
+
+### Configuration UI
+
+New section in Configuration > Tuning Center:
+
+- KB status: last sync time, entry counts per source, total entries
+- "Sync Now" button -- triggers manual resync
+- KB entry count and last updated shown per source
 
 ---
 
@@ -467,11 +499,17 @@ The model's base knowledge doesn't change, but it sees analyst-validated example
   [Analyst override] "fluent-bi...
 ```
 
-### Phase 4 — Vulnerability KB
-- SQLite KB schema
-- NVD + MITRE + CISA feed sync
-- KB → prompt context injection
-- Manual resync in Configuration
+### Phase 4 — Vulnerability KB — SHIPPED v1.2.46-beta.2+ (2026-04-11)
+- `vuln_kb` PostgreSQL table + indexes (migration 006)
+- `kbCron.js` — NVD (daily, 90-day window, 16,906 entries) + CISA KEV via NVD `?hasKev` (daily, 1,559 entries) + MITRE ATT&CK (weekly Tuesdays, 691 entries)
+- `/api/siem/noise/context` extended to return `vulnKb` matches alongside analyst decisions
+- `llmProcess.js` injects KB context into prompt, passes `kb_matches` array in IPC result
+- Configuration UI: KB status table, Sync Now, amber banner during sync
+- **Candidate detail modal** — click any candidate row to see full details, KB matches with NVD links, CVSS scores, `[KEV]` badge, Approve/Reject/Rescan actions
+- **Rescan feature** — `POST /candidates/rescan` resets LLM fields to pending; Activity Log has checkboxes + bulk Rescan
+- **Cancel download** — red Cancel button during any download, `llm:cancel-download` IPC
+- **Remove deletes file** — Remove now deletes `.gguf` for all model types if file is in models directory
+- **Key gotcha:** cisa.gov blocks VPS IPs — use NVD `?hasKev` flag (not `?hasKev=true`) to get KEV entries
 
 ### Phase 5 — Real-Time Event Analysis
 

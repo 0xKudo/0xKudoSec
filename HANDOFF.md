@@ -11,7 +11,78 @@ Unified cybersecurity tools platform at `0xkudo.com`. Monorepo — shared Expres
 
 ## Current Status
 
-**All 19 tools complete. Auth complete. SIEM complete. Electron wrapper complete. Noise Advisor Phase 1 complete. Noise Advisor Phase 2 (LLM integration) fully operational — shipped in v1.2.40.**
+**All 19 tools complete. Auth complete. SIEM complete. Electron wrapper complete. Noise Advisor Phase 1 + Phase 2 + Phase 3 complete. Multi-model support complete. Vulnerability KB built and confirmed working in v1.2.46-beta.2+.**
+
+### Recently Completed (2026-04-11, v1.2.46-beta.2 through beta.5)
+
+- **KB injection confirmed working** — `llmProcess.js` correctly injects KB context into LLM prompts. Confirmed via llm.log: `CVE-2019-11708 (critical CVSS 10.0) [ACTIVELY EXPLOITED - CISA KEV]` injected for Firefox-related candidates.
+- **Rescan feature** — `POST /candidates/rescan` resets LLM fields to null/pending. Activity Log tab now has checkboxes, Select All, bulk Rescan. Candidates tab has bulk Rescan alongside Approve/Reject.
+- **Candidate detail modal** — click any candidate row in desktop table to open full detail modal: all field_signature fields, LLM explanation, KB matches with NVD links and CVSS scores, Approve/Reject/Rescan actions.
+- **KB matches in candidate cards** — `llmProcess.js` now includes `kb_matches` in IPC result. `LlmExplanationCell` and mobile card both show matched CVEs with NVD links, CVSS, and `[KEV]` badge.
+- **URL download progress bar** — fixed key mismatch so `onDownloadProgress` events update the URL download bar correctly.
+- **Cancel download button** — red Cancel button appears next to Download during any active download (managed + URL). `llm:cancel-download` IPC handler sets `downloadCancelled` flag and destroys active request.
+- **Remove deletes file** — Remove now deletes the `.gguf` file for all model types if the file is in the models directory. Custom models added via Browse (external path) are unregistered only.
+
+**Current version: v1.2.46-beta.5** — building. All changes require Electron rebuild.
+
+### Recently Completed (2026-04-11, v1.2.46-beta.1 — Vulnerability Knowledge Base)
+
+- **`vuln_kb` PostgreSQL table** created on VPS — stores NVD CVEs, CISA KEV, and MITRE ATT&CK entries with indexes on `source` and `published_at`
+- **`kbCron.js`** — NVD sync (daily, 90-day rolling window, paginates at 2000/page with 6.5s rate-limit delay), CISA KEV (daily, full catalog), MITRE ATT&CK (weekly Tuesdays, full STIX bundle). Scheduled at 03:30 daily. Manual trigger via `POST /api/siem/noise/kb/sync`.
+- **`/api/siem/noise/kb/status`** — returns entry counts and last sync time per source, plus `syncing: true/false` flag used by UI polling
+- **`/context` endpoint extended** — now also queries `vuln_kb` for matching entries (by `attack_patterns` JSONB and `affected_products`), returning up to 5 KB matches alongside analyst decisions
+- **`llmProcess.js` updated** — `formatContext()` now injects KB matches into LLM prompt: CVE title, severity, CVSS score, description, CISA KEV flagged as `[ACTIVELY EXPLOITED]`
+- **KB sync banner** in `TopNav.jsx` — amber indeterminate progress bar above nav, matches LLM analysis and update banner style. Triggered via `window.dispatchEvent(new Event('kb-sync-start/done'))` from `SiemConfiguration`. Polls `/kb/status` every 5 seconds until `syncing: false`.
+- **KB status panel** in Configuration > Tuning Center Models — table showing entry counts + last sync per source, Sync Now button, Refresh Status button
+- **v1.2.45-beta.5/6/7 fixes (same session):**
+  - Auto-recover managed model from disk when library entry missing (crashed download)
+  - Backfill missing `templateFamily` on existing managed model library entries (`llama-3.2-3b-q4` was defaulting to `phi`)
+  - Disable all download buttons while any download in progress
+  - Re-sync `llm_model` setting after library loads to prevent false "Download a model" banner on open
+  - Qwen 1.5B stop trigger variants added (`{|im_end|}`, `|im_end|`) for token leak
+- **All 4 models tested and confirmed working:**
+  - Phi-3.5 Mini Q4 — phi template, confirmed previously
+  - Qwen2.5.1 Coder 7B (custom) — qwen template, 78 candidates ~26s on RTX 4060
+  - Llama 3.2 3B — llama template (after backfill fix), hallucinates CVEs without KB
+  - Qwen2.5 1.5B — qwen template, fast, minor stop token variants (fixed)
+- **Phase 5 real-time analysis** documented in spec (not yet built)
+- **macOS spec** written at `docs/specs/2026-04-11-macos-build.md`
+
+**Current version: v1.2.46-beta.1** — requires rebuild to ship `llmProcess.js` KB context injection. Server-side KB + UI confirmed fully operational on VPS.
+
+**KB sync confirmed working (2026-04-11):** NVD 16,906 entries, CISA KEV 1,559 entries, MITRE ATT&CK 691 entries. All three sources clean (`{}`  errors object empty).
+
+**kbCron.js fixes applied during beta.1 deployment:**
+- NVD date format: `.toISOString().slice(0, 23)` for ISO 8601 with T separator (was space-separated, got 404)
+- MITRE param index: `idx * 9` base with explicit `::numeric`, `::jsonb`, `::timestamptz` casts (was `idx * 10`, got param type error on $10)
+- CISA KEV: cisa.gov blocks VPS IPs via Cloudflare — switched to NVD `hasKev` flag param (`?hasKev` not `?hasKev=true`) which returns all CVEs in the CISA KEV catalog with full CVSS data
+- vuln_kb permissions: `GRANT ALL ON TABLE vuln_kb TO cybertools` required (table created as postgres superuser)
+
+**Key files changed:**
+- `platform/server/services/kbCron.js` (new)
+- `platform/server/routes/noise.js` — `/kb/status`, `/kb/sync`, `/context` KB extension
+- `platform/server/index.js` — `scheduleKbCron()` wired in
+- `platform/electron/llmProcess.js` — `formatContext()` KB injection, Qwen stop triggers
+- `platform/electron/llmWorker.js` — auto-recover disk/library mismatch, templateFamily backfill
+- `platform/shell/src/components/TopNav.jsx` — `KbSyncBanner` component
+- `platform/shell/src/components/SiemConfiguration.jsx` — KB status panel, polling, sync events
+- `platform/shell/src/components/NoiseAdvisor.jsx` — library sync fix on load
+
+**Next:**
+- Test KB context injection in LLM analysis log — should see "Known vulnerabilities relevant to this pattern" in llm.log output
+- Promote to stable v1.2.46 (rebuild Electron with llmProcess.js KB changes)
+- Phase 5 — Real-time event analysis (spec written, not built)
+- Rebuild CUDA binary with multi-arch flags for wider GPU compatibility
+- macOS build (spec at `docs/specs/2026-04-11-macos-build.md`)
+- Wireshark/tshark tool (spec at `docs/specs/wireshark-tshark-tool.md`)
+
+### Recently Completed (2026-04-11, v1.2.41 stability fixes)
+
+- **Stale child process kill:** `llmWorker.js` `runAnalysis` now kills any existing `activeChild` before spawning a new one. Prevents double model load (2x 2.2GB RAM spike) when app is closed mid-analysis and reopened. Previously caused full PC freeze.
+- **LLM banner em dash removed:** `TopNav.jsx` banner text changed from "Analyzing noise candidates — X%" to "Analyzing noise candidates X%".
+- **Table overflow resolved:** Noise Advisor candidates table no longer extends outside the window (resolved with v1.2.40 layout).
+- **Cancel button confirmed working:** Both the banner Cancel and the in-page Cancel button kill the child process correctly.
+- **Results persistence confirmed:** Per-candidate write-back survives navigation away and app restart.
 
 ### Recently Completed (2026-04-10, Noise Advisor LLM — production fixes v1.2.32–v1.2.40)
 
@@ -50,8 +121,150 @@ llmWorker.js (Electron main process)
 - `platform/electron/electron-builder.yml` — `asarUnpack: ["node_modules/**", "llmProcess.js"]`
 
 **Known limitations:**
-- CPU-only inference (~3-8 min per candidate on Phi-3.5 Mini Q4). GPU (CUDA) pending — RTX 4060 Laptop GPU should support it but prebuilt CUDA binary was incompatible. Next step: try `gpu: 'cuda'` or build from source.
-- Table overflow in Noise Advisor (pattern column wraps outside window) — pending fix.
+- CPU-only inference (~3-8 min per candidate on Phi-3.5 Mini Q4). GPU (CUDA) in progress — see GPU plan below.
+
+### Pending (next beta.3 build — installer size reduction)
+
+- `compression: maximum` (LZMA) added to `electron-builder.yml`
+- Excluded node-llama-cpp build artifacts from installer: CMakeFiles, vcxproj, llama.cpp source, x64 obj dir, xpack, toolchains
+- If CUDA fails to load after beta.3 install, revert `electron-builder.yml` exclusions and rebuild
+- Committed `26e433b` — will take effect on next build
+
+### Recently Completed (2026-04-11, v1.2.45-beta.4 — multi-model support + custom model fixes)
+
+- **Per-model chat templates:** `llmProcess.js` now selects the correct prompt template and stop triggers per model family: Phi-3.5 (`<|system|>`/`<|end|>`), Qwen2 (`<|im_start|>`/`<|im_end|>`), Llama 3 (`<|start_header_id|>`/`<|eot_id|>`)
+- **Template family stored in library:** Custom models now have a `templateFamily` field set at registration time, passed through `llmWorker.js` → `llmProcess.js` via `child.send`
+- **Template selector UI:** Configuration > Tuning Center Models "Add Custom Model" section has a Template dropdown (Phi / Qwen / Llama) shown before browsing or downloading
+- **Managed model downloads enabled:** `qwen2.5-1.5b-q4` and `llama-3.2-3b-q4` now have `downloadUrl` + `sha256` set, hosted at `0xKudoX/noise-advisor-models` on HuggingFace
+- **Custom model browse fixed:** Replaced broken `file.path` file input approach with `dialog.showOpenDialog` via `llm:browse-gguf` IPC -- works correctly in packaged Electron
+- **Model dropdown uses live library:** Tuning Center model dropdown now reads from `modelLibrary` (includes custom models) instead of hardcoded `LLM_MODELS` array
+- **Settings sync on load:** If saved `llm_model` key doesn't match any library entry, auto-syncs to the active model on load
+- **Tuning Center renames:** Configuration tab renamed from "Noise Advisor Models" to "Tuning Center Models"; section header updated to match
+- **UI layout fixes:** Daily Avg column widened to 110px, Confidence to 90px; settings bar split into two rows (dropdowns top, buttons bottom left-aligned); Tuning Center Models tab widened to 960px
+- **Button renames:** "Run Analysis" → "Analyze Logs"; "Run LLM (N)" → "AI Analysis (N)"
+- **AI Analysis selection-aware:** When rows are selected, AI Analysis runs only on selected unanalyzed candidates; label shows "(N selected)"
+- **Reload button:** `[ reload ]` button in TopNav between `[ reload ]` and username, visible only on beta builds (`__APP_VERSION__.includes('beta')`), calls `window.location.reload()`
+- **Installer size:** beta.3 LZMA compression + artifact exclusions reduced installer from 1.04GB to 970MB
+
+**Key files changed:**
+- `platform/electron/llmProcess.js` -- per-model template/stop triggers, `templateFamily` param
+- `platform/electron/llmWorker.js` -- `templateFamily` stored in library, passed to child; `dialog.showOpenDialog` IPC; managed model URLs set
+- `platform/electron/preload.js` -- `browseGguf`, `addCustom(filePath, templateFamily)`, `downloadUrl(url, templateFamily)`
+- `platform/shell/src/components/NoiseAdvisor.jsx` -- button renames, selection-aware AI Analysis, dropdown from live library, settings sync, column widths, layout
+- `platform/shell/src/components/SiemConfiguration.jsx` -- template selector, dialog browse, Tuning Center renames, 960px width
+- `platform/shell/src/components/TopNav.jsx` -- reload button, tab rename
+
+### Recently Completed (2026-04-11, v1.2.45-beta.2 — Tuning Center rename + tab reorder)
+
+- Renamed "Noise Advisor" to "Tuning Center" in TopNav, SiemSidebar, NoiseAdvisor.jsx page title
+- Reordered SIEM tabs to SOC workflow: Dashboard | Alerts | Cases | Log Search | Detection Rules | Tuning Center | Audit Log | Configuration
+- Removed section labels from SIEM sidebar, flattened to single nav list in same workflow order
+- Tuning Center enterprise spec written: `docs/specs/2026-04-11-tuning-center-enterprise-design.md`
+
+### Recently Completed (2026-04-11, v1.2.45-beta.2 — Phase 3 CONFIRMED WORKING)
+
+Phase 3 analyst decision learning is fully operational. Log confirmed `Injecting analyst context` firing for each candidate, pulling in past approved/rejected decisions and override notes.
+
+**Bugs fixed to get here:**
+- `getAccessTokenSilently()` silent throw — try/catch added in `NoiseAdvisor.jsx`
+- `/context` query `$4 IS NOT NULL` — cast to `$4::text` (candidates query)
+- `/context` query `$3 IS NOT NULL` — cast to `$3::text` (suppression rules query)
+- `fetchContext` timeout 5s → 15s
+- Token presence logged in `llmWorker.js` for debugging
+- Noise run fetch timeout 5min, try/catch on `/run` route
+- JWKS cache extended to 24h to survive transient Auth0 outages
+- DB: deleted 15M noisy network/info rows (Fluent Bit Sysmon Event ID 3), reclaimed 44GB
+- Added `logs_noise_scoring_idx` composite index on `(user_id, timestamp)`
+- Added Fluent Bit filter to drop known-safe process network connections
+
+### Recently Completed (2026-04-11, v1.2.45-beta.2 — Phase 3 context query fix)
+
+- Fixed `could not determine data type of parameter $4` error in `/context` endpoint -- cast `$4` to `::text` in the process_name condition
+- Increased `fetchContext` timeout from 5s to 15s with URL logged on timeout
+- Fixed noise run fetch timeout increased to 5 minutes (300s) in NoiseAdvisor.jsx
+- Added try/catch to `/run` route so errors are logged server-side
+- Added time filter to threshold query in `scoreNoiseCandidates` (was scanning all logs, now only last 7 days)
+- Added composite index `logs_noise_scoring_idx` on `(user_id, timestamp)` for faster scoring queries
+- Deleted 15M noisy network/info rows from Fluent Bit, VACUUM reclaimed 44GB (54GB -> 10GB used)
+- Added Fluent Bit filter to drop Sysmon Event ID 3 network connections from known-safe desktop processes
+
+**Key files changed:**
+- `platform/server/routes/noise.js` — context query cast fix, /run try/catch
+- `platform/server/services/noiseCron.js` — time filter on threshold query
+- `platform/shell/src/components/NoiseAdvisor.jsx` — 5 min fetch timeout
+- `platform/electron/llmProcess.js` — 15s fetchContext timeout + URL logging
+- `C:\Program Files\fluent-bit\conf\cybertools.conf` — network noise filter
+
+### Recently Completed (2026-04-11, v1.2.45 — Phase 3 token debug + fix)
+
+Phase 3 was shipping in v1.2.44 but context injection wasn't firing. The log showed `Analyzing candidate` jumping straight to `Calling generateCompletion` with no `fetchContext` call. Root cause: `getAccessTokenSilently()` was throwing silently, leaving `token` undefined, which caused `fetchContext` to bail on `if (!serverUrl || !token) return null` with no log output.
+
+**Fixes:**
+- `NoiseAdvisor.jsx`: wrapped `getAccessTokenSilently()` in try/catch, defaults to empty string on error (analysis still runs, just without context)
+- `llmProcess.js`: `fetchContext` now logs when it skips (token/serverUrl empty) and logs HTTP status codes on non-200 responses
+- `llmWorker.js`: logs whether `authToken` is present or missing when `llm:analyze` IPC fires
+
+**Key files changed:**
+- `platform/shell/src/components/NoiseAdvisor.jsx`
+- `platform/electron/llmProcess.js`
+- `platform/electron/llmWorker.js`
+
+**Next:** Confirm Phase 3 context injection is working by checking llm.log for `token=present` and `Injecting analyst context` lines after running analysis on previously-decided candidates.
+
+### Recently Completed (2026-04-11, v1.2.44 — Phase 3 analyst decision learning)
+
+LLM prompt now injected with past analyst decisions before each candidate analysis. The model sees what the analyst has approved, rejected, and overridden for similar patterns before making its verdict.
+
+**How it works:**
+- `GET /api/siem/noise/context?event_category=X&source=Y&process_name=Z` — new endpoint queries approved/rejected candidates + active suppression rules matching the pattern, returns up to 8 decisions + 5 rules
+- `llmProcess.js` fetches context before each candidate via `http/https` using `LLM_SERVER_URL` + `LLM_AUTH_TOKEN` from fork env
+- Context formatted as few-shot examples and injected into the system prompt
+- Override notes (`[Analyst override] ...`) shown verbatim as highest-signal examples
+- Token passed from render process: `NoiseAdvisor.jsx` → `window.electron.llm.analyze(candidates, model, token)` → `preload.js` → `llm:analyze` IPC → `llmWorker.js` → fork env
+
+**Key files changed:**
+- `platform/server/routes/noise.js` — added `GET /context` endpoint
+- `platform/electron/llmProcess.js` — `fetchContext()`, `formatContext()`, context injected into `buildPrompt()`
+- `platform/electron/llmWorker.js` — receives `authToken`, passes `LLM_SERVER_URL` + `LLM_AUTH_TOKEN` to fork env
+- `platform/electron/preload.js` — `analyze()` now accepts and forwards `authToken`
+- `platform/shell/src/components/NoiseAdvisor.jsx` — gets token via `getAccessTokenSilently()`, passes to `llm.analyze`
+
+**Also in v1.2.44 (from v1.2.43 shell-only changes):**
+- Override & Approve modal for CVE-unsafe candidates with required analyst note
+- Table overflow fixed (`tableLayout: fixed`, `tdLlm` width constraint)
+- Column widths tightened (checkbox, confidence, score, CVE safe)
+
+### Recently Completed (2026-04-11, v1.2.43 — CUDA GPU inference)
+
+CUDA binary compiled from source and bundled in installer. `llmProcess.js` uses `gpu: 'cuda'`. Shipped v1.2.43.
+
+**What failed first (v1.2.42):** `NoBinaryFoundError` on launch — the CUDA binary wasn't present because `source download` wipes `localBuilds/` and we hadn't rebuilt before packaging.
+
+**Correct build sequence (Developer PowerShell for VS 2022, Admin):**
+```powershell
+cd "C:\Users\lsgra\Desktop\claude projects\cybertools"
+node node_modules/node-llama-cpp/dist/cli/cli.js source download --skipBuild
+$env:CUDAFLAGS="-Xcompiler=/Zc:preprocessor"
+node node_modules/node-llama-cpp/dist/cli/cli.js source build --gpu cuda
+```
+
+**Key gotchas:**
+- Prebuilt binary incompatible with CUDA 13.2 — CCCL headers require `/Zc:preprocessor`, prebuilt doesn't include it
+- `$env:CUDAFLAGS="-Xcompiler=/Zc:preprocessor"` is the fix — set before `source build`, not before cmake
+- Raw cmake fails on `llama-addon` step: `node_api.h` not found — use `source build` CLI, not raw cmake
+- Manually patching vcxproj before `source build` doesn't work — CLI regenerates and wipes patches
+- Must run in Developer PowerShell for VS 2022 (Admin) — regular PowerShell lacks VS compiler and cmake on PATH
+- `source download` wipes `localBuilds/` — always rebuild after download before packaging
+
+**Full details in spec:** `docs/specs/2026-04-09-noise-suppression-llm-design.md` — GPU Acceleration section
+
+**Confirmed working:** 41 candidates completed in under 10 minutes. ~8 sec/candidate on GPU vs ~3 min/candidate on CPU (~24x speedup).
+
+**Next:**
+- **Phase 3 — Analyst Decision Learning:** RAG-style prompt injection. Before each candidate analysis, fetch past analyst decisions (approved, rejected, overrides, active suppression rules) with similar `event_category`/`source`/`process_name` and inject as few-shot examples into the LLM system prompt. Requires new `GET /api/siem/noise/context` endpoint + server URL passed to `llmProcess.js` via fork env. Full spec in `docs/specs/2026-04-09-noise-suppression-llm-design.md` Phase 3 section.
+- Override & Approve UI shipped (v1.2.43 server changes) — override notes stored as `[Analyst override] <note>` in `llm_cve_note`, audit logged as `noise.llm_override`
+- Rebuild CUDA binary with multi-arch flags (`-arch=sm_75;sm_80;sm_86;sm_89;sm_90`) for wider GPU support
+- NSIS optional section for GPU component at install time
 
 ### Recently Completed (2026-04-10, Noise Advisor Phase 2 — LLM integration)
 
