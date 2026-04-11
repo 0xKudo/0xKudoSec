@@ -24,7 +24,10 @@ function log(level, ...args) {
 async function fetchContext(candidate) {
   const serverUrl = process.env.LLM_SERVER_URL;
   const token = process.env.LLM_AUTH_TOKEN;
-  if (!serverUrl || !token) return null;
+  if (!serverUrl || !token) {
+    log('INFO', `fetchContext: skipped (serverUrl=${serverUrl ? 'set' : 'empty'} token=${token ? 'set' : 'empty'})`);
+    return null;
+  }
 
   const sig = typeof candidate.field_signature === 'object'
     ? candidate.field_signature
@@ -42,12 +45,17 @@ async function fetchContext(candidate) {
       let data = '';
       res.on('data', chunk => { data += chunk; });
       res.on('end', () => {
+        if (res.statusCode !== 200) {
+          log('ERROR', `fetchContext: HTTP ${res.statusCode}`);
+          resolve(null);
+          return;
+        }
         try { resolve(JSON.parse(data)); }
         catch (_) { resolve(null); }
       });
     });
-    req.on('error', () => resolve(null));
-    req.setTimeout(5000, () => { req.destroy(); resolve(null); });
+    req.on('error', (e) => { log('ERROR', `fetchContext: ${e.message}`); resolve(null); });
+    req.setTimeout(5000, () => { log('ERROR', 'fetchContext: timeout'); req.destroy(); resolve(null); });
   });
 }
 

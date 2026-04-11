@@ -491,6 +491,7 @@ function setupLlmIpc(mainWindow) {
 
   // llm:analyze ────────────────────────────────────────────────────────────
   ipcMain.handle('llm:analyze', async (event, candidates, modelKey, authToken) => {
+    llmLog('INFO', `llm:analyze token=${authToken ? 'present (' + String(authToken).slice(0, 20) + '...)' : 'MISSING'}`);
     if (!isValidSender(event)) return { ok: false, err: 'Unauthorized' };
     if (!Array.isArray(candidates) || candidates.length === 0) {
       return { ok: false, err: 'No candidates provided' };
