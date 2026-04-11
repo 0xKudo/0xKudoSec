@@ -391,10 +391,15 @@ router.get('/context', requireAuth, async (req, res) => {
 // POST /api/siem/noise/run — manual trigger for scoring job
 router.post('/run', requireAuth, async (req, res) => {
   const userId = uid(req);
-  const result = await scoreNoiseCandidates(userId);
-  await runAutoSuppress(userId);
-  await audit(userId, 'noise.manual_run', result || {}, req.ip);
-  res.json({ ok: true, result });
+  try {
+    const result = await scoreNoiseCandidates(userId);
+    await runAutoSuppress(userId);
+    await audit(userId, 'noise.manual_run', result || {}, req.ip);
+    res.json({ ok: true, result });
+  } catch (e) {
+    console.error('[noise] /run error:', e.message);
+    res.status(500).json({ ok: false, error: e.message });
+  }
 });
 
 export default router;

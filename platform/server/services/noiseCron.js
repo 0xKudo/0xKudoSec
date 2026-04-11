@@ -13,6 +13,7 @@ export async function scoreNoiseCandidates(userId, onProgress = null) {
       EXTRACT(EPOCH FROM (NOW() - MIN(timestamp))) / 86400 AS days_ingested
     FROM logs
     WHERE user_id = $1
+      AND timestamp > NOW() - INTERVAL '7 days'
   `, [userId]);
 
   const { total_events, days_ingested } = thresholdRows[0];

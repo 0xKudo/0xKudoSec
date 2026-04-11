@@ -259,7 +259,7 @@ export default function NoiseAdvisor() {
     setRunResult(null);
     try {
       const h = await authHeaders();
-      const res = await fetch(`${API}/run`, { method: 'POST', headers: h });
+      const res = await fetch(`${API}/run`, { method: 'POST', headers: h, signal: AbortSignal.timeout(120000) });
       if (!res.ok) {
         setRunning(false);
         setRunResult({ error: true });
