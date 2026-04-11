@@ -338,7 +338,7 @@ router.get('/context', requireAuth, async (req, res) => {
       AND (
         field_signature->>'event_category' = $2
         OR field_signature->>'source' = $3
-        OR ($4 IS NOT NULL AND field_signature->>'process_name' = $4)
+        OR ($4::text IS NOT NULL AND field_signature->>'process_name' = $4::text)
       )
     ORDER BY
       CASE WHEN field_signature->>'event_category' = $2 AND field_signature->>'source' = $3 THEN 0

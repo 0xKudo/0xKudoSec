@@ -55,7 +55,7 @@ async function fetchContext(candidate) {
       });
     });
     req.on('error', (e) => { log('ERROR', `fetchContext: ${e.message}`); resolve(null); });
-    req.setTimeout(5000, () => { log('ERROR', 'fetchContext: timeout'); req.destroy(); resolve(null); });
+    req.setTimeout(15000, () => { log('ERROR', `fetchContext: timeout url=${url.slice(0, 100)}`); req.destroy(); resolve(null); });
   });
 }
 
