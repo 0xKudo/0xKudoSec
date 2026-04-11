@@ -180,7 +180,20 @@ export default function NoiseAdvisor() {
       setStatus(await statusRes.json());
       setCandidates(await candidatesRes.json());
       setActivity(await activityRes.json());
-      setSettings(await settingsRes.json());
+      const loadedSettings = await settingsRes.json();
+      // If the saved model key doesn't match any library entry, sync to active model
+      if (isElectron) {
+        const lib = await window.electron.llm.getLibrary();
+        if (lib.ok && lib.models.length > 0) {
+          const savedKey = loadedSettings.llm_model;
+          const match = lib.models.find(m => m.modelKey === savedKey || m.filename === savedKey);
+          if (!match) {
+            const active = lib.models.find(m => m.active);
+            if (active) loadedSettings.llm_model = active.modelKey || active.filename;
+          }
+        }
+      }
+      setSettings(loadedSettings);
     } finally {
       if (isMountedRef.current) setLoading(false);
     }
