@@ -599,6 +599,32 @@ router.post('/rules', wrap(async (req, res) => {
   const validActions = ['alert', 'suppress'];
   const ruleSev = validSev.includes(severity) ? severity : 'high';
   const ruleAction = validActions.includes(action) ? action : 'alert';
+  const { rows: existing } = await pool.query(
+    `SELECT id FROM detection_rules WHERE user_id = $1 AND action = $2
+     AND COALESCE(match_event_id, -1) = COALESCE($3, -1)
+     AND COALESCE(match_category, '') = COALESCE($4, '')
+     AND COALESCE(match_severity, '') = COALESCE($5, '')
+     AND COALESCE(match_host, '') = COALESCE($6, '')
+     AND COALESCE(match_process, '') = COALESCE($7, '')
+     AND COALESCE(match_username, '') = COALESCE($8, '')
+     AND COALESCE(match_message, '') = COALESCE($9, '')
+     AND COALESCE(match_src_ip::text, '') = COALESCE($10, '')
+     AND COALESCE(match_dest_ip::text, '') = COALESCE($11, '')
+     AND COALESCE(match_dest_port, -1) = COALESCE($12, -1)`,
+    [uid(req), ruleAction,
+     match_event_id ? parseInt(match_event_id, 10) || null : null,
+     match_category ? String(match_category).slice(0, 64) : null,
+     validSev.includes(match_severity) ? match_severity : null,
+     match_host ? String(match_host).slice(0, 255) : null,
+     match_process ? String(match_process).slice(0, 500) : null,
+     match_username ? String(match_username).slice(0, 255) : null,
+     match_message ? String(match_message).slice(0, 500) : null,
+     match_src_ip ? String(match_src_ip) : null,
+     match_dest_ip ? String(match_dest_ip) : null,
+     match_dest_port ? parseInt(match_dest_port, 10) || null : null,
+    ]
+  );
+  if (existing.length) return res.status(409).json({ error: 'A rule with identical match conditions already exists.' });
   const { rows } = await pool.query(
     `INSERT INTO detection_rules
       (user_id, name, description, enabled, severity, action,
