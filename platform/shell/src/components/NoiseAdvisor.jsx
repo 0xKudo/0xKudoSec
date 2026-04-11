@@ -31,7 +31,8 @@ const s = {
   }),
   body: { flex: 1, overflow: 'auto', minHeight: 0, padding: '24px' },
   bodyMobile: { flex: 1, overflow: 'auto', minHeight: 0, padding: '16px' },
-  settingsBar: { display: 'flex', gap: '16px', alignItems: 'center', padding: '10px 14px', background: 'var(--bg-surface)', border: '1px solid var(--border)', marginBottom: '20px', flexWrap: 'wrap' },
+  settingsBar: { display: 'flex', flexDirection: 'column', gap: '10px', padding: '10px 14px', background: 'var(--bg-surface)', border: '1px solid var(--border)', marginBottom: '20px' },
+  settingsRow: { display: 'flex', gap: '16px', alignItems: 'center', flexWrap: 'wrap' },
   label: { fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' },
   select: { background: 'var(--bg-primary)', border: '1px solid var(--border)', color: 'var(--text-primary)', fontSize: '12px', padding: '4px 8px', fontFamily: 'var(--font)' },
   btn: { background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-text)', border: 'none', padding: '6px 14px', fontSize: '11px', fontFamily: 'var(--font)', cursor: 'pointer', letterSpacing: '0.04em' },
@@ -553,80 +554,82 @@ export default function NoiseAdvisor() {
 
         {/* Settings bar */}
         <div style={s.settingsBar}>
-          <span style={s.label}>Auto-suppress{saving ? ' saving...' : ''}</span>
-          <select style={s.select} value={settings.noise_auto_suppress} onChange={e => saveSetting('noise_auto_suppress', e.target.value)}>
-            <option value="off">Suggest only</option>
-            <option value="high_only">Auto-create (high confidence)</option>
-            <option value="all">Auto-create (all)</option>
-          </select>
-
-          {isElectron && <>
-            <div style={s.divider} />
-            <span style={s.label}>LLM</span>
-            <select style={s.select} value={settings.noise_llm_enabled ? 'on' : 'off'} onChange={e => saveSetting('noise_llm_enabled', e.target.value === 'on')}>
-              <option value="on">Enabled</option>
-              <option value="off">Disabled</option>
+          <div style={s.settingsRow}>
+            <span style={s.label}>Auto-suppress{saving ? ' saving...' : ''}</span>
+            <select style={s.select} value={settings.noise_auto_suppress} onChange={e => saveSetting('noise_auto_suppress', e.target.value)}>
+              <option value="off">Suggest only</option>
+              <option value="high_only">Auto-create (high confidence)</option>
+              <option value="all">Auto-create (all)</option>
             </select>
-            {llmEnabled && <>
-              <select style={s.select} value={settings.noise_llm_trigger} onChange={e => saveSetting('noise_llm_trigger', e.target.value)}>
-                <option value="manual">Manual trigger</option>
-                <option value="auto">Auto trigger</option>
+
+            {isElectron && <>
+              <div style={s.divider} />
+              <span style={s.label}>LLM</span>
+              <select style={s.select} value={settings.noise_llm_enabled ? 'on' : 'off'} onChange={e => saveSetting('noise_llm_enabled', e.target.value === 'on')}>
+                <option value="on">Enabled</option>
+                <option value="off">Disabled</option>
               </select>
-              <select
-                style={s.select}
-                value={settings.llm_model}
-                onChange={e => saveSetting('llm_model', e.target.value)}
-              >
-                {LLM_MODELS.map(m => (
-                  <option key={m.key} value={m.key}>{m.label}</option>
-                ))}
-              </select>
-              {llmStatus !== 'idle' && llmStatus !== 'unavailable' && (
-                <span style={{ fontSize: '10px', color: 'var(--text-muted)', letterSpacing: '0.06em' }}>
-                  {llmStatus === 'loading' ? 'loading model...' : `analyzing (${Object.values(llmResults).filter(r => r !== 'analyzing').length}/${Object.keys(llmResults).length})`}
-                </span>
-              )}
+              {llmEnabled && <>
+                <select style={s.select} value={settings.noise_llm_trigger} onChange={e => saveSetting('noise_llm_trigger', e.target.value)}>
+                  <option value="manual">Manual trigger</option>
+                  <option value="auto">Auto trigger</option>
+                </select>
+                <select
+                  style={s.select}
+                  value={settings.llm_model}
+                  onChange={e => saveSetting('llm_model', e.target.value)}
+                >
+                  {LLM_MODELS.map(m => (
+                    <option key={m.key} value={m.key}>{m.label}</option>
+                  ))}
+                </select>
+                {llmStatus !== 'idle' && llmStatus !== 'unavailable' && (
+                  <span style={{ fontSize: '10px', color: 'var(--text-muted)', letterSpacing: '0.06em' }}>
+                    {llmStatus === 'loading' ? 'loading model...' : `analyzing (${Object.values(llmResults).filter(r => r !== 'analyzing').length}/${Object.keys(llmResults).length})`}
+                  </span>
+                )}
+              </>}
             </>}
-          </>}
+          </div>
 
-          <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px', alignItems: 'center' }}>
-          <button
-            style={{ ...s.runBtn, opacity: running ? 0.5 : 1 }}
-            onClick={runAnalysis}
-            disabled={running}
-            onMouseEnter={e => { if (!running) e.currentTarget.style.color = 'var(--text-primary)'; }}
-            onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; }}
-          >
-            {running ? 'Running...' : 'Analyze Logs'}
-          </button>
-
-          {isElectron && llmEnabled && modelInstalled && settings.noise_llm_trigger === 'manual' && (() => {
-            const selectedUnanalyzed = selected.size > 0
-              ? candidates.filter(c => selected.has(c.id) && !c.llm_checked_at && llmResults[c.id] !== 'analyzing' && !llmResults[c.id])
-              : candidates.filter(c => !c.llm_checked_at && llmResults[c.id] !== 'analyzing' && !llmResults[c.id]);
-            const aiCount = selectedUnanalyzed.length;
-            const aiLabel = selected.size > 0 ? `AI Analysis (${aiCount} selected)` : `AI Analysis${aiCount ? ` (${aiCount})` : ''}`;
-            return (
-              <button
-                style={{ ...s.runBtn, opacity: (llmRunning || !aiCount) ? 0.5 : 1 }}
-                onClick={() => runLlmAnalysis(selectedUnanalyzed)}
-                disabled={llmRunning || !aiCount}
-                onMouseEnter={e => { if (!llmRunning && aiCount) e.currentTarget.style.color = 'var(--text-primary)'; }}
-                onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; }}
-              >
-                {llmRunning ? 'Analyzing...' : aiLabel}
-              </button>
-            );
-          })()}
-
-          {llmRunning && (
+          <div style={s.settingsRow}>
             <button
-              style={{ ...s.btnSmall, fontSize: '10px' }}
-              onClick={() => window.electron.llm.cancel()}
+              style={{ ...s.runBtn, opacity: running ? 0.5 : 1 }}
+              onClick={runAnalysis}
+              disabled={running}
+              onMouseEnter={e => { if (!running) e.currentTarget.style.color = 'var(--text-primary)'; }}
+              onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; }}
             >
-              Cancel
+              {running ? 'Running...' : 'Analyze Logs'}
             </button>
-          )}
+
+            {isElectron && llmEnabled && modelInstalled && settings.noise_llm_trigger === 'manual' && (() => {
+              const selectedUnanalyzed = selected.size > 0
+                ? candidates.filter(c => selected.has(c.id) && !c.llm_checked_at && llmResults[c.id] !== 'analyzing' && !llmResults[c.id])
+                : candidates.filter(c => !c.llm_checked_at && llmResults[c.id] !== 'analyzing' && !llmResults[c.id]);
+              const aiCount = selectedUnanalyzed.length;
+              const aiLabel = selected.size > 0 ? `AI Analysis (${aiCount} selected)` : `AI Analysis${aiCount ? ` (${aiCount})` : ''}`;
+              return (
+                <button
+                  style={{ ...s.runBtn, opacity: (llmRunning || !aiCount) ? 0.5 : 1 }}
+                  onClick={() => runLlmAnalysis(selectedUnanalyzed)}
+                  disabled={llmRunning || !aiCount}
+                  onMouseEnter={e => { if (!llmRunning && aiCount) e.currentTarget.style.color = 'var(--text-primary)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; }}
+                >
+                  {llmRunning ? 'Analyzing...' : aiLabel}
+                </button>
+              );
+            })()}
+
+            {llmRunning && (
+              <button
+                style={{ ...s.btnSmall, fontSize: '10px' }}
+                onClick={() => window.electron.llm.cancel()}
+              >
+                Cancel
+              </button>
+            )}
           </div>
         </div>
 
