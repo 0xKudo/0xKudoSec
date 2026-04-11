@@ -589,27 +589,35 @@ export default function NoiseAdvisor() {
             </>}
           </>}
 
+          <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px', alignItems: 'center' }}>
           <button
-            style={{ ...s.runBtn, marginLeft: 'auto', opacity: running ? 0.5 : 1 }}
+            style={{ ...s.runBtn, opacity: running ? 0.5 : 1 }}
             onClick={runAnalysis}
             disabled={running}
             onMouseEnter={e => { if (!running) e.currentTarget.style.color = 'var(--text-primary)'; }}
             onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; }}
           >
-            {running ? 'Running...' : 'Run Analysis'}
+            {running ? 'Running...' : 'Analyze Logs'}
           </button>
 
-          {isElectron && llmEnabled && modelInstalled && settings.noise_llm_trigger === 'manual' && (
-            <button
-              style={{ ...s.runBtn, opacity: (llmRunning || !unanalyzedCount) ? 0.5 : 1 }}
-              onClick={() => runLlmAnalysis()}
-              disabled={llmRunning || !unanalyzedCount}
-              onMouseEnter={e => { if (!llmRunning && unanalyzedCount) e.currentTarget.style.color = 'var(--text-primary)'; }}
-              onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; }}
-            >
-              {llmRunning ? 'Analyzing...' : `Run LLM${unanalyzedCount ? ` (${unanalyzedCount})` : ''}`}
-            </button>
-          )}
+          {isElectron && llmEnabled && modelInstalled && settings.noise_llm_trigger === 'manual' && (() => {
+            const selectedUnanalyzed = selected.size > 0
+              ? candidates.filter(c => selected.has(c.id) && !c.llm_checked_at && llmResults[c.id] !== 'analyzing' && !llmResults[c.id])
+              : candidates.filter(c => !c.llm_checked_at && llmResults[c.id] !== 'analyzing' && !llmResults[c.id]);
+            const aiCount = selectedUnanalyzed.length;
+            const aiLabel = selected.size > 0 ? `AI Analysis (${aiCount} selected)` : `AI Analysis${aiCount ? ` (${aiCount})` : ''}`;
+            return (
+              <button
+                style={{ ...s.runBtn, opacity: (llmRunning || !aiCount) ? 0.5 : 1 }}
+                onClick={() => runLlmAnalysis(selectedUnanalyzed)}
+                disabled={llmRunning || !aiCount}
+                onMouseEnter={e => { if (!llmRunning && aiCount) e.currentTarget.style.color = 'var(--text-primary)'; }}
+                onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; }}
+              >
+                {llmRunning ? 'Analyzing...' : aiLabel}
+              </button>
+            );
+          })()}
 
           {llmRunning && (
             <button
@@ -619,6 +627,7 @@ export default function NoiseAdvisor() {
               Cancel
             </button>
           )}
+          </div>
         </div>
 
         {/* Threshold progress */}
