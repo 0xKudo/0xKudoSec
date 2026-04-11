@@ -761,19 +761,27 @@ function setupLlmIpc(mainWindow) {
       let entry = lib.models.find(e => e.modelKey === key) || {};
       const onDisk = fs.existsSync(modelPath(m.filename));
 
+      const derivedTemplate = key.startsWith('qwen') ? 'qwen' : key.startsWith('llama') ? 'llama' : 'phi';
+
       // Auto-recover: file on disk but no library entry (e.g. crashed mid-download)
       if (onDisk && !entry.modelKey) {
-        const templateFamily = key.startsWith('qwen') ? 'qwen' : key.startsWith('llama') ? 'llama' : 'phi';
         upsertLibraryModel({
           filename: m.filename,
           type: 'managed',
           modelKey: key,
-          templateFamily,
+          templateFamily: derivedTemplate,
           status: 'ready',
           active: false,
         });
-        entry = { modelKey: key, templateFamily, status: 'ready', active: false };
+        entry = { modelKey: key, templateFamily: derivedTemplate, status: 'ready', active: false };
         llmLog('INFO', `Auto-recovered managed model from disk: ${key}`);
+      }
+
+      // Backfill missing templateFamily on existing library entries
+      if (entry.modelKey && !entry.templateFamily) {
+        upsertLibraryModel({ ...entry, templateFamily: derivedTemplate });
+        entry = { ...entry, templateFamily: derivedTemplate };
+        llmLog('INFO', `Backfilled templateFamily for managed model: ${key} → ${derivedTemplate}`);
       }
 
       return {
