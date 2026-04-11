@@ -179,24 +179,53 @@ export async function syncNvd() {
 }
 
 // ── CISA KEV sync ─────────────────────────────────────────────────────────────
+// cisa.gov blocks VPS IPs via Cloudflare. Pull KEV entries from NVD instead —
+// NVD API supports ?hasKev=true which returns only CVEs in the CISA KEV catalog,
+// and includes cisaExploitAdd / cisaActionDue / cisaRequiredAction fields.
 
 export async function syncCisa() {
   const pool = db.getPool();
-  const data = await fetchJson('https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json');
 
-  const rows = (data.vulnerabilities || []).map(v => ({
-    id: `cisa-${v.cveID}`,
-    source: 'cisa',
-    title: `${v.cveID}: ${v.vulnerabilityName}`,
-    description: (v.shortDescription || '').slice(0, 1000),
-    severity: 'high', // CISA KEV = actively exploited, always treat as high+
-    cvss_score: null,
-    affected_products: [v.vendorProject, v.product].filter(Boolean),
-    attack_patterns: [],
-    published_at: v.dateAdded ? new Date(v.dateAdded).toISOString() : null,
-  }));
+  let startIndex = 0;
+  const pageSize = 2000;
+  let totalResults = Infinity;
+  let upserted = 0;
 
-  return await upsertBatch(pool, rows);
+  while (startIndex < totalResults) {
+    const url = `https://services.nvd.nist.gov/rest/json/cves/2.0?hasKev=true&startIndex=${startIndex}&resultsPerPage=${pageSize}`;
+    const data = await fetchJson(url);
+    totalResults = data.totalResults ?? 0;
+
+    const rows = (data.vulnerabilities || []).map(({ cve }) => {
+      const desc = cve.descriptions?.find(d => d.lang === 'en')?.value || '';
+      const { severity, cvss_score } = nvdSeverity(cve.metrics);
+      const products = (cve.configurations || [])
+        .flatMap(c => c.nodes || [])
+        .flatMap(n => n.cpeMatch || [])
+        .map(m => m.criteria?.split(':')[4])
+        .filter(Boolean)
+        .slice(0, 20);
+      const kev = cve.cisaExploitAdd ? ` — Added to KEV: ${cve.cisaExploitAdd}` : '';
+      return {
+        id: `cisa-${cve.id}`,
+        source: 'cisa',
+        title: `${cve.id}${kev}`,
+        description: desc.slice(0, 1000),
+        severity: severity === 'none' || severity === 'low' ? 'high' : severity, // KEV = actively exploited
+        cvss_score,
+        affected_products: [...new Set(products)],
+        attack_patterns: nvdAttackPatterns(cve),
+        published_at: cve.cisaExploitAdd ? new Date(cve.cisaExploitAdd).toISOString() : (cve.published || null),
+      };
+    });
+
+    upserted += await upsertBatch(pool, rows);
+    startIndex += pageSize;
+
+    if (startIndex < totalResults) await new Promise(r => setTimeout(r, 6500));
+  }
+
+  return upserted;
 }
 
 // ── MITRE ATT&CK sync ────────────────────────────────────────────────────────
