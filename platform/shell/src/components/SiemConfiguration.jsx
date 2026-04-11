@@ -1627,7 +1627,7 @@ function NoiseAdvisorModelsTab({ s }) {
   };
 
   return (
-    <div style={s.section}>
+    <div style={{ ...s.section, maxWidth: '960px' }}>
       <div style={s.sectionTitle}>Tuning Center: Model Library</div>
       <div style={{ marginTop: '0' }}>
         <div style={s.sectionDesc}>
