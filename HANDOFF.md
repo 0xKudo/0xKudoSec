@@ -23,7 +23,7 @@ Unified cybersecurity tools platform at `0xkudo.com`. Monorepo — shared Expres
 - **Cancel download button** — red Cancel button appears next to Download during any active download (managed + URL). `llm:cancel-download` IPC handler sets `downloadCancelled` flag and destroys active request.
 - **Remove deletes file** — Remove now deletes the `.gguf` file for all model types if the file is in the models directory. Custom models added via Browse (external path) are unregistered only.
 
-**Current version: v1.2.46-beta.5** — building. All changes require Electron rebuild.
+**Current version: v1.2.47** — published and deployed (2026-04-11).
 
 ### Recently Completed (2026-04-11, v1.2.46-beta.1 — Vulnerability Knowledge Base)
 
