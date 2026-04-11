@@ -1531,6 +1531,7 @@ function NoiseAdvisorModelsTab({ s }) {
   const [customTemplate, setCustomTemplate] = useState('qwen');
   const [kbStatus, setKbStatus] = useState(null);
   const [kbSyncing, setKbSyncing] = useState(false);
+  const kbPollRef = useRef(null);
 
   const loadLibrary = async () => {
     const res = await window.electron.llm.getLibrary();
@@ -1542,8 +1543,25 @@ function NoiseAdvisorModelsTab({ s }) {
     try {
       const token = await getAccessTokenSilently();
       const res = await fetch('/api/siem/noise/kb/status', { headers: { Authorization: `Bearer ${token}` } });
-      if (res.ok) setKbStatus(await res.json());
+      if (res.ok) {
+        const data = await res.json();
+        setKbStatus(data);
+        setKbSyncing(data.syncing || false);
+        return data;
+      }
     } catch (_) {}
+    return null;
+  };
+
+  const startKbPolling = () => {
+    if (kbPollRef.current) return;
+    kbPollRef.current = setInterval(async () => {
+      const data = await loadKbStatus();
+      if (data && !data.syncing) {
+        clearInterval(kbPollRef.current);
+        kbPollRef.current = null;
+      }
+    }, 5000);
   };
 
   const handleKbSync = async (sources) => {
@@ -1551,14 +1569,13 @@ function NoiseAdvisorModelsTab({ s }) {
     setKbSyncing(true);
     try {
       const token = await getAccessTokenSilently();
-      await fetch('/api/siem/noise/kb/sync', {
+      const res = await fetch('/api/siem/noise/kb/sync', {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ sources }),
       });
-      flash('KB sync started. This may take a few minutes.', 'var(--severity-low)');
-      // Poll for completion
-      setTimeout(async () => { await loadKbStatus(); setKbSyncing(false); }, 60000);
+      if (!res.ok) throw new Error('Sync request failed');
+      startKbPolling();
     } catch (e) {
       flash('KB sync failed: ' + e.message, 'var(--severity-critical)');
       setKbSyncing(false);
@@ -1567,11 +1584,12 @@ function NoiseAdvisorModelsTab({ s }) {
 
   useEffect(() => {
     loadLibrary();
-    loadKbStatus();
+    loadKbStatus().then(data => { if (data?.syncing) startKbPolling(); });
     window.electron.llm.onDownloadProgress(info => {
       const key = info.modelKey || info.filename;
       setDownloadProgress(prev => ({ ...prev, [key]: info.percent ?? 0 }));
     });
+    return () => { if (kbPollRef.current) clearInterval(kbPollRef.current); };
   }, []);
 
   const flash = (text, color = 'var(--severity-low)') => {
@@ -1802,6 +1820,17 @@ function NoiseAdvisorModelsTab({ s }) {
           <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '12px', lineHeight: 1.6 }}>
             CVEs and attack patterns from NVD, CISA KEV, and MITRE ATT&CK. Injected into LLM prompts to improve analysis accuracy. Syncs daily at 03:30.
           </div>
+          {kbSyncing && (
+            <div style={{ marginBottom: '12px' }}>
+              <div style={{ fontSize: '11px', color: 'var(--accent-amber)', marginBottom: '6px' }}>
+                Syncing vulnerability KB... fetching NVD, CISA KEV, and MITRE ATT&CK feeds.
+              </div>
+              <div style={{ width: '100%', height: '3px', background: 'var(--border)', borderRadius: '2px', overflow: 'hidden' }}>
+                <div style={{ height: '100%', width: '100%', background: 'var(--accent-amber)', animation: 'kb-indeterminate 1.5s ease-in-out infinite', transformOrigin: 'left' }} />
+              </div>
+              <style>{`@keyframes kb-indeterminate { 0%{transform:translateX(-100%) scaleX(0.4)} 50%{transform:translateX(30%) scaleX(0.6)} 100%{transform:translateX(110%) scaleX(0.4)} }`}</style>
+            </div>
+          )}
           {kbStatus ? (
             <table style={{ ...s.table, marginBottom: '12px' }}>
               <thead>

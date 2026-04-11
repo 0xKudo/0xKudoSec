@@ -444,7 +444,7 @@ router.get('/kb/status', requireAuth, async (req, res) => {
       ORDER BY source
     `);
     const total = rows.reduce((sum, r) => sum + parseInt(r.count), 0);
-    res.json({ ok: true, sources: rows, total });
+    res.json({ ok: true, sources: rows, total, syncing: kbSyncRunning });
   } catch (e) {
     console.error('[noise] /kb/status error:', e.message);
     res.status(500).json({ ok: false, error: e.message });
