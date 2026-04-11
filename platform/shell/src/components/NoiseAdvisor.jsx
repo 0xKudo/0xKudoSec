@@ -449,7 +449,7 @@ export default function NoiseAdvisor() {
 
   // Determine model install state for UI prompts
   const activeModel = modelLibrary.find(m => m.active);
-  const selectedModelEntry = modelLibrary.find(m => m.modelKey === settings.llm_model || m.filename === settings.llm_model);
+  const selectedModelEntry = modelLibrary.find(m => m.modelKey === settings.llm_model || m.filename === settings.llm_model) || activeModel;
   const modelInstalled = selectedModelEntry?.status === 'ready';
   const llmEnabled = settings.noise_llm_enabled;
   const showDownloadPrompt = isElectron && llmEnabled && !modelInstalled && !downloadingModel;
@@ -576,7 +576,7 @@ export default function NoiseAdvisor() {
                 </select>
                 <select
                   style={s.select}
-                  value={settings.llm_model}
+                  value={settings.llm_model || (activeModel?.modelKey || activeModel?.filename) || ''}
                   onChange={e => saveSetting('llm_model', e.target.value)}
                 >
                   {(modelLibrary.length > 0 ? modelLibrary : LLM_MODELS.map(m => ({ modelKey: m.key, displayName: m.label, status: 'unknown' }))).map(m => (
