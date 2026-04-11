@@ -1527,6 +1527,7 @@ function NoiseAdvisorModelsTab({ s }) {
   const [actionMsg, setActionMsg] = useState(null); // { text, color }
   const [urlInput, setUrlInput] = useState('');
   const [urlLoading, setUrlLoading] = useState(false);
+  const [customTemplate, setCustomTemplate] = useState('qwen');
 
   const loadLibrary = async () => {
     const res = await window.electron.llm.getLibrary();
@@ -1573,7 +1574,7 @@ function NoiseAdvisorModelsTab({ s }) {
   const handleAddCustom = async () => {
     const picked = await window.electron.llm.browseGguf();
     if (!picked.ok || picked.cancelled) return;
-    const res = await window.electron.llm.addCustom(picked.filePath);
+    const res = await window.electron.llm.addCustom(picked.filePath, customTemplate);
     if (!res.ok) flash(res.err, 'var(--severity-critical)');
     else {
       const warn = res.warnings?.length ? ` Warnings: ${res.warnings.join('; ')}` : '';
@@ -1586,7 +1587,7 @@ function NoiseAdvisorModelsTab({ s }) {
     const url = urlInput.trim();
     if (!url) return;
     setUrlLoading(true);
-    const res = await window.electron.llm.downloadUrl(url);
+    const res = await window.electron.llm.downloadUrl(url, customTemplate);
     setUrlLoading(false);
     if (!res.ok) flash(res.err, 'var(--severity-critical)');
     else {
@@ -1722,6 +1723,14 @@ function NoiseAdvisorModelsTab({ s }) {
         {/* Add custom model — browse local file */}
         <div style={{ marginBottom: '16px' }}>
           <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Add Custom Model</div>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', marginBottom: '8px' }}>
+            <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Template:</span>
+            <select style={s.input} value={customTemplate} onChange={e => setCustomTemplate(e.target.value)}>
+              <option value="phi">Phi-3 / Phi-3.5</option>
+              <option value="qwen">Qwen2 / Qwen2.5</option>
+              <option value="llama">Llama 3 / Llama 3.x</option>
+            </select>
+          </div>
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
             <button style={{ ...s.btnPrimary, marginRight: 0 }} onClick={handleAddCustom}>
               Browse local .gguf file

@@ -84,8 +84,8 @@ contextBridge.exposeInMainWorld('electron', {
 
     // Custom model — local file or URL
     browseGguf: () => ipcRenderer.invoke('llm:browse-gguf'),
-    addCustom: (filePath) => ipcRenderer.invoke('llm:add-custom', filePath),
-    downloadUrl: (url) => ipcRenderer.invoke('llm:download-url', url),
+    addCustom: (filePath, templateFamily) => ipcRenderer.invoke('llm:add-custom', filePath, templateFamily),
+    downloadUrl: (url, templateFamily) => ipcRenderer.invoke('llm:download-url', url, templateFamily),
 
     // Push events from main → renderer
     onStatusChange: (cb) => ipcRenderer.on('llm:status-change', (_e, s) => cb(s)),

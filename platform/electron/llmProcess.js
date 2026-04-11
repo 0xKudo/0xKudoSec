@@ -84,21 +84,23 @@ function formatContext(context) {
 }
 
 // Map model keys to their chat template family
-function getTemplateFamily(modelKey) {
+// templateFamily from library takes precedence (set when registering custom models)
+function getTemplateFamily(modelKey, templateFamily) {
+  if (templateFamily) return templateFamily;
   if (!modelKey) return 'phi';
   if (modelKey.startsWith('qwen')) return 'qwen';
   if (modelKey.startsWith('llama')) return 'llama';
-  return 'phi'; // default for phi and unknown custom models
+  return 'phi';
 }
 
-function getStopTriggers(modelKey) {
-  const family = getTemplateFamily(modelKey);
+function getStopTriggers(modelKey, templateFamily) {
+  const family = getTemplateFamily(modelKey, templateFamily);
   if (family === 'qwen') return ['<|im_end|>'];
   if (family === 'llama') return ['<|eot_id|>'];
   return ['<|end|>', '<|user|>', '<|system|>'];
 }
 
-function buildPrompt(candidate, contextText, modelKey) {
+function buildPrompt(candidate, contextText, modelKey, templateFamily) {
   const sig = typeof candidate.field_signature === 'string'
     ? candidate.field_signature
     : JSON.stringify(candidate.field_signature, null, 2);
@@ -122,7 +124,7 @@ No analyst action taken in this period.
 Respond ONLY in JSON with this exact structure:
 {"explanation": "...", "cve_safe": true, "cve_note": "..."}`;
 
-  const family = getTemplateFamily(modelKey);
+  const family = getTemplateFamily(modelKey, templateFamily);
 
   if (family === 'qwen') {
     return `<|im_start|>system\n${systemContent}<|im_end|>\n<|im_start|>user\n${userContent}<|im_end|>\n<|im_start|>assistant\n`;
@@ -163,7 +165,7 @@ function parseResponse(text) {
   return { explanation: cleaned.slice(0, 500), cve_safe: true, cve_note: '' };
 }
 
-process.on('message', async ({ type, modelPath, modelKey, candidates }) => {
+process.on('message', async ({ type, modelPath, modelKey, templateFamily, candidates }) => {
   if (type !== 'analyze') return;
 
   let getLlama, LlamaCompletion;
@@ -195,11 +197,11 @@ process.on('message', async ({ type, modelPath, modelKey, candidates }) => {
       context = await model.createContext({ contextSize: 2048 });
       const sequence = context.getSequence();
       const completion = new LlamaCompletion({ contextSequence: sequence });
-      const prompt = buildPrompt(candidate, contextText, modelKey);
-      log('INFO', 'Calling generateCompletion, template family:', getTemplateFamily(modelKey));
+      const prompt = buildPrompt(candidate, contextText, modelKey, templateFamily);
+      log('INFO', 'Calling generateCompletion, template family:', getTemplateFamily(modelKey, templateFamily));
       const responseText = await completion.generateCompletion(prompt, {
         maxTokens: 256,
-        customStopTriggers: getStopTriggers(modelKey),
+        customStopTriggers: getStopTriggers(modelKey, templateFamily),
       });
       log('INFO', 'Response:', responseText);
       const parsed = parseResponse(responseText);

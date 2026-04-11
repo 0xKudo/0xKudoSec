@@ -346,7 +346,7 @@ function getLlmProcessScript() {
   return path.join(base, 'llmProcess.js');
 }
 
-async function runAnalysis(modelFilePath, modelKey, candidates, mainWindow, authToken) {
+async function runAnalysis(modelFilePath, modelKey, templateFamily, candidates, mainWindow, authToken) {
   // Kill any lingering child from a previous run (e.g. app closed mid-analysis)
   if (activeChild) {
     llmLog('INFO', 'Killing stale child process before starting new run');
@@ -446,7 +446,7 @@ async function runAnalysis(modelFilePath, modelKey, candidates, mainWindow, auth
       mainWindow.webContents.send('llm:analysis-started', { total: candidates.length });
     }
 
-    child.send({ type: 'analyze', modelPath: modelFilePath, modelKey, candidates });
+    child.send({ type: 'analyze', modelPath: modelFilePath, modelKey, templateFamily, candidates });
   });
 }
 
@@ -504,23 +504,25 @@ function setupLlmIpc(mainWindow) {
 
     // Resolve which model file to use
     let filePath;
+    let templateFamily = null;
     if (modelKey && MANAGED_MODELS[modelKey]) {
       filePath = modelPath(MANAGED_MODELS[modelKey].filename);
     } else {
       const lib = loadLibrary();
       const active = lib.models.find(m => m.active);
       if (!active) {
-        return { ok: false, err: 'No model selected. Download a model in Configuration > Noise Advisor.' };
+        return { ok: false, err: 'No model selected. Download a model in Configuration > Tuning Center.' };
       }
       filePath = modelPath(active.filename);
+      templateFamily = active.templateFamily || null;
     }
 
     if (!fs.existsSync(filePath)) {
-      return { ok: false, err: 'Model file not found. Download it in Configuration > Noise Advisor.' };
+      return { ok: false, err: 'Model file not found. Download it in Configuration > Tuning Center.' };
     }
 
     try {
-      const results = await runAnalysis(filePath, modelKey, candidates, mainWindow, authToken);
+      const results = await runAnalysis(filePath, modelKey, templateFamily, candidates, mainWindow, authToken);
       return { ok: true, results, cancelled: cancelRequested };
     } catch (e) {
       return { ok: false, err: e.message };
@@ -624,7 +626,7 @@ function setupLlmIpc(mainWindow) {
   });
 
   // llm:add-custom ─────────────────────────────────────────────────────────
-  ipcMain.handle('llm:add-custom', async (event, filePath) => {
+  ipcMain.handle('llm:add-custom', async (event, filePath, templateFamily) => {
     if (!isValidSender(event)) return { ok: false, err: 'Unauthorized' };
     if (typeof filePath !== 'string' || !filePath.toLowerCase().endsWith('.gguf')) {
       return { ok: false, err: 'Path must point to a .gguf file' };
@@ -651,6 +653,7 @@ function setupLlmIpc(mainWindow) {
       filename,
       displayName: filename.replace(/\.gguf$/i, ''),
       type: 'custom',
+      templateFamily: templateFamily || 'phi',
       sizeBytes: size,
       ramEstimateBytes: ramEst,
       quantization,
@@ -664,7 +667,7 @@ function setupLlmIpc(mainWindow) {
   });
 
   // llm:download-url ───────────────────────────────────────────────────────
-  ipcMain.handle('llm:download-url', async (event, url) => {
+  ipcMain.handle('llm:download-url', async (event, url, templateFamily) => {
     if (!isValidSender(event)) return { ok: false, err: 'Unauthorized' };
     if (typeof url !== 'string' || !url.startsWith('https://')) {
       return { ok: false, err: 'URL must start with https://' };
@@ -705,6 +708,7 @@ function setupLlmIpc(mainWindow) {
       filename,
       displayName: filename.replace(/\.gguf$/i, ''),
       type: 'custom',
+      templateFamily: templateFamily || 'phi',
       sizeBytes: size,
       ramEstimateBytes: ramEst,
       quantization,
