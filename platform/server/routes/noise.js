@@ -357,7 +357,7 @@ router.get('/context', requireAuth, async (req, res) => {
       AND enabled = true
       AND (
         match_category = $2
-        OR ($3 IS NOT NULL AND match_process = $3)
+        OR ($3::text IS NOT NULL AND match_process = $3::text)
       )
     ORDER BY created_at DESC
     LIMIT 5
