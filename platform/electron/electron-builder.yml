@@ -17,6 +17,8 @@ win:
       arch: x64
   icon: assets/icon.ico
 
+compression: maximum
+
 nsis:
   oneClick: false
   allowToChangeInstallationDirectory: false
@@ -42,6 +44,14 @@ files:
   - "assets/**"
   - "node_modules/**"
   - "package.json"
+  # Exclude node-llama-cpp build artifacts (cmake files, source, vcxproj) — only binaries needed at runtime
+  - "!node_modules/node-llama-cpp/llama/localBuilds/win-x64-cuda/CMakeFiles/**"
+  - "!node_modules/node-llama-cpp/llama/localBuilds/win-x64-cuda/llama.cpp/**"
+  - "!node_modules/node-llama-cpp/llama/localBuilds/win-x64-cuda/llama-addon.dir/**"
+  - "!node_modules/node-llama-cpp/llama/localBuilds/win-x64-cuda/x64/**"
+  - "!node_modules/node-llama-cpp/llama/llama.cpp/**"
+  - "!node_modules/node-llama-cpp/llama/xpack/**"
+  - "!node_modules/node-llama-cpp/llama/toolchains/**"
 
 # Unpack all node_modules — llmProcess.js runs as a child process and needs to resolve
 # ESM imports (node-llama-cpp and all its deps) from the filesystem, not inside app.asar
