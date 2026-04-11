@@ -80,9 +80,12 @@ router.patch('/candidates/:id/llm-result', requireAuth, async (req, res) => {
 
 // PATCH /api/siem/noise/candidates/:id
 router.patch('/candidates/:id', requireAuth, async (req, res) => {
-  const { status } = req.body;
+  const { status, llm_override, llm_override_note } = req.body;
   if (!['approved', 'rejected'].includes(status)) {
     return res.status(400).json({ error: 'status must be approved or rejected' });
+  }
+  if (llm_override && (typeof llm_override_note !== 'string' || llm_override_note.trim().length < 1)) {
+    return res.status(400).json({ error: 'llm_override_note is required when overriding LLM verdict' });
   }
 
   // Fetch the candidate first — we need to check CVE safety before approving
@@ -92,12 +95,22 @@ router.patch('/candidates/:id', requireAuth, async (req, res) => {
   );
   if (!existing.length) return res.status(404).json({ error: 'not found' });
 
-  // Hard block: CVE-flagged candidates cannot be approved regardless of user action
-  if (status === 'approved' && existing[0].llm_cve_safe === false) {
+  // Hard block: CVE-flagged candidates cannot be approved unless analyst explicitly overrides with a note
+  if (status === 'approved' && existing[0].llm_cve_safe === false && !llm_override) {
     return res.status(409).json({
       error: 'This pattern was flagged as CVE-unsafe by LLM analysis and cannot be suppressed.',
       llm_cve_note: existing[0].llm_cve_note || null,
     });
+  }
+
+  // If overriding, update the CVE verdict and log the analyst's reasoning
+  if (llm_override && llm_override_note) {
+    const safeNote = llm_override_note.slice(0, 1000);
+    await pool().query(
+      `UPDATE noise_candidates SET llm_cve_safe = true, llm_cve_note = $1, updated_at = NOW() WHERE id = $2 AND user_id = $3`,
+      [`[Analyst override] ${safeNote}`, req.params.id, uid(req)]
+    );
+    await audit(uid(req), 'noise.llm_override', { candidate_id: req.params.id, note: safeNote }, req.ip);
   }
 
   const { rows } = await pool().query(`

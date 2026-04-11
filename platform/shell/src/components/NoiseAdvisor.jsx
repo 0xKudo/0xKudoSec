@@ -37,7 +37,8 @@ const s = {
   btn: { background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-text)', border: 'none', padding: '6px 14px', fontSize: '11px', fontFamily: 'var(--font)', cursor: 'pointer', letterSpacing: '0.04em' },
   btnSmall: { background: 'none', border: '1px solid var(--border)', color: 'var(--text-muted)', padding: '4px 10px', fontSize: '11px', fontFamily: 'var(--font)', cursor: 'pointer' },
   runBtn: { background: 'none', border: '1px solid var(--border)', color: 'var(--text-muted)', padding: '4px 12px', fontSize: '11px', fontFamily: 'var(--font)', cursor: 'pointer', letterSpacing: '0.04em' },
-  table: { width: '100%', borderCollapse: 'collapse', fontSize: '12px' },
+  table: { width: '100%', borderCollapse: 'collapse', fontSize: '12px', tableLayout: 'fixed' },
+  tdLlm: { padding: '10px 12px', borderBottom: '1px solid var(--border)', color: 'var(--text-primary)', verticalAlign: 'top', width: '35%', wordBreak: 'break-word' },
   th: { textAlign: 'left', padding: '8px 12px', fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', borderBottom: '1px solid var(--border)' },
   td: { padding: '10px 12px', borderBottom: '1px solid var(--border)', color: 'var(--text-primary)', verticalAlign: 'top' },
   badge: (color) => ({ display: 'inline-block', padding: '2px 8px', fontSize: '10px', border: `1px solid ${color}`, color, letterSpacing: '0.06em' }),
@@ -140,6 +141,8 @@ export default function NoiseAdvisor() {
   const [pendingIds, setPendingIds] = useState(new Set());
   const [actionBanner, setActionBanner] = useState(null);
   const [undoingId, setUndoingId] = useState(null);
+  const [overrideId, setOverrideId] = useState(null); // candidate id showing override input
+  const [overrideNote, setOverrideNote] = useState('');
 
   // LLM state
   const [llmStatus, setLlmStatus] = useState('idle'); // idle | loading | running | unavailable
@@ -345,6 +348,25 @@ export default function NoiseAdvisor() {
         setTimeout(() => setActionBanner(null), 3000);
         await load();
       }
+    } finally {
+      setPendingIds(prev => { const n = new Set(prev); n.delete(id); return n; });
+    }
+  };
+
+  const overrideApprove = async (id) => {
+    if (!overrideNote.trim()) return;
+    setPendingIds(prev => new Set([...prev, id]));
+    setOverrideId(null);
+    try {
+      const h = await authHeaders();
+      await fetch(`${API}/candidates/${id}`, {
+        method: 'PATCH', headers: h,
+        body: JSON.stringify({ status: 'approved', llm_override: true, llm_override_note: overrideNote.trim() }),
+      });
+      setOverrideNote('');
+      setActionBanner({ text: 'Override applied. Suppression rule created.', color: 'var(--severity-low)' });
+      setTimeout(() => setActionBanner(null), 3000);
+      await load();
     } finally {
       setPendingIds(prev => { const n = new Set(prev); n.delete(id); return n; });
     }
@@ -675,9 +697,28 @@ export default function NoiseAdvisor() {
                               </div>
                             )}
                             <div style={s.cardActions}>
-                              <button style={s.btnSmall} disabled={unsafe} onClick={() => !unsafe && updateStatus(c.id, 'approved')}>Approve</button>
+                              {unsafe ? (
+                                <button style={{ ...s.btnSmall, color: 'var(--severity-critical)', borderColor: 'var(--severity-critical)' }} onClick={() => { setOverrideId(c.id); setOverrideNote(''); }}>Override</button>
+                              ) : (
+                                <button style={s.btnSmall} onClick={() => updateStatus(c.id, 'approved')}>Approve</button>
+                              )}
                               <button style={s.btnSmall} onClick={() => updateStatus(c.id, 'rejected')}>Reject</button>
                             </div>
+                            {overrideId === c.id && (
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '8px' }}>
+                                <textarea
+                                  autoFocus
+                                  placeholder="Why is this safe to suppress?"
+                                  value={overrideNote}
+                                  onChange={e => setOverrideNote(e.target.value)}
+                                  style={{ fontSize: '11px', fontFamily: 'var(--font)', background: 'var(--bg-surface)', color: 'var(--text-primary)', border: '1px solid var(--border)', padding: '4px 6px', resize: 'vertical', minHeight: '56px', width: '100%' }}
+                                />
+                                <div style={{ display: 'flex', gap: '6px' }}>
+                                  <button style={{ ...s.btnSmall, opacity: overrideNote.trim() ? 1 : 0.4 }} disabled={!overrideNote.trim()} onClick={() => overrideApprove(c.id)}>Confirm</button>
+                                  <button style={s.btnSmall} onClick={() => { setOverrideId(null); setOverrideNote(''); }}>Cancel</button>
+                                </div>
+                              </div>
+                            )}
                           </div>
                         );
                       })
@@ -716,18 +757,34 @@ export default function NoiseAdvisor() {
                                 </td>
                                 <td style={s.td}>{c.score}</td>
                                 {showLlmCols && <td style={s.td}><CveSafeCell candidate={c} llmResults={llmResults} /></td>}
-                                {showLlmCols && <td style={s.td}><LlmExplanationCell candidate={c} llmResults={llmResults} /></td>}
+                                {showLlmCols && <td style={s.tdLlm}><LlmExplanationCell candidate={c} llmResults={llmResults} /></td>}
                                 <td style={s.td}>
                                   {pending ? (
                                     <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Updating...</span>
+                                  ) : overrideId === c.id ? (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                      <textarea
+                                        autoFocus
+                                        placeholder="Why is this safe to suppress?"
+                                        value={overrideNote}
+                                        onChange={e => setOverrideNote(e.target.value)}
+                                        style={{ fontSize: '11px', fontFamily: 'var(--font)', background: 'var(--bg-surface)', color: 'var(--text-primary)', border: '1px solid var(--border)', padding: '4px 6px', resize: 'vertical', minHeight: '56px', width: '200px' }}
+                                      />
+                                      <div style={{ display: 'flex', gap: '6px' }}>
+                                        <button style={{ ...s.btnSmall, opacity: overrideNote.trim() ? 1 : 0.4 }} disabled={!overrideNote.trim()} onClick={() => overrideApprove(c.id)}>Confirm</button>
+                                        <button style={s.btnSmall} onClick={() => { setOverrideId(null); setOverrideNote(''); }}>Cancel</button>
+                                      </div>
+                                    </div>
                                   ) : (
-                                    <div style={{ display: 'flex', gap: '6px' }}>
-                                      <button
-                                        style={{ ...s.btnSmall, opacity: unsafe ? 0.4 : 1, cursor: unsafe ? 'not-allowed' : 'pointer' }}
-                                        disabled={unsafe}
-                                        title={unsafe ? (llmResults[c.id]?.cve_note || c.llm_cve_note || 'CVE-unsafe: suppression blocked') : undefined}
-                                        onClick={() => !unsafe && updateStatus(c.id, 'approved')}
-                                      >Approve</button>
+                                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                                      {unsafe ? (
+                                        <button
+                                          style={{ ...s.btnSmall, color: 'var(--severity-critical)', borderColor: 'var(--severity-critical)' }}
+                                          onClick={() => { setOverrideId(c.id); setOverrideNote(''); }}
+                                        >Override</button>
+                                      ) : (
+                                        <button style={s.btnSmall} onClick={() => updateStatus(c.id, 'approved')}>Approve</button>
+                                      )}
                                       <button style={s.btnSmall} onClick={() => updateStatus(c.id, 'rejected')}>Reject</button>
                                     </div>
                                   )}
