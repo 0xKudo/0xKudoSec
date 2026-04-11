@@ -11,17 +11,31 @@
  */
 
 import https from 'https';
+import http from 'http';
 import db from './db.js';
 import nodeCron from 'node-cron';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function fetchJson(url) {
+function fetchJson(url, redirectCount = 0) {
   return new Promise((resolve, reject) => {
-    const req = https.get(url, {
-      headers: { 'User-Agent': '0xKudo-SecurityToolkit/1.0 (kb-sync)' },
+    if (redirectCount > 5) { reject(new Error(`Too many redirects for ${url}`)); return; }
+    const lib = url.startsWith('https') ? https : http;
+    const req = lib.get(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; SecurityResearch/1.0)',
+        'Accept': 'application/json, */*',
+      },
       timeout: 30000,
     }, res => {
+      // Follow redirects
+      if (res.statusCode === 301 || res.statusCode === 302 || res.statusCode === 307 || res.statusCode === 308) {
+        const location = res.headers.location;
+        if (!location) { reject(new Error(`Redirect with no Location from ${url}`)); return; }
+        res.resume(); // drain the response
+        fetchJson(location, redirectCount + 1).then(resolve).catch(reject);
+        return;
+      }
       if (res.statusCode === 429) {
         reject(new Error(`Rate limited by ${url}`));
         return;
@@ -52,8 +66,8 @@ async function upsertBatch(pool, rows) {
     const values = [];
     const params = [];
     batch.forEach((r, idx) => {
-      const base = idx * 10;
-      values.push(`($${base+1},$${base+2},$${base+3},$${base+4},$${base+5},$${base+6},$${base+7},$${base+8},$${base+9},NOW(),NOW())`);
+      const base = idx * 9;
+      values.push(`($${base+1},$${base+2},$${base+3},$${base+4},$${base+5},$${base+6}::numeric,$${base+7}::jsonb,$${base+8}::jsonb,$${base+9}::timestamptz,NOW(),NOW())`);
       params.push(
         r.id, r.source, r.title, r.description, r.severity,
         r.cvss_score ?? null,
@@ -111,8 +125,9 @@ function nvdAttackPatterns(cve) {
 
 export async function syncNvd() {
   const pool = db.getPool();
-  const since = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().replace('T', ' ').slice(0, 19);
-  const until = new Date().toISOString().replace('T', ' ').slice(0, 19);
+  // NVD API v2 requires ISO 8601 with T separator and milliseconds
+  const since = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().slice(0, 23);
+  const until = new Date().toISOString().slice(0, 23);
 
   // NVD paginates at 2000 results per page
   let startIndex = 0;
