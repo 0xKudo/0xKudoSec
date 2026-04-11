@@ -730,7 +730,7 @@ winlogbeat.event_logs:
       </div>
 
       <div style={isMobile ? s.tabsMobile : s.tabs}>
-        {(isElectronUnauth ? ['Noise Advisor Models'] : [...BASE_TABS, ...(isElectron ? ['Noise Advisor Models'] : []), ...(isConfigEditor ? ['Edit Config'] : [])]).map((t, i) => (
+        {(isElectronUnauth ? ['Tuning Center Models'] : [...BASE_TABS, ...(isElectron ? ['Tuning Center Models'] : []), ...(isConfigEditor ? ['Edit Config'] : [])]).map((t, i) => (
           <button
             key={t}
             style={isMobile ? s.tabMobile(tab === (isElectronUnauth ? 6 : i)) : s.tab(tab === (isElectronUnauth ? 6 : i))}
@@ -989,7 +989,7 @@ winlogbeat.event_logs:
           </div>
         )}
 
-        {/* ── Tab 6: Noise Advisor Models (Electron only) ── */}
+        {/* ── Tab 6: Tuning Center Models (Electron only) ── */}
         {isElectron && tab === 6 && (
           <NoiseAdvisorModelsTab s={s} />
         )}
@@ -1628,7 +1628,7 @@ function NoiseAdvisorModelsTab({ s }) {
 
   return (
     <div style={s.section}>
-      <div style={s.sectionTitle}>Noise Advisor: Model Library</div>
+      <div style={s.sectionTitle}>Tuning Center: Model Library</div>
       <div style={{ marginTop: '0' }}>
         <div style={s.sectionDesc}>
           Models are stored in %APPDATA%\0xKudo\models. Managed models are downloaded on demand.

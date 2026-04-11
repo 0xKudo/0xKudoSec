@@ -346,7 +346,7 @@ function getLlmProcessScript() {
   return path.join(base, 'llmProcess.js');
 }
 
-async function runAnalysis(modelFilePath, candidates, mainWindow, authToken) {
+async function runAnalysis(modelFilePath, modelKey, candidates, mainWindow, authToken) {
   // Kill any lingering child from a previous run (e.g. app closed mid-analysis)
   if (activeChild) {
     llmLog('INFO', 'Killing stale child process before starting new run');
@@ -446,7 +446,7 @@ async function runAnalysis(modelFilePath, candidates, mainWindow, authToken) {
       mainWindow.webContents.send('llm:analysis-started', { total: candidates.length });
     }
 
-    child.send({ type: 'analyze', modelPath: modelFilePath, candidates });
+    child.send({ type: 'analyze', modelPath: modelFilePath, modelKey, candidates });
   });
 }
 
@@ -520,7 +520,7 @@ function setupLlmIpc(mainWindow) {
     }
 
     try {
-      const results = await runAnalysis(filePath, candidates, mainWindow, authToken);
+      const results = await runAnalysis(filePath, modelKey, candidates, mainWindow, authToken);
       return { ok: true, results, cancelled: cancelRequested };
     } catch (e) {
       return { ok: false, err: e.message };

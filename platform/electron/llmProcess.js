@@ -83,7 +83,22 @@ function formatContext(context) {
   return lines.join('\n');
 }
 
-function buildPrompt(candidate, contextText) {
+// Map model keys to their chat template family
+function getTemplateFamily(modelKey) {
+  if (!modelKey) return 'phi';
+  if (modelKey.startsWith('qwen')) return 'qwen';
+  if (modelKey.startsWith('llama')) return 'llama';
+  return 'phi'; // default for phi and unknown custom models
+}
+
+function getStopTriggers(modelKey) {
+  const family = getTemplateFamily(modelKey);
+  if (family === 'qwen') return ['<|im_end|>'];
+  if (family === 'llama') return ['<|eot_id|>'];
+  return ['<|end|>', '<|user|>', '<|system|>'];
+}
+
+function buildPrompt(candidate, contextText, modelKey) {
   const sig = typeof candidate.field_signature === 'string'
     ? candidate.field_signature
     : JSON.stringify(candidate.field_signature, null, 2);
@@ -92,10 +107,8 @@ function buildPrompt(candidate, contextText) {
     ? `\n\n${contextText}\n\nUse the above analyst decisions to inform your analysis.`
     : '';
 
-  return `<|system|>
-You are a security analyst assistant.${contextSection}<|end|>
-<|user|>
-Analyze this SIEM event pattern and answer two questions:
+  const systemContent = `You are a security analyst assistant.${contextSection}`;
+  const userContent = `Analyze this SIEM event pattern and answer two questions:
 
 Pattern: ${sig}
 Frequency: ${candidate.daily_avg || 0} events/day over ${candidate.days || 7} days
@@ -107,8 +120,18 @@ No analyst action taken in this period.
    If no, say "No known CVE match - safe to suppress."
 
 Respond ONLY in JSON with this exact structure:
-{"explanation": "...", "cve_safe": true, "cve_note": "..."}<|end|>
-<|assistant|>`;
+{"explanation": "...", "cve_safe": true, "cve_note": "..."}`;
+
+  const family = getTemplateFamily(modelKey);
+
+  if (family === 'qwen') {
+    return `<|im_start|>system\n${systemContent}<|im_end|>\n<|im_start|>user\n${userContent}<|im_end|>\n<|im_start|>assistant\n`;
+  }
+  if (family === 'llama') {
+    return `<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n${systemContent}<|eot_id|><|start_header_id|>user<|end_header_id|>\n${userContent}<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n`;
+  }
+  // Phi-3.5 default
+  return `<|system|>\n${systemContent}<|end|>\n<|user|>\n${userContent}<|end|>\n<|assistant|>`;
 }
 
 function parseResponse(text) {
@@ -140,7 +163,7 @@ function parseResponse(text) {
   return { explanation: cleaned.slice(0, 500), cve_safe: true, cve_note: '' };
 }
 
-process.on('message', async ({ type, modelPath, candidates }) => {
+process.on('message', async ({ type, modelPath, modelKey, candidates }) => {
   if (type !== 'analyze') return;
 
   let getLlama, LlamaCompletion;
@@ -172,11 +195,11 @@ process.on('message', async ({ type, modelPath, candidates }) => {
       context = await model.createContext({ contextSize: 2048 });
       const sequence = context.getSequence();
       const completion = new LlamaCompletion({ contextSequence: sequence });
-      const prompt = buildPrompt(candidate, contextText);
-      log('INFO', 'Calling generateCompletion');
+      const prompt = buildPrompt(candidate, contextText, modelKey);
+      log('INFO', 'Calling generateCompletion, template family:', getTemplateFamily(modelKey));
       const responseText = await completion.generateCompletion(prompt, {
         maxTokens: 256,
-        customStopTriggers: ['<|end|>', '<|user|>', '<|system|>'],
+        customStopTriggers: getStopTriggers(modelKey),
       });
       log('INFO', 'Response:', responseText);
       const parsed = parseResponse(responseText);
