@@ -737,8 +737,8 @@ export default function NoiseAdvisor() {
                           <tr>
                             <th style={s.thChk}><input type="checkbox" checked={items.every(c => selected.has(c.id))} ref={el => { if (el) el.indeterminate = items.some(c => selected.has(c.id)) && !items.every(c => selected.has(c.id)); }} onChange={() => toggleSelectGroup(items)} /></th>
                             <th style={s.th}>Pattern</th>
-                            <th style={s.thSm}>Daily Avg</th>
-                            <th style={s.thSm}>Confidence</th>
+                            <th style={{ ...s.thSm, width: '110px' }}>Daily Avg</th>
+                            <th style={{ ...s.thSm, width: '90px' }}>Confidence</th>
                             <th style={{ ...s.thSm, width: '60px' }}>Score</th>
                             {showLlmCols && <th style={s.thCve}>CVE Safe</th>}
                             {showLlmCols && <th style={s.th}>LLM Analysis</th>}
