@@ -342,6 +342,13 @@ function getLlmProcessScript() {
 }
 
 async function runAnalysis(modelFilePath, candidates, mainWindow) {
+  // Kill any lingering child from a previous run (e.g. app closed mid-analysis)
+  if (activeChild) {
+    llmLog('INFO', 'Killing stale child process before starting new run');
+    try { activeChild.kill(); } catch (_) {}
+    activeChild = null;
+  }
+
   llmStatus = 'loading';
   emitStatus(mainWindow, 'loading');
   llmLog('INFO', 'Spawning llmProcess for', candidates.length, 'candidates');
