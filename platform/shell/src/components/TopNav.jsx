@@ -233,6 +233,46 @@ function LlmAnalysisBanner() {
   );
 }
 
+function KbSyncBanner() {
+  const [syncing, setSyncing] = useState(false);
+
+  useEffect(() => {
+    const onStart = () => setSyncing(true);
+    const onDone  = () => setSyncing(false);
+    window.addEventListener('kb-sync-start', onStart);
+    window.addEventListener('kb-sync-done',  onDone);
+    return () => {
+      window.removeEventListener('kb-sync-start', onStart);
+      window.removeEventListener('kb-sync-done',  onDone);
+    };
+  }, []);
+
+  if (!syncing) return null;
+
+  const bannerStyle = {
+    background: 'var(--bg-surface)',
+    borderBottom: '1px solid var(--accent-amber)',
+    padding: '6px 16px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+    fontSize: '11px',
+    color: 'var(--accent-amber)',
+    flexShrink: 0,
+  };
+
+  return (
+    <div style={bannerStyle}>
+      <span>KB</span>
+      <span>Syncing vulnerability knowledge base...</span>
+      <div style={{ flex: 1, maxWidth: '120px', height: '3px', background: 'var(--border)', borderRadius: '2px', overflow: 'hidden' }}>
+        <div style={{ height: '100%', width: '100%', background: 'var(--accent-amber)', animation: 'kb-indeterminate 2.5s cubic-bezier(0.4,0,0.2,1) infinite', transformOrigin: 'left' }} />
+      </div>
+      <style>{`@keyframes kb-indeterminate { 0%{transform:translateX(-100%) scaleX(0.3)} 60%{transform:translateX(60%) scaleX(0.5)} 100%{transform:translateX(120%) scaleX(0.3)} }`}</style>
+    </div>
+  );
+}
+
 export function TopNav({ activeApp, onSwitchApp, onMenuToggle, menuOpen, theme, setTheme }) {
   const [closeHover, setCloseHover] = useState(false);
   const { isAuthenticated, user, loginWithRedirect, logout } = useAuth0();
@@ -244,6 +284,7 @@ export function TopNav({ activeApp, onSwitchApp, onMenuToggle, menuOpen, theme, 
     <>
     <UpdateBanner />
     <LlmAnalysisBanner />
+    <KbSyncBanner />
     <nav style={styles.nav}>
       {isMobile ? (
         <>

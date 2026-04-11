@@ -1560,6 +1560,8 @@ function NoiseAdvisorModelsTab({ s }) {
       if (data && !data.syncing) {
         clearInterval(kbPollRef.current);
         kbPollRef.current = null;
+        setKbSyncing(false);
+        window.dispatchEvent(new Event('kb-sync-done'));
       }
     }, 5000);
   };
@@ -1567,6 +1569,7 @@ function NoiseAdvisorModelsTab({ s }) {
   const handleKbSync = async (sources) => {
     if (kbSyncing) return;
     setKbSyncing(true);
+    window.dispatchEvent(new Event('kb-sync-start'));
     try {
       const token = await getAccessTokenSilently();
       const res = await fetch('/api/siem/noise/kb/sync', {
@@ -1579,6 +1582,7 @@ function NoiseAdvisorModelsTab({ s }) {
     } catch (e) {
       flash('KB sync failed: ' + e.message, 'var(--severity-critical)');
       setKbSyncing(false);
+      window.dispatchEvent(new Event('kb-sync-done'));
     }
   };
 
@@ -1820,17 +1824,6 @@ function NoiseAdvisorModelsTab({ s }) {
           <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '12px', lineHeight: 1.6 }}>
             CVEs and attack patterns from NVD, CISA KEV, and MITRE ATT&CK. Injected into LLM prompts to improve analysis accuracy. Syncs daily at 03:30.
           </div>
-          {kbSyncing && (
-            <div style={{ marginBottom: '12px' }}>
-              <div style={{ fontSize: '11px', color: 'var(--accent-amber)', marginBottom: '6px' }}>
-                Syncing vulnerability KB... fetching NVD, CISA KEV, and MITRE ATT&CK feeds.
-              </div>
-              <div style={{ width: '100%', height: '3px', background: 'var(--border)', borderRadius: '2px', overflow: 'hidden' }}>
-                <div style={{ height: '100%', width: '100%', background: 'var(--accent-amber)', animation: 'kb-indeterminate 2.5s cubic-bezier(0.4,0,0.2,1) infinite', transformOrigin: 'left' }} />
-              </div>
-              <style>{`@keyframes kb-indeterminate { 0%{transform:translateX(-100%) scaleX(0.3)} 60%{transform:translateX(60%) scaleX(0.5)} 100%{transform:translateX(120%) scaleX(0.3)} }`}</style>
-            </div>
-          )}
           {kbStatus ? (
             <table style={{ ...s.table, marginBottom: '12px' }}>
               <thead>
