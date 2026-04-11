@@ -1763,7 +1763,7 @@ function NoiseAdvisorModelsTab({ s }) {
                         {m.status !== 'not-downloaded' && (
                           removeConfirm === m.filename ? (
                             <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                              {m.type === 'managed' ? 'Delete file?' : 'Remove from library?'}
+                              {'Delete file?'}
                               <button style={{ ...s.btnPrimary, marginRight: 0, background: 'none', border: '1px solid var(--severity-critical)', color: 'var(--severity-critical)' }} onClick={() => handleRemove(m.filename)}>Yes</button>
                               <button style={{ ...s.btnPrimary, marginRight: 0, background: 'none', border: '1px solid var(--border)', color: 'var(--text-muted)' }} onClick={() => setRemoveConfirm(null)}>Cancel</button>
                             </span>

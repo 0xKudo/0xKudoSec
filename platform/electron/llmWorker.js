@@ -765,13 +765,12 @@ function setupLlmIpc(mainWindow) {
     const entry = lib.models.find(m => m.filename === filename);
     if (!entry) return { ok: false, err: 'Model not found in library' };
 
-    // Managed: delete .gguf from AppData. Custom: unregister only.
-    if (entry.type === 'managed') {
-      const filePath = modelPath(filename);
-      if (fs.existsSync(filePath)) {
-        try { fs.unlinkSync(filePath); } catch (e) {
-          return { ok: false, err: `Failed to delete model file: ${e.message}` };
-        }
+    // Delete file if it lives inside the managed models directory (managed + URL-downloaded custom).
+    // Custom models added via Browse may live anywhere on disk — don't delete those.
+    const filePath = modelPath(filename);
+    if (fs.existsSync(filePath)) {
+      try { fs.unlinkSync(filePath); } catch (e) {
+        return { ok: false, err: `Failed to delete model file: ${e.message}` };
       }
     }
 
