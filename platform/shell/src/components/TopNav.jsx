@@ -366,14 +366,14 @@ const rowStyles = {
 // ── SIEM view id → display label ─────────────────────────────────────────────
 
 const SIEM_TABS = [
-  { id: 'dashboard', label: 'Dashboard' },
-  { id: 'alerts',    label: 'Alerts' },
-  { id: 'rules',     label: 'Detection Rules' },
-  { id: 'logsearch', label: 'Log Search' },
-  { id: 'cases',     label: 'Cases' },
+  { id: 'dashboard',     label: 'Dashboard' },
+  { id: 'alerts',        label: 'Alerts' },
+  { id: 'cases',         label: 'Cases' },
+  { id: 'logsearch',     label: 'Log Search' },
+  { id: 'rules',         label: 'Detection Rules' },
+  { id: 'noise',         label: 'Tuning Center' },
+  { id: 'auditlog',      label: 'Audit Log' },
   { id: 'configuration', label: 'Configuration' },
-  { id: 'auditlog',  label: 'Audit Log' },
-  { id: 'noise',     label: 'Noise Advisor' },
 ];
 
 const TOOL_CATEGORIES = [

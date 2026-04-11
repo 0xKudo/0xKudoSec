@@ -66,26 +66,14 @@ const styles = {
 };
 
 const NAV = [
-  { section: 'Overview', items: [
-    { id: 'dashboard', label: 'Dashboard' },
-  ]},
-  { section: 'Detection', items: [
-    { id: 'alerts', label: 'Alert Queue' },
-    { id: 'rules', label: 'Detection Rules' },
-  ]},
-  { section: 'Response', items: [
-    { id: 'cases', label: 'Cases' },
-    { id: 'playbooks', label: 'Playbooks' },
-  ]},
-  { section: 'Investigate', items: [
-    { id: 'logsearch', label: 'Log Search' },
-    { id: 'timeline', label: 'Timeline' },
-  ]},
-  { section: 'System', items: [
-    { id: 'configuration', label: 'Configuration' },
-    { id: 'auditlog', label: 'Audit Log' },
-    { id: 'noise', label: 'Noise Advisor' },
-  ]},
+  { id: 'dashboard',     label: 'Dashboard' },
+  { id: 'alerts',        label: 'Alert Queue' },
+  { id: 'cases',         label: 'Cases' },
+  { id: 'logsearch',     label: 'Log Search' },
+  { id: 'rules',         label: 'Detection Rules' },
+  { id: 'noise',         label: 'Tuning Center' },
+  { id: 'auditlog',      label: 'Audit Log' },
+  { id: 'configuration', label: 'Configuration' },
 ];
 
 function useFluentBitStatus() {
@@ -114,10 +102,7 @@ export function SiemSidebar({ activeView, onNavigate, onSwitchToTools, isAuthent
   const fluentStatus = useFluentBitStatus();
   return (
     <aside style={styles.sidebar}>
-      {NAV.map(group => (
-        <div key={group.section}>
-          <div style={styles.sectionLabel}>{group.section}</div>
-          {group.items.map(item => {
+      {NAV.map(item => {
             const locked = !isAuthenticated && item.id !== 'configuration' && item.id !== 'dashboard';
             return (
               <div
@@ -136,8 +121,6 @@ export function SiemSidebar({ activeView, onNavigate, onSwitchToTools, isAuthent
               </div>
             );
           })}
-        </div>
-      ))}
 
       <div
         style={styles.toolsLink}

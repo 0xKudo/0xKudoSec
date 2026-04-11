@@ -461,7 +461,7 @@ export default function NoiseAdvisor() {
     <div style={s.container}>
       {/* Header */}
       <div style={isMobile ? { ...s.header, flexWrap: 'wrap' } : s.header}>
-        <span style={s.title}>Noise Advisor</span>
+        <span style={s.title}>Tuning Center</span>
         {isElectron && modelUpdateAvailable && (
           <span style={{ marginLeft: 'auto', fontSize: '10px', color: 'var(--accent-amber)', letterSpacing: '0.06em' }}>
             model update available: {modelUpdateAvailable.displayName}
