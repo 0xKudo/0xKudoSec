@@ -1571,23 +1571,15 @@ function NoiseAdvisorModelsTab({ s }) {
   };
 
   const handleAddCustom = async () => {
-    // Use showOpenDialog via a hidden file input (Electron doesn't expose dialog via contextBridge here)
-    // Fall back to a file input that the user selects
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.gguf';
-    input.onchange = async (e) => {
-      const file = e.target.files?.[0];
-      if (!file) return;
-      const res = await window.electron.llm.addCustom(file.path);
-      if (!res.ok) flash(res.err, 'var(--severity-critical)');
-      else {
-        const warn = res.warnings?.length ? ` Warnings: ${res.warnings.join('; ')}` : '';
-        flash(`Model added.${warn}`, res.warnings?.length ? 'var(--severity-medium)' : 'var(--severity-low)');
-        await loadLibrary();
-      }
-    };
-    input.click();
+    const picked = await window.electron.llm.browseGguf();
+    if (!picked.ok || picked.cancelled) return;
+    const res = await window.electron.llm.addCustom(picked.filePath);
+    if (!res.ok) flash(res.err, 'var(--severity-critical)');
+    else {
+      const warn = res.warnings?.length ? ` Warnings: ${res.warnings.join('; ')}` : '';
+      flash(`Model added.${warn}`, res.warnings?.length ? 'var(--severity-medium)' : 'var(--severity-low)');
+      await loadLibrary();
+    }
   };
 
   const handleDownloadUrl = async () => {

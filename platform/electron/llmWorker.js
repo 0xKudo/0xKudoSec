@@ -20,7 +20,7 @@
  *   llm:set-active      → set the active model for analysis
  */
 
-const { ipcMain, app } = require('electron');
+const { ipcMain, app, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const https = require('https');
@@ -609,6 +609,18 @@ function setupLlmIpc(mainWindow) {
     } catch (e) {
       return { ok: false, err: e.message, updateAvailable: false };
     }
+  });
+
+  // llm:browse-gguf ────────────────────────────────────────────────────────
+  ipcMain.handle('llm:browse-gguf', async (event) => {
+    if (!isValidSender(event)) return { ok: false, err: 'Unauthorized' };
+    const result = await dialog.showOpenDialog({
+      title: 'Select GGUF Model File',
+      filters: [{ name: 'GGUF Models', extensions: ['gguf'] }],
+      properties: ['openFile'],
+    });
+    if (result.canceled || !result.filePaths.length) return { ok: false, cancelled: true };
+    return { ok: true, filePath: result.filePaths[0] };
   });
 
   // llm:add-custom ─────────────────────────────────────────────────────────

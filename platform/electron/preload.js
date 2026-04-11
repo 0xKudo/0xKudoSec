@@ -83,6 +83,7 @@ contextBridge.exposeInMainWorld('electron', {
     checkUpdate: (modelKey) => ipcRenderer.invoke('llm:check-update', modelKey),
 
     // Custom model — local file or URL
+    browseGguf: () => ipcRenderer.invoke('llm:browse-gguf'),
     addCustom: (filePath) => ipcRenderer.invoke('llm:add-custom', filePath),
     downloadUrl: (url) => ipcRenderer.invoke('llm:download-url', url),
 
