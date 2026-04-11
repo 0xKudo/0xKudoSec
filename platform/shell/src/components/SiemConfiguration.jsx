@@ -1591,7 +1591,13 @@ function NoiseAdvisorModelsTab({ s }) {
     loadKbStatus().then(data => { if (data?.syncing) startKbPolling(); });
     window.electron.llm.onDownloadProgress(info => {
       const key = info.modelKey || info.filename;
-      setDownloadProgress(prev => ({ ...prev, [key]: info.percent ?? 0 }));
+      setDownloadProgress(prev => {
+        // Update both the direct key and any url: prefixed key for URL downloads
+        const next = { ...prev, [key]: info.percent ?? 0 };
+        const urlKey = `url:${info.filename}`;
+        if (prev[urlKey] !== undefined) next[urlKey] = info.percent ?? 0;
+        return next;
+      });
     });
     return () => { if (kbPollRef.current) clearInterval(kbPollRef.current); };
   }, []);
