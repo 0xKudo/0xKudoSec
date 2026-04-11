@@ -1639,9 +1639,13 @@ function NoiseAdvisorModelsTab({ s }) {
   const handleDownloadUrl = async () => {
     const url = urlInput.trim();
     if (!url) return;
-    setUrlLoading(true);
+    const filename = url.split('/').pop().split('?')[0] || 'custom-model.gguf';
+    const progressKey = `url:${filename}`;
+    setDownloading(progressKey);
+    setDownloadProgress(prev => ({ ...prev, [progressKey]: 0 }));
     const res = await window.electron.llm.downloadUrl(url, customTemplate);
-    setUrlLoading(false);
+    setDownloading(null);
+    setDownloadProgress(prev => { const n = { ...prev }; delete n[progressKey]; return n; });
     if (!res.ok) flash(res.err, 'var(--severity-critical)');
     else {
       const warn = res.warnings?.length ? ` Warnings: ${res.warnings.join('; ')}` : '';
@@ -1806,13 +1810,27 @@ function NoiseAdvisorModelsTab({ s }) {
               style={{ ...s.input, width: '320px' }}
             />
             <button
-              style={{ ...s.btnPrimary, marginRight: 0, opacity: urlLoading || downloading || !urlInput.trim() ? 0.5 : 1 }}
-              disabled={urlLoading || !!downloading || !urlInput.trim()}
+              style={{ ...s.btnPrimary, marginRight: 0, opacity: !!downloading || !urlInput.trim() ? 0.5 : 1 }}
+              disabled={!!downloading || !urlInput.trim()}
               onClick={handleDownloadUrl}
             >
-              {urlLoading ? 'Downloading...' : 'Download'}
+              {downloading?.startsWith('url:') ? 'Downloading...' : 'Download'}
             </button>
           </div>
+          {downloading?.startsWith('url:') && (() => {
+            const pct = downloadProgress[downloading];
+            return (
+              <div style={{ marginTop: '6px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '3px' }}>
+                  <span>{downloading.slice(4)}</span>
+                  <span>{pct !== undefined ? `${pct}%` : '...'}</span>
+                </div>
+                <div style={{ height: '3px', background: 'var(--border)', borderRadius: '2px' }}>
+                  <div style={{ height: '100%', width: pct !== undefined ? `${pct}%` : '0%', background: 'var(--severity-medium)', borderRadius: '2px', transition: 'width 0.3s' }} />
+                </div>
+              </div>
+            );
+          })()}
           <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px', lineHeight: 1.6 }}>
             Custom models are validated for GGUF format and RAM requirements. Warnings are informational only. You decide whether to use them.
           </div>

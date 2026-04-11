@@ -219,7 +219,10 @@ process.on('message', async ({ type, modelPath, modelKey, templateFamily, candid
       });
       log('INFO', 'Response:', responseText);
       const parsed = parseResponse(responseText);
-      process.send({ type: 'result', id: candidate.id, ...parsed, error: null });
+      const kb_matches = (analystContext?.vulnKb || []).map(v => ({
+        id: v.id, title: v.title, source: v.source, severity: v.severity, cvss_score: v.cvss_score,
+      }));
+      process.send({ type: 'result', id: candidate.id, ...parsed, kb_matches, error: null });
     } catch (e) {
       log('ERROR', 'Candidate error:', e.message);
       process.send({ type: 'result', id: candidate.id, explanation: e.message, cve_safe: true, cve_note: '', error: e.message });

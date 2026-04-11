@@ -104,9 +104,36 @@ function CveSafeCell({ candidate, llmResults }) {
 function LlmExplanationCell({ candidate, llmResults }) {
   const result = llmResults[candidate.id];
   if (result === 'analyzing') return <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>analyzing...</span>;
-  if (result?.explanation) return <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{result.explanation}</span>;
-  if (candidate.llm_explanation) return <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{candidate.llm_explanation}</span>;
-  return <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>—</span>;
+  const explanation = result?.explanation || candidate.llm_explanation;
+  const kbMatches = result?.kb_matches || [];
+  return (
+    <div>
+      {explanation
+        ? <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{explanation}</span>
+        : <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>—</span>
+      }
+      {kbMatches.length > 0 && (
+        <div style={{ marginTop: '4px', padding: '4px 6px', background: 'color-mix(in srgb, var(--severity-high) 8%, transparent)', borderLeft: '2px solid var(--severity-high)', borderRadius: '2px' }}>
+          <div style={{ fontSize: '10px', color: 'var(--severity-high)', fontWeight: 600, marginBottom: '2px' }}>KB matches</div>
+          {kbMatches.map(v => {
+            const cveId = v.title?.match(/CVE-\d{4}-\d+/)?.[0] || v.id?.replace(/^(cisa|nvd)-/, '');
+            const nvdUrl = cveId ? `https://nvd.nist.gov/vuln/detail/${cveId}` : null;
+            const sevColor = v.severity === 'critical' ? 'var(--severity-critical)' : v.severity === 'high' ? 'var(--severity-high)' : 'var(--text-muted)';
+            return (
+              <div key={v.id} style={{ fontSize: '10px', marginBottom: '1px' }}>
+                {nvdUrl
+                  ? <a href={nvdUrl} target="_blank" rel="noreferrer" style={{ color: sevColor, textDecoration: 'underline' }}>{v.title?.slice(0, 50)}</a>
+                  : <span style={{ color: sevColor }}>{v.title?.slice(0, 50)}</span>
+                }
+                {v.cvss_score && <span style={{ color: 'var(--text-muted)', marginLeft: '4px' }}>CVSS {v.cvss_score}</span>}
+                {v.source === 'cisa' && <span style={{ color: 'var(--severity-critical)', marginLeft: '4px' }}>[KEV]</span>}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
 }
 
 function isCveUnsafe(candidate, llmResults) {
@@ -151,6 +178,7 @@ export default function NoiseAdvisor() {
   const [rescanningId, setRescanningId] = useState(null);
   const [overrideId, setOverrideId] = useState(null); // candidate id showing override input
   const [overrideNote, setOverrideNote] = useState('');
+  const [detailCandidate, setDetailCandidate] = useState(null); // candidate shown in detail modal
 
   // LLM state
   const [llmStatus, setLlmStatus] = useState('idle'); // idle | loading | running | unavailable
@@ -763,6 +791,26 @@ export default function NoiseAdvisor() {
                                 {result?.explanation || c.llm_explanation}
                               </div>
                             )}
+                            {result?.kb_matches?.length > 0 && (
+                              <div style={{ fontSize: '11px', marginBottom: '8px', padding: '6px 8px', background: 'color-mix(in srgb, var(--severity-high) 8%, transparent)', borderLeft: '2px solid var(--severity-high)', borderRadius: '2px' }}>
+                                <div style={{ color: 'var(--severity-high)', fontWeight: 600, marginBottom: '4px' }}>KB matches ({result.kb_matches.length})</div>
+                                {result.kb_matches.map(v => {
+                                  const cveId = v.title?.match(/CVE-\d{4}-\d+/)?.[0] || v.id?.replace(/^(cisa|nvd)-/, '');
+                                  const nvdUrl = cveId ? `https://nvd.nist.gov/vuln/detail/${cveId}` : null;
+                                  const sevColor = v.severity === 'critical' ? 'var(--severity-critical)' : v.severity === 'high' ? 'var(--severity-high)' : 'var(--text-muted)';
+                                  return (
+                                    <div key={v.id} style={{ marginBottom: '2px' }}>
+                                      {nvdUrl
+                                        ? <a href={nvdUrl} target="_blank" rel="noreferrer" style={{ color: sevColor, textDecoration: 'underline' }}>{v.title?.slice(0, 60)}</a>
+                                        : <span style={{ color: sevColor }}>{v.title?.slice(0, 60)}</span>
+                                      }
+                                      {v.cvss_score && <span style={{ color: 'var(--text-muted)', marginLeft: '6px' }}>CVSS {v.cvss_score}</span>}
+                                      {v.source === 'cisa' && <span style={{ color: 'var(--severity-critical)', marginLeft: '6px' }}>[KEV]</span>}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
                             <div style={s.cardActions}>
                               {unsafe ? (
                                 <button style={{ ...s.btnSmall, color: 'var(--severity-critical)', borderColor: 'var(--severity-critical)' }} onClick={() => { setOverrideId(c.id); setOverrideNote(''); }}>Override</button>
@@ -810,7 +858,7 @@ export default function NoiseAdvisor() {
                             return (
                               <tr key={c.id} style={{ opacity: pending ? 0.4 : 1, transition: 'opacity 0.2s', background: unsafe ? 'color-mix(in srgb, var(--severity-critical) 5%, transparent)' : undefined }}>
                                 <td style={s.td}><input type="checkbox" checked={selected.has(c.id)} onChange={() => toggleSelect(c.id)} disabled={pending} /></td>
-                                <td style={s.td}>
+                                <td style={{ ...s.td, cursor: 'pointer' }} onClick={() => setDetailCandidate({ c, result: llmResults[c.id] })}>
                                   <div style={{ fontWeight: 600 }}>{c.field_signature.event_category}</div>
                                   <div style={{ color: 'var(--text-muted)', fontSize: '11px' }}>
                                     {[c.field_signature.source, c.field_signature.event_id ? `Event ID ${c.field_signature.event_id}` : null, c.field_signature.process_name, c.field_signature.username].filter(Boolean).join(' / ')}
@@ -935,6 +983,106 @@ export default function NoiseAdvisor() {
           </>
         )}
       </div>
+
+      {/* Candidate detail modal */}
+      {detailCandidate && (() => {
+        const { c, result } = detailCandidate;
+        const unsafe = isCveUnsafe(c, llmResults);
+        const kbMatches = result?.kb_matches || [];
+        const sig = c.field_signature || {};
+        const fields = [
+          ['Category', sig.event_category],
+          ['Source', sig.source],
+          ['Event ID', sig.event_id],
+          ['Process', sig.process_name],
+          ['Command Line', sig.command_line],
+          ['User', sig.user || sig.username],
+          ['Path', sig.path || sig.file_path],
+          ['Dominant Severity', sig.dominant_severity],
+        ].filter(([, v]) => v);
+        return (
+          <div style={s.modalOverlay} onClick={() => setDetailCandidate(null)}>
+            <div style={{ ...s.modal, maxWidth: '640px', width: '90vw', maxHeight: '80vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>Candidate Detail</div>
+                <button style={{ ...s.btnSmall, fontSize: '12px' }} onClick={() => setDetailCandidate(null)}>Close</button>
+              </div>
+
+              {/* Pattern summary */}
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Pattern</div>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', marginBottom: '16px' }}>
+                <tbody>
+                  {fields.map(([label, val]) => (
+                    <tr key={label}>
+                      <td style={{ padding: '3px 12px 3px 0', color: 'var(--text-muted)', whiteSpace: 'nowrap', verticalAlign: 'top' }}>{label}</td>
+                      <td style={{ padding: '3px 0', color: 'var(--text-primary)', wordBreak: 'break-all' }}>{val}</td>
+                    </tr>
+                  ))}
+                  <tr><td style={{ padding: '3px 12px 3px 0', color: 'var(--text-muted)' }}>Daily Avg</td><td style={{ padding: '3px 0' }}>{parseFloat(c.daily_avg).toFixed(1)}/day</td></tr>
+                  <tr><td style={{ padding: '3px 12px 3px 0', color: 'var(--text-muted)' }}>Score</td><td style={{ padding: '3px 0' }}>{c.score}</td></tr>
+                  <tr><td style={{ padding: '3px 12px 3px 0', color: 'var(--text-muted)' }}>Confidence</td><td style={{ padding: '3px 0' }}>{c.confidence}</td></tr>
+                  <tr><td style={{ padding: '3px 12px 3px 0', color: 'var(--text-muted)' }}>First Seen</td><td style={{ padding: '3px 0' }}>{c.first_seen ? new Date(c.first_seen).toLocaleString() : '—'}</td></tr>
+                  <tr><td style={{ padding: '3px 12px 3px 0', color: 'var(--text-muted)' }}>Last Seen</td><td style={{ padding: '3px 0' }}>{c.last_seen ? new Date(c.last_seen).toLocaleString() : '—'}</td></tr>
+                </tbody>
+              </table>
+
+              {/* LLM Analysis */}
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>LLM Analysis</div>
+              <div style={{ fontSize: '12px', color: unsafe ? 'var(--severity-critical)' : 'var(--text-muted)', marginBottom: '4px' }}>
+                CVE Safe: {result ? (result.cve_safe ? 'Yes' : 'No') : c.llm_checked_at ? (c.llm_cve_safe ? 'Yes' : 'No') : '—'}
+              </div>
+              {(result?.explanation || c.llm_explanation) && (
+                <div style={{ fontSize: '12px', color: 'var(--text-primary)', lineHeight: 1.5, marginBottom: '12px' }}>
+                  {result?.explanation || c.llm_explanation}
+                </div>
+              )}
+              {(result?.cve_note || c.llm_cve_note) && (
+                <div style={{ fontSize: '12px', color: 'var(--severity-critical)', marginBottom: '12px' }}>
+                  {result?.cve_note || c.llm_cve_note}
+                </div>
+              )}
+
+              {/* KB Matches */}
+              {kbMatches.length > 0 && (
+                <>
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Vulnerability KB Matches</div>
+                  {kbMatches.map(v => {
+                    const cveId = v.title?.match(/CVE-\d{4}-\d+/)?.[0] || v.id?.replace(/^(cisa|nvd)-/, '');
+                    const nvdUrl = cveId ? `https://nvd.nist.gov/vuln/detail/${cveId}` : null;
+                    const sevColor = v.severity === 'critical' ? 'var(--severity-critical)' : v.severity === 'high' ? 'var(--severity-high)' : 'var(--text-muted)';
+                    return (
+                      <div key={v.id} style={{ marginBottom: '8px', padding: '8px', border: '1px solid var(--border)', borderLeft: `3px solid ${sevColor}`, borderRadius: '2px' }}>
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '4px' }}>
+                          {nvdUrl
+                            ? <a href={nvdUrl} target="_blank" rel="noreferrer" style={{ fontSize: '12px', fontWeight: 600, color: sevColor, textDecoration: 'underline' }}>{v.title?.slice(0, 80)}</a>
+                            : <span style={{ fontSize: '12px', fontWeight: 600, color: sevColor }}>{v.title?.slice(0, 80)}</span>
+                          }
+                        </div>
+                        <div style={{ display: 'flex', gap: '12px', fontSize: '11px', color: 'var(--text-muted)' }}>
+                          <span>Severity: <span style={{ color: sevColor }}>{v.severity}</span></span>
+                          {v.cvss_score && <span>CVSS: {v.cvss_score}</span>}
+                          {v.source === 'cisa' && <span style={{ color: 'var(--severity-critical)', fontWeight: 600 }}>[ACTIVELY EXPLOITED - CISA KEV]</span>}
+                        </div>
+                        {nvdUrl && <div style={{ fontSize: '11px', marginTop: '4px' }}><a href={nvdUrl} target="_blank" rel="noreferrer" style={{ color: 'var(--text-muted)', textDecoration: 'underline' }}>View on NVD →</a></div>}
+                      </div>
+                    );
+                  })}
+                </>
+              )}
+
+              {/* Actions */}
+              <div style={{ display: 'flex', gap: '8px', marginTop: '16px', justifyContent: 'flex-end' }}>
+                <button style={s.btnSmall} onClick={() => { setDetailCandidate(null); rescan(c.id); }}>Rescan</button>
+                {unsafe
+                  ? <button style={{ ...s.btnSmall, color: 'var(--severity-critical)', borderColor: 'var(--severity-critical)' }} onClick={() => { setDetailCandidate(null); setOverrideId(c.id); setOverrideNote(''); }}>Override</button>
+                  : <button style={s.btnSmall} onClick={() => { setDetailCandidate(null); updateStatus(c.id, 'approved'); }}>Approve</button>
+                }
+                <button style={s.btnSmall} onClick={() => { setDetailCandidate(null); updateStatus(c.id, 'rejected'); }}>Reject</button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Override modal */}
       {overrideId && (
