@@ -148,6 +148,7 @@ export default function NoiseAdvisor() {
   const [pendingIds, setPendingIds] = useState(new Set());
   const [actionBanner, setActionBanner] = useState(null);
   const [undoingId, setUndoingId] = useState(null);
+  const [rescanningId, setRescanningId] = useState(null);
   const [overrideId, setOverrideId] = useState(null); // candidate id showing override input
   const [overrideNote, setOverrideNote] = useState('');
 
@@ -444,6 +445,23 @@ export default function NoiseAdvisor() {
     setUndoingId(null);
   };
 
+  const rescan = async (ids) => {
+    const idArr = Array.isArray(ids) ? ids : [ids];
+    if (idArr.length === 1) setRescanningId(idArr[0]);
+    const h = await authHeaders();
+    const res = await fetch(`${API}/candidates/rescan`, {
+      method: 'POST',
+      headers: { ...h, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids: idArr }),
+    });
+    const data = await res.json();
+    await load();
+    setRescanningId(null);
+    setSelected(new Set());
+    setActionBanner({ text: `${data.updated} candidate${data.updated !== 1 ? 's' : ''} reset for rescan.`, color: 'var(--severity-medium)' });
+    setTimeout(() => setActionBanner(null), 4000);
+  };
+
   const toggleSelect = (id) => {
     setSelected(prev => {
       const next = new Set(prev);
@@ -682,6 +700,7 @@ export default function NoiseAdvisor() {
                 {selected.size > 0 && <>
                   <button style={s.btn} onClick={() => bulkUpdate('approved')}>Approve {selected.size}</button>
                   <button style={s.btnSmall} onClick={() => bulkUpdate('rejected')}>Reject {selected.size}</button>
+                  <button style={s.btnSmall} onClick={() => rescan([...selected])}>Rescan {selected.size}</button>
                 </>}
               </div>
             )}
@@ -854,36 +873,65 @@ export default function NoiseAdvisor() {
                     <button style={s.btnSmall} onClick={() => undo(c.id)} disabled={undoingId === c.id}>
                       {undoingId === c.id ? 'Undoing...' : 'Undo'}
                     </button>
+                    <button style={s.btnSmall} onClick={() => rescan(c.id)} disabled={rescanningId === c.id}>
+                      {rescanningId === c.id ? 'Rescanning...' : 'Rescan'}
+                    </button>
                   </div>
                 </div>
               ))
-            ) : (
-              <table style={s.table}>
-                <thead>
-                  <tr>
-                    <th style={s.th}>Pattern</th>
-                    <th style={s.th}>Rule Created</th>
-                    <th style={s.th}>Status</th>
-                    <th style={s.th}>Date</th>
-                    <th style={s.th}>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {activity.map(c => (
-                    <tr key={c.id}>
-                      <td style={s.td}>
-                        <div>{c.field_signature.event_category}</div>
-                        <div style={{ color: 'var(--text-muted)', fontSize: '11px' }}>{c.field_signature.source}</div>
-                      </td>
-                      <td style={s.td}>{c.rule_name || 'None'}</td>
-                      <td style={s.td}><span style={s.badge('var(--severity-low)')}>{c.status}</span></td>
-                      <td style={s.td}>{new Date(c.updated_at).toLocaleDateString()}</td>
-                      <td style={s.td}><button style={s.btnSmall} onClick={() => undo(c.id)} disabled={undoingId === c.id}>{undoingId === c.id ? 'Undoing...' : 'Undo'}</button></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
+            ) : (() => {
+              const activitySelected = new Set(activity.filter(c => selected.has(c.id)).map(c => c.id));
+              const allActivitySelected = activity.length > 0 && activity.every(c => selected.has(c.id));
+              return (
+                <>
+                  <div style={{ display: 'flex', gap: '8px', padding: '8px 12px', alignItems: 'center', borderBottom: '1px solid var(--border)' }}>
+                    <button style={s.btnSmall} onClick={() => {
+                      if (allActivitySelected) {
+                        setSelected(prev => { const next = new Set(prev); activity.forEach(c => next.delete(c.id)); return next; });
+                      } else {
+                        setSelected(prev => { const next = new Set(prev); activity.forEach(c => next.add(c.id)); return next; });
+                      }
+                    }}>
+                      {allActivitySelected ? 'Deselect All' : `Select All ${activity.length}`}
+                    </button>
+                    {activitySelected.size > 0 && (
+                      <button style={s.btnSmall} onClick={() => rescan([...activitySelected])}>Rescan {activitySelected.size}</button>
+                    )}
+                  </div>
+                  <table style={s.table}>
+                    <thead>
+                      <tr>
+                        <th style={{ ...s.th, width: '32px' }}></th>
+                        <th style={s.th}>Pattern</th>
+                        <th style={s.th}>Rule Created</th>
+                        <th style={s.th}>Status</th>
+                        <th style={s.th}>Date</th>
+                        <th style={s.th}>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {activity.map(c => (
+                        <tr key={c.id}>
+                          <td style={s.td}><input type="checkbox" checked={selected.has(c.id)} onChange={() => toggleSelect(c.id)} /></td>
+                          <td style={s.td}>
+                            <div>{c.field_signature.event_category}</div>
+                            <div style={{ color: 'var(--text-muted)', fontSize: '11px' }}>{c.field_signature.source}</div>
+                          </td>
+                          <td style={s.td}>{c.rule_name || 'None'}</td>
+                          <td style={s.td}><span style={s.badge('var(--severity-low)')}>{c.status}</span></td>
+                          <td style={s.td}>{new Date(c.updated_at).toLocaleDateString()}</td>
+                          <td style={s.td} >
+                            <button style={s.btnSmall} onClick={() => undo(c.id)} disabled={undoingId === c.id}>{undoingId === c.id ? 'Undoing...' : 'Undo'}</button>
+                            {' '}
+                            <button style={s.btnSmall} onClick={() => rescan(c.id)} disabled={rescanningId === c.id}>{rescanningId === c.id ? 'Rescanning...' : 'Rescan'}</button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </>
+              );
+            })()}
           </>
         )}
       </div>

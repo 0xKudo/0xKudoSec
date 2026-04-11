@@ -250,6 +250,26 @@ router.post('/candidates/:id/undo', requireAuth, async (req, res) => {
   res.json({ ok: true });
 });
 
+// POST /api/siem/noise/candidates/rescan — reset LLM fields so candidates are re-analyzed
+router.post('/candidates/rescan', requireAuth, async (req, res) => {
+  const { ids } = req.body;
+  if (!Array.isArray(ids) || !ids.length) return res.status(400).json({ error: 'ids required' });
+  const safeIds = ids.filter(id => typeof id === 'string' && /^[0-9a-f-]{36}$/.test(id));
+  if (!safeIds.length) return res.status(400).json({ error: 'no valid ids' });
+
+  const placeholders = safeIds.map((_, i) => `$${i + 2}`).join(',');
+  const { rowCount } = await pool().query(
+    `UPDATE noise_candidates
+     SET status = 'pending', llm_explanation = NULL, llm_cve_safe = NULL, llm_cve_note = NULL,
+         llm_checked_at = NULL, suppression_rule_id = NULL, updated_at = NOW()
+     WHERE user_id = $1 AND id IN (${placeholders})`,
+    [uid(req), ...safeIds]
+  );
+
+  await audit(uid(req), 'noise.rescan', { count: rowCount }, req.ip);
+  res.json({ updated: rowCount });
+});
+
 // GET /api/siem/noise/activity
 router.get('/activity', requireAuth, async (req, res) => {
   const { rows } = await pool().query(`
