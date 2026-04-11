@@ -219,7 +219,7 @@ function LlmAnalysisBanner() {
   return (
     <div style={bannerStyle}>
       <span>LLM</span>
-      <span>Analyzing noise candidates{total > 0 ? ` — ${percent}%` : '...'}</span>
+      <span>Analyzing noise candidates{total > 0 ? ` ${percent}%` : '...'}</span>
       {total > 0 && (
         <div style={{ flex: 1, maxWidth: '120px', height: '3px', background: 'var(--border)', borderRadius: '2px' }}>
           <div style={{ width: `${percent}%`, height: '100%', background: 'var(--accent-amber)', borderRadius: '2px', transition: 'width 0.3s' }} />
