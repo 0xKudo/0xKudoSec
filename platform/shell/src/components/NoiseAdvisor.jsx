@@ -38,9 +38,15 @@ const s = {
   btnSmall: { background: 'none', border: '1px solid var(--border)', color: 'var(--text-muted)', padding: '4px 10px', fontSize: '11px', fontFamily: 'var(--font)', cursor: 'pointer' },
   runBtn: { background: 'none', border: '1px solid var(--border)', color: 'var(--text-muted)', padding: '4px 12px', fontSize: '11px', fontFamily: 'var(--font)', cursor: 'pointer', letterSpacing: '0.04em' },
   table: { width: '100%', borderCollapse: 'collapse', fontSize: '12px', tableLayout: 'fixed' },
-  tdLlm: { padding: '10px 12px', borderBottom: '1px solid var(--border)', color: 'var(--text-primary)', verticalAlign: 'top', width: '35%', wordBreak: 'break-word' },
+  thChk: { textAlign: 'left', padding: '8px 12px', fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', borderBottom: '1px solid var(--border)', width: '36px' },
+  thSm: { textAlign: 'left', padding: '8px 12px', fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', borderBottom: '1px solid var(--border)', width: '80px' },
+  thCve: { textAlign: 'left', padding: '8px 12px', fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', borderBottom: '1px solid var(--border)', width: '70px' },
+  thActions: { textAlign: 'left', padding: '8px 12px', fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', borderBottom: '1px solid var(--border)', width: '100px' },
+  tdLlm: { padding: '10px 12px', borderBottom: '1px solid var(--border)', color: 'var(--text-primary)', verticalAlign: 'top', wordBreak: 'break-word' },
   th: { textAlign: 'left', padding: '8px 12px', fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', borderBottom: '1px solid var(--border)' },
   td: { padding: '10px 12px', borderBottom: '1px solid var(--border)', color: 'var(--text-primary)', verticalAlign: 'top' },
+  modalOverlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 },
+  modal: { background: 'var(--bg-surface)', border: '1px solid var(--border)', padding: '24px', width: '420px', maxWidth: '90vw', display: 'flex', flexDirection: 'column', gap: '12px' },
   badge: (color) => ({ display: 'inline-block', padding: '2px 8px', fontSize: '10px', border: `1px solid ${color}`, color, letterSpacing: '0.06em' }),
   progress: { width: '100%', height: '4px', background: 'var(--border)', marginTop: '6px' },
   progressFill: (pct) => ({ height: '100%', width: `${Math.min(pct, 100)}%`, background: 'var(--accent-amber)', transition: 'width 0.3s' }),
@@ -726,14 +732,14 @@ export default function NoiseAdvisor() {
                       <table style={s.table}>
                         <thead>
                           <tr>
-                            <th style={s.th}><input type="checkbox" checked={items.every(c => selected.has(c.id))} ref={el => { if (el) el.indeterminate = items.some(c => selected.has(c.id)) && !items.every(c => selected.has(c.id)); }} onChange={() => toggleSelectGroup(items)} /></th>
+                            <th style={s.thChk}><input type="checkbox" checked={items.every(c => selected.has(c.id))} ref={el => { if (el) el.indeterminate = items.some(c => selected.has(c.id)) && !items.every(c => selected.has(c.id)); }} onChange={() => toggleSelectGroup(items)} /></th>
                             <th style={s.th}>Pattern</th>
-                            <th style={s.th}>Daily Avg</th>
-                            <th style={s.th}>Confidence</th>
-                            <th style={s.th}>Score</th>
-                            {showLlmCols && <th style={s.th}>CVE Safe</th>}
+                            <th style={s.thSm}>Daily Avg</th>
+                            <th style={s.thSm}>Confidence</th>
+                            <th style={{ ...s.thSm, width: '60px' }}>Score</th>
+                            {showLlmCols && <th style={s.thCve}>CVE Safe</th>}
                             {showLlmCols && <th style={s.th}>LLM Analysis</th>}
-                            <th style={s.th}>Actions</th>
+                            <th style={s.thActions}>Actions</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -761,20 +767,6 @@ export default function NoiseAdvisor() {
                                 <td style={s.td}>
                                   {pending ? (
                                     <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Updating...</span>
-                                  ) : overrideId === c.id ? (
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                      <textarea
-                                        autoFocus
-                                        placeholder="Why is this safe to suppress?"
-                                        value={overrideNote}
-                                        onChange={e => setOverrideNote(e.target.value)}
-                                        style={{ fontSize: '11px', fontFamily: 'var(--font)', background: 'var(--bg-surface)', color: 'var(--text-primary)', border: '1px solid var(--border)', padding: '4px 6px', resize: 'vertical', minHeight: '56px', width: '200px' }}
-                                      />
-                                      <div style={{ display: 'flex', gap: '6px' }}>
-                                        <button style={{ ...s.btnSmall, opacity: overrideNote.trim() ? 1 : 0.4 }} disabled={!overrideNote.trim()} onClick={() => overrideApprove(c.id)}>Confirm</button>
-                                        <button style={s.btnSmall} onClick={() => { setOverrideId(null); setOverrideNote(''); }}>Cancel</button>
-                                      </div>
-                                    </div>
                                   ) : (
                                     <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                                       {unsafe ? (
@@ -853,6 +845,33 @@ export default function NoiseAdvisor() {
           </>
         )}
       </div>
+
+      {/* Override modal */}
+      {overrideId && (
+        <div style={s.modalOverlay} onClick={() => { setOverrideId(null); setOverrideNote(''); }}>
+          <div style={s.modal} onClick={e => e.stopPropagation()}>
+            <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>Override LLM Verdict</div>
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+              The LLM flagged this pattern as potentially unsafe. Provide a reason why it is safe to suppress — this will be used to improve future analysis.
+            </div>
+            <textarea
+              autoFocus
+              placeholder="e.g. Known NVIDIA overlay network activity, not a threat"
+              value={overrideNote}
+              onChange={e => setOverrideNote(e.target.value)}
+              style={{ fontSize: '12px', fontFamily: 'var(--font)', background: 'var(--bg)', color: 'var(--text-primary)', border: '1px solid var(--border)', padding: '8px', resize: 'vertical', minHeight: '80px', width: '100%', boxSizing: 'border-box' }}
+            />
+            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+              <button style={s.btnSmall} onClick={() => { setOverrideId(null); setOverrideNote(''); }}>Cancel</button>
+              <button
+                style={{ ...s.btnSmall, opacity: overrideNote.trim() ? 1 : 0.4, color: 'var(--severity-low)', borderColor: 'var(--severity-low)' }}
+                disabled={!overrideNote.trim()}
+                onClick={() => overrideApprove(overrideId)}
+              >Confirm Override</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
