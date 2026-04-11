@@ -449,7 +449,7 @@ export default function NoiseAdvisor() {
 
   // Determine model install state for UI prompts
   const activeModel = modelLibrary.find(m => m.active);
-  const selectedModelEntry = modelLibrary.find(m => m.modelKey === settings.llm_model);
+  const selectedModelEntry = modelLibrary.find(m => m.modelKey === settings.llm_model || m.filename === settings.llm_model);
   const modelInstalled = selectedModelEntry?.status === 'ready';
   const llmEnabled = settings.noise_llm_enabled;
   const showDownloadPrompt = isElectron && llmEnabled && !modelInstalled && !downloadingModel;
