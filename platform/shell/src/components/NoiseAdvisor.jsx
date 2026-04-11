@@ -579,8 +579,10 @@ export default function NoiseAdvisor() {
                   value={settings.llm_model}
                   onChange={e => saveSetting('llm_model', e.target.value)}
                 >
-                  {LLM_MODELS.map(m => (
-                    <option key={m.key} value={m.key}>{m.label}</option>
+                  {(modelLibrary.length > 0 ? modelLibrary : LLM_MODELS.map(m => ({ modelKey: m.key, displayName: m.label, status: 'unknown' }))).map(m => (
+                    <option key={m.modelKey || m.filename} value={m.modelKey || m.filename}>
+                      {m.displayName || m.filename}{m.active ? ' (active)' : ''}
+                    </option>
                   ))}
                 </select>
                 {llmStatus !== 'idle' && llmStatus !== 'unavailable' && (
