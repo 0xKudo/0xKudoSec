@@ -129,16 +129,28 @@ Default: **Phi-3.5 Mini Instruct (Q4_K_M quantization)**
 
 ### Supported Models
 
-| Model | Size | Notes |
-|-------|------|-------|
-| Phi-3.5 Mini Q4 | ~2.2GB | **Default — recommended** |
-| Qwen2.5 1.5B Q4 | ~1GB | Faster, lighter, weaker CVE knowledge |
-| Llama 3.2 3B Q4 | ~2GB | Good general reasoning |
-| Custom GGUF | user-provided | Any llama.cpp-compatible GGUF file |
+| Model | Key | Size | Template | Download URL |
+|-------|-----|------|----------|--------------|
+| Phi-3.5 Mini Q4 | `phi-3.5-mini-q4` | ~2.2GB | phi | `0xKudoX/noise-advisor-models` HuggingFace |
+| Qwen2.5 1.5B Q4 | `qwen2.5-1.5b-q4` | ~1GB | qwen | `0xKudoX/noise-advisor-models` HuggingFace |
+| Llama 3.2 3B Q4 | `llama-3.2-3b-q4` | ~2GB | llama | `0xKudoX/noise-advisor-models` HuggingFace |
+| Custom GGUF | filename | user-provided | user-selected | Browse local or paste URL |
 
-The active model is selected in Configuration > Noise Advisor. Switching models unloads the current model and loads the new one on next analysis run.
+All three managed models confirmed working in v1.2.45-beta.4. Managed models hosted at `https://huggingface.co/0xKudoX/noise-advisor-models`.
 
-**Custom GGUF:** User browses to a local `.gguf` file via a file picker dialog. The app does not validate model quality — the user is responsible for selecting a compatible model. Path is stored in `user_settings` as `llm_custom_model_path`. SHA-256 is computed on first use and stored to detect if the file changes.
+The active model is selected in Configuration > Tuning Center Models. Switching models unloads the current model and loads the new one on next analysis run.
+
+**Custom GGUF (v1.2.45-beta.4):** User selects a template family (Phi / Qwen / Llama) from a dropdown before browsing or downloading. Template family is stored in the model library entry and passed to `llmProcess.js` at inference time. The browse dialog uses `dialog.showOpenDialog` via `llm:browse-gguf` IPC -- file input `.path` does not work in packaged Electron.
+
+### Chat Template Families (v1.2.45-beta.4)
+
+Each model family uses a different chat template format. `llmProcess.js` selects the correct template and stop triggers based on `templateFamily` (explicit, from library) or `modelKey` prefix (managed models):
+
+| Family | System token | User token | End token | Stop triggers |
+|--------|-------------|-----------|-----------|---------------|
+| phi | `<\|system\|>` | `<\|user\|>` | `<\|end\|>` | `['<\|end\|>', '<\|user\|>', '<\|system\|>']` |
+| qwen | `<\|im_start\|>system` | `<\|im_start\|>user` | `<\|im_end\|>` | `['<\|im_end\|>']` |
+| llama | `<\|start_header_id\|>system` | `<\|start_header_id\|>user` | `<\|eot_id\|>` | `['<\|eot_id\|>']` |
 
 ### LLM Run Trigger
 
@@ -398,11 +410,188 @@ New keys in `user_settings`:
 - LLM prompt + response parsing
 - CVE safety flag in UI
 
-### Phase 3 — Vulnerability KB
+### Phase 3 — Analyst Decision Learning — v1.2.45-beta.2 (CONFIRMED WORKING 2026-04-11)
+
+The LLM currently makes decisions in isolation with no awareness of past analyst judgements. This phase feeds analyst decisions back into the prompt as context so the model improves over time without retraining.
+
+**Approach — RAG-style prompt injection:**
+
+Before analyzing a candidate, query the DB for past decisions that are similar in pattern (same `event_category`, `source`, or `process_name`). Inject them into the system prompt as examples:
+
+```
+Past analyst decisions for similar patterns:
+- fluent-bit / Event ID 5158 / nvcontainer.exe → APPROVED (safe to suppress)
+  Analyst note: "Known NVIDIA overlay network activity, not a threat"
+- fluent-bit / Event ID 1 / process → REJECTED
+  Analyst note: "Too broad, keep monitoring"
+- fluent-bit / Event ID 5158 / tailscaled.exe → APPROVED (safe to suppress)
+  [Override] Analyst note: "Tailscale VPN keepalive traffic, safe"
+```
+
+The model uses these as few-shot examples to calibrate its verdict for the current candidate.
+
+**Data sources for learning:**
+1. **Approved noise candidates** — `noise_candidates` where `status = 'approved'`, including `field_signature`, `llm_explanation`, `llm_cve_note`
+2. **Rejected noise candidates** — `status = 'rejected'`, same fields
+3. **LLM override decisions** — `llm_cve_note LIKE '[Analyst override]%'` — analyst explicitly disagreed with the LLM verdict and provided a reason
+4. **Active suppression rules** — `detection_rules` with `action = 'suppress'` and `description LIKE 'Approved from Noise Advisor%'` — these represent patterns the analyst has definitively classified as safe
+
+**Similarity matching:**
+- Exact match on `event_category` + `source` is most relevant
+- Partial match on `process_name` if present
+- Limit to 5-10 most recent/relevant examples to stay within context window
+- Prefer override decisions — they carry explicit analyst reasoning
+
+**Implementation:**
+- New server endpoint `GET /api/siem/noise/context?event_category=X&source=Y&process_name=Z` — returns matching past decisions
+- `llmProcess.js` fetches context before each candidate analysis (requires server URL passed via fork env)
+- Context injected into system prompt before the candidate data
+- Override notes (prefixed `[Analyst override]`) shown verbatim — they are the highest-signal examples
+
+**Why this works without retraining:**
+The model's base knowledge doesn't change, but it sees analyst-validated examples at inference time. A pattern that was previously flagged as unsafe but overridden by the analyst will be correctly identified as safe the next time it appears because the override note is in the prompt.
+
+**Bugs fixed during implementation (v1.2.45-beta.1/beta.2):**
+- `getAccessTokenSilently()` was throwing silently — wrapped in try/catch, defaults to empty string
+- `/context` endpoint crashed with `could not determine data type of parameter $4` — fixed by casting `$4::text` in candidates query
+- `/context` endpoint crashed with `could not determine data type of parameter $3` — fixed by casting `$3::text` in suppression rules query
+- `fetchContext` timeout increased from 5s to 15s
+- Token presence now logged in `llmWorker.js` at IPC call time for debugging
+
+**Confirmed working log output:**
+```
+[child] Injecting analyst context: Past analyst decisions for similar patterns:
+- file / fluent-bit / Event ID 11 / ... → APPROVED (safe to suppress)
+[child] Injecting analyst context: Past analyst decisions for similar patterns:
+- process / fluent-bit / Event ID 1 / ... → APPROVED (safe to suppress)
+  [Analyst override] "fluent-bi...
+```
+
+### Phase 4 — Vulnerability KB
 - SQLite KB schema
 - NVD + MITRE + CISA feed sync
 - KB → prompt context injection
 - Manual resync in Configuration
+
+### Phase 5 — Real-Time Event Analysis
+
+Analyze incoming events as they are ingested and surface results in a dedicated Tuning Center dashboard tab. Distinct from batch noise candidate analysis — this runs on individual events as they arrive, not on patterns that have already been scored over 7 days.
+
+**Trigger:**
+- Events are analyzed as they arrive via the ingest pipeline
+- `info` severity events are skipped entirely — they are noise by definition and not worth inference time
+- `low`, `medium`, `high`, `critical` severity events are queued for LLM analysis
+
+**Queue architecture:**
+- A lightweight in-memory queue in `llmWorker.js` buffers incoming events
+- Events are dequeued and analyzed one at a time (serial, same child process model as batch analysis)
+- Queue drains in the background — does not block ingest
+- If the LLM is already running a batch analysis, real-time events are held in queue until it completes
+- Queue is capped at 100 pending events — oldest entries dropped if cap exceeded (prevents memory growth during high-volume bursts)
+
+**IPC flow:**
+- New server-side webhook or polling mechanism pushes new events to the Electron app
+- `llm:realtime-event` IPC channel receives individual event objects
+- `llmWorker.js` enqueues the event and processes when the child is free
+- Results emitted via `llm:realtime-result` push event to the renderer
+
+**Storage:**
+- Results stored in a new `realtime_analysis` table on the VPS (not in `noise_candidates`)
+- Schema: `id, user_id, event_id (FK siem_events), explanation, cve_safe, cve_note, analyzed_at`
+- Rolling 7-day retention — old results purged by noiseCron
+- `cve_safe: false` results are never auto-suppressed and are highlighted in the UI
+
+**Tuning Center dashboard tab:**
+- New "Live Analysis" tab in the Tuning Center navigation (alongside the existing candidates tab)
+- Shows a live-updating table of recent analysis results: event time, source, category, process, severity, LLM verdict, CVE safe flag, explanation
+- Auto-refreshes every 30 seconds
+- Filter by: severity, cve_safe, time range
+- `cve_safe: false` rows highlighted in red with the CVE note visible
+- Events flagged as `cve_safe: false` offer a one-click "Create Alert Rule" shortcut
+
+**Resource considerations:**
+- Real-time mode recommended for smaller models (Qwen2.5 1.5B, Llama 3.2 3B) to avoid sustained GPU load
+- A warning is shown in Configuration when real-time mode is enabled with a 7B+ model
+- User can disable real-time analysis per-session from the Tuning Center or from Configuration
+
+**Configuration:**
+- New `user_settings` key: `noise_realtime_enabled` (boolean, default `false`)
+- Toggle in Configuration > Tuning Center settings
+- Only available in the Electron app (same restriction as batch LLM analysis)
+
+### GPU Acceleration (NVIDIA CUDA) — v1.2.43
+
+**Status:** CUDA binary compiled and bundled. `llmProcess.js` uses `gpu: 'cuda'`. Shipped in v1.2.43.
+
+**System tested:** RTX 4060 Laptop, driver 595.79, CUDA 13.2, MSVC 19.44.35225.0, VS 2022 Community.
+
+**Why the prebuilt binary fails:** node-llama-cpp ships prebuilt CUDA binaries compiled against older CUDA versions. CUDA 13.2 uses CCCL headers that require the MSVC standard conforming preprocessor (`/Zc:preprocessor`). The prebuilt cmake config does not pass this flag. `NoBinaryFoundError` is the symptom — node-llama-cpp cannot find a compatible prebuilt and reports failure. Vulkan fallback also fails with `ErrorOutOfHostMemory` on D3D12 adapter.
+
+**Why env vars and cmake flags don't work:** `CXXFLAGS`, `CUDAFLAGS`, and `-DCMAKE_CUDA_FLAGS` do not reliably propagate into the nvcc `-Xcompiler` chain in the generated vcxproj. The only reliable fix is to set `$env:CUDAFLAGS="-Xcompiler=/Zc:preprocessor"` before the node-llama-cpp CLI build — this is what the working build used.
+
+**Correct build procedure (must run in Developer PowerShell for VS 2022, Admin):**
+
+```powershell
+# 1. From cybertools root — download llama.cpp source
+cd "C:\Users\lsgra\Desktop\claude projects\cybertools"
+node node_modules/node-llama-cpp/dist/cli/cli.js source download --skipBuild
+
+# 2. Set the preprocessor flag so nvcc accepts CCCL headers
+$env:CUDAFLAGS="-Xcompiler=/Zc:preprocessor"
+
+# 3. Build with CUDA via the node-llama-cpp CLI (handles Node headers automatically)
+node node_modules/node-llama-cpp/dist/cli/cli.js source build --gpu cuda
+```
+
+**Why to use the node-llama-cpp CLI (not raw cmake):**
+- Raw `cmake --build` fails on `llama-addon.vcxproj` with `node_api.h: No such file or directory` — Node.js headers are not on the cmake include path
+- The node-llama-cpp CLI (`source build`) passes the correct Node headers automatically via `cmake-js`
+- `source download --skipBuild` then `source build --gpu cuda` is the correct two-step sequence
+
+**What NOT to do:**
+- Do not use raw `cmake .. -DGGML_CUDA=ON` + `cmake --build` for the full build — Node headers missing
+- Do not manually patch vcxproj before running `source build` — the CLI regenerates it and wipes patches
+- Do not run in regular PowerShell — VS compiler not on PATH, cmake not found
+- Do not run without Admin — symlink privileges required during build
+
+**Output binaries** (in `node_modules/node-llama-cpp/llama/localBuilds/win-x64-cuda/Release/`):
+- `llama-addon.node` — Node.js native addon (274KB)
+- `ggml-cuda.dll`, `ggml-base.dll`, `ggml-cpu.dll`, `ggml.dll`, `llama.dll`
+
+These are picked up automatically by node-llama-cpp and bundled into the installer via `asarUnpack: ["node_modules/**"]` in `electron-builder.yml`.
+
+**Code changes (v1.2.42→v1.2.43):**
+- `llmProcess.js`: `getLlama({ gpu: 'cuda' })` (was `gpu: false`)
+- `llmWorker.js`: removed `NODE_LLAMA_CPP_GPU: 'false'` from fork env (now just `NODE_PATH`)
+
+**Next steps for multi-arch / user distribution:**
+- Rebuild with `-arch=sm_75;sm_80;sm_86;sm_89;sm_90` instead of `-arch=native` for wider GPU compatibility
+- NSIS optional section checkbox for GPU component at install time
+- CPU fallback detection at runtime if CUDA binary absent
+
+### Future — Optional LLM Component Installer (NSIS)
+
+The current build bundles `node-llama-cpp` and its native binaries unconditionally in `asarUnpack`. A future improvement would make the LLM runtime an optional install component using a custom NSIS section in `electron-builder.yml`:
+
+- Single installer with a checkbox during setup: "Include LLM Noise Advisor (~500MB)"
+- If unchecked, the `node-llama-cpp` native binaries are not extracted to disk
+- If the user skips it at install time, a prompt in Configuration > Noise Advisor offers to install the component on demand (downloads and extracts the binaries at runtime)
+- The rest of the app (SIEM, tools, all other Noise Advisor features) works normally without it
+- LLM features show "LLM component not installed — Install now" instead of "Desktop app required"
+
+This keeps the base installer lean for users who don't need LLM analysis while preserving full functionality for those who do. Implementation requires a custom NSIS script and a runtime extraction mechanism for the native binaries.
+
+### Future — Automatic LLM Analysis on Schedule
+
+Currently the user must manually click "Run LLM Analysis" after candidates are scored. A future improvement would run LLM analysis automatically as part of the nightly cycle so candidates are pre-analyzed by morning.
+
+**Approach:** Add a `node-cron` job in Electron's `main.js` that triggers after the server-side scoring cron completes (e.g. 02:45). It calls `llmWorker.js` directly — no user action required. By the time the user opens Noise Advisor, every candidate already has an LLM verdict and explanation.
+
+**Why Electron-side, not server-side:** `node-llama-cpp` is already wired into the Electron layer. Moving it to the server would require bundling the native binaries server-side and changing the inference architecture. Electron-side cron is the path of least resistance.
+
+**UX change:** The manual "Run LLM Analysis" button becomes "Re-analyze" — useful when new candidates appear mid-day or after a manual scoring run. The default state is that analysis is already done.
+
+**Dependency:** App must be running at 02:45. Could add a "Last auto-analyzed" timestamp to the Noise Advisor header so users know when it last ran.
 
 ---
 
