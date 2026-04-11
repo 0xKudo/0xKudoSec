@@ -28,6 +28,11 @@ const crypto = require('crypto');
 const os = require('os');
 const { fork } = require('child_process');
 
+const _isDev = process.env.NODE_ENV !== 'production' && !app.isPackaged;
+const _SERVER_PORT = 4000;
+const _PRODUCTION_URL = 'https://0xkudo.com';
+const LLM_SERVER_URL = _isDev ? `http://localhost:${_SERVER_PORT}` : _PRODUCTION_URL;
+
 // ── File logger ───────────────────────────────────────────────────────────
 
 const getLogsDir = () => path.join(app.getPath('userData'), 'logs');
@@ -341,7 +346,7 @@ function getLlmProcessScript() {
   return path.join(base, 'llmProcess.js');
 }
 
-async function runAnalysis(modelFilePath, candidates, mainWindow) {
+async function runAnalysis(modelFilePath, candidates, mainWindow, authToken) {
   // Kill any lingering child from a previous run (e.g. app closed mid-analysis)
   if (activeChild) {
     llmLog('INFO', 'Killing stale child process before starting new run');
@@ -372,6 +377,8 @@ async function runAnalysis(modelFilePath, candidates, mainWindow) {
         env: {
           ...process.env,
           NODE_PATH: nodeModulesPath,
+          LLM_SERVER_URL: LLM_SERVER_URL,
+          LLM_AUTH_TOKEN: authToken || '',
         },
       });
     } catch (e) {
@@ -483,7 +490,7 @@ function setupLlmIpc(mainWindow) {
   });
 
   // llm:analyze ────────────────────────────────────────────────────────────
-  ipcMain.handle('llm:analyze', async (event, candidates, modelKey) => {
+  ipcMain.handle('llm:analyze', async (event, candidates, modelKey, authToken) => {
     if (!isValidSender(event)) return { ok: false, err: 'Unauthorized' };
     if (!Array.isArray(candidates) || candidates.length === 0) {
       return { ok: false, err: 'No candidates provided' };
@@ -512,7 +519,7 @@ function setupLlmIpc(mainWindow) {
     }
 
     try {
-      const results = await runAnalysis(filePath, candidates, mainWindow);
+      const results = await runAnalysis(filePath, candidates, mainWindow, authToken);
       return { ok: true, results, cancelled: cancelRequested };
     } catch (e) {
       return { ok: false, err: e.message };

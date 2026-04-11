@@ -291,9 +291,11 @@ export default function NoiseAdvisor() {
       return next;
     });
 
+    const token = await getAccessTokenSilently();
     const res = await window.electron.llm.analyze(
       toAnalyze.map(c => ({ id: c.id, field_signature: c.field_signature, daily_avg: c.daily_avg, days: 7 })),
-      settings.llm_model
+      settings.llm_model,
+      token
     );
 
     setLlmRunning(false);

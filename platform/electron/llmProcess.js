@@ -14,17 +14,78 @@
 
 'use strict';
 
+const https = require('https');
+const http = require('http');
+
 function log(level, ...args) {
   process.send({ type: 'log', level, msg: args.join(' ') });
 }
 
-function buildPrompt(candidate) {
+async function fetchContext(candidate) {
+  const serverUrl = process.env.LLM_SERVER_URL;
+  const token = process.env.LLM_AUTH_TOKEN;
+  if (!serverUrl || !token) return null;
+
+  const sig = typeof candidate.field_signature === 'object'
+    ? candidate.field_signature
+    : JSON.parse(candidate.field_signature);
+
+  const params = new URLSearchParams();
+  if (sig.event_category) params.set('event_category', sig.event_category);
+  if (sig.source) params.set('source', sig.source);
+  if (sig.process_name) params.set('process_name', sig.process_name);
+
+  return new Promise((resolve) => {
+    const url = `${serverUrl}/api/siem/noise/context?${params.toString()}`;
+    const lib = url.startsWith('https') ? https : http;
+    const req = lib.get(url, { headers: { Authorization: `Bearer ${token}` } }, (res) => {
+      let data = '';
+      res.on('data', chunk => { data += chunk; });
+      res.on('end', () => {
+        try { resolve(JSON.parse(data)); }
+        catch (_) { resolve(null); }
+      });
+    });
+    req.on('error', () => resolve(null));
+    req.setTimeout(5000, () => { req.destroy(); resolve(null); });
+  });
+}
+
+function formatContext(context) {
+  if (!context) return '';
+  const { decisions = [], suppressionRules = [] } = context;
+  if (!decisions.length && !suppressionRules.length) return '';
+
+  const lines = ['Past analyst decisions for similar patterns:'];
+
+  for (const d of decisions) {
+    const action = d.decision === 'approved' ? 'APPROVED (safe to suppress)' : 'REJECTED (keep monitoring)';
+    lines.push(`- ${d.pattern} → ${action}`);
+    if (d.override && d.analyst_note) lines.push(`  [Analyst override] "${d.analyst_note}"`);
+    else if (d.llm_explanation) lines.push(`  Reason: ${d.llm_explanation}`);
+  }
+
+  if (suppressionRules.length) {
+    lines.push('Active suppression rules for similar patterns:');
+    for (const r of suppressionRules) {
+      lines.push(`- ${r.name}${r.description ? `: ${r.description}` : ''}`);
+    }
+  }
+
+  return lines.join('\n');
+}
+
+function buildPrompt(candidate, contextText) {
   const sig = typeof candidate.field_signature === 'string'
     ? candidate.field_signature
     : JSON.stringify(candidate.field_signature, null, 2);
 
+  const contextSection = contextText
+    ? `\n\n${contextText}\n\nUse the above analyst decisions to inform your analysis.`
+    : '';
+
   return `<|system|>
-You are a security analyst assistant.<|end|>
+You are a security analyst assistant.${contextSection}<|end|>
 <|user|>
 Analyze this SIEM event pattern and answer two questions:
 
@@ -97,10 +158,13 @@ process.on('message', async ({ type, modelPath, candidates }) => {
     let context;
     try {
       log('INFO', 'Analyzing candidate:', candidate.id);
+      const analystContext = await fetchContext(candidate);
+      const contextText = formatContext(analystContext);
+      if (contextText) log('INFO', 'Injecting analyst context:', contextText.slice(0, 200));
       context = await model.createContext({ contextSize: 2048 });
       const sequence = context.getSequence();
       const completion = new LlamaCompletion({ contextSequence: sequence });
-      const prompt = buildPrompt(candidate);
+      const prompt = buildPrompt(candidate, contextText);
       log('INFO', 'Calling generateCompletion');
       const responseText = await completion.generateCompletion(prompt, {
         maxTokens: 256,

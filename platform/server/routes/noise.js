@@ -314,6 +314,80 @@ router.patch('/settings', requireAuth, async (req, res) => {
   res.json({ ok: true });
 });
 
+// GET /api/siem/noise/context — fetch analyst decision history for similar patterns
+// Used by llmProcess.js to inject few-shot examples into the LLM prompt before each candidate analysis.
+router.get('/context', requireAuth, async (req, res) => {
+  const { event_category, source, process_name } = req.query;
+  if (!event_category && !source) return res.status(400).json({ error: 'event_category or source required' });
+
+  const userId = uid(req);
+
+  // 1. Past noise candidate decisions (approved + rejected + overrides)
+  const { rows: candidateRows } = await pool().query(`
+    SELECT
+      field_signature,
+      status,
+      llm_explanation,
+      llm_cve_note,
+      score,
+      daily_avg,
+      updated_at
+    FROM noise_candidates
+    WHERE user_id = $1
+      AND status IN ('approved', 'rejected')
+      AND (
+        field_signature->>'event_category' = $2
+        OR field_signature->>'source' = $3
+        OR ($4 IS NOT NULL AND field_signature->>'process_name' = $4)
+      )
+    ORDER BY
+      CASE WHEN field_signature->>'event_category' = $2 AND field_signature->>'source' = $3 THEN 0
+           WHEN field_signature->>'event_category' = $2 THEN 1
+           ELSE 2 END,
+      updated_at DESC
+    LIMIT 8
+  `, [userId, event_category || null, source || null, process_name || null]);
+
+  // 2. Active suppression rules (manually created ones too, not just Noise Advisor)
+  const { rows: ruleRows } = await pool().query(`
+    SELECT name, description, match_category, match_event_id, match_process, match_username, created_at
+    FROM detection_rules
+    WHERE user_id = $1
+      AND action = 'suppress'
+      AND enabled = true
+      AND (
+        match_category = $2
+        OR ($3 IS NOT NULL AND match_process = $3)
+      )
+    ORDER BY created_at DESC
+    LIMIT 5
+  `, [userId, event_category || null, process_name || null]);
+
+  // Format as structured context for prompt injection
+  const decisions = candidateRows.map(r => {
+    const sig = r.field_signature;
+    const isOverride = r.llm_cve_note && r.llm_cve_note.startsWith('[Analyst override]');
+    return {
+      pattern: `${sig.event_category || 'unknown'} / ${sig.source || 'unknown'}${sig.event_id ? ` / Event ID ${sig.event_id}` : ''}${sig.process_name ? ` / ${sig.process_name}` : ''}`,
+      decision: r.status,
+      override: isOverride,
+      analyst_note: isOverride ? r.llm_cve_note.replace('[Analyst override] ', '') : null,
+      llm_explanation: r.llm_explanation || null,
+      daily_avg: r.daily_avg,
+      score: r.score,
+    };
+  });
+
+  const suppressionRules = ruleRows.map(r => ({
+    name: r.name,
+    description: r.description,
+    match_category: r.match_category,
+    match_process: r.match_process,
+  }));
+
+  res.json({ decisions, suppressionRules });
+});
+
 // POST /api/siem/noise/run — manual trigger for scoring job
 router.post('/run', requireAuth, async (req, res) => {
   const userId = uid(req);

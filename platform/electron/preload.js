@@ -71,7 +71,7 @@ contextBridge.exposeInMainWorld('electron', {
     cancel: () => ipcRenderer.invoke('llm:cancel'),
 
     // Analysis
-    analyze: (candidates, modelKey) => ipcRenderer.invoke('llm:analyze', candidates, modelKey),
+    analyze: (candidates, modelKey, authToken) => ipcRenderer.invoke('llm:analyze', candidates, modelKey, authToken),
 
     // Model library
     getLibrary: () => ipcRenderer.invoke('llm:get-library'),
