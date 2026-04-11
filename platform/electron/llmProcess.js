@@ -95,7 +95,7 @@ function getTemplateFamily(modelKey, templateFamily) {
 
 function getStopTriggers(modelKey, templateFamily) {
   const family = getTemplateFamily(modelKey, templateFamily);
-  if (family === 'qwen') return ['<|im_end|>'];
+  if (family === 'qwen') return ['<|im_end|>', '{|im_end|}', '|im_end|'];
   if (family === 'llama') return ['<|eot_id|>'];
   return ['<|end|>', '<|user|>', '<|system|>'];
 }
