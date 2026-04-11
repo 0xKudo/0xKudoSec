@@ -77,8 +77,8 @@ const MANAGED_MODELS = {
     sizeBytes: 1000000000,
     ramEstimateBytes: 1610612736,
     quantization: 'Q4_K_M',
-    downloadUrl: null,
-    sha256: null,
+    downloadUrl: 'https://huggingface.co/0xKudoX/noise-advisor-models/resolve/main/qwen2.5-1.5b-instruct-q4_k_m.gguf',
+    sha256: '6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e',
   },
   'llama-3.2-3b-q4': {
     filename: 'llama-3.2-3b-instruct-q4_k_m.gguf',
@@ -86,8 +86,8 @@ const MANAGED_MODELS = {
     sizeBytes: 2000000000,
     ramEstimateBytes: 2684354560,
     quantization: 'Q4_K_M',
-    downloadUrl: null,
-    sha256: null,
+    downloadUrl: 'https://huggingface.co/0xKudoX/noise-advisor-models/resolve/main/llama-3.2-3b-instruct-q4_k_m.gguf',
+    sha256: 'c55a83bfb6396799337853ca69918a0b9bbb2917621078c34570bc17d20fd7a1',
   },
 };
 
