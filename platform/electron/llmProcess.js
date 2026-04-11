@@ -61,22 +61,36 @@ async function fetchContext(candidate) {
 
 function formatContext(context) {
   if (!context) return '';
-  const { decisions = [], suppressionRules = [] } = context;
-  if (!decisions.length && !suppressionRules.length) return '';
+  const { decisions = [], suppressionRules = [], vulnKb = [] } = context;
+  if (!decisions.length && !suppressionRules.length && !vulnKb.length) return '';
 
-  const lines = ['Past analyst decisions for similar patterns:'];
+  const lines = [];
 
-  for (const d of decisions) {
-    const action = d.decision === 'approved' ? 'APPROVED (safe to suppress)' : 'REJECTED (keep monitoring)';
-    lines.push(`- ${d.pattern} → ${action}`);
-    if (d.override && d.analyst_note) lines.push(`  [Analyst override] "${d.analyst_note}"`);
-    else if (d.llm_explanation) lines.push(`  Reason: ${d.llm_explanation}`);
+  if (decisions.length) {
+    lines.push('Past analyst decisions for similar patterns:');
+    for (const d of decisions) {
+      const action = d.decision === 'approved' ? 'APPROVED (safe to suppress)' : 'REJECTED (keep monitoring)';
+      lines.push(`- ${d.pattern} → ${action}`);
+      if (d.override && d.analyst_note) lines.push(`  [Analyst override] "${d.analyst_note}"`);
+      else if (d.llm_explanation) lines.push(`  Reason: ${d.llm_explanation}`);
+    }
   }
 
   if (suppressionRules.length) {
     lines.push('Active suppression rules for similar patterns:');
     for (const r of suppressionRules) {
       lines.push(`- ${r.name}${r.description ? `: ${r.description}` : ''}`);
+    }
+  }
+
+  if (vulnKb.length) {
+    lines.push('Known vulnerabilities relevant to this pattern:');
+    for (const v of vulnKb) {
+      const cvss = v.cvss_score ? ` CVSS ${v.cvss_score}` : '';
+      const sev = v.severity ? ` (${v.severity}${cvss})` : '';
+      const src = v.source === 'cisa' ? ' [ACTIVELY EXPLOITED - CISA KEV]' : '';
+      lines.push(`- ${v.title}${sev}${src}`);
+      if (v.description) lines.push(`  ${v.description.slice(0, 200)}`);
     }
   }
 

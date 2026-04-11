@@ -17,6 +17,7 @@ import { loadTools } from './loader.js';
 import { attachWebSocketServer } from './services/wsBroadcast.js';
 import { startRetentionCron } from './services/retentionCron.js';
 import { scheduleNoiseCron } from './services/noiseCron.js';
+import { scheduleKbCron } from './services/kbCron.js';
 
 const app = express();
 
@@ -94,5 +95,6 @@ if (!process.env.VITEST) {
     attachWebSocketServer(server);
     startRetentionCron();
     scheduleNoiseCron();
+    scheduleKbCron();
   });
 }

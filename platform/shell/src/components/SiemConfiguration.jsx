@@ -1519,6 +1519,7 @@ winlogbeat.event_logs:
 // ── NoiseAdvisorModelsTab ─────────────────────────────────────────────────────
 
 function NoiseAdvisorModelsTab({ s }) {
+  const { getAccessTokenSilently } = useAuth0();
   const [library, setLibrary] = useState([]);
   const [libraryLoading, setLibraryLoading] = useState(true);
   const [downloadProgress, setDownloadProgress] = useState({}); // modelKey/filename → percent
@@ -1528,6 +1529,8 @@ function NoiseAdvisorModelsTab({ s }) {
   const [urlInput, setUrlInput] = useState('');
   const [urlLoading, setUrlLoading] = useState(false);
   const [customTemplate, setCustomTemplate] = useState('qwen');
+  const [kbStatus, setKbStatus] = useState(null);
+  const [kbSyncing, setKbSyncing] = useState(false);
 
   const loadLibrary = async () => {
     const res = await window.electron.llm.getLibrary();
@@ -1535,8 +1538,36 @@ function NoiseAdvisorModelsTab({ s }) {
     setLibraryLoading(false);
   };
 
+  const loadKbStatus = async () => {
+    try {
+      const token = await getAccessTokenSilently();
+      const res = await fetch('/api/siem/noise/kb/status', { headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) setKbStatus(await res.json());
+    } catch (_) {}
+  };
+
+  const handleKbSync = async (sources) => {
+    if (kbSyncing) return;
+    setKbSyncing(true);
+    try {
+      const token = await getAccessTokenSilently();
+      await fetch('/api/siem/noise/kb/sync', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sources }),
+      });
+      flash('KB sync started. This may take a few minutes.', 'var(--severity-low)');
+      // Poll for completion
+      setTimeout(async () => { await loadKbStatus(); setKbSyncing(false); }, 60000);
+    } catch (e) {
+      flash('KB sync failed: ' + e.message, 'var(--severity-critical)');
+      setKbSyncing(false);
+    }
+  };
+
   useEffect(() => {
     loadLibrary();
+    loadKbStatus();
     window.electron.llm.onDownloadProgress(info => {
       const key = info.modelKey || info.filename;
       setDownloadProgress(prev => ({ ...prev, [key]: info.percent ?? 0 }));
@@ -1762,6 +1793,57 @@ function NoiseAdvisorModelsTab({ s }) {
           </div>
           <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px', lineHeight: 1.6 }}>
             Custom models are validated for GGUF format and RAM requirements. Warnings are informational only. You decide whether to use them.
+          </div>
+        </div>
+
+        {/* Vulnerability KB status */}
+        <div style={{ marginTop: '24px', borderTop: '1px solid var(--border)', paddingTop: '20px' }}>
+          <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Vulnerability Knowledge Base</div>
+          <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '12px', lineHeight: 1.6 }}>
+            CVEs and attack patterns from NVD, CISA KEV, and MITRE ATT&CK. Injected into LLM prompts to improve analysis accuracy. Syncs daily at 03:30.
+          </div>
+          {kbStatus ? (
+            <table style={{ ...s.table, marginBottom: '12px' }}>
+              <thead>
+                <tr>
+                  <th style={s.th}>Source</th>
+                  <th style={s.th}>Entries</th>
+                  <th style={s.th}>Last Synced</th>
+                </tr>
+              </thead>
+              <tbody>
+                {kbStatus.sources.map(src => (
+                  <tr key={src.source}>
+                    <td style={s.td}>{src.source.toUpperCase()}</td>
+                    <td style={s.td}>{parseInt(src.count).toLocaleString()}</td>
+                    <td style={s.td}>{src.last_synced ? new Date(src.last_synced).toLocaleString() : '—'}</td>
+                  </tr>
+                ))}
+                {kbStatus.sources.length === 0 && (
+                  <tr>
+                    <td colSpan={3} style={{ ...s.td, color: 'var(--text-muted)', textAlign: 'center' }}>No entries yet — run a sync to populate the KB.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          ) : (
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '12px' }}>Loading KB status...</div>
+          )}
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            <button
+              style={{ ...s.btnPrimary, marginRight: 0, opacity: kbSyncing ? 0.5 : 1 }}
+              disabled={kbSyncing}
+              onClick={() => handleKbSync(['nvd', 'cisa', 'mitre'])}
+            >
+              {kbSyncing ? 'Syncing...' : 'Sync Now'}
+            </button>
+            <button
+              style={{ background: 'none', border: '1px solid var(--border)', color: 'var(--text-muted)', fontFamily: 'var(--font)', fontSize: '11px', padding: '4px 10px', cursor: kbSyncing ? 'not-allowed' : 'pointer', opacity: kbSyncing ? 0.5 : 1 }}
+              disabled={kbSyncing}
+              onClick={() => loadKbStatus()}
+            >
+              Refresh Status
+            </button>
           </div>
         </div>
       </div>

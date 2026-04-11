@@ -3,6 +3,7 @@ import { requireAuth } from '../middleware/requireAuth.js';
 import db from '../services/db.js';
 import { audit } from '../services/audit.js';
 import { scoreNoiseCandidates, runAutoSuppress } from '../services/noiseCron.js';
+import { syncKnowledgeBase } from '../services/kbCron.js';
 
 const router = Router();
 const pool = () => db.getPool();
@@ -363,6 +364,24 @@ router.get('/context', requireAuth, async (req, res) => {
     LIMIT 5
   `, [userId, event_category || null, process_name || null]);
 
+  // 3. Vulnerability KB — match on attack_patterns (process names) and event_category
+  const { rows: kbRows } = await pool().query(`
+    SELECT id, source, title, description, severity, cvss_score, affected_products, attack_patterns
+    FROM vuln_kb
+    WHERE
+      ($1::text IS NOT NULL AND attack_patterns @> $1::jsonb)
+      OR ($2::text IS NOT NULL AND attack_patterns @> $2::jsonb)
+      OR (source = 'cisa' AND affected_products::text ILIKE $3)
+    ORDER BY
+      CASE source WHEN 'cisa' THEN 0 WHEN 'nvd' THEN 1 ELSE 2 END,
+      cvss_score DESC NULLS LAST
+    LIMIT 5
+  `, [
+    process_name ? JSON.stringify([process_name]) : null,
+    event_category ? JSON.stringify([event_category]) : null,
+    process_name ? `%${process_name.replace('.exe', '')}%` : '%',
+  ]);
+
   // Format as structured context for prompt injection
   const decisions = candidateRows.map(r => {
     const sig = r.field_signature;
@@ -385,7 +404,17 @@ router.get('/context', requireAuth, async (req, res) => {
     match_process: r.match_process,
   }));
 
-  res.json({ decisions, suppressionRules });
+  const vulnKb = kbRows.map(r => ({
+    id: r.id,
+    source: r.source,
+    title: r.title,
+    description: r.description?.slice(0, 300),
+    severity: r.severity,
+    cvss_score: r.cvss_score,
+    affected_products: r.affected_products,
+  }));
+
+  res.json({ decisions, suppressionRules, vulnKb });
 });
 
 // POST /api/siem/noise/run — manual trigger for scoring job
@@ -399,6 +428,42 @@ router.post('/run', requireAuth, async (req, res) => {
   } catch (e) {
     console.error('[noise] /run error:', e.message);
     res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+// GET /api/siem/noise/kb/status — KB entry counts and last sync times
+router.get('/kb/status', requireAuth, async (req, res) => {
+  try {
+    const { rows } = await pool().query(`
+      SELECT
+        source,
+        COUNT(*) AS count,
+        MAX(updated_at) AS last_synced
+      FROM vuln_kb
+      GROUP BY source
+      ORDER BY source
+    `);
+    const total = rows.reduce((sum, r) => sum + parseInt(r.count), 0);
+    res.json({ ok: true, sources: rows, total });
+  } catch (e) {
+    console.error('[noise] /kb/status error:', e.message);
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+// POST /api/siem/noise/kb/sync — manual KB sync trigger
+let kbSyncRunning = false;
+router.post('/kb/sync', requireAuth, async (req, res) => {
+  if (kbSyncRunning) return res.status(409).json({ ok: false, error: 'Sync already in progress' });
+  const { sources } = req.body; // optional: ['nvd', 'cisa', 'mitre']
+  kbSyncRunning = true;
+  res.json({ ok: true, message: 'KB sync started' });
+  try {
+    await syncKnowledgeBase({ sources: sources || ['nvd', 'cisa', 'mitre'] });
+  } catch (e) {
+    console.error('[noise] /kb/sync error:', e.message);
+  } finally {
+    kbSyncRunning = false;
   }
 });
 
