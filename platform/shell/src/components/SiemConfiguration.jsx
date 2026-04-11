@@ -1826,9 +1826,9 @@ function NoiseAdvisorModelsTab({ s }) {
                 Syncing vulnerability KB... fetching NVD, CISA KEV, and MITRE ATT&CK feeds.
               </div>
               <div style={{ width: '100%', height: '3px', background: 'var(--border)', borderRadius: '2px', overflow: 'hidden' }}>
-                <div style={{ height: '100%', width: '100%', background: 'var(--accent-amber)', animation: 'kb-indeterminate 1.5s ease-in-out infinite', transformOrigin: 'left' }} />
+                <div style={{ height: '100%', width: '100%', background: 'var(--accent-amber)', animation: 'kb-indeterminate 2.5s cubic-bezier(0.4,0,0.2,1) infinite', transformOrigin: 'left' }} />
               </div>
-              <style>{`@keyframes kb-indeterminate { 0%{transform:translateX(-100%) scaleX(0.4)} 50%{transform:translateX(30%) scaleX(0.6)} 100%{transform:translateX(110%) scaleX(0.4)} }`}</style>
+              <style>{`@keyframes kb-indeterminate { 0%{transform:translateX(-100%) scaleX(0.3)} 60%{transform:translateX(60%) scaleX(0.5)} 100%{transform:translateX(120%) scaleX(0.3)} }`}</style>
             </div>
           )}
           {kbStatus ? (
