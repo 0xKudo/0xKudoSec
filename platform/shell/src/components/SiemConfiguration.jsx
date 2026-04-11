@@ -1619,8 +1619,9 @@ function NoiseAdvisorModelsTab({ s }) {
     const res = await window.electron.llm.downloadModel(modelKey);
     setDownloading(null);
     setDownloadProgress(prev => { const n = { ...prev }; delete n[modelKey]; return n; });
-    if (!res.ok) flash(res.err, 'var(--severity-critical)');
-    else { flash('Model downloaded successfully.'); await loadLibrary(); }
+    if (!res.ok) {
+      if (!res.err?.includes('cancelled')) flash(res.err, 'var(--severity-critical)');
+    } else { flash('Model downloaded successfully.'); await loadLibrary(); }
   };
 
   const handleRemove = async (filename) => {
@@ -1652,8 +1653,9 @@ function NoiseAdvisorModelsTab({ s }) {
     const res = await window.electron.llm.downloadUrl(url, customTemplate);
     setDownloading(null);
     setDownloadProgress(prev => { const n = { ...prev }; delete n[progressKey]; return n; });
-    if (!res.ok) flash(res.err, 'var(--severity-critical)');
-    else {
+    if (!res.ok) {
+      if (!res.err?.includes('cancelled')) flash(res.err, 'var(--severity-critical)');
+    } else {
       const warn = res.warnings?.length ? ` Warnings: ${res.warnings.join('; ')}` : '';
       flash(`Model downloaded.${warn}`, res.warnings?.length ? 'var(--severity-medium)' : 'var(--severity-low)');
       setUrlInput('');
@@ -1753,7 +1755,10 @@ function NoiseAdvisorModelsTab({ s }) {
                           </button>
                         )}
                         {isDownloading && (
-                          <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{pct ?? 0}%</span>
+                          <>
+                            <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{pct ?? 0}%</span>
+                            <button style={{ ...s.btnPrimary, marginRight: 0, border: '1px solid var(--severity-critical)', color: 'var(--severity-critical)', background: 'none' }} onClick={() => window.electron.llm.cancelDownload()}>Cancel</button>
+                          </>
                         )}
                         {m.status !== 'not-downloaded' && (
                           removeConfirm === m.filename ? (
@@ -1822,6 +1827,9 @@ function NoiseAdvisorModelsTab({ s }) {
             >
               {downloading?.startsWith('url:') ? 'Downloading...' : 'Download'}
             </button>
+            {downloading?.startsWith('url:') && (
+              <button style={{ ...s.btnPrimary, marginRight: 0, border: '1px solid var(--severity-critical)', color: 'var(--severity-critical)', background: 'none' }} onClick={() => window.electron.llm.cancelDownload()}>Cancel</button>
+            )}
           </div>
           {downloading?.startsWith('url:') && (() => {
             const pct = downloadProgress[downloading];

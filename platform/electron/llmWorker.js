@@ -99,6 +99,8 @@ const GGUF_MAGIC = Buffer.from([0x47, 0x47, 0x55, 0x46]);
 let llmStatus = 'idle'; // 'idle' | 'loading' | 'running' | 'unavailable'
 let cancelRequested = false;
 let activeChild = null; // reference to the running inference child process
+let activeDownloadReq = null; // reference to the active download request (for cancellation)
+let downloadCancelled = false;
 
 // ── Model library persistence ─────────────────────────────────────────────
 
@@ -233,14 +235,21 @@ function fetchJson(url) {
 
 /** Download a file from an HTTPS URL, following redirects, with progress callbacks. */
 function downloadFile(url, destPath, onProgress) {
+  downloadCancelled = false;
   return new Promise((resolve, reject) => {
     const tmp = destPath + '.download';
     const file = fs.createWriteStream(tmp);
     let received = 0;
 
     function doRequest(requestUrl) {
+      if (downloadCancelled) {
+        file.destroy();
+        try { fs.unlinkSync(tmp); } catch (_) {}
+        reject(new Error('Download cancelled'));
+        return;
+      }
       const parsed = new URL(requestUrl);
-      https.get({
+      const req = https.get({
         hostname: parsed.hostname,
         path: parsed.pathname + parsed.search,
         headers: { 'User-Agent': '0xKudo-SecurityToolkit' },
@@ -255,6 +264,13 @@ function downloadFile(url, destPath, onProgress) {
         }
         const total = parseInt(res.headers['content-length'] || '0', 10);
         res.on('data', (chunk) => {
+          if (downloadCancelled) {
+            req.destroy();
+            file.destroy();
+            try { fs.unlinkSync(tmp); } catch (_) {}
+            reject(new Error('Download cancelled'));
+            return;
+          }
           received += chunk.length;
           file.write(chunk);
           if (onProgress && total > 0) {
@@ -262,11 +278,11 @@ function downloadFile(url, destPath, onProgress) {
           }
         });
         res.on('end', () => {
+          if (downloadCancelled) return;
           file.end(() => {
             try {
               fs.renameSync(tmp, destPath);
             } catch (_) {
-              // renameSync can fail across volume/path boundaries; fall back to copy+delete
               fs.copyFileSync(tmp, destPath);
               try { fs.unlinkSync(tmp); } catch (_2) {}
             }
@@ -277,8 +293,9 @@ function downloadFile(url, destPath, onProgress) {
       }).on('error', (e) => {
         file.destroy();
         try { fs.unlinkSync(tmp); } catch (_) {}
-        reject(e);
+        if (!downloadCancelled) reject(e);
       });
+      activeDownloadReq = req;
     }
 
     doRequest(url);
@@ -486,6 +503,16 @@ function setupLlmIpc(mainWindow) {
     if (activeChild) {
       try { activeChild.kill(); } catch (_) {}
       activeChild = null;
+    }
+  });
+
+  // llm:cancel-download ────────────────────────────────────────────────────
+  ipcMain.handle('llm:cancel-download', (event) => {
+    if (!isValidSender(event)) return;
+    downloadCancelled = true;
+    if (activeDownloadReq) {
+      try { activeDownloadReq.destroy(); } catch (_) {}
+      activeDownloadReq = null;
     }
   });
 
