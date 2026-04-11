@@ -542,6 +542,7 @@ function setupLlmIpc(mainWindow) {
     if (fs.existsSync(dest)) return { ok: false, err: 'Model already downloaded.' };
 
     ensureModelsDir();
+    try { fs.unlinkSync(dest + '.download'); } catch (_) {} // clean up stale temp file
     try {
       await downloadFile(managed.downloadUrl, dest, (progress) => {
         if (mainWindow && !mainWindow.isDestroyed()) {
@@ -757,8 +758,24 @@ function setupLlmIpc(mainWindow) {
     const lib = loadLibrary();
 
     const managed = Object.entries(MANAGED_MODELS).map(([key, m]) => {
-      const entry = lib.models.find(e => e.modelKey === key) || {};
+      let entry = lib.models.find(e => e.modelKey === key) || {};
       const onDisk = fs.existsSync(modelPath(m.filename));
+
+      // Auto-recover: file on disk but no library entry (e.g. crashed mid-download)
+      if (onDisk && !entry.modelKey) {
+        const templateFamily = key.startsWith('qwen') ? 'qwen' : key.startsWith('llama') ? 'llama' : 'phi';
+        upsertLibraryModel({
+          filename: m.filename,
+          type: 'managed',
+          modelKey: key,
+          templateFamily,
+          status: 'ready',
+          active: false,
+        });
+        entry = { modelKey: key, templateFamily, status: 'ready', active: false };
+        llmLog('INFO', `Auto-recovered managed model from disk: ${key}`);
+      }
+
       return {
         filename: m.filename,
         displayName: m.displayName,

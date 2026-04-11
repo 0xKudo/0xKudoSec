@@ -1681,7 +1681,11 @@ function NoiseAdvisorModelsTab({ s }) {
                           </button>
                         )}
                         {m.type === 'managed' && m.status === 'not-downloaded' && !isDownloading && (
-                          <button style={{ ...s.btnPrimary, marginRight: 0 }} onClick={() => handleDownload(m.modelKey)}>
+                          <button
+                            style={{ ...s.btnPrimary, marginRight: 0, opacity: downloading ? 0.5 : 1 }}
+                            disabled={!!downloading}
+                            onClick={() => handleDownload(m.modelKey)}
+                          >
                             Download
                           </button>
                         )}
@@ -1732,7 +1736,11 @@ function NoiseAdvisorModelsTab({ s }) {
             </select>
           </div>
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-            <button style={{ ...s.btnPrimary, marginRight: 0 }} onClick={handleAddCustom}>
+            <button
+              style={{ ...s.btnPrimary, marginRight: 0, opacity: downloading || urlLoading ? 0.5 : 1 }}
+              disabled={!!downloading || urlLoading}
+              onClick={handleAddCustom}
+            >
               Browse local .gguf file
             </button>
             <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>or paste a download URL:</span>
@@ -1741,12 +1749,12 @@ function NoiseAdvisorModelsTab({ s }) {
               placeholder="https://huggingface.co/.../model.gguf"
               value={urlInput}
               onChange={e => setUrlInput(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter' && !urlLoading) handleDownloadUrl(); }}
+              onKeyDown={e => { if (e.key === 'Enter' && !urlLoading && !downloading) handleDownloadUrl(); }}
               style={{ ...s.input, width: '320px' }}
             />
             <button
-              style={{ ...s.btnPrimary, marginRight: 0, opacity: urlLoading || !urlInput.trim() ? 0.5 : 1 }}
-              disabled={urlLoading || !urlInput.trim()}
+              style={{ ...s.btnPrimary, marginRight: 0, opacity: urlLoading || downloading || !urlInput.trim() ? 0.5 : 1 }}
+              disabled={urlLoading || !!downloading || !urlInput.trim()}
               onClick={handleDownloadUrl}
             >
               {urlLoading ? 'Downloading...' : 'Download'}
