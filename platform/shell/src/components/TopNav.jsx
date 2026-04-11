@@ -297,7 +297,6 @@ export function TopNav({ activeApp, onSwitchApp, onMenuToggle, menuOpen, theme, 
             )}
             {isAuthenticated ? (
               <>
-                <span style={styles.userName}>{user.name || user.email}</span>
                 {__APP_VERSION__.includes('beta') && (
                   <button
                     style={{ ...styles.authBtn, fontSize: '10px', opacity: 0.6 }}
@@ -305,6 +304,7 @@ export function TopNav({ activeApp, onSwitchApp, onMenuToggle, menuOpen, theme, 
                     onClick={() => window.location.reload()}
                   >[ reload ]</button>
                 )}
+                <span style={styles.userName}>{user.name || user.email}</span>
                 <button style={styles.authBtn} onClick={() => isElectron ? logout({ openUrl: false }) : logout({ logoutParams: { returnTo: window.location.origin } })}>[ logout ]</button>
               </>
             ) : (
