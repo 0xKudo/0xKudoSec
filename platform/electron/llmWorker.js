@@ -372,9 +372,6 @@ async function runAnalysis(modelFilePath, candidates, mainWindow) {
         env: {
           ...process.env,
           NODE_PATH: nodeModulesPath,
-          // Force CPU-only inference — CUDA binary is incompatible and Vulkan
-          // fails with ErrorOutOfHostMemory on this system's D3D12 adapter
-          NODE_LLAMA_CPP_GPU: 'false',
         },
       });
     } catch (e) {

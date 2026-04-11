@@ -85,7 +85,7 @@ process.on('message', async ({ type, modelPath, candidates }) => {
   let llama, model;
   try {
     log('INFO', 'Loading model:', modelPath);
-    llama = await getLlama({ gpu: false });
+    llama = await getLlama({ gpu: 'cuda' });
     model = await llama.loadModel({ modelPath });
     log('INFO', 'Model loaded');
   } catch (e) {
