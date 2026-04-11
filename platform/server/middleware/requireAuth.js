@@ -8,6 +8,8 @@ export const requireAuth = (req, res, next) => {
   return expressjwt({
     secret: expressJwtSecret({
       cache: true,
+      cacheMaxEntries: 5,
+      cacheMaxAge: 86400000, // 24 hours — survives transient Auth0 JWKS outages
       rateLimit: true,
       jwksRequestsPerMinute: 5,
       jwksUri: `https://${AUTH0_DOMAIN}/.well-known/jwks.json`,
