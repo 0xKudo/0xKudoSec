@@ -203,7 +203,19 @@ export default function NoiseAdvisor() {
   const loadModelLibrary = useCallback(async () => {
     if (!isElectron) return;
     const res = await window.electron.llm.getLibrary();
-    if (res.ok && isMountedRef.current) setModelLibrary(res.models);
+    if (res.ok && isMountedRef.current) {
+      setModelLibrary(res.models);
+      // Re-sync llm_model setting against freshly loaded library
+      setSettings(prev => {
+        if (!prev) return prev;
+        const match = res.models.find(m => m.modelKey === prev.llm_model || m.filename === prev.llm_model);
+        if (!match) {
+          const active = res.models.find(m => m.active);
+          if (active) return { ...prev, llm_model: active.modelKey || active.filename };
+        }
+        return prev;
+      });
+    }
   }, []);
 
   useEffect(() => {
