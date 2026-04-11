@@ -852,7 +852,7 @@ export default function NoiseAdvisor() {
           <div style={s.modal} onClick={e => e.stopPropagation()}>
             <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>Override LLM Verdict</div>
             <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-              The LLM flagged this pattern as potentially unsafe. Provide a reason why it is safe to suppress — this will be used to improve future analysis.
+              The LLM flagged this pattern as potentially unsafe. Provide a reason why it is safe to suppress. This will be used to improve future analysis.
             </div>
             <textarea
               autoFocus
