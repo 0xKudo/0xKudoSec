@@ -270,6 +270,59 @@ function fluentBitSysmonFields(eventId, inserts) {
     };
   }
 
+  // Event ID 2 (File Creation Time Changed):
+  // [0]=RuleName,[1]=UtcTime,[2]=ProcessGuid,[3]=ProcessId,[4]=Image,
+  // [5]=TargetFilename,[6]=CreationUtcTime,[7]=PreviousCreationUtcTime,[8]=User
+  if (id === 2) {
+    const user2 = inserts[8] || null;
+    const [domain2, username2] = user2 ? user2.split('\\') : [null, null];
+    return {
+      process_id: inserts[3] ? Number(inserts[3]) : null,
+      process_name: inserts[4] || null,
+      process_guid: inserts[2] ? inserts[2].toLowerCase() : null,
+      file_path: inserts[5] || null,
+      username: username2 || user2 || null,
+      domain: domain2 || null,
+      source_ip: null, dest_ip: null, dest_port: null, protocol: null,
+      parent_process_name: null, parent_process_id: null, parent_process_guid: null,
+      registry_key: null,
+    };
+  }
+
+  // Event ID 22 (DNS Query):
+  // [0]=RuleName,[1]=UtcTime,[2]=ProcessGuid,[3]=ProcessId,[4]=Image,
+  // [5]=User,[6]=QueryName,[7]=QueryStatus,[8]=QueryResults
+  if (id === 22) {
+    const user22 = inserts[5] || null;
+    const [domain22, username22] = user22 ? user22.split('\\') : [null, null];
+    return {
+      process_id: inserts[3] ? Number(inserts[3]) : null,
+      process_name: inserts[4] || null,
+      process_guid: inserts[2] ? inserts[2].toLowerCase() : null,
+      username: username22 || user22 || null,
+      domain: domain22 || null,
+      message_extra: inserts[6] || null, // QueryName stored in message already
+      source_ip: null, dest_ip: null, dest_port: null, protocol: null,
+      parent_process_name: null, parent_process_id: null, parent_process_guid: null,
+      file_path: null, registry_key: null,
+    };
+  }
+
+  // Event ID 5379 (Credential Read):
+  // [0]=SubjectUserSid,[1]=SubjectUserName,[2]=SubjectDomainName,[3]=SubjectLogonId,
+  // [4]=ClientProcessId,[5]=ClientCreationTime,[6]=TargetName,[7]=Type,[8]=CountOfCredentialsReturned
+  if (id === 5379) {
+    return {
+      username: inserts[1] || null,
+      domain: inserts[2] || null,
+      process_id: inserts[4] ? Number(inserts[4]) : null,
+      source_ip: null, dest_ip: null, dest_port: null, protocol: null,
+      process_name: null, process_guid: null,
+      parent_process_name: null, parent_process_id: null, parent_process_guid: null,
+      file_path: null, registry_key: null,
+    };
+  }
+
   return {};
 }
 
