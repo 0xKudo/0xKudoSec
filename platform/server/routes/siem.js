@@ -1161,4 +1161,102 @@ router.get('/audit-log', wrap(async (req, res) => {
   res.json(rows);
 }));
 
+// ── Phase 5: Real-time LLM analysis ──────────────────────────────────────────
+
+// GET /siem/realtime/events?since=<log_id>
+// Returns up to 50 events with id > since, skipping info severity and already-analyzed events.
+// Each event includes would_suppress: true if it matches an active suppress rule.
+// Used by Electron llmWorker after receiving new_events WS broadcast.
+router.get('/realtime/events', wrap(async (req, res) => {
+  const sinceId = parseInt(req.query.since, 10);
+  if (isNaN(sinceId) || sinceId < 0) return res.status(400).json({ error: 'since must be a non-negative integer' });
+  const userId = uid(req);
+  const { rows } = await pool.query(
+    `SELECT l.id, l.event_id, l.event_category, l.severity, l.host, l.source,
+            l.process_name, l.process_id, l.username, l.source_ip, l.dest_ip,
+            l.dest_port, l.message, l.timestamp
+     FROM logs l
+     WHERE l.user_id = $1
+       AND l.id > $2
+       AND l.severity != 'info'
+       AND NOT EXISTS (
+         SELECT 1 FROM realtime_analysis ra
+         WHERE ra.log_id = l.id AND ra.user_id = $1
+       )
+     ORDER BY l.id ASC
+     LIMIT 50`,
+    [userId, sinceId]
+  );
+  if (!rows.length) return res.json([]);
+
+  // Tag each event with would_suppress — matches any active suppress rule
+  const { rows: rules } = await pool.query(
+    `SELECT * FROM detection_rules WHERE user_id = $1 AND enabled = true AND action = 'suppress'`,
+    [userId]
+  );
+
+  const result = rows.map(ev => {
+    const would_suppress = rules.some(rule => {
+      if (rule.match_event_id && rule.match_event_id !== ev.event_id) return false;
+      if (rule.match_category && ev.event_category !== rule.match_category) return false;
+      if (rule.match_severity && ev.severity !== rule.match_severity) return false;
+      if (rule.match_host && !(ev.host || '').toLowerCase().includes(rule.match_host.toLowerCase())) return false;
+      if (rule.match_process && !(ev.process_name || '').toLowerCase().includes(rule.match_process.toLowerCase())) return false;
+      if (rule.match_username && !(ev.username || '').toLowerCase().includes(rule.match_username.toLowerCase())) return false;
+      if (rule.match_message && !(ev.message || '').toLowerCase().includes(rule.match_message.toLowerCase())) return false;
+      if (rule.match_src_ip && !(ev.source_ip || '').includes(rule.match_src_ip)) return false;
+      if (rule.match_dest_ip && !(ev.dest_ip || '').includes(rule.match_dest_ip)) return false;
+      if (rule.match_dest_port && rule.match_dest_port !== ev.dest_port) return false;
+      return true;
+    });
+    return { ...ev, would_suppress };
+  });
+
+  res.json(result);
+}));
+
+// POST /siem/realtime/result
+// Called by Electron after LLM analysis of a single event.
+// Stores the result and broadcasts to all WS clients.
+router.post('/realtime/result', wrap(async (req, res) => {
+  const { log_id, signal_type, explanation, cve_safe, cve_note } = req.body || {};
+  const userId = uid(req);
+
+  const VALID_SIGNALS = ['suspicious', 'suppression_conflict', 'first_seen'];
+  if (!Number.isInteger(log_id) || log_id <= 0) return res.status(400).json({ error: 'log_id must be a positive integer' });
+  if (!VALID_SIGNALS.includes(signal_type)) return res.status(400).json({ error: 'invalid signal_type' });
+
+  // Verify log belongs to this user
+  const { rows: logRows } = await pool.query('SELECT id FROM logs WHERE id = $1 AND user_id = $2', [log_id, userId]);
+  if (!logRows.length) return res.status(404).json({ error: 'log not found' });
+
+  // Upsert — if already analyzed skip silently
+  await pool.query(
+    `INSERT INTO realtime_analysis (user_id, log_id, signal_type, explanation, cve_safe, cve_note)
+     VALUES ($1, $2, $3, $4, $5, $6)
+     ON CONFLICT DO NOTHING`,
+    [userId, log_id, signal_type, explanation || null, cve_safe ?? null, cve_note || null]
+  );
+
+  broadcast('realtime_analysis', { user_id: userId, log_id, signal_type });
+  res.json({ ok: true });
+}));
+
+// GET /siem/realtime/results
+// Returns the last 50 realtime_analysis rows for the dashboard panel, joined with log data.
+router.get('/realtime/results', wrap(async (req, res) => {
+  const userId = uid(req);
+  const { rows } = await pool.query(
+    `SELECT ra.id, ra.log_id, ra.signal_type, ra.explanation, ra.cve_safe, ra.cve_note, ra.analyzed_at,
+            l.event_id, l.severity, l.host, l.process_name, l.username, l.message, l.timestamp
+     FROM realtime_analysis ra
+     JOIN logs l ON l.id = ra.log_id
+     WHERE ra.user_id = $1
+     ORDER BY ra.analyzed_at DESC
+     LIMIT 50`,
+    [userId]
+  );
+  res.json(rows);
+}));
+
 export default router;

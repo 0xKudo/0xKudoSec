@@ -152,7 +152,7 @@ function ElectronCollapsibleToolsSidebar({ onSwitchToSiem, onSwitchToSiemView })
 }
 
 function AppInner() {
-  const { isAuthenticated, isLoading } = useAuth0();
+  const { isAuthenticated, isLoading, getAccessTokenSilently } = useAuth0();
   const isMobile = useIsMobile();
   const location = useLocation();
   const navigate = useNavigate();
@@ -238,15 +238,31 @@ function AppInner() {
     if (!isAuthenticated) return;
     const proto = window.location.protocol === 'https:' ? 'wss' : 'ws';
     const ws = new WebSocket(`${proto}://${window.location.host}/ws`);
+    let lastSeenId = 0;
     ws.onmessage = (e) => {
       try {
         const msg = JSON.parse(e.data);
         if (msg.type === 'ingest_key_rotated') setKeyRotatedBanner(true);
-        if (msg.type === 'new_events') setKeyRotatedBanner(false);
+        if (msg.type === 'new_events') {
+          setKeyRotatedBanner(false);
+          // In Electron, forward to llmWorker for real-time analysis if enabled
+          if (isElectron && window.electron?.llm?.notifyNewEvents) {
+            const realtimeEnabled = localStorage.getItem('noise_realtime_enabled') === 'true';
+            if (realtimeEnabled) {
+              getAccessTokenSilently().then(token => {
+                window.electron.llm.notifyNewEvents(token, lastSeenId);
+              }).catch(() => {});
+            }
+          }
+        }
+        if (msg.type === 'realtime_analysis') {
+          // Signal dashboard to reload AI Alert Analysis panel
+          window.dispatchEvent(new CustomEvent('realtime_analysis_update'));
+        }
       } catch {}
     };
     return () => { if (ws.readyState !== WebSocket.CONNECTING) ws.close(); else ws.onopen = () => ws.close(); };
-  }, [isAuthenticated]);
+  }, [isAuthenticated, getAccessTokenSilently]);
   const tools = useTools();
 
   // Must be above any conditional returns to satisfy rules of hooks

@@ -513,12 +513,17 @@ The model's base knowledge doesn't change, but it sees analyst-validated example
 
 ### Phase 5 — Real-Time Event Analysis
 
-Analyze incoming events as they are ingested and surface results in a dedicated Tuning Center dashboard tab. Distinct from batch noise candidate analysis — this runs on individual events as they arrive, not on patterns that have already been scored over 7 days.
+Analyze incoming events as they are ingested and surface results in the SIEM Dashboard. Distinct from batch noise candidate analysis — this runs on individual events as they arrive, not on patterns that have already been scored over 7 days.
 
 **Trigger:**
 - Events are analyzed as they arrive via the ingest pipeline
 - `info` severity events are skipped entirely — they are noise by definition and not worth inference time
 - `low`, `medium`, `high`, `critical` severity events are queued for LLM analysis
+
+**Signal types surfaced (only these three appear in AI Alert Analysis):**
+1. **Suspicious** — LLM flagged `cve_safe: false`
+2. **Conflicts suppress rule** — LLM flagged suspicious but an existing suppress rule would have hidden it
+3. **First seen** — process/event_id combination never seen before in this environment (no prior entry in `logs` for this user)
 
 **Queue architecture:**
 - A lightweight in-memory queue in `llmWorker.js` buffers incoming events
@@ -527,30 +532,40 @@ Analyze incoming events as they are ingested and surface results in a dedicated 
 - If the LLM is already running a batch analysis, real-time events are held in queue until it completes
 - Queue is capped at 100 pending events — oldest entries dropped if cap exceeded (prevents memory growth during high-volume bursts)
 
-**IPC flow:**
-- New server-side webhook or polling mechanism pushes new events to the Electron app
-- `llm:realtime-event` IPC channel receives individual event objects
-- `llmWorker.js` enqueues the event and processes when the child is free
-- Results emitted via `llm:realtime-result` push event to the renderer
+**Flow (Electron-originated, VPS-broadcast):**
+1. Ingest route stores events and calls `broadcast('new_events', { count })` to all WS clients
+2. Electron is a WS client — its existing connection receives `new_events`
+3. Electron fetches new events from `/api/siem/logs?since=<last_seen_id>` (new endpoint, authenticated)
+4. New events are passed via `llm:realtime-event` IPC to `llmWorker.js`
+5. `llmWorker.js` enqueues events and processes serially when the child process is free
+6. On each result, Electron POSTs to `/api/siem/realtime/result` (new authenticated endpoint)
+7. VPS stores the result in `realtime_analysis` and calls `broadcast('realtime_analysis', { log_id, signal_type })`
+8. All WS clients (web app, other Electron windows) receive the broadcast and reload the AI Alert Analysis panel
+
+**Key point:** The LLM runs exclusively in Electron. The VPS never runs inference — it only stores results and rebroadcasts. Web-only users see the panel populated by Electron's work.
 
 **Storage:**
 - Results stored in a new `realtime_analysis` table on the VPS (not in `noise_candidates`)
-- Schema: `id, user_id, event_id (FK siem_events), explanation, cve_safe, cve_note, analyzed_at`
+- Schema: `id, user_id, log_id (FK logs), signal_type TEXT ('suspicious'|'suppression_conflict'|'first_seen'), explanation, cve_safe, cve_note, analyzed_at`
 - Rolling 7-day retention — old results purged by noiseCron
 - `cve_safe: false` results are never auto-suppressed and are highlighted in the UI
 
-**Tuning Center dashboard tab:**
-- New "Live Analysis" tab in the Tuning Center navigation (alongside the existing candidates tab)
-- Shows a live-updating table of recent analysis results: event time, source, category, process, severity, LLM verdict, CVE safe flag, explanation
-- Auto-refreshes every 30 seconds
-- Filter by: severity, cve_safe, time range
-- `cve_safe: false` rows highlighted in red with the CVE note visible
-- Events flagged as `cve_safe: false` offer a one-click "Create Alert Rule" shortcut
+**Dashboard UI — AI Alert Analysis panel:**
+- Positioned on the SIEM Dashboard below the Active Alerts table (left column)
+- Tab panel (TOP EVENT IDS / FAILED LOGINS / TOP USERNAMES / ALERT TREND / RULE HITS) moved to the right column, below the BY SEVERITY donut and TOP SOURCES
+- Columns: TIME | SEVERITY | EVENT ID | PROCESS | HOST | SIGNAL TYPE | LLM SUMMARY
+- Rows are clickable — opens the same event detail modal used by Recent Events on the dashboard
+- Modal includes: all event fields, LLM explanation, CVE note, signal type badge
+- Modal actions: Create Case, Add to Existing Case (same as alert queue modal)
+- Updates instantly via WebSocket `realtime_analysis` broadcast — no polling interval
+- `cve_safe: false` rows highlighted in red
+- `first_seen` rows highlighted in amber
+- `suppression_conflict` rows highlighted in orange
 
 **Resource considerations:**
 - Real-time mode recommended for smaller models (Qwen2.5 1.5B, Llama 3.2 3B) to avoid sustained GPU load
 - A warning is shown in Configuration when real-time mode is enabled with a 7B+ model
-- User can disable real-time analysis per-session from the Tuning Center or from Configuration
+- User can disable real-time analysis per-session from Configuration
 
 **Configuration:**
 - New `user_settings` key: `noise_realtime_enabled` (boolean, default `false`)

@@ -94,5 +94,9 @@ contextBridge.exposeInMainWorld('electron', {
     onAnalysisStarted: (cb) => ipcRenderer.on('llm:analysis-started', (_e, info) => cb(info)),
     onDownloadProgress: (cb) => ipcRenderer.on('llm:download-progress', (_e, info) => cb(info)),
     onUpdateAvailable: (cb) => ipcRenderer.on('llm:update-available', (_e, info) => cb(info)),
+    onRealtimeResult: (cb) => ipcRenderer.on('llm:realtime-result', (_e, result) => cb(result)),
+
+    // Renderer → main: new events arrived, trigger real-time analysis queue
+    notifyNewEvents: (authToken, sinceId) => ipcRenderer.invoke('llm:notify-new-events', authToken, sinceId),
   },
 });

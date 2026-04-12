@@ -203,31 +203,44 @@ function buildCompatibilityWarnings(filePath, filename, headerCheck) {
   return warnings;
 }
 
-/** Fetch JSON from an HTTPS URL, following redirects. */
-function fetchJson(url) {
+/** Fetch JSON from an HTTPS URL, following redirects.
+ *  extraHeaders: optional object of additional request headers
+ *  method: 'GET' (default) or 'POST'
+ *  body: string body for POST requests
+ */
+function fetchJson(url, extraHeaders = {}, method = 'GET', body = null) {
   return new Promise((resolve, reject) => {
     function doRequest(requestUrl) {
       const parsed = new URL(requestUrl);
-      https.get({
+      const headers = { 'User-Agent': '0xKudo-SecurityToolkit', 'Accept': 'application/json', ...extraHeaders };
+      const options = {
         hostname: parsed.hostname,
         path: parsed.pathname + parsed.search,
-        headers: { 'User-Agent': '0xKudo-SecurityToolkit', 'Accept': 'application/json' },
-      }, (res) => {
+        method,
+        headers,
+      };
+      if (body) options.headers['Content-Length'] = Buffer.byteLength(body);
+
+      const req = https.request(options, (res) => {
         if ([301, 302, 307, 308].includes(res.statusCode)) {
           doRequest(res.headers.location);
           return;
         }
-        if (res.statusCode !== 200) {
+        if (res.statusCode !== 200 && res.statusCode !== 201) {
           reject(new Error(`HTTP ${res.statusCode}`));
           return;
         }
-        let body = '';
-        res.on('data', chunk => { body += chunk; });
+        let respBody = '';
+        res.on('data', chunk => { respBody += chunk; });
         res.on('end', () => {
-          try { resolve(JSON.parse(body)); } catch (e) { reject(new Error('Invalid JSON in response')); }
+          try { resolve(respBody ? JSON.parse(respBody) : {}); }
+          catch (e) { reject(new Error('Invalid JSON in response')); }
         });
         res.on('error', reject);
-      }).on('error', reject);
+      });
+      req.on('error', reject);
+      if (body) req.write(body);
+      req.end();
     }
     doRequest(url);
   });
@@ -873,6 +886,107 @@ function setupLlmIpc(mainWindow) {
     saveLibrary(lib);
 
     return { ok: true };
+  });
+
+  // llm:notify-new-events ──────────────────────────────────────────────────
+  // Called by renderer when WS broadcast fires new_events and realtime is enabled.
+  // Fetches events since sinceId, enqueues them for analysis.
+  ipcMain.handle('llm:notify-new-events', async (event, authToken, sinceId) => {
+    if (!isValidSender(event)) return;
+    if (typeof authToken !== 'string' || !authToken) return;
+    if (llmStatus === 'loading' || llmStatus === 'running') {
+      llmLog('INFO', 'realtime: LLM busy, skipping new_events fetch');
+      return;
+    }
+
+    let events;
+    try {
+      const resp = await fetchJson(
+        `${LLM_SERVER_URL}/api/siem/realtime/events?since=${sinceId || 0}`,
+        { Authorization: `Bearer ${authToken}` }
+      );
+      if (!Array.isArray(resp) || resp.length === 0) return;
+      events = resp;
+    } catch (e) {
+      llmLog('ERROR', 'realtime: failed to fetch events:', e.message);
+      return;
+    }
+
+    llmLog('INFO', `realtime: queued ${events.length} events for analysis (since=${sinceId})`);
+
+    // Resolve active model
+    let filePath, modelKey, templateFamily;
+    try {
+      const lib = loadLibrary();
+      const active = lib.models.find(m => m.active);
+      if (!active) return;
+      filePath = modelPath(active.filename);
+      modelKey = active.modelKey || null;
+      templateFamily = active.templateFamily || null;
+      if (!fs.existsSync(filePath)) return;
+    } catch (e) {
+      llmLog('ERROR', 'realtime: model resolve failed:', e.message);
+      return;
+    }
+
+    // Build a lookup of event original data keyed by id for signal_type derivation
+    const eventById = {};
+    for (const ev of events) eventById[ev.id] = ev;
+
+    // Shape events as candidates for llmProcess (reuse existing noise format)
+
+    // field_signature is built from available fields for context fetching
+    const candidates = events.map(ev => ({
+      id: ev.id,
+      field_signature: JSON.stringify({
+        event_id: ev.event_id,
+        event_category: ev.event_category,
+        source: ev.source,
+        process_name: ev.process_name,
+      }),
+      daily_avg: 1,
+      days: 1,
+    }));
+
+    try {
+      const results = await runAnalysis(filePath, modelKey, templateFamily, candidates, mainWindow, authToken);
+      for (const result of results) {
+        if (result.error) continue;
+
+        // Derive signal_type using would_suppress flag from server:
+        // 1. cve_safe: false AND would_suppress → suppression_conflict (dangerous false negative)
+        // 2. cve_safe: false AND !would_suppress → suspicious
+        // 3. cve_safe: true → first_seen
+        const ev = eventById[result.id] || {};
+        let signal_type;
+        if (result.cve_safe === false) {
+          signal_type = ev.would_suppress ? 'suppression_conflict' : 'suspicious';
+        } else {
+          signal_type = 'first_seen';
+        }
+
+        try {
+          await fetchJson(`${LLM_SERVER_URL}/api/siem/realtime/result`, {
+            Authorization: `Bearer ${authToken}`,
+            'Content-Type': 'application/json',
+          }, 'POST', JSON.stringify({
+            log_id: result.id,
+            signal_type,
+            explanation: result.explanation || null,
+            cve_safe: result.cve_safe ?? null,
+            cve_note: result.cve_note || null,
+          }));
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send('llm:realtime-result', { ...result, signal_type });
+          }
+          llmLog('INFO', `realtime: stored result log_id=${result.id} signal=${signal_type}`);
+        } catch (e) {
+          llmLog('ERROR', 'realtime: failed to POST result for log', result.id, ':', e.message);
+        }
+      }
+    } catch (e) {
+      llmLog('ERROR', 'realtime: runAnalysis failed:', e.message);
+    }
   });
 }
 

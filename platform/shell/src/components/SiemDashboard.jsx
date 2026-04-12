@@ -492,6 +492,7 @@ export function SiemDashboard({ onNavigate }) {
   const [alertTrend, setAlertTrend] = useState([]);
   const [ruleHits, setRuleHits] = useState([]);
   const [recentAlerts, setRecentAlerts] = useState([]);   // top 5 new alerts
+  const [realtimeResults, setRealtimeResults] = useState([]);
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [loading, setLoading] = useState(true);
@@ -599,6 +600,14 @@ export function SiemDashboard({ onNavigate }) {
     } catch {}
   }, [hours, showSuppressed, getAccessTokenSilently]);
 
+  const loadRealtimeResults = useCallback(async () => {
+    try {
+      const token = await getAccessTokenSilently();
+      const res = await fetch('/api/siem/realtime/results', { headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) setRealtimeResults(await res.json());
+    } catch {}
+  }, [getAccessTokenSilently]);
+
   // Live data: re-runs on any filter change
   useEffect(() => {
     loadLive();
@@ -614,6 +623,10 @@ export function SiemDashboard({ onNavigate }) {
   }, [loadCharts]);
 
   useEffect(() => {
+    loadRealtimeResults();
+  }, [loadRealtimeResults]);
+
+  useEffect(() => {
     const proto = window.location.protocol === 'https:' ? 'wss' : 'ws';
     const ws = new WebSocket(`${proto}://${window.location.host}/ws`);
     let debounce = null;
@@ -624,10 +637,14 @@ export function SiemDashboard({ onNavigate }) {
           clearTimeout(debounce);
           debounce = setTimeout(loadLive, 500);
         }
+        if (msg.type === 'realtime_analysis') {
+          clearTimeout(debounce);
+          debounce = setTimeout(loadRealtimeResults, 500);
+        }
       } catch {}
     };
     return () => { clearTimeout(debounce); if (ws.readyState !== WebSocket.CONNECTING) ws.close(); else ws.onopen = () => ws.close(); };
-  }, [loadLive]);
+  }, [loadLive, loadRealtimeResults]);
 
   const totalSev = severities.reduce((sum, r) => sum + Number(r.count), 0);
   const hasAlerts = recentAlerts.length > 0 || alertSummary.some(r => Number(r.count) > 0);
@@ -710,44 +727,78 @@ export function SiemDashboard({ onNavigate }) {
       </div>
 
       {/* Main Charts + Alerts Row */}
-      <div style={{ display: 'grid', gridTemplateColumns: hasAlerts ? '1fr 1fr' : '1fr', gap: '1px', background: 'var(--border-subtle)', borderBottom: '1px solid var(--border)' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: (hasAlerts || realtimeResults.length > 0) ? '1fr 1fr' : '1fr', gap: '1px', background: 'var(--border-subtle)', borderBottom: '1px solid var(--border)' }}>
 
-        {/* Left: Alerts panel (only when alerts exist) */}
-        {hasAlerts && (
+        {/* Left: Alerts + AI Alert Analysis */}
+        {(hasAlerts || realtimeResults.length > 0) && (
           <div style={{ background: 'var(--bg-surface)', display: 'flex', flexDirection: 'column' }}>
-            <div style={s.alertsPanelHeader}>
-              <div style={s.alertsPanelTitle}>
-                <span>Active Alerts</span>
-                {alertSummary.map(r => (
-                  <span key={r.status} style={s.alertCountChip(r.status === 'new' ? 'var(--severity-critical)' : r.status === 'acknowledged' ? 'var(--severity-medium)' : 'var(--text-muted)')}>
-                    {r.status} {r.count}
+            {/* Active Alerts */}
+            {hasAlerts && (<>
+              <div style={s.alertsPanelHeader}>
+                <div style={s.alertsPanelTitle}>
+                  <span>Active Alerts</span>
+                  {alertSummary.map(r => (
+                    <span key={r.status} style={s.alertCountChip(r.status === 'new' ? 'var(--severity-critical)' : r.status === 'acknowledged' ? 'var(--severity-medium)' : 'var(--text-muted)')}>
+                      {r.status} {r.count}
+                    </span>
+                  ))}
+                </div>
+                <button style={s.btn} onClick={() => onNavigate('alerts')}>View All →</button>
+              </div>
+              {recentAlerts.length === 0 && (
+                <div style={{ padding: '10px 14px', fontSize: '11px', color: 'var(--text-muted)' }}>No new alerts.</div>
+              )}
+              {recentAlerts.map(a => (
+                <div key={a.id} style={s.alertRow}
+                  onClick={() => setSelectedAlert(a)}
+                  onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-primary)'}
+                  onMouseLeave={e => e.currentTarget.style.background = ''}
+                >
+                  <span style={s.sevBadge(sevColor(a.severity))}>{a.severity}</span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden', minWidth: 0 }}>
+                    <span style={{ color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.title}</span>
+                    {a.count > 1 && <span style={{ fontSize: '10px', padding: '1px 5px', border: '1px solid var(--text-muted)', color: 'var(--text-muted)', whiteSpace: 'nowrap', flexShrink: 0 }}>{a.count}×</span>}
                   </span>
-                ))}
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.host || '—'}</span>
+                  <span style={{ fontSize: '11px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{new Date(a.created_at).toLocaleString()}</span>
+                </div>
+              ))}
+            </>)}
+
+            {/* AI Alert Analysis */}
+            {realtimeResults.length > 0 && (
+              <div style={{ borderTop: hasAlerts ? '1px solid var(--border)' : 'none' }}>
+                <div style={{ ...s.alertsPanelHeader, borderBottom: '1px solid var(--border-subtle)' }}>
+                  <div style={s.alertsPanelTitle}>
+                    <span>AI Alert Analysis</span>
+                    <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 'normal' }}>Electron LLM</span>
+                  </div>
+                </div>
+                {realtimeResults.map(r => {
+                  const sigColor = r.signal_type === 'suspicious' ? 'var(--severity-critical)' : r.signal_type === 'suppression_conflict' ? 'var(--severity-high)' : 'var(--severity-medium)';
+                  const sigLabel = r.signal_type === 'suspicious' ? 'SUSPICIOUS' : r.signal_type === 'suppression_conflict' ? 'CONFLICT' : 'FIRST SEEN';
+                  return (
+                    <div key={r.id}
+                      style={{ ...s.alertRow, gridTemplateColumns: 'auto 1fr auto', cursor: 'pointer', borderLeft: `3px solid ${sigColor}` }}
+                      onClick={() => setSelectedEvent({ id: r.log_id, event_id: r.event_id, severity: r.severity, host: r.host, process_name: r.process_name, username: r.username, message: r.message, timestamp: r.timestamp, _llm: { signal_type: r.signal_type, explanation: r.explanation, cve_safe: r.cve_safe, cve_note: r.cve_note } })}
+                      onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-primary)'}
+                      onMouseLeave={e => e.currentTarget.style.background = ''}
+                    >
+                      <span style={{ fontSize: '10px', padding: '1px 5px', border: `1px solid ${sigColor}`, color: sigColor, whiteSpace: 'nowrap', flexShrink: 0 }}>{sigLabel}</span>
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--text-primary)', fontSize: '11px' }}>
+                        {r.explanation || `${r.event_id || ''}${r.host ? ` · ${r.host}` : ''}`}
+                      </span>
+                      <span style={{ fontSize: '10px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{new Date(r.analyzed_at).toLocaleTimeString()}</span>
+                    </div>
+                  );
+                })}
               </div>
-              <button style={s.btn} onClick={() => onNavigate('alerts')}>View All →</button>
-            </div>
-            {recentAlerts.length === 0 && (
-              <div style={{ padding: '10px 14px', fontSize: '11px', color: 'var(--text-muted)' }}>No new alerts.</div>
             )}
-            {recentAlerts.map(a => (
-              <div key={a.id} style={s.alertRow}
-                onClick={() => setSelectedAlert(a)}
-                onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-primary)'}
-                onMouseLeave={e => e.currentTarget.style.background = ''}
-              >
-                <span style={s.sevBadge(sevColor(a.severity))}>{a.severity}</span>
-                <span style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden', minWidth: 0 }}>
-                  <span style={{ color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.title}</span>
-                  {a.count > 1 && <span style={{ fontSize: '10px', padding: '1px 5px', border: '1px solid var(--text-muted)', color: 'var(--text-muted)', whiteSpace: 'nowrap', flexShrink: 0 }}>{a.count}×</span>}
-                </span>
-                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.host || '—'}</span>
-                <span style={{ fontSize: '11px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{new Date(a.created_at).toLocaleString()}</span>
-              </div>
-            ))}
           </div>
         )}
 
-        {/* Right: Severity + Top Sources side by side */}
+        {/* Right: Severity + Top Sources + Insights tabs */}
+        <div style={{ display: 'flex', flexDirection: 'column', background: 'var(--bg-surface)' }}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1px', background: 'var(--border-subtle)' }}>
           <div style={s.chartPanel}>
             <div style={s.chartTitle}>By Severity</div>
@@ -789,10 +840,8 @@ export function SiemDashboard({ onNavigate }) {
             </table>
           </div>
         </div>
-      </div>
-
-      {/* Insights Tabbed Panel */}
-      {(() => {
+        {/* Insights Tabbed Panel — inside right column */}
+        {(() => {
         const TABS = [
           { id: 'event-ids', label: 'Top Event IDs' },
           { id: 'failed-logins', label: 'Failed Logins' },
@@ -963,6 +1012,8 @@ export function SiemDashboard({ onNavigate }) {
           </div>
         );
       })()}
+        </div>{/* end right flex column */}
+      </div>{/* end outer main grid */}
 
       {/* Search Bar */}
       <div style={s.searchBar}>
@@ -1104,6 +1155,26 @@ export function SiemDashboard({ onNavigate }) {
                 </div>
               ))}
               <ProcessTreePanel event={selectedEvent} />
+              {selectedEvent._llm && (
+                <div style={{ marginTop: '12px', padding: '10px 12px', border: '1px solid var(--border)', background: 'var(--bg-primary)' }}>
+                  <div style={{ fontSize: '10px', color: 'var(--text-muted)', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '8px' }}>AI Alert Analysis</div>
+                  {(() => {
+                    const sigColor = selectedEvent._llm.signal_type === 'suspicious' ? 'var(--severity-critical)' : selectedEvent._llm.signal_type === 'suppression_conflict' ? 'var(--severity-high)' : 'var(--severity-medium)';
+                    const sigLabel = selectedEvent._llm.signal_type === 'suspicious' ? 'SUSPICIOUS' : selectedEvent._llm.signal_type === 'suppression_conflict' ? 'SUPPRESSION CONFLICT' : 'FIRST SEEN';
+                    return (<>
+                      <div style={{ marginBottom: '6px' }}>
+                        <span style={{ fontSize: '10px', padding: '1px 6px', border: `1px solid ${sigColor}`, color: sigColor }}>{sigLabel}</span>
+                      </div>
+                      {selectedEvent._llm.explanation && (
+                        <div style={{ fontSize: '11px', color: 'var(--text-primary)', marginBottom: '6px' }}>{selectedEvent._llm.explanation}</div>
+                      )}
+                      {selectedEvent._llm.cve_note && (
+                        <div style={{ fontSize: '11px', color: selectedEvent._llm.cve_safe === false ? 'var(--severity-critical)' : 'var(--text-muted)' }}>{selectedEvent._llm.cve_note}</div>
+                      )}
+                    </>);
+                  })()}
+                </div>
+              )}
             </div>
           </div>
         </div>

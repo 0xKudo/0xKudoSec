@@ -1900,6 +1900,47 @@ function NoiseAdvisorModelsTab({ s }) {
             </button>
           </div>
         </div>
+
+        {/* Real-time analysis toggle */}
+        <RealtimeAnalysisToggle s={s} />
+      </div>
+    </div>
+  );
+}
+
+// ── RealtimeAnalysisToggle ────────────────────────────────────────────────────
+
+function RealtimeAnalysisToggle({ s }) {
+  const [enabled, setEnabled] = useState(
+    () => localStorage.getItem('noise_realtime_enabled') === 'true'
+  );
+
+  function toggle() {
+    const next = !enabled;
+    setEnabled(next);
+    localStorage.setItem('noise_realtime_enabled', String(next));
+  }
+
+  return (
+    <div style={{ marginTop: '24px', borderTop: '1px solid var(--border)', paddingTop: '20px' }}>
+      <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Real-Time Event Analysis</div>
+      <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '12px', lineHeight: 1.6 }}>
+        When enabled, incoming events are analyzed by the embedded LLM as they arrive. Results appear in the AI Alert Analysis panel on the dashboard.
+        Signals surfaced: <strong>suspicious</strong> (CVE match), <strong>suppression conflict</strong> (suppressed but dangerous), <strong>first seen</strong> (new process/event combination).
+      </div>
+      <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '14px', lineHeight: 1.6, padding: '8px 10px', border: '1px solid var(--border-subtle)', background: 'var(--bg-primary)' }}>
+        Recommended for Qwen2.5 1.5B or Llama 3.2 3B. Using a 7B+ model keeps the GPU active continuously and may slow batch Noise Advisor analysis.
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <button
+          style={{ ...s.btnPrimary, marginRight: 0, background: enabled ? 'var(--btn-primary-bg)' : 'none', color: enabled ? 'var(--btn-primary-text)' : 'var(--text-muted)', border: enabled ? 'none' : '1px solid var(--border)' }}
+          onClick={toggle}
+        >
+          {enabled ? 'Enabled' : 'Disabled'}
+        </button>
+        <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+          {enabled ? 'Real-time analysis is active. Disable to stop LLM from queuing incoming events.' : 'Enable to start analyzing incoming events in real time.'}
+        </span>
       </div>
     </div>
   );
