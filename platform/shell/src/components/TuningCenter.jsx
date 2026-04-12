@@ -156,7 +156,7 @@ function groupBySeverity(candidates) {
   }).filter(Boolean);
 }
 
-export default function NoiseAdvisor() {
+export default function TuningCenter() {
   const { getAccessTokenSilently } = useAuth0();
   const isMobile = useIsMobile();
 
@@ -765,10 +765,17 @@ export default function NoiseAdvisor() {
                         const unsafe = isCveUnsafe(c, llmResults);
                         const result = llmResults[c.id];
                         return (
-                          <div key={c.id} style={{ ...s.card, border: unsafe ? '1px solid var(--severity-critical)' : s.card.border }}>
+                          <div key={c.id} style={{ ...s.card, border: (unsafe || c.is_suppression_conflict) ? '1px solid var(--severity-critical)' : s.card.border }}>
+                            {c.is_suppression_conflict && (
+                              <div style={{ fontSize: '10px', fontWeight: 600, color: 'var(--severity-critical)', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '4px' }}>
+                                SUPPRESSION CONFLICT
+                              </div>
+                            )}
                             <div style={s.cardTitle}>{c.field_signature.event_category}</div>
                             <div style={s.cardMeta}>
-                              {[c.field_signature.source, c.field_signature.event_id ? `Event ID ${c.field_signature.event_id}` : null, c.field_signature.process_name, c.field_signature.username].filter(Boolean).join(' / ')}, {parseFloat(c.daily_avg).toFixed(1)}/day
+                              {c.is_suppression_conflict
+                                ? `Rule: ${c.field_signature.suppression_rule_name || 'unknown'} — ${c.field_signature.kb_title || 'CVE match'}`
+                                : [c.field_signature.source, c.field_signature.event_id ? `Event ID ${c.field_signature.event_id}` : null, c.field_signature.process_name, c.field_signature.username].filter(Boolean).join(' / ') + `, ${parseFloat(c.daily_avg).toFixed(1)}/day`}
                             </div>
                             <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap' }}>
                               <span style={s.badge(c.confidence === 'high' ? 'var(--severity-critical)' : 'var(--severity-medium)')}>{c.confidence.toUpperCase()}</span>
@@ -856,12 +863,17 @@ export default function NoiseAdvisor() {
                             const pending = pendingIds.has(c.id);
                             const unsafe = isCveUnsafe(c, llmResults);
                             return (
-                              <tr key={c.id} style={{ opacity: pending ? 0.4 : 1, transition: 'opacity 0.2s', background: unsafe ? 'color-mix(in srgb, var(--severity-critical) 5%, transparent)' : undefined }}>
+                              <tr key={c.id} style={{ opacity: pending ? 0.4 : 1, transition: 'opacity 0.2s', background: (unsafe || c.is_suppression_conflict) ? 'color-mix(in srgb, var(--severity-critical) 5%, transparent)' : undefined }}>
                                 <td style={s.td}><input type="checkbox" checked={selected.has(c.id)} onChange={() => toggleSelect(c.id)} disabled={pending} /></td>
                                 <td style={{ ...s.td, cursor: 'pointer' }} onClick={() => setDetailCandidate({ c, result: llmResults[c.id] })}>
+                                  {c.is_suppression_conflict && (
+                                    <div style={{ fontSize: '10px', fontWeight: 600, color: 'var(--severity-critical)', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '2px' }}>SUPPRESSION CONFLICT</div>
+                                  )}
                                   <div style={{ fontWeight: 600 }}>{c.field_signature.event_category}</div>
                                   <div style={{ color: 'var(--text-muted)', fontSize: '11px' }}>
-                                    {[c.field_signature.source, c.field_signature.event_id ? `Event ID ${c.field_signature.event_id}` : null, c.field_signature.process_name, c.field_signature.username].filter(Boolean).join(' / ')}
+                                    {c.is_suppression_conflict
+                                      ? `Rule: ${c.field_signature.suppression_rule_name || 'unknown'}`
+                                      : [c.field_signature.source, c.field_signature.event_id ? `Event ID ${c.field_signature.event_id}` : null, c.field_signature.process_name, c.field_signature.username].filter(Boolean).join(' / ')}
                                   </div>
                                 </td>
                                 <td style={s.td}>{parseFloat(c.daily_avg).toFixed(1)}/day</td>

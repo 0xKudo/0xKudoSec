@@ -170,7 +170,7 @@ export async function runAutoSuppress(userId) {
     `, [
       userId,
       ruleName,
-      `Auto-created by Noise Advisor (score: ${candidate.score})`,
+      `Auto-created by Tuning Center (score: ${candidate.score})`,
       sig.event_category || null,
       sig.event_id ?? null,
       sig.process_name || null,
@@ -195,6 +195,86 @@ export async function runAutoSuppress(userId) {
   }
 }
 
+// Checks every active suppression rule against the vulnerability KB.
+// If the suppressed event category / process matches a known CVE/attack pattern,
+// create a synthetic noise candidate with is_suppression_conflict = true so the
+// LLM pipeline can flag it to the analyst.
+export async function scoreSuppressConflicts(userId) {
+  const pool = db.getPool();
+
+  // Active suppression rules for this user
+  const { rows: rules } = await pool.query(`
+    SELECT id, name, match_category, match_event_id, match_process, match_username
+    FROM detection_rules
+    WHERE user_id = $1 AND action = 'suppress' AND enabled = true
+  `, [userId]);
+
+  if (!rules.length) return { scored: 0 };
+
+  let scored = 0;
+
+  for (const rule of rules) {
+    // Build KB query: match on process name (attack_patterns) or category
+    const process = rule.match_process || null;
+    const category = rule.match_category || null;
+
+    const { rows: kbMatches } = await pool.query(`
+      SELECT id, title, severity, cvss_score
+      FROM vuln_kb
+      WHERE
+        ($1::text IS NOT NULL AND attack_patterns @> jsonb_build_array($1::text))
+        OR ($2::text IS NOT NULL AND attack_patterns @> jsonb_build_array($2::text))
+      ORDER BY cvss_score DESC NULLS LAST
+      LIMIT 1
+    `, [process, category]);
+
+    if (!kbMatches.length) continue;
+
+    const kb = kbMatches[0];
+
+    // Build a field_signature that mirrors a real noise candidate
+    const field_signature = {
+      source: 'suppression_conflict',
+      event_category: category || 'unknown',
+      event_id: rule.match_event_id || null,
+      process_name: process || null,
+      username: rule.match_username || null,
+      dominant_severity: kb.severity || 'high',
+      suppression_rule_id: rule.id,
+      suppression_rule_name: rule.name,
+      kb_title: kb.title,
+      kb_cvss: kb.cvss_score,
+    };
+
+    // Only insert if not already pending/reviewed — dedupe on suppression_rule_id in field_signature
+    const { rows: existing } = await pool.query(`
+      SELECT id FROM noise_candidates
+      WHERE user_id = $1
+        AND field_signature->>'suppression_rule_id' = $2::text
+        AND status IN ('pending', 'approved', 'rejected', 'auto_created')
+    `, [userId, String(rule.id)]);
+
+    if (existing.length) continue;
+
+    const { rowCount } = await pool.query(`
+      INSERT INTO noise_candidates
+        (user_id, field_signature, score, confidence, daily_avg, first_seen, last_seen, event_count, is_suppression_conflict)
+      VALUES ($1, $2::jsonb, $3, $4, $5, NOW(), NOW(), 0, true)
+      ON CONFLICT DO NOTHING
+    `, [
+      userId,
+      JSON.stringify(field_signature),
+      90,       // high score — suppression conflicts are always high priority
+      'high',
+      0,
+    ]);
+
+    if (rowCount > 0) scored++;
+  }
+
+  return { scored };
+}
+
 export async function scheduleNoiseCron() {
   const cron = (await import('node-cron')).default;
   cron.schedule('30 2 * * *', async () => {
@@ -203,6 +283,7 @@ export async function scheduleNoiseCron() {
     for (const { user_id } of users) {
       try {
         await scoreNoiseCandidates(user_id);
+        await scoreSuppressConflicts(user_id);
         await runAutoSuppress(user_id);
       } catch (err) {
         console.error(`[noise] Error processing user ${user_id}:`, err.message);

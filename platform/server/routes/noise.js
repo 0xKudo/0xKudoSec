@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { requireAuth } from '../middleware/requireAuth.js';
 import db from '../services/db.js';
 import { audit } from '../services/audit.js';
-import { scoreNoiseCandidates, runAutoSuppress } from '../services/noiseCron.js';
+import { scoreNoiseCandidates, runAutoSuppress, scoreSuppressConflicts } from '../services/noiseCron.js';
 import { syncKnowledgeBase } from '../services/kbCron.js';
 
 const router = Router();
@@ -135,7 +135,7 @@ router.patch('/candidates/:id', requireAuth, async (req, res) => {
     `, [
       uid(req),
       ruleName,
-      `Approved from Noise Advisor (score: ${rows[0].score})`,
+      `Approved from Tuning Center (score: ${rows[0].score})`,
       sig.event_category || null,
       sig.event_id ?? null,
       sig.process_name || null,
@@ -207,7 +207,7 @@ router.post('/candidates/bulk', requireAuth, async (req, res) => {
       `, [
         uid(req),
         `[Auto] Suppress ${sig.event_category || 'unknown'}${eventIdLabel}${processLabel} from ${sig.source || 'unknown'}`,
-        `Approved from Noise Advisor (score: ${candidate.score})`,
+        `Approved from Tuning Center (score: ${candidate.score})`,
         sig.event_category || null,
         sig.event_id ?? null,
         sig.process_name || null,
@@ -369,7 +369,7 @@ router.get('/context', requireAuth, async (req, res) => {
     LIMIT 8
   `, [userId, event_category || null, source || null, process_name || null]);
 
-  // 2. Active suppression rules (manually created ones too, not just Noise Advisor)
+  // 2. Active suppression rules (manually created ones too, not just Tuning Center)
   const { rows: ruleRows } = await pool().query(`
     SELECT name, description, match_category, match_event_id, match_process, match_username, created_at
     FROM detection_rules
@@ -442,9 +442,10 @@ router.post('/run', requireAuth, async (req, res) => {
   const userId = uid(req);
   try {
     const result = await scoreNoiseCandidates(userId);
+    const conflictResult = await scoreSuppressConflicts(userId);
     await runAutoSuppress(userId);
-    await audit(userId, 'noise.manual_run', result || {}, req.ip);
-    res.json({ ok: true, result });
+    await audit(userId, 'noise.manual_run', { ...result, suppression_conflicts: conflictResult.scored }, req.ip);
+    res.json({ ok: true, result: { ...result, suppression_conflicts: conflictResult.scored } });
   } catch (e) {
     console.error('[noise] /run error:', e.message);
     res.status(500).json({ ok: false, error: e.message });

@@ -991,7 +991,7 @@ winlogbeat.event_logs:
 
         {/* ── Tab 6: Tuning Center Models (Electron only) ── */}
         {isElectron && tab === 6 && (
-          <NoiseAdvisorModelsTab s={s} />
+          <TuningCenterModelsTab s={s} />
         )}
 
         {/* ── Tab 7: Edit Config (config-editor role + Electron only) ── */}
@@ -1516,9 +1516,9 @@ winlogbeat.event_logs:
   );
 }
 
-// ── NoiseAdvisorModelsTab ─────────────────────────────────────────────────────
+// ── TuningCenterModelsTab ─────────────────────────────────────────────────────
 
-function NoiseAdvisorModelsTab({ s }) {
+function TuningCenterModelsTab({ s }) {
   const { getAccessTokenSilently } = useAuth0();
   const [library, setLibrary] = useState([]);
   const [libraryLoading, setLibraryLoading] = useState(true);
@@ -1929,7 +1929,7 @@ function RealtimeAnalysisToggle({ s }) {
         Signals surfaced: <strong>suspicious</strong> (CVE match), <strong>suppression conflict</strong> (suppressed but dangerous), <strong>first seen</strong> (new process/event combination).
       </div>
       <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '14px', lineHeight: 1.6, padding: '8px 10px', border: '1px solid var(--border-subtle)', background: 'var(--bg-primary)' }}>
-        Recommended for Qwen2.5 1.5B or Llama 3.2 3B. Using a 7B+ model keeps the GPU active continuously and may slow batch Noise Advisor analysis.
+        Recommended for Qwen2.5 1.5B or Llama 3.2 3B. Using a 7B+ model keeps the GPU active continuously and may slow batch Tuning Center analysis.
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
         <button

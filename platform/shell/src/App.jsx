@@ -15,7 +15,7 @@ import { LogSearch } from './components/LogSearch';
 import { Cases } from './components/Cases';
 import { SiemConfiguration } from './components/SiemConfiguration';
 import { AuditLog } from './components/AuditLog';
-import NoiseAdvisor from './components/NoiseAdvisor';
+import TuningCenter from './components/TuningCenter';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { RequireAuth } from './components/RequireAuth';
 import { LandingPage } from './pages/LandingPage';
@@ -449,7 +449,7 @@ function AppInner() {
                     {siemView === 'cases' && <Cases onNavigate={handleSiemNavigate} />}
                     {siemView === 'configuration' && <SiemConfiguration navLayout={navLayout} setNavLayout={setNavLayoutAndPersist} theme={theme} setTheme={setTheme} />}
                     {siemView === 'auditlog' && <AuditLog />}
-                    {siemView === 'noise' && <NoiseAdvisor />}
+                    {siemView === 'noise' && <TuningCenter />}
                     {!['dashboard','alerts','rules','logsearch','cases','configuration','auditlog','noise'].includes(siemView) && (
                       <div style={{ padding: '40px', color: 'var(--text-muted)', fontSize: '13px' }}>
                         {siemView.charAt(0).toUpperCase() + siemView.slice(1)} — coming soon

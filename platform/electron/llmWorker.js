@@ -1,5 +1,5 @@
 /**
- * llmWorker.js — LLM IPC handler for Noise Advisor
+ * llmWorker.js — LLM IPC handler for Tuning Center
  *
  * Manages model lifecycle, downloads, and inference via node-llama-cpp v3.
  * The model is NEVER loaded on startup — only when analysis is triggered.
