@@ -325,38 +325,52 @@ function DonutChart({ severities, sevFilter, onSliceClick, size = 88 }) {
   );
 }
 
-// 24h alert trend sparkline — bar chart, one bar per hour
-function SparklineChart({ data }) {
+// Alert trend sparkline — bar chart, bucket size adapts to time window
+function SparklineChart({ data, hours }) {
   const W = 220, H = 80, BAR_GAP = 2;
-  // Build a full 24-slot array — one per hour, 0-filled for missing hours
   const now = new Date();
-  const slots = Array.from({ length: 24 }, (_, i) => {
-    const slotHour = new Date(now);
-    slotHour.setMinutes(0, 0, 0);
-    slotHour.setHours(now.getHours() - 23 + i);
-    const key = slotHour.toISOString().slice(0, 13); // 'YYYY-MM-DDTHH'
+
+  // Determine bucket size in ms and number of slots
+  let bucketMs, numSlots;
+  if (hours === 1)        { bucketMs = 5 * 60000;  numSlots = 12; }  // 5-min buckets
+  else if (hours === 6)   { bucketMs = 30 * 60000; numSlots = 12; }  // 30-min buckets
+  else if (hours === 24)  { bucketMs = 60 * 60000; numSlots = 24; }  // 1-hour buckets
+  else if (hours === 48)  { bucketMs = 60 * 60000; numSlots = 48; }  // 1-hour buckets
+  else                    { bucketMs = 60 * 60000; numSlots = 168; } // 7d, 1-hour
+
+  const slots = Array.from({ length: numSlots }, (_, i) => {
+    const slotMs = Math.floor(now.getTime() / bucketMs) * bucketMs - (numSlots - 1 - i) * bucketMs;
+    const slotTime = new Date(slotMs);
     const match = data.find(r => {
-      const rHour = new Date(r.hour).toISOString().slice(0, 13);
-      return rHour === key;
+      const rMs = new Date(r.hour).getTime();
+      return Math.abs(rMs - slotMs) < bucketMs / 2;
     });
-    return { hour: slotHour, count: match ? Number(match.count) : 0 };
+    return { hour: slotTime, count: match ? Number(match.count) : 0 };
   });
 
   const max = Math.max(...slots.map(s => s.count), 1);
-  const barW = (W - BAR_GAP * 23) / 24;
+  const barW = Math.max(1, (W - BAR_GAP * (numSlots - 1)) / numSlots);
   const total = slots.reduce((s, r) => s + r.count, 0);
   const [tooltip, setTooltip] = useState(null);
+
+  const labelFmt = hours <= 6
+    ? (d) => d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    : (d) => d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+  const midLabel = hours === 1 ? '-30m' : hours === 6 ? '-3h' : hours === 24 ? '-12h' : hours === 48 ? '-24h' : '-3.5d';
+  const startLabel = hours === 1 ? '-1h' : hours === 6 ? '-6h' : hours === 24 ? '-24h' : hours === 48 ? '-48h' : '-7d';
+  const windowLabel = hours === 168 ? '7d' : `${hours}h`;
 
   return (
     <div style={{ position: 'relative', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
       {tooltip && (
         <div style={{ position: 'absolute', top: 0, left: 0, right: 0, textAlign: 'center', fontSize: '10px', color: 'var(--text-muted)', pointerEvents: 'none' }}>
-          {new Date(tooltip.hour).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} — {tooltip.count} alert{tooltip.count !== 1 ? 's' : ''}
+          {labelFmt(tooltip.hour)} - {tooltip.count} alert{tooltip.count !== 1 ? 's' : ''}
         </div>
       )}
       {!tooltip && (
         <div style={{ position: 'absolute', top: 0, left: 0, right: 0, textAlign: 'center', fontSize: '10px', color: 'var(--text-muted)', pointerEvents: 'none' }}>
-          {total} alert{total !== 1 ? 's' : ''} in last 24h
+          {total} alert{total !== 1 ? 's' : ''} in last {windowLabel}
         </div>
       )}
       <svg width="100%" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{ display: 'block' }}>
@@ -364,7 +378,7 @@ function SparklineChart({ data }) {
           const barH = slot.count === 0 ? 1 : Math.max(3, Math.round((slot.count / max) * H));
           const x = i * (barW + BAR_GAP);
           const y = H - barH;
-          const isRecent = i >= 20;
+          const isRecent = i >= numSlots - Math.ceil(numSlots / 6);
           return (
             <rect
               key={i}
@@ -379,8 +393,8 @@ function SparklineChart({ data }) {
         })}
       </svg>
       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9px', color: 'var(--text-muted)', marginTop: '4px' }}>
-        <span>-24h</span>
-        <span>-12h</span>
+        <span>{startLabel}</span>
+        <span>{midLabel}</span>
         <span>now</span>
       </div>
     </div>
@@ -553,6 +567,7 @@ export function SiemDashboard({ onNavigate }) {
   const [topUsernames, setTopUsernames] = useState([]);
   const [alertTrend, setAlertTrend] = useState([]);
   const [alertHourly, setAlertHourly] = useState([]);
+  const [sparklineHours, setSparklineHours] = useState(24);
   const [ruleHits, setRuleHits] = useState([]);
   const [recentAlerts, setRecentAlerts] = useState([]);   // top 5 new alerts
   const [realtimeResults, setRealtimeResults] = useState([]);
@@ -632,7 +647,7 @@ export function SiemDashboard({ onNavigate }) {
       const sup = showSuppressed ? '&showSuppressed=1' : '';
       const h = `?hours=${hours}`;
 
-      const [sevRes, srcRes, catRes, srcListRes, topIdsRes, failedLoginsRes, topUsersRes, alertTrendRes, ruleHitsRes, alertHourlyRes] = await Promise.all([
+      const [sevRes, srcRes, catRes, srcListRes, topIdsRes, failedLoginsRes, topUsersRes, alertTrendRes, ruleHitsRes] = await Promise.all([
         fetch(`/api/siem/events/by-severity${h}${sup}`, { headers }),
         fetch(`/api/siem/events/by-source${h}`, { headers }),
         fetch(`/api/siem/events/categories${h}`, { headers }),
@@ -642,10 +657,9 @@ export function SiemDashboard({ onNavigate }) {
         fetch(`/api/siem/events/top-usernames${h}`, { headers }),
         fetch('/api/siem/alerts/trend', { headers }),
         fetch(`/api/siem/rules/hit-counts${h}`, { headers }),
-        fetch('/api/siem/alerts/hourly', { headers }),
       ]);
 
-      const [sev, src, cats, srcs, topIds, failedLoginsData, topUsers, trendData, hitsData, hourlyData] = await Promise.all([
+      const [sev, src, cats, srcs, topIds, failedLoginsData, topUsers, trendData, hitsData] = await Promise.all([
         sevRes.ok ? sevRes.json() : Promise.resolve([]),
         srcRes.ok ? srcRes.json() : Promise.resolve([]),
         catRes.ok ? catRes.json() : Promise.resolve([]),
@@ -655,7 +669,6 @@ export function SiemDashboard({ onNavigate }) {
         topUsersRes.ok ? topUsersRes.json() : Promise.resolve([]),
         alertTrendRes.ok ? alertTrendRes.json() : Promise.resolve([]),
         ruleHitsRes.ok ? ruleHitsRes.json() : Promise.resolve([]),
-        alertHourlyRes.ok ? alertHourlyRes.json() : Promise.resolve([]),
       ]);
 
       setSeverities(Array.isArray(sev) ? sev : []);
@@ -666,10 +679,17 @@ export function SiemDashboard({ onNavigate }) {
       setFailedLogins(Array.isArray(failedLoginsData) ? failedLoginsData : []);
       setTopUsernames(Array.isArray(topUsers) ? topUsers : []);
       setAlertTrend(Array.isArray(trendData) ? trendData : []);
-      setAlertHourly(Array.isArray(hourlyData) ? hourlyData : []);
       setRuleHits(Array.isArray(hitsData) ? hitsData : []);
     } catch {}
   }, [hours, showSuppressed, getAccessTokenSilently]);
+
+  const loadSparkline = useCallback(async () => {
+    try {
+      const token = await getAccessTokenSilently();
+      const res = await fetch(`/api/siem/alerts/hourly?hours=${sparklineHours}`, { headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) setAlertHourly(await res.json());
+    } catch {}
+  }, [sparklineHours, getAccessTokenSilently]);
 
   const loadRealtimeResults = useCallback(async () => {
     try {
@@ -692,6 +712,10 @@ export function SiemDashboard({ onNavigate }) {
     const chartsInterval = setInterval(loadCharts, 300000);
     return () => clearInterval(chartsInterval);
   }, [loadCharts]);
+
+  useEffect(() => {
+    loadSparkline();
+  }, [loadSparkline]);
 
   useEffect(() => {
     loadRealtimeResults();
@@ -922,11 +946,28 @@ export function SiemDashboard({ onNavigate }) {
         {/* Right: Severity + Top Sources + Insights tabs */}
         <div style={{ display: 'flex', flexDirection: 'column', background: 'var(--bg-surface)' }}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1px', background: 'var(--border-subtle)' }}>
-          <div style={{ ...s.chartPanel, gap: '8px' }}>
-            <div style={s.chartTitle}>Alert Trend (24h)</div>
+          <div style={{ ...s.chartPanel, gap: '6px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={s.chartTitle}>Alert Trend</div>
+              <div style={{ display: 'flex', gap: '3px' }}>
+                {[1, 6, 24, 48, 168].map(h => (
+                  <button
+                    key={h}
+                    onClick={() => setSparklineHours(h)}
+                    style={{
+                      background: sparklineHours === h ? 'var(--btn-primary-bg)' : 'none',
+                      color: sparklineHours === h ? 'var(--btn-primary-text)' : 'var(--text-muted)',
+                      border: '1px solid var(--border)',
+                      fontFamily: 'var(--font)', fontSize: '9px', padding: '2px 5px',
+                      cursor: 'pointer', letterSpacing: '0.04em',
+                    }}
+                  >{h === 168 ? '7d' : `${h}h`}</button>
+                ))}
+              </div>
+            </div>
             {alertHourly.length === 0
-              ? <div style={{ fontSize: '11px', color: 'var(--text-muted)', flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>No alerts in last 24h</div>
-              : <SparklineChart data={alertHourly} />
+              ? <div style={{ fontSize: '11px', color: 'var(--text-muted)', flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>No alerts in window</div>
+              : <SparklineChart data={alertHourly} hours={sparklineHours} />
             }
           </div>
 

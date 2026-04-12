@@ -465,15 +465,33 @@ router.get('/alerts/trend', wrap(async (req, res) => {
   res.json(rows);
 }));
 
-// GET /siem/alerts/hourly — alert counts per hour for the last 24 hours
+// GET /siem/alerts/hourly — alert counts per bucket for a given time window
+// ?hours=1|6|24|48|168 — 1h uses 5-min buckets, 6h uses 30-min, rest use 1-hour buckets
 router.get('/alerts/hourly', wrap(async (req, res) => {
+  const h = parseInt(req.query.hours, 10);
+  const hours = [1, 6, 24, 48, 168].includes(h) ? h : 24;
+  let trunc, interval;
+  if (hours === 1) { trunc = 'minute'; interval = '5 minutes'; }
+  else if (hours === 6) { trunc = 'minute'; interval = '30 minutes'; }
+  else { trunc = 'hour'; interval = '1 hour'; }
   const { rows } = await pool.query(
-    `SELECT date_trunc('hour', created_at) AS hour, COUNT(*) AS count
+    `SELECT date_trunc($1, created_at) AS hour, COUNT(*) AS count
      FROM alerts
-     WHERE user_id = $1 AND created_at > NOW() - INTERVAL '24 hours'
+     WHERE user_id = $2 AND created_at > NOW() - ($3 || ' hours')::INTERVAL
      GROUP BY hour ORDER BY hour ASC`,
-    [uid(req)]
+    [trunc, uid(req), String(hours)]
   );
+  // re-bucket by interval for sub-hour truncations
+  if (trunc === 'minute') {
+    const bucketMs = interval === '5 minutes' ? 5 * 60000 : 30 * 60000;
+    const buckets = {};
+    for (const row of rows) {
+      const t = new Date(row.hour).getTime();
+      const key = Math.floor(t / bucketMs) * bucketMs;
+      buckets[key] = (buckets[key] || 0) + Number(row.count);
+    }
+    return res.json(Object.entries(buckets).map(([ts, count]) => ({ hour: new Date(Number(ts)).toISOString(), count })));
+  }
   res.json(rows);
 }));
 
