@@ -456,9 +456,7 @@ function AppInner() {
                   <button onClick={() => setRealtimeDisabledBanner(null)} style={{ background: 'none', border: 'none', color: 'var(--severity-critical)', fontFamily: 'var(--font)', fontSize: '11px', cursor: 'pointer', opacity: 0.7, marginLeft: 'auto' }}>✕</button>
                 </div>
               )}
-              {isElectron && siemView === 'configuration'
-                ? <SiemConfiguration navLayout={navLayout} setNavLayout={setNavLayoutAndPersist} theme={theme} setTheme={setTheme} />
-                : (
+              {(
                   <RequireAuth>
                     {/* Always mounted so intervals + WS stay alive; hidden via CSS when not active */}
                     <div style={{ display: siemView === 'dashboard' ? 'contents' : 'none' }}>
@@ -477,8 +475,7 @@ function AppInner() {
                       </div>
                     )}
                   </RequireAuth>
-                )
-              }
+              )}
             </main>
           </>
         )}
