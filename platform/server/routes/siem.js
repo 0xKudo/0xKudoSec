@@ -490,6 +490,33 @@ router.get('/alerts/hourly', wrap(async (req, res) => {
   res.json(Object.entries(buckets).map(([ts, count]) => ({ hour: new Date(Number(ts)).toISOString(), count })));
 }));
 
+// GET /siem/alerts/hourly/detail?hours=N&bucket=<iso-timestamp>
+// Returns alerts whose last_seen falls within the bucket containing the given timestamp.
+router.get('/alerts/hourly/detail', wrap(async (req, res) => {
+  const h = parseInt(req.query.hours, 10);
+  const hours = [1, 6, 24, 48, 168].includes(h) ? h : 24;
+  const bucketMinutes = hours === 1 ? 5 : hours === 6 ? 15 : hours === 24 ? 120 : hours === 48 ? 240 : 1440;
+  const bucketMs = bucketMinutes * 60 * 1000;
+  const bucketTs = parseInt(req.query.bucket, 10);
+  if (!bucketTs || isNaN(bucketTs)) return res.status(400).json({ error: 'bucket must be a millisecond timestamp' });
+  const bucketStart = new Date(bucketTs);
+  const bucketEnd = new Date(bucketTs + bucketMs);
+  const userId = uid(req);
+  const { rows } = await pool.query(
+    `SELECT a.id AS alert_id, a.title, a.severity, a.count, a.last_seen, a.host,
+            l.id AS log_id, l.event_id, l.event_category, l.source, l.process_name,
+            l.username, l.source_ip, l.dest_ip, l.message, l.timestamp
+     FROM alerts a
+     JOIN logs l ON l.id = a.log_id
+     WHERE a.user_id = $1
+       AND a.last_seen >= $2 AND a.last_seen < $3
+     ORDER BY a.last_seen DESC
+     LIMIT 100`,
+    [userId, bucketStart.toISOString(), bucketEnd.toISOString()]
+  );
+  res.json(rows);
+}));
+
 router.get('/rules/hit-counts', wrap(async (req, res) => {
   const hours = hoursParam(req);
   const { rows } = await pool.query(

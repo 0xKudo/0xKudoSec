@@ -335,7 +335,7 @@ const SPARKLINE_CONFIG = {
   168: { bucketMs: 24 * 60 * 60000, numSlots: 7,  fmt: d => d.toLocaleDateString([], { weekday: 'short' }),                 mid: '-3d',  start: '-7d',  label: '7d'  },
 };
 
-function SparklineChart({ data, hours }) {
+function SparklineChart({ data, hours, onBarClick }) {
   const cfg = SPARKLINE_CONFIG[hours] || SPARKLINE_CONFIG[24];
   const { bucketMs, numSlots, fmt, mid, start, label } = cfg;
   const W = 220, H = 72, BAR_GAP = 3;
@@ -348,7 +348,7 @@ function SparklineChart({ data, hours }) {
       const rMs = new Date(r.hour).getTime();
       return Math.abs(rMs - slotMs) < bucketMs / 2;
     });
-    return { hour: slotTime, count: match ? Number(match.count) : 0 };
+    return { hour: slotTime, slotMs, count: match ? Number(match.count) : 0 };
   });
 
   const max = Math.max(...slots.map(s => s.count), 1);
@@ -366,7 +366,6 @@ function SparklineChart({ data, hours }) {
         }
       </div>
       <svg width="100%" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{ display: 'block', marginTop: '18px' }}>
-        {/* baseline */}
         <line x1="0" y1={H} x2={W} y2={H} stroke="var(--border)" strokeWidth="1" opacity="0.4" />
         {slots.map((slot, i) => {
           const barH = slot.count === 0 ? 0 : Math.max(4, Math.round((slot.count / max) * (H - 2)));
@@ -375,7 +374,12 @@ function SparklineChart({ data, hours }) {
           const y = H - barH;
           const isRecent = i >= recentThreshold;
           return (
-            <g key={i} onMouseEnter={() => setTooltip(slot)} onMouseLeave={() => setTooltip(null)} style={{ cursor: 'default' }}>
+            <g key={i}
+              onMouseEnter={() => setTooltip(slot)}
+              onMouseLeave={() => setTooltip(null)}
+              onClick={() => onBarClick && onBarClick(slot.slotMs)}
+              style={{ cursor: onBarClick ? 'pointer' : 'default' }}
+            >
               <rect x={x} y={y} width={barW} height={barH}
                 fill={isRecent ? '#d97706' : 'var(--text-muted)'}
                 opacity={isRecent ? 0.9 : 0.5}
@@ -384,7 +388,6 @@ function SparklineChart({ data, hours }) {
             </g>
           );
         })}
-        {/* empty slot tick marks */}
         {slots.map((slot, i) => {
           if (slot.count > 0) return null;
           const x = i * (barW + BAR_GAP);
@@ -576,6 +579,8 @@ export function SiemDashboard({ onNavigate }) {
   const [error, setError] = useState(null);
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [selectedAlert, setSelectedAlert] = useState(null);
+  const [sparklineBucket, setSparklineBucket] = useState(null); // { slotMs, alerts: [] } | null
+  const [sparklineBucketLoading, setSparklineBucketLoading] = useState(false);
   const [contextMenu, setContextMenu] = useState(null); // { x, y, row }
   const [caseTitle, setCaseTitle] = useState('');
   const [cases, setCases] = useState([]);
@@ -766,6 +771,17 @@ export function SiemDashboard({ onNavigate }) {
   }
 
   const activeFilterCount = [sevFilters.size > 0, catFilter, srcFilter].filter(Boolean).length + visibleCols.filter(v => !v).length;
+
+  async function loadSparklineBucket(slotMs) {
+    setSparklineBucketLoading(true);
+    setSparklineBucket({ slotMs, alerts: [] });
+    try {
+      const token = await getAccessTokenSilently();
+      const res = await fetch(`/api/siem/alerts/hourly/detail?hours=${sparklineHours}&bucket=${slotMs}`, { headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) setSparklineBucket({ slotMs, alerts: await res.json() });
+    } catch {}
+    setSparklineBucketLoading(false);
+  }
 
   async function loadCasesForEvent() {
     try {
@@ -968,7 +984,7 @@ export function SiemDashboard({ onNavigate }) {
             </div>
             {alertHourly.length === 0
               ? <div style={{ fontSize: '11px', color: 'var(--text-muted)', flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>No alerts in window</div>
-              : <SparklineChart data={alertHourly} hours={sparklineHours} />
+              : <SparklineChart data={alertHourly} hours={sparklineHours} onBarClick={loadSparklineBucket} />
             }
           </div>
 
@@ -1247,11 +1263,61 @@ export function SiemDashboard({ onNavigate }) {
         </table>
       </div>
 
+      {sparklineBucket && !selectedEvent && (
+        <div style={s.overlay} onClick={() => setSparklineBucket(null)}>
+          <div style={{ ...s.modal, width: '720px' }} onClick={e => e.stopPropagation()}>
+            <div style={s.modalHeader}>
+              <span style={s.modalTitle}>
+                Alert Trend &nbsp;·&nbsp; {new Date(sparklineBucket.slotMs).toLocaleString()} &nbsp;·&nbsp; {sparklineBucket.alerts.length} alert{sparklineBucket.alerts.length !== 1 ? 's' : ''}
+              </span>
+              <button style={s.modalClose} onClick={() => setSparklineBucket(null)}>✕</button>
+            </div>
+            <div style={s.modalBody}>
+              {sparklineBucketLoading
+                ? <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Loading...</div>
+                : sparklineBucket.alerts.length === 0
+                  ? <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>No alerts in this window.</div>
+                  : (
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
+                      <thead>
+                        <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                          {['Severity', 'Title', 'Host', 'Count', 'Last Seen'].map(h => (
+                            <th key={h} style={{ padding: '4px 8px', textAlign: 'left', color: 'var(--text-muted)', fontWeight: 400, fontSize: '10px', letterSpacing: '0.06em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {sparklineBucket.alerts.map(a => (
+                          <tr key={a.alert_id}
+                            style={{ borderBottom: '1px solid var(--border-subtle)', cursor: 'pointer' }}
+                            onClick={() => { setSelectedEvent(a); loadCasesForEvent(); }}
+                            onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-primary)'}
+                            onMouseLeave={e => e.currentTarget.style.background = ''}
+                          >
+                            <td style={{ padding: '6px 8px', whiteSpace: 'nowrap' }}>
+                              <span style={{ fontSize: '10px', padding: '1px 5px', border: `1px solid ${sevColor(a.severity)}`, color: sevColor(a.severity) }}>{(a.severity || 'unknown').toUpperCase()}</span>
+                            </td>
+                            <td style={{ padding: '6px 8px', color: 'var(--text-primary)', maxWidth: '260px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.title}</td>
+                            <td style={{ padding: '6px 8px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{a.host || '—'}</td>
+                            <td style={{ padding: '6px 8px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{a.count}</td>
+                            <td style={{ padding: '6px 8px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{new Date(a.last_seen).toLocaleString()}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )
+              }
+            </div>
+          </div>
+        </div>
+      )}
+
       {selectedEvent && (
         <div style={s.overlay} onClick={() => { setSelectedEvent(null); setCaseTitle(''); setCases([]); }}>
           <div style={s.modal} onClick={e => e.stopPropagation()}>
             <div style={s.modalHeader}>
               <span style={s.modalTitle}>
+                {sparklineBucket && <span style={{ color: 'var(--text-muted)', cursor: 'pointer', marginRight: '8px' }} onClick={() => { setSelectedEvent(null); setCaseTitle(''); setCases([]); }}>← Back</span>}
                 Event {selectedEvent.event_id || '—'} &nbsp;·&nbsp; {selectedEvent.host || '—'} &nbsp;·&nbsp;
                 <span style={{ color: sevColor(selectedEvent.severity) }}>{selectedEvent.severity || '—'}</span>
               </span>
