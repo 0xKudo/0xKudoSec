@@ -900,6 +900,21 @@ function setupLlmIpc(mainWindow) {
       return;
     }
 
+    // Memory safeguard — skip if less than 1.5GB free RAM to avoid OOM
+    try {
+      const mem = process.getSystemMemoryInfo();
+      const freeMb = mem.free / 1024;
+      if (freeMb < 1536) {
+        llmLog('WARN', `realtime: skipping — only ${Math.round(freeMb)}MB free RAM (threshold 1536MB)`);
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('llm:realtime-disabled', 'Real-time analysis paused: low memory. Free up RAM or disable real-time analysis.');
+        }
+        return;
+      }
+    } catch (e) {
+      llmLog('WARN', 'realtime: could not check memory:', e.message);
+    }
+
     let events;
     try {
       const resp = await fetchJson(
@@ -988,6 +1003,11 @@ function setupLlmIpc(mainWindow) {
       }
     } catch (e) {
       llmLog('ERROR', 'realtime: runAnalysis failed:', e.message);
+      // VRAM/context errors are unrecoverable for this session — disable realtime
+      const isResourceError = /vram|context size|out of memory|insufficient/i.test(e.message);
+      if (isResourceError && mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('llm:realtime-disabled', `Real-time analysis disabled: ${e.message}. Reduce model size or free GPU memory.`);
+      }
     }
   });
 }

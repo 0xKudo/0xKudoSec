@@ -173,6 +173,7 @@ function AppInner() {
   });
   const [menuOpen, setMenuOpen] = useState(false);
   const [keyRotatedBanner, setKeyRotatedBanner] = useState(false);
+  const [realtimeDisabledBanner, setRealtimeDisabledBanner] = useState(null);
   const [navLayout, setNavLayout] = useState(
     () => localStorage.getItem('cybertools_nav_layout') || 'topnav'
   );
@@ -234,6 +235,14 @@ function AppInner() {
       // Reset real-time analysis to off, then re-enable only if user opted into start-on-launch
       const startOnLaunch = localStorage.getItem('noise_realtime_startup') === 'true';
       localStorage.setItem('noise_realtime_enabled', String(startOnLaunch));
+
+      // Listen for memory/VRAM failsafe — disable toggle and show banner
+      if (window.electron?.llm?.onRealtimeDisabled) {
+        window.electron.llm.onRealtimeDisabled((reason) => {
+          localStorage.setItem('noise_realtime_enabled', 'false');
+          setRealtimeDisabledBanner(reason);
+        });
+      }
     }
   }, [isAuthenticated]);
 
@@ -439,6 +448,12 @@ function AppInner() {
                 <div style={{ background: 'var(--bg-surface)', borderBottom: '1px solid var(--accent-amber)', padding: '6px 16px', display: 'flex', alignItems: 'center', gap: '12px', fontSize: '11px', color: 'var(--accent-amber)', flexShrink: 0 }}>
                   <span>Ingest key rotated. Update your Fluent Bit config and restart the agent.</span>
                   <button onClick={() => setKeyRotatedBanner(false)} style={{ background: 'none', border: 'none', color: 'var(--accent-amber)', fontFamily: 'var(--font)', fontSize: '11px', cursor: 'pointer', opacity: 0.7, marginLeft: 'auto' }}>✕</button>
+                </div>
+              )}
+              {realtimeDisabledBanner && (
+                <div style={{ background: 'var(--bg-surface)', borderBottom: '1px solid var(--severity-critical)', padding: '6px 16px', display: 'flex', alignItems: 'center', gap: '12px', fontSize: '11px', color: 'var(--severity-critical)', flexShrink: 0 }}>
+                  <span>Real-time analysis disabled: {realtimeDisabledBanner}</span>
+                  <button onClick={() => setRealtimeDisabledBanner(null)} style={{ background: 'none', border: 'none', color: 'var(--severity-critical)', fontFamily: 'var(--font)', fontSize: '11px', cursor: 'pointer', opacity: 0.7, marginLeft: 'auto' }}>✕</button>
                 </div>
               )}
               {isElectron && siemView === 'configuration'
