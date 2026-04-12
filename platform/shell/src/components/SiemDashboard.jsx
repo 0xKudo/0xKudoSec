@@ -142,7 +142,7 @@ const s = {
   alertsPanelTitle: { fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'flex', alignItems: 'center', gap: '10px' },
   alertCountChip: (color) => ({ fontSize: '10px', padding: '1px 8px', border: `1px solid ${color}`, color, letterSpacing: '0.04em' }),
   alertRow: {
-    display: 'grid', gridTemplateColumns: '80px 1fr 90px 140px',
+    display: 'grid', gridTemplateColumns: '80px 1fr 90px 160px',
     alignItems: 'center', gap: '12px',
     padding: '7px 14px', borderBottom: '1px solid var(--border-subtle)',
     fontSize: '12px', color: 'var(--text-muted)',
@@ -816,7 +816,7 @@ export function SiemDashboard({ onNavigate }) {
                     {a.count > 1 && <span style={{ fontSize: '10px', padding: '1px 5px', border: '1px solid var(--text-muted)', color: 'var(--text-muted)', whiteSpace: 'nowrap', flexShrink: 0 }}>{a.count}×</span>}
                   </span>
                   <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.host || '—'}</span>
-                  <span style={{ fontSize: '11px', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{new Date(a.created_at).toLocaleString()}</span>
+                  <span style={{ fontSize: '11px', color: 'var(--text-muted)', whiteSpace: 'nowrap', textAlign: 'right' }}>{new Date(a.created_at).toLocaleString()}</span>
                 </div>
               ))}
             </>)}
@@ -844,7 +844,7 @@ export function SiemDashboard({ onNavigate }) {
                         {r.explanation || `${r.event_id || ''}${r.host ? ` · ${r.host}` : ''}`}
                       </span>
                       <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '11px' }}>{r.host || '—'}</span>
-                      <span style={{ fontSize: '11px', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{new Date(r.analyzed_at).toLocaleString()}</span>
+                      <span style={{ fontSize: '11px', color: 'var(--text-muted)', whiteSpace: 'nowrap', textAlign: 'right' }}>{new Date(r.analyzed_at).toLocaleString()}</span>
                     </div>
                   );
                 })}
