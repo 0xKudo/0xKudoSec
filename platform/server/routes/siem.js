@@ -474,9 +474,9 @@ router.get('/alerts/hourly', wrap(async (req, res) => {
   const bucketMinutes = hours === 1 ? 5 : hours === 6 ? 30 : hours === 24 ? 120 : hours === 48 ? 240 : 1440;
   const bucketMs = bucketMinutes * 60000;
   const { rows } = await pool.query(
-    `SELECT date_trunc('minute', created_at) AS hour, COUNT(*) AS count
+    `SELECT date_trunc('minute', last_seen) AS hour, COUNT(*) AS count
      FROM alerts
-     WHERE user_id = $1 AND created_at > NOW() - ($2 || ' hours')::INTERVAL
+     WHERE user_id = $1 AND last_seen > NOW() - ($2 || ' hours')::INTERVAL
      GROUP BY hour ORDER BY hour ASC`,
     [uid(req), String(hours)]
   );
