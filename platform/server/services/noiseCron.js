@@ -1,5 +1,6 @@
 import db from './db.js';
 import { audit } from './audit.js';
+import { broadcast } from './wsBroadcast.js';
 
 const HIGH_THRESHOLD = 70;
 const MEDIUM_THRESHOLD = 40;
@@ -269,7 +270,34 @@ export async function scoreSuppressConflicts(userId) {
       0,
     ]);
 
-    if (rowCount > 0) scored++;
+    if (rowCount > 0) {
+      scored++;
+
+      // Find most recent log matching this suppression rule to anchor the dashboard entry
+      const matchConditions = [];
+      const matchParams = [userId];
+      if (category) { matchParams.push(category); matchConditions.push(`event_category = $${matchParams.length}`); }
+      if (rule.match_event_id) { matchParams.push(rule.match_event_id); matchConditions.push(`event_id = $${matchParams.length}`); }
+      if (process) { matchParams.push(process); matchConditions.push(`process_name = $${matchParams.length}`); }
+      const whereClause = matchConditions.length ? ' AND ' + matchConditions.join(' AND ') : '';
+
+      const { rows: logRows } = await pool.query(
+        `SELECT id FROM logs WHERE user_id = $1${whereClause} ORDER BY timestamp DESC LIMIT 1`,
+        matchParams
+      );
+
+      if (logRows.length) {
+        const logId = logRows[0].id;
+        const explanation = `Suppression conflict: rule "${rule.name}" suppresses events matching ${kb.title} (CVSS ${kb.cvss_score ?? 'N/A'}). This pattern is associated with known attack techniques — review before keeping the suppression rule active.`;
+        await pool.query(
+          `INSERT INTO realtime_analysis (user_id, log_id, signal_type, explanation, cve_safe, cve_note)
+           VALUES ($1, $2, 'suppression_conflict', $3, false, $4)
+           ON CONFLICT DO NOTHING`,
+          [userId, logId, explanation, kb.title]
+        );
+        broadcast('realtime_analysis', { user_id: userId, log_id: logId, signal_type: 'suppression_conflict' });
+      }
+    }
   }
 
   return { scored };
