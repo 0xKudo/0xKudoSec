@@ -1953,7 +1953,7 @@ function RealtimeAnalysisToggle({ s }) {
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
         <button
-          style={{ ...s.btnPrimary, marginRight: 0, width: '80px', textAlign: 'center', background: startOnLaunch ? 'var(--btn-primary-bg)' : 'none', color: startOnLaunch ? 'var(--btn-primary-text)' : 'var(--text-muted)', border: startOnLaunch ? 'none' : '1px solid var(--border)' }}
+          style={{ ...s.btnPrimary, marginRight: 0, width: '80px', textAlign: 'center', background: startOnLaunch ? 'var(--btn-primary-bg)' : 'none', color: startOnLaunch ? 'var(--btn-primary-text)' : 'var(--text-muted)', border: '1px solid ' + (startOnLaunch ? 'var(--btn-primary-bg)' : 'var(--border)') }}
           onClick={toggleStartup}
         >
           {startOnLaunch ? 'Enabled' : 'Disabled'}
