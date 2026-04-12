@@ -249,9 +249,14 @@ function AppInner() {
   useEffect(() => {
     if (!isAuthenticated) return;
     const proto = window.location.protocol === 'https:' ? 'wss' : 'ws';
-    const ws = new WebSocket(`${proto}://${window.location.host}/ws`);
+    const url = `${proto}://${window.location.host}/ws`;
     let lastSeenId = 0;
-    ws.onmessage = (e) => {
+    let ws = null;
+    let retryDelay = 1000;
+    let stopped = false;
+    let retryTimer = null;
+
+    function handleMessage(e) {
       try {
         const msg = JSON.parse(e.data);
         if (msg.type === 'ingest_key_rotated') setKeyRotatedBanner(true);
@@ -274,8 +279,28 @@ function AppInner() {
           window.dispatchEvent(new CustomEvent('realtime_analysis_update'));
         }
       } catch {}
+    }
+
+    function connect() {
+      if (stopped) return;
+      ws = new WebSocket(url);
+      ws.onmessage = handleMessage;
+      ws.onopen = () => { retryDelay = 1000; };
+      ws.onclose = () => {
+        if (!stopped) {
+          retryTimer = setTimeout(() => { retryDelay = Math.min(retryDelay * 2, 30000); connect(); }, retryDelay);
+        }
+      };
+      ws.onerror = () => {};
+    }
+
+    connect();
+    return () => {
+      stopped = true;
+      clearTimeout(retryTimer);
+      if (ws && ws.readyState !== WebSocket.CONNECTING) ws.close();
+      else if (ws) ws.onopen = () => ws.close();
     };
-    return () => { if (ws.readyState !== WebSocket.CONNECTING) ws.close(); else ws.onopen = () => ws.close(); };
   }, [isAuthenticated, getAccessTokenSilently]);
   const tools = useTools();
 
