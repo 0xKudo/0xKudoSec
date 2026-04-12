@@ -465,6 +465,18 @@ router.get('/alerts/trend', wrap(async (req, res) => {
   res.json(rows);
 }));
 
+// GET /siem/alerts/hourly — alert counts per hour for the last 24 hours
+router.get('/alerts/hourly', wrap(async (req, res) => {
+  const { rows } = await pool.query(
+    `SELECT date_trunc('hour', created_at) AS hour, COUNT(*) AS count
+     FROM alerts
+     WHERE user_id = $1 AND created_at > NOW() - INTERVAL '24 hours'
+     GROUP BY hour ORDER BY hour ASC`,
+    [uid(req)]
+  );
+  res.json(rows);
+}));
+
 router.get('/rules/hit-counts', wrap(async (req, res) => {
   const hours = hoursParam(req);
   const { rows } = await pool.query(

@@ -325,6 +325,68 @@ function DonutChart({ severities, sevFilter, onSliceClick, size = 88 }) {
   );
 }
 
+// 24h alert trend sparkline — bar chart, one bar per hour
+function SparklineChart({ data }) {
+  const W = 220, H = 80, BAR_GAP = 2;
+  // Build a full 24-slot array — one per hour, 0-filled for missing hours
+  const now = new Date();
+  const slots = Array.from({ length: 24 }, (_, i) => {
+    const slotHour = new Date(now);
+    slotHour.setMinutes(0, 0, 0);
+    slotHour.setHours(now.getHours() - 23 + i);
+    const key = slotHour.toISOString().slice(0, 13); // 'YYYY-MM-DDTHH'
+    const match = data.find(r => {
+      const rHour = new Date(r.hour).toISOString().slice(0, 13);
+      return rHour === key;
+    });
+    return { hour: slotHour, count: match ? Number(match.count) : 0 };
+  });
+
+  const max = Math.max(...slots.map(s => s.count), 1);
+  const barW = (W - BAR_GAP * 23) / 24;
+  const total = slots.reduce((s, r) => s + r.count, 0);
+  const [tooltip, setTooltip] = useState(null);
+
+  return (
+    <div style={{ position: 'relative', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
+      {tooltip && (
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, textAlign: 'center', fontSize: '10px', color: 'var(--text-muted)', pointerEvents: 'none' }}>
+          {new Date(tooltip.hour).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} — {tooltip.count} alert{tooltip.count !== 1 ? 's' : ''}
+        </div>
+      )}
+      {!tooltip && (
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, textAlign: 'center', fontSize: '10px', color: 'var(--text-muted)', pointerEvents: 'none' }}>
+          {total} alert{total !== 1 ? 's' : ''} in last 24h
+        </div>
+      )}
+      <svg width="100%" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{ display: 'block' }}>
+        {slots.map((slot, i) => {
+          const barH = slot.count === 0 ? 1 : Math.max(3, Math.round((slot.count / max) * H));
+          const x = i * (barW + BAR_GAP);
+          const y = H - barH;
+          const isRecent = i >= 20;
+          return (
+            <rect
+              key={i}
+              x={x} y={y} width={barW} height={barH}
+              fill={slot.count === 0 ? 'var(--border)' : isRecent ? 'var(--severity-high)' : 'var(--text-muted)'}
+              opacity={slot.count === 0 ? 0.3 : 0.8}
+              onMouseEnter={() => setTooltip(slot)}
+              onMouseLeave={() => setTooltip(null)}
+              style={{ cursor: slot.count > 0 ? 'default' : undefined }}
+            />
+          );
+        })}
+      </svg>
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9px', color: 'var(--text-muted)', marginTop: '4px' }}>
+        <span>-24h</span>
+        <span>-12h</span>
+        <span>now</span>
+      </div>
+    </div>
+  );
+}
+
 // Slide-in filter panel
 function FilterPanel({ open, onClose, hours, setHours, sevFilters, toggleSevFilter, setSevFilters, catFilter, setCatFilter, srcFilter, setSrcFilter, categories, sourcesList, visibleCols, setVisibleCols, showSuppressed, setShowSuppressed }) {
   if (!open) return null;
@@ -490,6 +552,7 @@ export function SiemDashboard({ onNavigate }) {
   const [failedLogins, setFailedLogins] = useState([]);
   const [topUsernames, setTopUsernames] = useState([]);
   const [alertTrend, setAlertTrend] = useState([]);
+  const [alertHourly, setAlertHourly] = useState([]);
   const [ruleHits, setRuleHits] = useState([]);
   const [recentAlerts, setRecentAlerts] = useState([]);   // top 5 new alerts
   const [realtimeResults, setRealtimeResults] = useState([]);
@@ -569,7 +632,7 @@ export function SiemDashboard({ onNavigate }) {
       const sup = showSuppressed ? '&showSuppressed=1' : '';
       const h = `?hours=${hours}`;
 
-      const [sevRes, srcRes, catRes, srcListRes, topIdsRes, failedLoginsRes, topUsersRes, alertTrendRes, ruleHitsRes] = await Promise.all([
+      const [sevRes, srcRes, catRes, srcListRes, topIdsRes, failedLoginsRes, topUsersRes, alertTrendRes, ruleHitsRes, alertHourlyRes] = await Promise.all([
         fetch(`/api/siem/events/by-severity${h}${sup}`, { headers }),
         fetch(`/api/siem/events/by-source${h}`, { headers }),
         fetch(`/api/siem/events/categories${h}`, { headers }),
@@ -579,9 +642,10 @@ export function SiemDashboard({ onNavigate }) {
         fetch(`/api/siem/events/top-usernames${h}`, { headers }),
         fetch('/api/siem/alerts/trend', { headers }),
         fetch(`/api/siem/rules/hit-counts${h}`, { headers }),
+        fetch('/api/siem/alerts/hourly', { headers }),
       ]);
 
-      const [sev, src, cats, srcs, topIds, failedLoginsData, topUsers, trendData, hitsData] = await Promise.all([
+      const [sev, src, cats, srcs, topIds, failedLoginsData, topUsers, trendData, hitsData, hourlyData] = await Promise.all([
         sevRes.ok ? sevRes.json() : Promise.resolve([]),
         srcRes.ok ? srcRes.json() : Promise.resolve([]),
         catRes.ok ? catRes.json() : Promise.resolve([]),
@@ -591,6 +655,7 @@ export function SiemDashboard({ onNavigate }) {
         topUsersRes.ok ? topUsersRes.json() : Promise.resolve([]),
         alertTrendRes.ok ? alertTrendRes.json() : Promise.resolve([]),
         ruleHitsRes.ok ? ruleHitsRes.json() : Promise.resolve([]),
+        alertHourlyRes.ok ? alertHourlyRes.json() : Promise.resolve([]),
       ]);
 
       setSeverities(Array.isArray(sev) ? sev : []);
@@ -601,6 +666,7 @@ export function SiemDashboard({ onNavigate }) {
       setFailedLogins(Array.isArray(failedLoginsData) ? failedLoginsData : []);
       setTopUsernames(Array.isArray(topUsers) ? topUsers : []);
       setAlertTrend(Array.isArray(trendData) ? trendData : []);
+      setAlertHourly(Array.isArray(hourlyData) ? hourlyData : []);
       setRuleHits(Array.isArray(hitsData) ? hitsData : []);
     } catch {}
   }, [hours, showSuppressed, getAccessTokenSilently]);
@@ -856,25 +922,12 @@ export function SiemDashboard({ onNavigate }) {
         {/* Right: Severity + Top Sources + Insights tabs */}
         <div style={{ display: 'flex', flexDirection: 'column', background: 'var(--bg-surface)' }}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1px', background: 'var(--border-subtle)' }}>
-          <div style={s.chartPanel}>
-            <div style={s.chartTitle}>By Severity</div>
-            <div style={s.donutWrap}>
-              <DonutChart severities={severities} sevFilter={sevFilters.size === 1 ? [...sevFilters][0] : null} onSliceClick={handleDonutClick} size={160} />
-              <div style={s.legend}>
-                {['critical', 'high', 'medium', 'low', 'info'].map(sev => {
-                  const row = severities.find(r => r.severity === sev);
-                  if (!row) return null;
-                  const pct = totalSev ? Math.round((Number(row.count) / totalSev) * 100) : 0;
-                  const isActive = sevFilters.has(sev);
-                  return (
-                    <div key={sev} style={s.legendItem(isActive, sevColor(sev))} onClick={() => handleDonutClick(sev)}>
-                      <div style={s.legendDot(sevColor(sev))} />
-                      {sev} {pct}%
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+          <div style={{ ...s.chartPanel, gap: '8px' }}>
+            <div style={s.chartTitle}>Alert Trend — 24h</div>
+            {alertHourly.length === 0
+              ? <div style={{ fontSize: '11px', color: 'var(--text-muted)', flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>No alerts in last 24h</div>
+              : <SparklineChart data={alertHourly} />
+            }
           </div>
 
           <div style={s.chartPanel}>
