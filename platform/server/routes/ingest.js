@@ -125,8 +125,8 @@ async function insertEvents(events, userId) {
 
   // Run detection rules against only the newly inserted log IDs — fire and forget
   if (insertedIds.length && userId) {
-    runDetectionRules(userId, insertedIds).then(({ created }) => {
-      if (created > 0) broadcast('new_alerts', { count: created });
+    runDetectionRules(userId, insertedIds).then(({ created, deduped }) => {
+      if (created > 0 || deduped > 0) broadcast('new_alerts', { count: created + deduped });
     }).catch(err => console.error('Detection error:', err.message));
   }
 
