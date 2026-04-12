@@ -460,7 +460,10 @@ function AppInner() {
                 ? <SiemConfiguration navLayout={navLayout} setNavLayout={setNavLayoutAndPersist} theme={theme} setTheme={setTheme} />
                 : (
                   <RequireAuth>
-                    {siemView === 'dashboard' && (isMobile ? <SiemDashboardMobile onNavigate={handleSiemNavigate} /> : <SiemDashboard onNavigate={handleSiemNavigate} />)}
+                    {/* Always mounted so intervals + WS stay alive; hidden via CSS when not active */}
+                    <div style={{ display: siemView === 'dashboard' ? 'contents' : 'none' }}>
+                      {isMobile ? <SiemDashboardMobile onNavigate={handleSiemNavigate} /> : <SiemDashboard onNavigate={handleSiemNavigate} />}
+                    </div>
                     {siemView === 'alerts' && <AlertQueue onNavigate={handleSiemNavigate} />}
                     {siemView === 'rules' && <DetectionRules onNavigate={handleSiemNavigate} />}
                     {siemView === 'logsearch' && <LogSearch />}
