@@ -123,7 +123,7 @@ function buildPrompt(candidate, contextText, modelKey, templateFamily) {
     ? `\n\n${contextText}\n\nUse the above analyst decisions to inform your analysis.`
     : '';
 
-  const systemContent = `You are a security analyst assistant.${contextSection}`;
+  const systemContent = `You are a security analyst assistant for the 0xKudo Security Toolkit Tuning Center.${contextSection}`;
   const userContent = `Analyze this SIEM event pattern and answer two questions:
 
 Pattern: ${sig}
