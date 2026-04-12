@@ -326,17 +326,20 @@ function DonutChart({ severities, sevFilter, onSliceClick, size = 88 }) {
 }
 
 // Alert trend sparkline — bar chart, bucket size adapts to time window
-function SparklineChart({ data, hours }) {
-  const W = 220, H = 80, BAR_GAP = 2;
-  const now = new Date();
+// Slot config: always ~24 bars max for readability
+const SPARKLINE_CONFIG = {
+  1:   { bucketMs: 5  * 60000, numSlots: 12, fmt: d => d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), mid: '-30m', start: '-1h',  label: '1h'  },
+  6:   { bucketMs: 15 * 60000, numSlots: 24, fmt: d => d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), mid: '-3h',  start: '-6h',  label: '6h'  },
+  24:  { bucketMs: 2  * 60 * 60000, numSlots: 12, fmt: d => d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), mid: '-12h', start: '-24h', label: '24h' },
+  48:  { bucketMs: 4  * 60 * 60000, numSlots: 12, fmt: d => d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), mid: '-24h', start: '-48h', label: '48h' },
+  168: { bucketMs: 24 * 60 * 60000, numSlots: 7,  fmt: d => d.toLocaleDateString([], { weekday: 'short' }),                 mid: '-3d',  start: '-7d',  label: '7d'  },
+};
 
-  // Determine bucket size in ms and number of slots
-  let bucketMs, numSlots;
-  if (hours === 1)        { bucketMs = 5 * 60000;  numSlots = 12; }  // 5-min buckets
-  else if (hours === 6)   { bucketMs = 30 * 60000; numSlots = 12; }  // 30-min buckets
-  else if (hours === 24)  { bucketMs = 60 * 60000; numSlots = 24; }  // 1-hour buckets
-  else if (hours === 48)  { bucketMs = 60 * 60000; numSlots = 48; }  // 1-hour buckets
-  else                    { bucketMs = 60 * 60000; numSlots = 168; } // 7d, 1-hour
+function SparklineChart({ data, hours }) {
+  const cfg = SPARKLINE_CONFIG[hours] || SPARKLINE_CONFIG[24];
+  const { bucketMs, numSlots, fmt, mid, start, label } = cfg;
+  const W = 220, H = 72, BAR_GAP = 3;
+  const now = new Date();
 
   const slots = Array.from({ length: numSlots }, (_, i) => {
     const slotMs = Math.floor(now.getTime() / bucketMs) * bucketMs - (numSlots - 1 - i) * bucketMs;
@@ -349,52 +352,48 @@ function SparklineChart({ data, hours }) {
   });
 
   const max = Math.max(...slots.map(s => s.count), 1);
-  const barW = Math.max(1, (W - BAR_GAP * (numSlots - 1)) / numSlots);
+  const barW = Math.max(4, (W - BAR_GAP * (numSlots - 1)) / numSlots);
   const total = slots.reduce((s, r) => s + r.count, 0);
   const [tooltip, setTooltip] = useState(null);
-
-  const labelFmt = hours <= 6
-    ? (d) => d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    : (d) => d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-  const midLabel = hours === 1 ? '-30m' : hours === 6 ? '-3h' : hours === 24 ? '-12h' : hours === 48 ? '-24h' : '-3.5d';
-  const startLabel = hours === 1 ? '-1h' : hours === 6 ? '-6h' : hours === 24 ? '-24h' : hours === 48 ? '-48h' : '-7d';
-  const windowLabel = hours === 168 ? '7d' : `${hours}h`;
+  const recentThreshold = numSlots - Math.ceil(numSlots / 4);
 
   return (
     <div style={{ position: 'relative', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
-      {tooltip && (
-        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, textAlign: 'center', fontSize: '10px', color: 'var(--text-muted)', pointerEvents: 'none' }}>
-          {labelFmt(tooltip.hour)} - {tooltip.count} alert{tooltip.count !== 1 ? 's' : ''}
-        </div>
-      )}
-      {!tooltip && (
-        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, textAlign: 'center', fontSize: '10px', color: 'var(--text-muted)', pointerEvents: 'none' }}>
-          {total} alert{total !== 1 ? 's' : ''} in last {windowLabel}
-        </div>
-      )}
-      <svg width="100%" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{ display: 'block' }}>
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, textAlign: 'center', fontSize: '10px', color: 'var(--text-muted)', pointerEvents: 'none', minHeight: '14px' }}>
+        {tooltip
+          ? <>{fmt(tooltip.hour)} - {tooltip.count} alert{tooltip.count !== 1 ? 's' : ''}</>
+          : <>{total} alert{total !== 1 ? 's' : ''} in last {label}</>
+        }
+      </div>
+      <svg width="100%" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{ display: 'block', marginTop: '18px' }}>
+        {/* baseline */}
+        <line x1="0" y1={H} x2={W} y2={H} stroke="var(--border)" strokeWidth="1" opacity="0.4" />
         {slots.map((slot, i) => {
-          const barH = slot.count === 0 ? 1 : Math.max(3, Math.round((slot.count / max) * H));
+          const barH = slot.count === 0 ? 0 : Math.max(4, Math.round((slot.count / max) * (H - 2)));
+          if (barH === 0) return null;
           const x = i * (barW + BAR_GAP);
           const y = H - barH;
-          const isRecent = i >= numSlots - Math.ceil(numSlots / 6);
+          const isRecent = i >= recentThreshold;
           return (
-            <rect
-              key={i}
-              x={x} y={y} width={barW} height={barH}
-              fill={slot.count === 0 ? 'var(--border)' : isRecent ? 'var(--severity-high)' : 'var(--text-muted)'}
-              opacity={slot.count === 0 ? 0.3 : 0.8}
-              onMouseEnter={() => setTooltip(slot)}
-              onMouseLeave={() => setTooltip(null)}
-              style={{ cursor: slot.count > 0 ? 'default' : undefined }}
-            />
+            <g key={i} onMouseEnter={() => setTooltip(slot)} onMouseLeave={() => setTooltip(null)} style={{ cursor: 'default' }}>
+              <rect x={x} y={y} width={barW} height={barH}
+                fill={isRecent ? '#d97706' : 'var(--text-muted)'}
+                opacity={isRecent ? 0.9 : 0.5}
+                rx="1"
+              />
+            </g>
           );
+        })}
+        {/* empty slot tick marks */}
+        {slots.map((slot, i) => {
+          if (slot.count > 0) return null;
+          const x = i * (barW + BAR_GAP);
+          return <rect key={`e${i}`} x={x} y={H - 2} width={barW} height={2} fill="var(--border)" opacity="0.25" rx="0" />;
         })}
       </svg>
       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9px', color: 'var(--text-muted)', marginTop: '4px' }}>
-        <span>{startLabel}</span>
-        <span>{midLabel}</span>
+        <span>{start}</span>
+        <span>{mid}</span>
         <span>now</span>
       </div>
     </div>
