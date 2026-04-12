@@ -500,6 +500,11 @@ export function SiemDashboard({ onNavigate }) {
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [selectedAlert, setSelectedAlert] = useState(null);
   const [contextMenu, setContextMenu] = useState(null); // { x, y, row }
+  const [caseTitle, setCaseTitle] = useState('');
+  const [cases, setCases] = useState([]);
+  const [selectedCaseId, setSelectedCaseId] = useState('');
+  const [creatingCase, setCreatingCase] = useState(false);
+  const [addingToCase, setAddingToCase] = useState(false);
   const loadingRef = useRef(false);
   const [showSuppressed, setShowSuppressed] = useState(false);
 
@@ -671,6 +676,57 @@ export function SiemDashboard({ onNavigate }) {
 
   const activeFilterCount = [sevFilters.size > 0, catFilter, srcFilter].filter(Boolean).length + visibleCols.filter(v => !v).length;
 
+  async function loadCasesForEvent() {
+    try {
+      const token = await getAccessTokenSilently();
+      const res = await fetch('/api/siem/cases', { headers: { Authorization: `Bearer ${token}` } });
+      const data = await res.json();
+      setCases(Array.isArray(data) ? data : []);
+      setSelectedCaseId('');
+    } catch {}
+  }
+
+  async function createCaseFromEvent() {
+    if (!caseTitle.trim() || !selectedEvent) return;
+    setCreatingCase(true);
+    try {
+      const token = await getAccessTokenSilently();
+      const caseRes = await fetch('/api/siem/cases', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: caseTitle.trim(), severity: selectedEvent.severity }),
+      });
+      const newCase = await caseRes.json();
+      if (selectedEvent.alert_id) {
+        await fetch(`/api/siem/cases/${newCase.id}/alerts`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ alert_id: selectedEvent.alert_id }),
+        });
+      }
+      setCaseTitle('');
+      await loadCasesForEvent();
+    } catch {} finally {
+      setCreatingCase(false);
+    }
+  }
+
+  async function addEventToCase() {
+    if (!selectedCaseId || !selectedEvent?.alert_id) return;
+    setAddingToCase(true);
+    try {
+      const token = await getAccessTokenSilently();
+      await fetch(`/api/siem/cases/${selectedCaseId}/alerts`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ alert_id: selectedEvent.alert_id }),
+      });
+      setSelectedCaseId('');
+    } catch {} finally {
+      setAddingToCase(false);
+    }
+  }
+
   return (
     <div style={s.container}>
       <div style={s.pageHeader}>
@@ -771,7 +827,6 @@ export function SiemDashboard({ onNavigate }) {
                 <div style={{ ...s.alertsPanelHeader, borderBottom: '1px solid var(--border-subtle)' }}>
                   <div style={s.alertsPanelTitle}>
                     <span>AI Alert Analysis</span>
-                    <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 'normal' }}>Electron LLM</span>
                   </div>
                 </div>
                 {realtimeResults.map(r => {
@@ -779,12 +834,12 @@ export function SiemDashboard({ onNavigate }) {
                   const sigLabel = r.signal_type === 'suspicious' ? 'SUSPICIOUS' : r.signal_type === 'suppression_conflict' ? 'CONFLICT' : 'FIRST SEEN';
                   return (
                     <div key={r.id}
-                      style={{ ...s.alertRow, gridTemplateColumns: 'auto 1fr auto', cursor: 'pointer', borderLeft: `3px solid ${sigColor}` }}
+                      style={{ ...s.alertRow, gridTemplateColumns: 'auto 1fr auto', cursor: 'pointer' }}
                       onClick={() => setSelectedEvent({ id: r.log_id, event_id: r.event_id, severity: r.severity, host: r.host, process_name: r.process_name, username: r.username, message: r.message, timestamp: r.timestamp, _llm: { signal_type: r.signal_type, explanation: r.explanation, cve_safe: r.cve_safe, cve_note: r.cve_note } })}
                       onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-primary)'}
                       onMouseLeave={e => e.currentTarget.style.background = ''}
                     >
-                      <span style={{ fontSize: '10px', padding: '1px 5px', border: `1px solid ${sigColor}`, color: sigColor, whiteSpace: 'nowrap', flexShrink: 0 }}>{sigLabel}</span>
+                      <span style={{ fontSize: '10px', padding: '2px 5px', border: `1px solid ${sigColor}`, color: sigColor, whiteSpace: 'nowrap', flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>{sigLabel}</span>
                       <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--text-primary)', fontSize: '11px' }}>
                         {r.explanation || `${r.event_id || ''}${r.host ? ` · ${r.host}` : ''}`}
                       </span>
@@ -1087,7 +1142,7 @@ export function SiemDashboard({ onNavigate }) {
               <tr
                 key={row.id}
                 style={{ cursor: 'pointer' }}
-                onClick={() => setSelectedEvent(row)}
+                onClick={() => { setSelectedEvent(row); if (row.alert_id) loadCasesForEvent(); }}
                 onContextMenu={e => { e.preventDefault(); setContextMenu({ x: e.clientX, y: e.clientY, row }); }}
                 onMouseEnter={e => { Array.from(e.currentTarget.cells).forEach(c => c.style.background = 'var(--bg-surface)'); }}
                 onMouseLeave={e => { Array.from(e.currentTarget.cells).forEach(c => c.style.background = ''); }}
@@ -1118,14 +1173,14 @@ export function SiemDashboard({ onNavigate }) {
       </div>
 
       {selectedEvent && (
-        <div style={s.overlay} onClick={() => setSelectedEvent(null)}>
+        <div style={s.overlay} onClick={() => { setSelectedEvent(null); setCaseTitle(''); setCases([]); }}>
           <div style={s.modal} onClick={e => e.stopPropagation()}>
             <div style={s.modalHeader}>
               <span style={s.modalTitle}>
                 Event {selectedEvent.event_id || '—'} &nbsp;·&nbsp; {selectedEvent.host || '—'} &nbsp;·&nbsp;
                 <span style={{ color: sevColor(selectedEvent.severity) }}>{selectedEvent.severity || '—'}</span>
               </span>
-              <button style={s.modalClose} onClick={() => setSelectedEvent(null)}>✕</button>
+              <button style={s.modalClose} onClick={() => { setSelectedEvent(null); setCaseTitle(''); setCases([]); }}>✕</button>
             </div>
             <div style={s.modalBody}>
               {[
@@ -1161,19 +1216,61 @@ export function SiemDashboard({ onNavigate }) {
                   {(() => {
                     const sigColor = selectedEvent._llm.signal_type === 'suspicious' ? 'var(--severity-critical)' : selectedEvent._llm.signal_type === 'suppression_conflict' ? 'var(--severity-high)' : 'var(--severity-medium)';
                     const sigLabel = selectedEvent._llm.signal_type === 'suspicious' ? 'SUSPICIOUS' : selectedEvent._llm.signal_type === 'suppression_conflict' ? 'SUPPRESSION CONFLICT' : 'FIRST SEEN';
+                    const cveId = selectedEvent._llm.cve_note?.match(/CVE-\d{4}-\d+/)?.[0];
                     return (<>
                       <div style={{ marginBottom: '6px' }}>
-                        <span style={{ fontSize: '10px', padding: '1px 6px', border: `1px solid ${sigColor}`, color: sigColor }}>{sigLabel}</span>
+                        <span style={{ fontSize: '10px', padding: '2px 6px', border: `1px solid ${sigColor}`, color: sigColor, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>{sigLabel}</span>
                       </div>
                       {selectedEvent._llm.explanation && (
                         <div style={{ fontSize: '11px', color: 'var(--text-primary)', marginBottom: '6px' }}>{selectedEvent._llm.explanation}</div>
                       )}
                       {selectedEvent._llm.cve_note && (
-                        <div style={{ fontSize: '11px', color: selectedEvent._llm.cve_safe === false ? 'var(--severity-critical)' : 'var(--text-muted)' }}>{selectedEvent._llm.cve_note}</div>
+                        <div style={{ fontSize: '11px', color: selectedEvent._llm.cve_safe === false ? 'var(--severity-critical)' : 'var(--text-muted)' }}>
+                          {cveId
+                            ? <><a href={`https://nvd.nist.gov/vuln/detail/${cveId}`} target="_blank" rel="noreferrer" style={{ color: 'inherit', textDecoration: 'underline' }}>{cveId}</a>{selectedEvent._llm.cve_note.replace(cveId, '').trim() ? ` — ${selectedEvent._llm.cve_note.replace(cveId, '').replace(/^[\s\-—]+/, '')}` : ''}</>
+                            : selectedEvent._llm.cve_note}
+                        </div>
                       )}
                     </>);
                   })()}
                 </div>
+              )}
+              {selectedEvent.alert_id && (
+                <>
+                  <div style={{ marginTop: '16px', borderTop: '1px solid var(--border)', paddingTop: '12px' }}>
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Create Case from Alert</div>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <input
+                        style={{ background: 'var(--bg-primary)', border: '1px solid var(--border)', color: 'var(--text-primary)', fontFamily: 'var(--font)', fontSize: '12px', padding: '6px 10px', outline: 'none', flex: 1 }}
+                        placeholder="Case title..."
+                        value={caseTitle}
+                        onChange={e => setCaseTitle(e.target.value)}
+                        onKeyDown={e => e.key === 'Enter' && createCaseFromEvent()}
+                      />
+                      <button style={s.btn} onClick={createCaseFromEvent} disabled={creatingCase || !caseTitle.trim()}>
+                        {creatingCase ? '...' : 'Create Case'}
+                      </button>
+                    </div>
+                  </div>
+                  {cases.length > 0 && (
+                    <div style={{ marginTop: '10px' }}>
+                      <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Add to Existing Case</div>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <select
+                          style={{ background: 'var(--bg-primary)', border: '1px solid var(--border)', color: 'var(--text-primary)', fontFamily: 'var(--font)', fontSize: '12px', padding: '6px 10px', outline: 'none', flex: 1 }}
+                          value={selectedCaseId}
+                          onChange={e => setSelectedCaseId(e.target.value)}
+                        >
+                          <option value="">Select a case...</option>
+                          {cases.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}
+                        </select>
+                        <button style={s.btn} onClick={addEventToCase} disabled={addingToCase || !selectedCaseId}>
+                          {addingToCase ? '...' : 'Add'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </div>
