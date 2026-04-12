@@ -714,6 +714,8 @@ export function SiemDashboard({ onNavigate }) {
 
   useEffect(() => {
     loadSparkline();
+    const sparklineInterval = setInterval(loadSparkline, 60000);
+    return () => clearInterval(sparklineInterval);
   }, [loadSparkline]);
 
   useEffect(() => {
@@ -995,7 +997,6 @@ export function SiemDashboard({ onNavigate }) {
           { id: 'event-ids', label: 'Top Event IDs' },
           { id: 'failed-logins', label: 'Failed Logins' },
           { id: 'top-usernames', label: 'Top Usernames' },
-          { id: 'alert-trend', label: 'Alert Trend' },
           { id: 'rule-hits', label: 'Rule Hits' },
         ];
         const tabBtn = (id) => ({
@@ -1087,26 +1088,6 @@ export function SiemDashboard({ onNavigate }) {
                     </table>
               )}
               {insightTab === 'top-usernames' && rankTable(topUsernames, 'username', 'Username')}
-              {insightTab === 'alert-trend' && (
-                alertTrend.length === 0
-                  ? <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>No alert data in the last 7 days.</div>
-                  : <table style={{ ...s.sourceTable, maxWidth: '480px' }}>
-                      <thead>
-                        <tr>
-                          <th style={{ ...s.th, position: 'static', background: 'none', padding: '4px 0' }}>Day</th>
-                          <th style={{ ...s.th, position: 'static', background: 'none', padding: '4px 0', textAlign: 'right' }}>Alerts</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {alertTrend.map((r, i) => (
-                          <tr key={i} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                            <td style={{ padding: '5px 0', color: 'var(--text-primary)', fontSize: '11px' }}>{new Date(r.day).toLocaleDateString()}</td>
-                            <td style={{ padding: '5px 0', color: 'var(--text-muted)', textAlign: 'right', fontSize: '11px' }}>{Number(r.count).toLocaleString()}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-              )}
               {insightTab === 'rule-hits' && (
                 ruleHits.length === 0
                   ? <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>No rules configured.</div>
