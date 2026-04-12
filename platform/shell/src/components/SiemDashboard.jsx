@@ -835,7 +835,7 @@ export function SiemDashboard({ onNavigate }) {
                   return (
                     <div key={r.id}
                       style={{ ...s.alertRow, gridTemplateColumns: 'auto 1fr auto', cursor: 'pointer' }}
-                      onClick={() => setSelectedEvent({ id: r.log_id, event_id: r.event_id, severity: r.severity, host: r.host, process_name: r.process_name, username: r.username, message: r.message, timestamp: r.timestamp, _llm: { signal_type: r.signal_type, explanation: r.explanation, cve_safe: r.cve_safe, cve_note: r.cve_note } })}
+                      onClick={() => { setSelectedEvent({ id: r.log_id, event_id: r.event_id, severity: r.severity, host: r.host, process_name: r.process_name, username: r.username, message: r.message, timestamp: r.timestamp, _llm: { signal_type: r.signal_type, explanation: r.explanation, cve_safe: r.cve_safe, cve_note: r.cve_note } }); loadCasesForEvent(); }}
                       onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-primary)'}
                       onMouseLeave={e => e.currentTarget.style.background = ''}
                     >
@@ -1142,7 +1142,7 @@ export function SiemDashboard({ onNavigate }) {
               <tr
                 key={row.id}
                 style={{ cursor: 'pointer' }}
-                onClick={() => { setSelectedEvent(row); if (row.alert_id) loadCasesForEvent(); }}
+                onClick={() => { setSelectedEvent(row); loadCasesForEvent(); }}
                 onContextMenu={e => { e.preventDefault(); setContextMenu({ x: e.clientX, y: e.clientY, row }); }}
                 onMouseEnter={e => { Array.from(e.currentTarget.cells).forEach(c => c.style.background = 'var(--bg-surface)'); }}
                 onMouseLeave={e => { Array.from(e.currentTarget.cells).forEach(c => c.style.background = ''); }}
@@ -1235,8 +1235,7 @@ export function SiemDashboard({ onNavigate }) {
                   })()}
                 </div>
               )}
-              {selectedEvent.alert_id && (
-                <>
+              <>
                   <div style={{ marginTop: '16px', borderTop: '1px solid var(--border)', paddingTop: '12px' }}>
                     <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Create Case from Alert</div>
                     <div style={{ display: 'flex', gap: '8px' }}>
@@ -1270,8 +1269,7 @@ export function SiemDashboard({ onNavigate }) {
                       </div>
                     </div>
                   )}
-                </>
-              )}
+              </>
             </div>
           </div>
         </div>
