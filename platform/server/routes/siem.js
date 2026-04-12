@@ -1232,11 +1232,16 @@ router.post('/realtime/result', wrap(async (req, res) => {
   const { rows: logRows } = await pool.query('SELECT id FROM logs WHERE id = $1 AND user_id = $2', [log_id, userId]);
   if (!logRows.length) return res.status(404).json({ error: 'log not found' });
 
-  // Upsert — if already analyzed skip silently
+  // Upsert — overwrite if already analyzed (re-analysis should update the result)
   await pool.query(
     `INSERT INTO realtime_analysis (user_id, log_id, signal_type, explanation, cve_safe, cve_note)
      VALUES ($1, $2, $3, $4, $5, $6)
-     ON CONFLICT DO NOTHING`,
+     ON CONFLICT (user_id, log_id) DO UPDATE SET
+       signal_type = EXCLUDED.signal_type,
+       explanation = EXCLUDED.explanation,
+       cve_safe    = EXCLUDED.cve_safe,
+       cve_note    = EXCLUDED.cve_note,
+       analyzed_at = NOW()`,
     [userId, log_id, signal_type, explanation || null, cve_safe ?? null, cve_note || null]
   );
 
