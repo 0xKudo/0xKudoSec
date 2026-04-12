@@ -1107,7 +1107,13 @@ export function SiemDashboard({ onNavigate }) {
               {insightTab === 'rule-hits' && (
                 ruleHits.length === 0
                   ? <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>No rules configured.</div>
-                  : <table style={{ ...s.sourceTable, maxWidth: '700px' }}>
+                  : <table style={{ ...s.sourceTable, width: '100%', tableLayout: 'fixed' }}>
+                      <colgroup>
+                        <col style={{ width: 'auto' }} />
+                        <col style={{ width: '80px' }} />
+                        <col style={{ width: '48px' }} />
+                        <col style={{ width: '90px' }} />
+                      </colgroup>
                       <thead>
                         <tr>
                           {['Rule', 'Severity', 'Hits', ''].map(h => (
@@ -1136,9 +1142,9 @@ export function SiemDashboard({ onNavigate }) {
                               onClick={() => filterQuery && setSearch(isActive ? '' : filterQuery)}
                               onMouseEnter={e => { if (filterQuery && !isActive) e.currentTarget.style.background = 'var(--bg-primary)'; }}
                               onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = ''; }}
-                              title={filterQuery ? (isActive ? 'Click to clear filter' : `Filter: ${filterQuery}`) : ''}
+                              title={r.name}
                             >
-                              <td style={{ padding: '5px 8px 5px 0', color: 'var(--text-primary)', fontSize: '11px', fontWeight: isActive ? 'bold' : 'normal' }}>
+                              <td style={{ padding: '5px 8px 5px 0', color: 'var(--text-primary)', fontSize: '11px', fontWeight: isActive ? 'bold' : 'normal', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                 {isActive ? '✕ ' : ''}{r.name}
                               </td>
                               <td style={{ padding: '5px 8px 5px 0', fontSize: '11px' }}><span style={s.sevBadge(sevColor(r.severity))}>{r.severity}</span></td>
