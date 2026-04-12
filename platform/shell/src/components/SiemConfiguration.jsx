@@ -1942,21 +1942,21 @@ function RealtimeAnalysisToggle({ s }) {
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
         <button
-          style={{ ...s.btnPrimary, marginRight: 0, background: enabled ? 'var(--btn-primary-bg)' : 'none', color: enabled ? 'var(--btn-primary-text)' : 'var(--text-muted)', border: enabled ? 'none' : '1px solid var(--border)' }}
+          style={{ ...s.btnPrimary, marginRight: 0, width: '80px', textAlign: 'center', background: enabled ? 'var(--btn-primary-bg)' : 'none', color: enabled ? 'var(--btn-primary-text)' : 'var(--text-muted)', border: enabled ? 'none' : '1px solid var(--border)' }}
           onClick={toggle}
         >
           {enabled ? 'Enabled' : 'Disabled'}
         </button>
         <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-          {enabled ? 'Real-time analysis is active. Disable to stop LLM from queuing incoming events.' : 'Enable to start analyzing incoming events in real time.'}
+          Analyze incoming alerts with the embedded LLM in real time
         </span>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
         <button
-          style={{ ...s.btnPrimary, marginRight: 0, background: startOnLaunch ? 'var(--btn-primary-bg)' : 'none', color: startOnLaunch ? 'var(--btn-primary-text)' : 'var(--text-muted)', border: startOnLaunch ? 'none' : '1px solid var(--border)' }}
+          style={{ ...s.btnPrimary, marginRight: 0, width: '80px', textAlign: 'center', background: startOnLaunch ? 'var(--btn-primary-bg)' : 'none', color: startOnLaunch ? 'var(--btn-primary-text)' : 'var(--text-muted)', border: startOnLaunch ? 'none' : '1px solid var(--border)' }}
           onClick={toggleStartup}
         >
-          {startOnLaunch ? 'On' : 'Off'}
+          {startOnLaunch ? 'Enabled' : 'Disabled'}
         </button>
         <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Start real-time analysis on launch</span>
       </div>
