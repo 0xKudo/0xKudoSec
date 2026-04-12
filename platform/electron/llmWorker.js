@@ -970,16 +970,16 @@ function setupLlmIpc(mainWindow) {
       for (const result of results) {
         if (result.error) continue;
 
-        // Derive signal_type using would_suppress flag from server:
-        // 1. cve_safe: false AND would_suppress → suppression_conflict (dangerous false negative)
-        // 2. cve_safe: false AND !would_suppress → suspicious
-        // 3. cve_safe: true → first_seen
+        // Derive signal_type from LLM assessment:
+        // 1. cve_safe: false AND would_suppress → conflict (CVE match, suppressed = dangerous false negative)
+        // 2. cve_safe: false AND !would_suppress → critical (CVE match, not suppressed)
+        // 3. cve_safe: true → noise (LLM assessed as safe/routine)
         const ev = eventById[result.id] || {}; // result.id === log_id
         let signal_type;
         if (result.cve_safe === false) {
-          signal_type = ev.would_suppress ? 'suppression_conflict' : 'suspicious';
+          signal_type = ev.would_suppress ? 'conflict' : 'critical';
         } else {
-          signal_type = 'first_seen';
+          signal_type = 'noise';
         }
 
         try {

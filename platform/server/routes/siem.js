@@ -1225,7 +1225,7 @@ router.post('/realtime/result', wrap(async (req, res) => {
   const log_id = Number(req.body?.log_id);
   const userId = uid(req);
 
-  const VALID_SIGNALS = ['suspicious', 'suppression_conflict', 'first_seen'];
+  const VALID_SIGNALS = ['critical', 'conflict', 'noise'];
   if (!Number.isInteger(log_id) || log_id <= 0) return res.status(400).json({ error: 'log_id must be a positive integer' });
   if (!VALID_SIGNALS.includes(signal_type)) return res.status(400).json({ error: 'invalid signal_type' });
 

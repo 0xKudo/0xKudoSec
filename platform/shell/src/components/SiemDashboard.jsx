@@ -921,8 +921,8 @@ export function SiemDashboard({ onNavigate }) {
                   </div>
                 </div>
                 {realtimeResults.map(r => {
-                  const sigColor = r.signal_type === 'suspicious' ? 'var(--severity-critical)' : r.signal_type === 'suppression_conflict' ? 'var(--severity-high)' : 'var(--severity-medium)';
-                  const sigLabel = r.signal_type === 'suspicious' ? 'SUSPICIOUS' : r.signal_type === 'suppression_conflict' ? 'CONFLICT' : 'FIRST SEEN';
+                  const sigColor = r.signal_type === 'critical' ? 'var(--severity-critical)' : r.signal_type === 'conflict' ? 'var(--severity-high)' : 'var(--severity-low)';
+                  const sigLabel = r.signal_type === 'critical' ? 'CRITICAL' : r.signal_type === 'conflict' ? 'CONFLICT' : 'NOISE';
                   return (
                     <div key={r.id}
                       style={{ ...s.alertRow, cursor: 'pointer' }}
@@ -1289,8 +1289,8 @@ export function SiemDashboard({ onNavigate }) {
                 <div style={{ marginTop: '12px', padding: '10px 12px', border: '1px solid var(--border)', background: 'var(--bg-primary)' }}>
                   <div style={{ fontSize: '10px', color: 'var(--text-muted)', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '8px' }}>AI Alert Analysis</div>
                   {(() => {
-                    const sigColor = selectedEvent._llm.signal_type === 'suspicious' ? 'var(--severity-critical)' : selectedEvent._llm.signal_type === 'suppression_conflict' ? 'var(--severity-high)' : 'var(--severity-medium)';
-                    const sigLabel = selectedEvent._llm.signal_type === 'suspicious' ? 'SUSPICIOUS' : selectedEvent._llm.signal_type === 'suppression_conflict' ? 'SUPPRESSION CONFLICT' : 'FIRST SEEN';
+                    const sigColor = selectedEvent._llm.signal_type === 'critical' ? 'var(--severity-critical)' : selectedEvent._llm.signal_type === 'conflict' ? 'var(--severity-high)' : 'var(--severity-low)';
+                    const sigLabel = selectedEvent._llm.signal_type === 'critical' ? 'CRITICAL' : selectedEvent._llm.signal_type === 'conflict' ? 'SUPPRESSION CONFLICT' : 'NOISE';
                     const cveId = selectedEvent._llm.cve_note?.match(/CVE-\d{4}-\d+/)?.[0];
                     return (<>
                       <div style={{ marginBottom: '6px' }}>
