@@ -142,7 +142,7 @@ const s = {
   alertsPanelTitle: { fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'flex', alignItems: 'center', gap: '10px' },
   alertCountChip: (color) => ({ fontSize: '10px', padding: '1px 8px', border: `1px solid ${color}`, color, letterSpacing: '0.04em' }),
   alertRow: {
-    display: 'grid', gridTemplateColumns: '80px 1fr 110px 90px',
+    display: 'grid', gridTemplateColumns: '80px 1fr 90px 140px',
     alignItems: 'center', gap: '12px',
     padding: '7px 14px', borderBottom: '1px solid var(--border-subtle)',
     fontSize: '12px', color: 'var(--text-muted)',
@@ -816,7 +816,7 @@ export function SiemDashboard({ onNavigate }) {
                     {a.count > 1 && <span style={{ fontSize: '10px', padding: '1px 5px', border: '1px solid var(--text-muted)', color: 'var(--text-muted)', whiteSpace: 'nowrap', flexShrink: 0 }}>{a.count}×</span>}
                   </span>
                   <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.host || '—'}</span>
-                  <span style={{ fontSize: '11px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{new Date(a.created_at).toLocaleString()}</span>
+                  <span style={{ fontSize: '11px', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{new Date(a.created_at).toLocaleString()}</span>
                 </div>
               ))}
             </>)}
@@ -834,16 +834,17 @@ export function SiemDashboard({ onNavigate }) {
                   const sigLabel = r.signal_type === 'suspicious' ? 'SUSPICIOUS' : r.signal_type === 'suppression_conflict' ? 'CONFLICT' : 'FIRST SEEN';
                   return (
                     <div key={r.id}
-                      style={{ ...s.alertRow, gridTemplateColumns: 'auto 1fr auto', cursor: 'pointer' }}
+                      style={{ ...s.alertRow, cursor: 'pointer' }}
                       onClick={() => { setSelectedEvent({ id: r.log_id, event_id: r.event_id, severity: r.severity, host: r.host, process_name: r.process_name, username: r.username, message: r.message, timestamp: r.timestamp, _llm: { signal_type: r.signal_type, explanation: r.explanation, cve_safe: r.cve_safe, cve_note: r.cve_note } }); loadCasesForEvent(); }}
                       onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-primary)'}
                       onMouseLeave={e => e.currentTarget.style.background = ''}
                     >
-                      <span style={{ fontSize: '10px', padding: '2px 5px', border: `1px solid ${sigColor}`, color: sigColor, whiteSpace: 'nowrap', flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>{sigLabel}</span>
+                      <span style={{ fontSize: '10px', padding: '2px 5px', border: `1px solid ${sigColor}`, color: sigColor, whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>{sigLabel}</span>
                       <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--text-primary)', fontSize: '11px' }}>
                         {r.explanation || `${r.event_id || ''}${r.host ? ` · ${r.host}` : ''}`}
                       </span>
-                      <span style={{ fontSize: '10px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{new Date(r.analyzed_at).toLocaleTimeString()}</span>
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '11px' }}>{r.host || '—'}</span>
+                      <span style={{ fontSize: '11px', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{new Date(r.analyzed_at).toLocaleString()}</span>
                     </div>
                   );
                 })}
