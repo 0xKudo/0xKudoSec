@@ -1221,7 +1221,8 @@ router.get('/realtime/alerts', wrap(async (req, res) => {
 // Called by Electron after LLM analysis of a single event.
 // Stores the result and broadcasts to all WS clients.
 router.post('/realtime/result', wrap(async (req, res) => {
-  const { log_id, signal_type, explanation, cve_safe, cve_note } = req.body || {};
+  const { signal_type, explanation, cve_safe, cve_note } = req.body || {};
+  const log_id = Number(req.body?.log_id);
   const userId = uid(req);
 
   const VALID_SIGNALS = ['suspicious', 'suppression_conflict', 'first_seen'];
