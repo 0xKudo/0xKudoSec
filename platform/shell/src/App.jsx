@@ -245,12 +245,14 @@ function AppInner() {
         if (msg.type === 'ingest_key_rotated') setKeyRotatedBanner(true);
         if (msg.type === 'new_events') {
           setKeyRotatedBanner(false);
-          // In Electron, forward to llmWorker for real-time analysis if enabled
-          if (isElectron && window.electron?.llm?.notifyNewEvents) {
+        }
+        if (msg.type === 'new_alerts') {
+          // In Electron, forward to llmWorker for real-time alert analysis if enabled
+          if (isElectron && window.electron?.llm?.notifyNewAlerts) {
             const realtimeEnabled = localStorage.getItem('noise_realtime_enabled') === 'true';
             if (realtimeEnabled) {
               getAccessTokenSilently().then(token => {
-                window.electron.llm.notifyNewEvents(token, lastSeenId);
+                window.electron.llm.notifyNewAlerts(token, lastSeenId);
               }).catch(() => {});
             }
           }

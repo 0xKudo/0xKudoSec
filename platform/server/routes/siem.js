@@ -1163,56 +1163,33 @@ router.get('/audit-log', wrap(async (req, res) => {
 
 // ── Phase 5: Real-time LLM analysis ──────────────────────────────────────────
 
-// GET /siem/realtime/events?since=<log_id>
-// Returns up to 50 events with id > since, skipping info severity and already-analyzed events.
-// Each event includes would_suppress: true if it matches an active suppress rule.
-// Used by Electron llmWorker after receiving new_events WS broadcast.
-router.get('/realtime/events', wrap(async (req, res) => {
+// GET /siem/realtime/alerts?since=<alert_id>
+// Returns new alerts (status=new) with id > since that haven't been analyzed yet.
+// Used by Electron llmWorker after receiving new_alerts WS broadcast.
+// Alerts are already pre-filtered by detection rules — far lower volume than raw events.
+router.get('/realtime/alerts', wrap(async (req, res) => {
   const sinceId = parseInt(req.query.since, 10);
   if (isNaN(sinceId) || sinceId < 0) return res.status(400).json({ error: 'since must be a non-negative integer' });
   const userId = uid(req);
   const { rows } = await pool.query(
-    `SELECT l.id, l.event_id, l.event_category, l.severity, l.host, l.source,
+    `SELECT a.id AS alert_id, a.title, a.severity, a.rule_id,
+            l.id AS log_id, l.event_id, l.event_category, l.host, l.source,
             l.process_name, l.process_id, l.username, l.source_ip, l.dest_ip,
             l.dest_port, l.message, l.timestamp
-     FROM logs l
-     WHERE l.user_id = $1
-       AND l.id > $2
-       AND l.severity != 'info'
+     FROM alerts a
+     JOIN logs l ON l.id = a.log_id
+     WHERE a.user_id = $1
+       AND a.id > $2
+       AND a.status = 'new'
        AND NOT EXISTS (
          SELECT 1 FROM realtime_analysis ra
          WHERE ra.log_id = l.id AND ra.user_id = $1
        )
-     ORDER BY l.id ASC
-     LIMIT 50`,
+     ORDER BY a.id ASC
+     LIMIT 20`,
     [userId, sinceId]
   );
-  if (!rows.length) return res.json([]);
-
-  // Tag each event with would_suppress — matches any active suppress rule
-  const { rows: rules } = await pool.query(
-    `SELECT * FROM detection_rules WHERE user_id = $1 AND enabled = true AND action = 'suppress'`,
-    [userId]
-  );
-
-  const result = rows.map(ev => {
-    const would_suppress = rules.some(rule => {
-      if (rule.match_event_id && rule.match_event_id !== ev.event_id) return false;
-      if (rule.match_category && ev.event_category !== rule.match_category) return false;
-      if (rule.match_severity && ev.severity !== rule.match_severity) return false;
-      if (rule.match_host && !(ev.host || '').toLowerCase().includes(rule.match_host.toLowerCase())) return false;
-      if (rule.match_process && !(ev.process_name || '').toLowerCase().includes(rule.match_process.toLowerCase())) return false;
-      if (rule.match_username && !(ev.username || '').toLowerCase().includes(rule.match_username.toLowerCase())) return false;
-      if (rule.match_message && !(ev.message || '').toLowerCase().includes(rule.match_message.toLowerCase())) return false;
-      if (rule.match_src_ip && !(ev.source_ip || '').includes(rule.match_src_ip)) return false;
-      if (rule.match_dest_ip && !(ev.dest_ip || '').includes(rule.match_dest_ip)) return false;
-      if (rule.match_dest_port && rule.match_dest_port !== ev.dest_port) return false;
-      return true;
-    });
-    return { ...ev, would_suppress };
-  });
-
-  res.json(result);
+  res.json(rows);
 }));
 
 // POST /siem/realtime/result

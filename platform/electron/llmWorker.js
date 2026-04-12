@@ -888,10 +888,11 @@ function setupLlmIpc(mainWindow) {
     return { ok: true };
   });
 
-  // llm:notify-new-events ──────────────────────────────────────────────────
-  // Called by renderer when WS broadcast fires new_events and realtime is enabled.
-  // Fetches events since sinceId, enqueues them for analysis.
-  ipcMain.handle('llm:notify-new-events', async (event, authToken, sinceId) => {
+  // llm:notify-new-alerts ──────────────────────────────────────────────────
+  // Called by renderer when WS broadcast fires new_alerts and realtime is enabled.
+  // Fetches new unanalyzed alerts since sinceId and runs LLM on each one.
+  // Alerts are pre-filtered by detection rules — far lower volume than raw events.
+  ipcMain.handle('llm:notify-new-alerts', async (event, authToken, sinceId) => {
     if (!isValidSender(event)) return;
     if (typeof authToken !== 'string' || !authToken) return;
     if (llmStatus === 'loading' || llmStatus === 'running') {
@@ -902,7 +903,7 @@ function setupLlmIpc(mainWindow) {
     let events;
     try {
       const resp = await fetchJson(
-        `${LLM_SERVER_URL}/api/siem/realtime/events?since=${sinceId || 0}`,
+        `${LLM_SERVER_URL}/api/siem/realtime/alerts?since=${sinceId || 0}`,
         { Authorization: `Bearer ${authToken}` }
       );
       if (!Array.isArray(resp) || resp.length === 0) return;
@@ -912,7 +913,7 @@ function setupLlmIpc(mainWindow) {
       return;
     }
 
-    llmLog('INFO', `realtime: queued ${events.length} events for analysis (since=${sinceId})`);
+    llmLog('INFO', `realtime: queued ${events.length} alerts for analysis (since=${sinceId})`);
 
     // Resolve active model
     let filePath, modelKey, templateFamily;
@@ -929,20 +930,21 @@ function setupLlmIpc(mainWindow) {
       return;
     }
 
-    // Build a lookup of event original data keyed by id for signal_type derivation
+    // Build a lookup keyed by log_id for signal_type derivation
     const eventById = {};
-    for (const ev of events) eventById[ev.id] = ev;
+    for (const ev of events) eventById[ev.log_id] = ev;
 
-    // Shape events as candidates for llmProcess (reuse existing noise format)
-
-    // field_signature is built from available fields for context fetching
+    // Shape alerts as candidates for llmProcess.
+    // Use log_id as the candidate id so results store against the log.
     const candidates = events.map(ev => ({
-      id: ev.id,
+      id: ev.log_id,
       field_signature: JSON.stringify({
         event_id: ev.event_id,
         event_category: ev.event_category,
         source: ev.source,
         process_name: ev.process_name,
+        alert_title: ev.title,
+        severity: ev.severity,
       }),
       daily_avg: 1,
       days: 1,
@@ -957,7 +959,7 @@ function setupLlmIpc(mainWindow) {
         // 1. cve_safe: false AND would_suppress → suppression_conflict (dangerous false negative)
         // 2. cve_safe: false AND !would_suppress → suspicious
         // 3. cve_safe: true → first_seen
-        const ev = eventById[result.id] || {};
+        const ev = eventById[result.id] || {}; // result.id === log_id
         let signal_type;
         if (result.cve_safe === false) {
           signal_type = ev.would_suppress ? 'suppression_conflict' : 'suspicious';
