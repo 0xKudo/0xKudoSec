@@ -97,7 +97,7 @@ async function insertEvents(events, userId) {
           parent_process_name, parent_process_id, parent_process_guid,
           file_path, registry_key, raw, user_id
         ) VALUES (
-          $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,
+          $1,$2,$3,$4,$5,$6,COALESCE($7, NOW()),$8,$9,$10,$11,
           $12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25
         ) RETURNING id`,
         [

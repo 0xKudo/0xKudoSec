@@ -1189,9 +1189,9 @@ router.get('/audit-log', wrap(async (req, res) => {
 // ── Phase 5: Real-time LLM analysis ──────────────────────────────────────────
 
 // GET /siem/realtime/alerts?since=<alert_id>
-// Returns new alerts (status=new) with id > since that haven't been analyzed yet.
+// Returns new alerts updated in the last 5 minutes that haven't been analyzed yet.
+// Uses last_seen instead of id so deduplicated alerts (count++) still get picked up.
 // Used by Electron llmWorker after receiving new_alerts WS broadcast.
-// Alerts are already pre-filtered by detection rules — far lower volume than raw events.
 router.get('/realtime/alerts', wrap(async (req, res) => {
   const sinceId = parseInt(req.query.since, 10);
   if (isNaN(sinceId) || sinceId < 0) return res.status(400).json({ error: 'since must be a non-negative integer' });
@@ -1204,15 +1204,15 @@ router.get('/realtime/alerts', wrap(async (req, res) => {
      FROM alerts a
      JOIN logs l ON l.id = a.log_id
      WHERE a.user_id = $1
-       AND a.id > $2
        AND a.status = 'new'
+       AND a.last_seen > NOW() - INTERVAL '5 minutes'
        AND NOT EXISTS (
          SELECT 1 FROM realtime_analysis ra
          WHERE ra.log_id = l.id AND ra.user_id = $1
        )
-     ORDER BY a.id ASC
+     ORDER BY a.last_seen ASC
      LIMIT 20`,
-    [userId, sinceId]
+    [userId]
   );
   res.json(rows);
 }));
