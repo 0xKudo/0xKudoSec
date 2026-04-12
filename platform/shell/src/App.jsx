@@ -231,6 +231,10 @@ function AppInner() {
   useEffect(() => {
     if (isElectron && isAuthenticated) {
       setActiveApp('siem');
+      // Auto-enable real-time analysis on startup if user opted in
+      if (localStorage.getItem('noise_realtime_startup') === 'true') {
+        localStorage.setItem('noise_realtime_enabled', 'true');
+      }
     }
   }, [isAuthenticated]);
 

@@ -1914,11 +1914,20 @@ function RealtimeAnalysisToggle({ s }) {
   const [enabled, setEnabled] = useState(
     () => localStorage.getItem('noise_realtime_enabled') === 'true'
   );
+  const [startOnLaunch, setStartOnLaunch] = useState(
+    () => localStorage.getItem('noise_realtime_startup') === 'true'
+  );
 
   function toggle() {
     const next = !enabled;
     setEnabled(next);
     localStorage.setItem('noise_realtime_enabled', String(next));
+  }
+
+  function toggleStartup() {
+    const next = !startOnLaunch;
+    setStartOnLaunch(next);
+    localStorage.setItem('noise_realtime_startup', String(next));
   }
 
   return (
@@ -1931,7 +1940,7 @@ function RealtimeAnalysisToggle({ s }) {
       <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '14px', lineHeight: 1.6, padding: '8px 10px', border: '1px solid var(--border-subtle)', background: 'var(--bg-primary)' }}>
         Recommended for Qwen2.5 1.5B or Llama 3.2 3B. Using a 7B+ model keeps the GPU active continuously and may slow batch Tuning Center analysis.
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
         <button
           style={{ ...s.btnPrimary, marginRight: 0, background: enabled ? 'var(--btn-primary-bg)' : 'none', color: enabled ? 'var(--btn-primary-text)' : 'var(--text-muted)', border: enabled ? 'none' : '1px solid var(--border)' }}
           onClick={toggle}
@@ -1941,6 +1950,15 @@ function RealtimeAnalysisToggle({ s }) {
         <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
           {enabled ? 'Real-time analysis is active. Disable to stop LLM from queuing incoming events.' : 'Enable to start analyzing incoming events in real time.'}
         </span>
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <button
+          style={{ ...s.btnPrimary, marginRight: 0, background: startOnLaunch ? 'var(--btn-primary-bg)' : 'none', color: startOnLaunch ? 'var(--btn-primary-text)' : 'var(--text-muted)', border: startOnLaunch ? 'none' : '1px solid var(--border)' }}
+          onClick={toggleStartup}
+        >
+          {startOnLaunch ? 'On' : 'Off'}
+        </button>
+        <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Start real-time analysis on launch</span>
       </div>
     </div>
   );
