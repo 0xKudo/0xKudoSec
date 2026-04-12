@@ -923,7 +923,7 @@ export function SiemDashboard({ onNavigate }) {
         <div style={{ display: 'flex', flexDirection: 'column', background: 'var(--bg-surface)' }}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1px', background: 'var(--border-subtle)' }}>
           <div style={{ ...s.chartPanel, gap: '8px' }}>
-            <div style={s.chartTitle}>Alert Trend — 24h</div>
+            <div style={s.chartTitle}>Alert Trend (24h)</div>
             {alertHourly.length === 0
               ? <div style={{ fontSize: '11px', color: 'var(--text-muted)', flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>No alerts in last 24h</div>
               : <SparklineChart data={alertHourly} />
