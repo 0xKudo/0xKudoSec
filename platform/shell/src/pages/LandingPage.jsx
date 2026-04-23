@@ -467,7 +467,7 @@ function DesktopLanding({ onLogin }) {
         </div>
         <p style={s.heroNote}>
           <span style={{ color: 'var(--severity-low)' }}>✓</span>
-          {' '}No credit card required
+          {' '}Free desktop app — full SIEM, no subscription needed
         </p>
       </section>
 
@@ -564,9 +564,12 @@ function DesktopLanding({ onLogin }) {
         </div>
       </div>
 
-      {/* Free strip */}
+      {/* Tier strip */}
       <div style={s.freeStrip}>
-        <span style={s.freeText}>No credit card required.</span>
+        <div style={{ display: 'flex', gap: '32px', flexWrap: 'wrap' }}>
+          <span style={s.freeText}><strong>Free:</strong> Desktop app — full SIEM runs locally, all 19 tools, no subscription.</span>
+          <span style={s.freeText}><strong>Paid:</strong> Cloud SIEM — multi-device log ingestion, Claude AI analysis, always-on.</span>
+        </div>
         <button style={s.btnPrimary} onClick={onLogin}>Create Account</button>
       </div>
 
@@ -613,7 +616,7 @@ function MobileLanding({ onLogin }) {
         </div>
         <p style={{ ...s.heroNote, position: 'relative' }}>
           <span style={{ color: 'var(--severity-low)' }}>✓</span>
-          {' '}No credit card required
+          {' '}Free desktop app — full SIEM, no subscription needed
         </p>
       </section>
 
@@ -708,7 +711,10 @@ function MobileLanding({ onLogin }) {
 
       {/* Free strip */}
       <div style={s.freeStripMobile}>
-        <span style={s.freeText}>No credit card required.</span>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <span style={s.freeText}><strong>Free:</strong> Desktop app — full SIEM runs locally, all 19 tools, no subscription.</span>
+          <span style={s.freeText}><strong>Paid:</strong> Cloud SIEM — multi-device log ingestion, Claude AI analysis, always-on.</span>
+        </div>
         <button style={s.btnPrimaryFull} onClick={onLogin}>Create Account</button>
       </div>
 
