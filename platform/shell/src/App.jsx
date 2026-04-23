@@ -18,6 +18,7 @@ import { AuditLog } from './components/AuditLog';
 import TuningCenter from './components/TuningCenter';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { RequireAuth } from './components/RequireAuth';
+import SiemGate from './components/SiemGate';
 import { LandingPage } from './pages/LandingPage';
 import { ElectronHome } from './pages/ElectronHome';
 import { PrivacyPage } from './pages/PrivacyPage';
@@ -483,22 +484,24 @@ function AppInner() {
               )}
               {(
                   <RequireAuth>
-                    {/* Always mounted so intervals + WS stay alive; hidden via CSS when not active */}
-                    <div style={{ display: siemView === 'dashboard' ? 'contents' : 'none' }}>
-                      {isMobile ? <SiemDashboardMobile onNavigate={handleSiemNavigate} /> : <SiemDashboard onNavigate={handleSiemNavigate} />}
-                    </div>
-                    {siemView === 'alerts' && <AlertQueue onNavigate={handleSiemNavigate} />}
-                    {siemView === 'rules' && <DetectionRules onNavigate={handleSiemNavigate} />}
-                    {siemView === 'logsearch' && <LogSearch />}
-                    {siemView === 'cases' && <Cases onNavigate={handleSiemNavigate} />}
-                    {siemView === 'configuration' && <SiemConfiguration navLayout={navLayout} setNavLayout={setNavLayoutAndPersist} theme={theme} setTheme={setTheme} />}
-                    {siemView === 'auditlog' && <AuditLog />}
-                    {siemView === 'noise' && <TuningCenter />}
-                    {!['dashboard','alerts','rules','logsearch','cases','configuration','auditlog','noise'].includes(siemView) && (
-                      <div style={{ padding: '40px', color: 'var(--text-muted)', fontSize: '13px' }}>
-                        {siemView.charAt(0).toUpperCase() + siemView.slice(1)} — coming soon
+                    <SiemGate>
+                      {/* Always mounted so intervals + WS stay alive; hidden via CSS when not active */}
+                      <div style={{ display: siemView === 'dashboard' ? 'contents' : 'none' }}>
+                        {isMobile ? <SiemDashboardMobile onNavigate={handleSiemNavigate} /> : <SiemDashboard onNavigate={handleSiemNavigate} />}
                       </div>
-                    )}
+                      {siemView === 'alerts' && <AlertQueue onNavigate={handleSiemNavigate} />}
+                      {siemView === 'rules' && <DetectionRules onNavigate={handleSiemNavigate} />}
+                      {siemView === 'logsearch' && <LogSearch />}
+                      {siemView === 'cases' && <Cases onNavigate={handleSiemNavigate} />}
+                      {siemView === 'configuration' && <SiemConfiguration navLayout={navLayout} setNavLayout={setNavLayoutAndPersist} theme={theme} setTheme={setTheme} />}
+                      {siemView === 'auditlog' && <AuditLog />}
+                      {siemView === 'noise' && <TuningCenter />}
+                      {!['dashboard','alerts','rules','logsearch','cases','configuration','auditlog','noise'].includes(siemView) && (
+                        <div style={{ padding: '40px', color: 'var(--text-muted)', fontSize: '13px' }}>
+                          {siemView.charAt(0).toUpperCase() + siemView.slice(1)} — coming soon
+                        </div>
+                      )}
+                    </SiemGate>
                   </RequireAuth>
               )}
             </main>
