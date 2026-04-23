@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, shell, protocol, safeStorage, Menu } = require('electron');
+const { app, BrowserWindow, ipcMain, shell, protocol, safeStorage, Menu, dialog } = require('electron');
 const path = require('path');
 const { fork } = require('child_process');
 const { exec } = require('child_process');
@@ -264,6 +264,53 @@ ipcMain.handle('electron:getStorageMode', (event) => {
 ipcMain.handle('electron:getIsPaid', (event) => {
   if (!isValidSender(event)) return true;
   return store.get('isPaid', true);
+});
+
+ipcMain.handle('electron:getStoragePath', (event) => {
+  if (!isValidSender(event)) return null;
+  return store.get('sqlitePath', path.join(app.getPath('userData'), 'siem.db'));
+});
+
+ipcMain.handle('electron:pickStoragePath', async (event) => {
+  if (!isValidSender(event)) return { cancelled: true };
+
+  const result = await dialog.showOpenDialog(mainWindow, {
+    title: 'Choose log storage location',
+    defaultPath: path.dirname(store.get('sqlitePath', path.join(app.getPath('userData'), 'siem.db'))),
+    properties: ['openDirectory'],
+  });
+
+  if (result.cancelled || !result.filePaths.length) return { cancelled: true };
+
+  const newDir = result.filePaths[0];
+  const newPath = path.join(newDir, 'siem.db');
+  const oldPath = store.get('sqlitePath', path.join(app.getPath('userData'), 'siem.db'));
+
+  if (newPath === oldPath) return { cancelled: true };
+
+  // Copy existing DB to new location if it exists
+  if (fs.existsSync(oldPath)) {
+    try {
+      fs.copyFileSync(oldPath, newPath);
+    } catch (e) {
+      return { cancelled: false, error: `Failed to copy database: ${e.message}` };
+    }
+  }
+
+  store.set('sqlitePath', newPath);
+
+  // Restart local server with new path
+  if (serverProcess) {
+    serverProcess.kill();
+    serverProcess = null;
+  }
+  try {
+    await startLocalServer();
+  } catch (e) {
+    return { cancelled: false, error: `Database moved but server restart failed: ${e.message}`, newPath };
+  }
+
+  return { cancelled: false, newPath };
 });
 
 // ── Express server ────────────────────────────────────────────────────────

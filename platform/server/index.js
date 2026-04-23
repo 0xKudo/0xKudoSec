@@ -85,6 +85,9 @@ export async function createApp() {
       '0xKudo', 'siem.db'
     );
     migrateLocal(dbPath);
+
+    const { default: exportRoutes } = await import('./routes/export.js');
+    app.use('/api/local/export', apiRateLimiter, exportRoutes);
   }
   await loadTools(app);
   return app;

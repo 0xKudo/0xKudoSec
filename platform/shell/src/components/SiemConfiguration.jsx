@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useIsMobile } from '../hooks/useIsMobile.js';
+import { useTier } from '../hooks/useTier.js';
 
 // ── Custom DateTimePicker ─────────────────────────────────────────────────────
 const DAYS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
@@ -307,6 +308,9 @@ export function SiemConfiguration({ navLayout, setNavLayout, theme, setTheme }) 
 
   // Electron agent status state
   const isElectron = typeof window !== 'undefined' && window.electron?.isElectron === true;
+  const { storageMode } = useTier();
+  const isLocalMode = isElectron && storageMode === 'local';
+  const localStorageTabIdx = 6 + (isElectron ? 1 : 0) + (isConfigEditor ? 1 : 0);
   const [agentStatus, setAgentStatus] = useState('UNKNOWN');
   const [agentAction, setAgentAction] = useState(null);
   const [trayOnClose, setTrayOnClose] = useState(true);
@@ -730,7 +734,7 @@ winlogbeat.event_logs:
       </div>
 
       <div style={isMobile ? s.tabsMobile : s.tabs}>
-        {(isElectronUnauth ? ['Tuning Center Models'] : [...BASE_TABS, ...(isElectron ? ['Tuning Center Models'] : []), ...(isConfigEditor ? ['Edit Config'] : [])]).map((t, i) => (
+        {(isElectronUnauth ? ['Tuning Center Models'] : [...BASE_TABS, ...(isElectron ? ['Tuning Center Models'] : []), ...(isConfigEditor ? ['Edit Config'] : []), ...(isLocalMode ? ['Local Storage'] : [])]).map((t, i) => (
           <button
             key={t}
             style={isMobile ? s.tabMobile(tab === (isElectronUnauth ? 6 : i)) : s.tab(tab === (isElectronUnauth ? 6 : i))}
@@ -1151,6 +1155,11 @@ winlogbeat.event_logs:
               )
             )}
           </div>
+        )}
+
+        {/* ── Local Storage tab (Electron local mode only) ── */}
+        {isLocalMode && tab === localStorageTabIdx && (
+          <LocalStorageTab s={s} />
         )}
 
         {/* ── Tab 2: Log Retention ── */}
@@ -1959,6 +1968,117 @@ function RealtimeAnalysisToggle({ s }) {
           {startOnLaunch ? 'Enabled' : 'Disabled'}
         </button>
         <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Start real-time analysis on launch</span>
+      </div>
+    </div>
+  );
+}
+
+function LocalStorageTab({ s }) {
+  const [storagePath, setStoragePath] = useState(null);
+  const [picking, setPicking] = useState(false);
+  const [pickMsg, setPickMsg] = useState(null);
+  const [exporting, setExporting] = useState(null);
+
+  useEffect(() => {
+    if (window.electron?.storage?.getStoragePath) {
+      window.electron.storage.getStoragePath().then(setStoragePath);
+    }
+  }, []);
+
+  async function handlePickPath() {
+    setPicking(true);
+    setPickMsg(null);
+    try {
+      const result = await window.electron.storage.pickStoragePath();
+      if (!result.cancelled) {
+        if (result.error) {
+          setPickMsg({ ok: false, text: result.error });
+        } else {
+          setStoragePath(result.newPath);
+          setPickMsg({ ok: true, text: 'Storage location updated.' });
+        }
+      }
+    } finally {
+      setPicking(false);
+    }
+  }
+
+  async function handleExport(resource, format) {
+    const key = `${resource}-${format}`;
+    setExporting(key);
+    try {
+      const res = await fetch(`/api/local/export/${resource}?format=${format}`, {
+        headers: { Accept: '*/*' },
+      });
+      if (!res.ok) throw new Error(`Export failed: ${res.status}`);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+      a.download = `${resource}-${ts}.${format}`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      alert(e.message);
+    } finally {
+      setExporting(null);
+    }
+  }
+
+  const EXPORTS = [
+    { label: 'Logs', resource: 'logs' },
+    { label: 'Alerts', resource: 'alerts' },
+    { label: 'Cases', resource: 'cases' },
+  ];
+  const FORMATS = ['json', 'jsonl', 'csv'];
+
+  return (
+    <div style={s.section}>
+      <div style={s.sectionTitle}>Local Storage</div>
+      <div style={s.sectionDesc}>
+        All SIEM data is stored locally on your device. Nothing is sent to the cloud.
+      </div>
+
+      <div style={{ marginBottom: '28px' }}>
+        <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>Database location</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+          <span style={{ fontSize: '12px', color: 'var(--text-primary)', fontFamily: 'var(--font)', background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '4px', padding: '6px 10px', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {storagePath || 'Loading...'}
+          </span>
+          <button style={s.btnPrimary} onClick={handlePickPath} disabled={picking}>
+            {picking ? 'Moving...' : 'Change Location'}
+          </button>
+        </div>
+        {pickMsg && (
+          <div style={{ marginTop: '8px', fontSize: '11px', color: pickMsg.ok ? 'var(--severity-low)' : 'var(--severity-critical)' }}>
+            {pickMsg.text}
+          </div>
+        )}
+        <div style={{ marginTop: '8px', fontSize: '11px', color: 'var(--text-muted)', lineHeight: 1.5 }}>
+          Changing the location copies your existing database to the new folder and restarts the local server.
+        </div>
+      </div>
+
+      <div>
+        <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '12px' }}>Export data</div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, auto)', gap: '8px', justifyContent: 'start' }}>
+          {EXPORTS.map(({ label, resource }) =>
+            FORMATS.map(fmt => {
+              const key = `${resource}-${fmt}`;
+              return (
+                <button
+                  key={key}
+                  style={{ ...s.btnPrimary, padding: '6px 12px', fontSize: '11px', background: 'transparent', border: '1px solid var(--border)' }}
+                  onClick={() => handleExport(resource, fmt)}
+                  disabled={exporting === key}
+                >
+                  {exporting === key ? 'Exporting...' : `${label} · ${fmt.toUpperCase()}`}
+                </button>
+              );
+            })
+          )}
+        </div>
       </div>
     </div>
   );
