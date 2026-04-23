@@ -45,6 +45,17 @@ contextBridge.exposeInMainWorld('electron', {
     onCallback: (cb) => ipcRenderer.on('auth0:callback', (_e, url) => cb(url)),
   },
 
+  tier: {
+    setTier: (isPaid) => ipcRenderer.invoke('electron:setTier', isPaid),
+    getStorageMode: () => ipcRenderer.invoke('electron:getStorageMode'),
+    getIsPaid: () => ipcRenderer.invoke('electron:getIsPaid'),
+  },
+
+  storage: {
+    getStoragePath: () => ipcRenderer.invoke('electron:getStoragePath'),
+    pickStoragePath: () => ipcRenderer.invoke('electron:pickStoragePath'),
+  },
+
   window: {
     minimize: () => ipcRenderer.send('window:minimize'),
     maximize: () => ipcRenderer.send('window:maximize'),

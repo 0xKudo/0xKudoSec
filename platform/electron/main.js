@@ -192,6 +192,80 @@ function createMainWindow() {
   });
 }
 
+// ── Local server (free tier) ──────────────────────────────────────────────
+function startLocalServer() {
+  return new Promise((resolve, reject) => {
+    if (serverProcess) { resolve(); return; }
+
+    const serverEntry = app.isPackaged
+      ? path.join(process.resourcesPath, 'app.asar.unpacked', 'platform', 'server', 'index.js')
+      : path.join(__dirname, '..', 'server', 'index.js');
+
+    const dbPath = store.get('sqlitePath', path.join(app.getPath('userData'), 'siem.db'));
+
+    const ALLOWED_ENV_VARS = [
+      'AUTH0_DOMAIN', 'AUTH0_CLIENT_ID', 'AUTH0_AUDIENCE',
+      'SHODAN_API_KEY', 'VIRUSTOTAL_API_KEY', 'HUNTER_API_KEY',
+      'IPINFO_TOKEN', 'ABUSEIPDB_API_KEY', 'ABUSECH_API_KEY',
+    ];
+    const env = Object.fromEntries(
+      ALLOWED_ENV_VARS
+        .filter(k => process.env[k] !== undefined)
+        .map(k => [k, process.env[k]])
+    );
+    env.NODE_ENV = 'production';
+    env.STORAGE_MODE = 'local';
+    env.SQLITE_PATH = dbPath;
+    env.PORT = String(SERVER_PORT);
+    env.ALLOWED_ORIGIN = `http://localhost:${SHELL_PORT}`;
+
+    serverProcess = fork(serverEntry, [], { env, stdio: 'pipe', execArgv: [] });
+    serverProcess.stdout?.on('data', d => console.log('[local-server]', d.toString().trim()));
+    serverProcess.stderr?.on('data', d => console.error('[local-server]', d.toString().trim()));
+    serverProcess.on('error', reject);
+
+    const deadline = Date.now() + 15000;
+    function poll() {
+      http.get(`http://localhost:${SERVER_PORT}/health`, (res) => {
+        if (res.statusCode === 200) resolve();
+        else retry();
+      }).on('error', retry);
+    }
+    function retry() {
+      if (Date.now() > deadline) { reject(new Error('Local server failed to start')); return; }
+      setTimeout(poll, 300);
+    }
+    setTimeout(poll, 500);
+  });
+}
+
+ipcMain.handle('electron:setTier', async (event, isPaid) => {
+  if (!isValidSender(event)) return;
+  store.set('isPaid', !!isPaid);
+  store.set('storageMode', isPaid ? 'cloud' : 'local');
+
+  if (!isPaid && app.isPackaged) {
+    try {
+      await startLocalServer();
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.loadURL(`http://localhost:${SERVER_PORT}/app`);
+      }
+    } catch (e) {
+      console.error('Failed to start local server:', e.message);
+    }
+  }
+});
+
+ipcMain.handle('electron:getStorageMode', (event) => {
+  if (!isValidSender(event)) return 'cloud';
+  return store.get('storageMode', 'cloud');
+});
+
+ipcMain.handle('electron:getIsPaid', (event) => {
+  if (!isValidSender(event)) return true;
+  return store.get('isPaid', true);
+});
+
 // ── Express server ────────────────────────────────────────────────────────
 function startServer() {
   return new Promise((resolve, reject) => {
