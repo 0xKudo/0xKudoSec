@@ -1,11 +1,17 @@
 import { Router } from 'express';
 import { requireAuth } from '../middleware/requireAuth.js';
+import { requirePaid } from '../middleware/requirePaid.js';
 import db from '../services/db.js';
 import { audit } from '../services/audit.js';
 import { scoreNoiseCandidates, runAutoSuppress, scoreSuppressConflicts } from '../services/noiseCron.js';
 import { syncKnowledgeBase } from '../services/kbCron.js';
 
 const router = Router();
+if (process.env.STORAGE_MODE !== 'local') {
+  router.use(requireAuth, requirePaid);
+} else {
+  router.use(requireAuth);
+}
 const pool = () => db.getPool();
 const uid = req => req.auth.sub;
 

@@ -11,6 +11,7 @@ import { fileURLToPath } from 'url';
 import archiver from 'archiver';
 import pool from '../services/db.js';
 import { requireAuth } from '../middleware/requireAuth.js';
+import { requirePaid } from '../middleware/requirePaid.js';
 import { runDetectionRules } from '../services/detection.js';
 import { audit } from '../services/audit.js';
 import { broadcast } from '../services/wsBroadcast.js';
@@ -19,7 +20,11 @@ import { ingestKeyLimiter, ruleImportLimiter } from '../middleware/rateLimiter.j
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const router = Router();
-router.use(requireAuth);
+if (process.env.STORAGE_MODE !== 'local') {
+  router.use(requireAuth, requirePaid);
+} else {
+  router.use(requireAuth);
+}
 
 // Wrap async route handlers so unhandled promise rejections reach the error middleware
 function wrap(fn) {

@@ -9,6 +9,7 @@ let _ingestAuthPool;
 import { normalizeEvent } from '../services/ingest/normalizeEvent.js';
 import { broadcast } from '../services/wsBroadcast.js';
 import { requireAuth } from '../middleware/requireAuth.js';
+import { requirePaid } from '../middleware/requirePaid.js';
 import { runDetectionRules } from '../services/detection.js';
 import { audit } from '../services/audit.js';
 import { ingestBeatsLimiter } from '../middleware/rateLimiter.js';
@@ -133,7 +134,10 @@ async function insertEvents(events, userId) {
   return accepted;
 }
 
-router.post('/upload', requireAuth, upload.single('file'), async (req, res, next) => {
+const uploadAuth = process.env.STORAGE_MODE !== 'local'
+  ? [requireAuth, requirePaid]
+  : [requireAuth];
+router.post('/upload', ...uploadAuth, upload.single('file'), async (req, res, next) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
 
