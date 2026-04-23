@@ -14,6 +14,7 @@ import ingestRoutes from './routes/ingest.js';
 import siemRoutes from './routes/siem.js';
 import noiseRoutes from './routes/noise.js';
 import { loadTools } from './loader.js';
+import { migrateLocal } from './db/migrate-sqlite.js';
 import { attachWebSocketServer } from './services/wsBroadcast.js';
 import { startRetentionCron } from './services/retentionCron.js';
 import { scheduleNoiseCron } from './services/noiseCron.js';
@@ -77,6 +78,14 @@ app.use((err, req, res, next) => {
 // createApp sets up the express app and loads tools.
 // Call start() to actually bind to a port (not called during tests).
 export async function createApp() {
+  if (process.env.STORAGE_MODE === 'local') {
+    const { join } = await import('path');
+    const dbPath = process.env.SQLITE_PATH || join(
+      process.env.APPDATA || process.env.HOME || '.',
+      '0xKudo', 'siem.db'
+    );
+    migrateLocal(dbPath);
+  }
   await loadTools(app);
   return app;
 }
