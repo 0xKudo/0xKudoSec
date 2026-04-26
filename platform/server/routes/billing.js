@@ -23,11 +23,28 @@ router.post('/create-checkout-session', requireAuth, async (req, res) => {
   const userEmail = req.auth.email;
   const appUrl = process.env.ALLOWED_ORIGIN || 'https://0xkudo.com';
 
+  // Find or create a Stripe customer with auth0_sub in metadata so it's
+  // available immediately when subscription webhooks fire (before
+  // checkout.session.completed is processed).
+  let customerId;
+  const existing = await getStripe().customers.search({
+    query: `metadata['auth0_sub']:'${userSub}'`,
+  });
+  if (existing.data.length) {
+    customerId = existing.data[0].id;
+  } else {
+    const customer = await getStripe().customers.create({
+      email: userEmail,
+      metadata: { auth0_sub: userSub },
+    });
+    customerId = customer.id;
+  }
+
   const session = await getStripe().checkout.sessions.create({
     mode: 'subscription',
     line_items: [{ price: priceId, quantity: 1 }],
     client_reference_id: userSub,
-    customer_email: userEmail,
+    customer: customerId,
     success_url: `${appUrl}/siem?upgraded=1`,
     cancel_url: `${appUrl}/siem`,
     metadata: { auth0_sub: userSub },
