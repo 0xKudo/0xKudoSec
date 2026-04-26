@@ -15,7 +15,7 @@
     "dev:shipper": "node shipper/index.js",
     "test": "npm run test --workspace=platform/server",
     "electron:dev": "NODE_ENV=development npm run dev & sleep 4 && electron platform/electron/main.js",
-    "electron:build": "npm run build --workspace=platform/shell && electron-builder --config platform/electron/electron-builder.yml --projectDir platform/electron"
+    "electron:build": "npm run build --workspace=platform/shell && electron-builder --config electron-builder.yml --projectDir platform/electron"
   },
   "devDependencies": {
     "concurrently": "^9.2.1"
