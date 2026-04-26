@@ -13,6 +13,7 @@ import apiRoutes from './routes/tools.js';
 import ingestRoutes from './routes/ingest.js';
 import siemRoutes from './routes/siem.js';
 import noiseRoutes from './routes/noise.js';
+import billingRoutes, { webhookHandler } from './routes/billing.js';
 import { loadTools } from './loader.js';
 import { migrateLocal } from './db/migrate-sqlite.js';
 import { attachWebSocketServer } from './services/wsBroadcast.js';
@@ -57,6 +58,8 @@ app.post('/api/csp-report', express.json({ type: 'application/csp-report', limit
 app.use('/api/ingest', express.json({ limit: '10mb' }), apiRateLimiter, ingestRoutes);
 app.use('/api/siem/noise', express.json({ limit: '50kb' }), apiRateLimiter, noiseRoutes);
 app.use('/api/siem', express.json({ limit: '50kb' }), apiRateLimiter, siemRoutes);
+app.post('/api/billing/webhook', express.raw({ type: 'application/json' }), apiRateLimiter, webhookHandler);
+app.use('/api/billing', express.json({ limit: '50kb' }), apiRateLimiter, billingRoutes);
 app.use(express.json({ limit: '50kb' }));
 app.use('/api', apiRateLimiter);
 app.use('/api', apiRoutes);
