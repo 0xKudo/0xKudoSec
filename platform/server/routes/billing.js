@@ -60,27 +60,34 @@ router.post('/create-portal-session', requireAuth, async (req, res) => {
 async function handleWebhookEvent(event) {
   const { type, data } = event;
   const obj = data.object;
+  console.log('[billing/webhook] event:', type);
 
   if (type === 'checkout.session.completed') {
     const userSub = obj.client_reference_id;
+    console.log('[billing/webhook] checkout completed, userSub:', userSub, 'customer:', obj.customer);
     if (userSub && obj.customer) {
       await getStripe().customers.update(obj.customer, {
         metadata: { auth0_sub: userSub },
       });
+      console.log('[billing/webhook] customer metadata updated');
     }
     return;
   }
 
   if (type === 'customer.subscription.created' || type === 'customer.subscription.updated') {
     const status = obj.status;
+    console.log('[billing/webhook] subscription event, status:', status, 'customer:', obj.customer);
     const customer = await getStripe().customers.retrieve(obj.customer);
     const userSub = customer.metadata?.auth0_sub;
+    console.log('[billing/webhook] resolved userSub:', userSub);
     if (!userSub) return;
 
     if (status === 'active' || status === 'trialing') {
       await assignPaidRole(userSub);
+      console.log('[billing/webhook] paid role assigned to:', userSub);
     } else if (status === 'canceled' || status === 'past_due' || status === 'unpaid') {
       await removePaidRole(userSub);
+      console.log('[billing/webhook] paid role removed from:', userSub);
     }
     return;
   }
@@ -90,6 +97,7 @@ async function handleWebhookEvent(event) {
     const userSub = customer.metadata?.auth0_sub;
     if (!userSub) return;
     await removePaidRole(userSub);
+    console.log('[billing/webhook] paid role removed (deleted) from:', userSub);
   }
 }
 
@@ -105,7 +113,7 @@ export async function webhookHandler(req, res) {
   try {
     await handleWebhookEvent(event);
   } catch (err) {
-    console.error('[billing/webhook] handler error:', err.message);
+    console.error('[billing/webhook] handler error:', err.message, err.stack);
     return res.status(200).json({ received: true, error: err.message });
   }
   res.json({ received: true });
