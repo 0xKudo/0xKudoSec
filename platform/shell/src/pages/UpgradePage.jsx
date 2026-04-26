@@ -141,6 +141,9 @@ export default function UpgradePage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to start checkout');
       window.location.href = data.url;
+      // In Electron, will-navigate intercepts this and opens the browser externally.
+      // The component stays mounted, so reset loading state.
+      if (window.electron?.isElectron) setLoading(null);
     } catch (e) {
       setError(e.message);
       setLoading(null);
