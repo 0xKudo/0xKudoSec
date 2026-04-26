@@ -3,9 +3,11 @@ import Stripe from 'stripe';
 import { requireAuth } from '../middleware/requireAuth.js';
 import { assignPaidRole, removePaidRole } from '../services/auth0Mgmt.js';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-const WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET;
-const APP_URL = process.env.ALLOWED_ORIGIN || 'https://0xkudo.com';
+let _stripe = null;
+function getStripe() {
+  if (!_stripe) _stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+  return _stripe;
+}
 
 const router = Router();
 
@@ -19,14 +21,15 @@ router.post('/create-checkout-session', requireAuth, async (req, res) => {
 
   const userSub = req.auth.sub;
   const userEmail = req.auth.email;
+  const appUrl = process.env.ALLOWED_ORIGIN || 'https://0xkudo.com';
 
-  const session = await stripe.checkout.sessions.create({
+  const session = await getStripe().checkout.sessions.create({
     mode: 'subscription',
     line_items: [{ price: priceId, quantity: 1 }],
     client_reference_id: userSub,
     customer_email: userEmail,
-    success_url: `${APP_URL}/app/siem?upgraded=1`,
-    cancel_url: `${APP_URL}/app`,
+    success_url: `${appUrl}/app/siem?upgraded=1`,
+    cancel_url: `${appUrl}/app`,
     metadata: { auth0_sub: userSub },
   });
 
@@ -36,8 +39,9 @@ router.post('/create-checkout-session', requireAuth, async (req, res) => {
 // POST /api/billing/create-portal-session
 router.post('/create-portal-session', requireAuth, async (req, res) => {
   const userSub = req.auth.sub;
+  const appUrl = process.env.ALLOWED_ORIGIN || 'https://0xkudo.com';
 
-  const customers = await stripe.customers.search({
+  const customers = await getStripe().customers.search({
     query: `metadata['auth0_sub']:'${userSub}'`,
   });
 
@@ -45,9 +49,9 @@ router.post('/create-portal-session', requireAuth, async (req, res) => {
     return res.status(404).json({ error: 'No billing account found for this user.' });
   }
 
-  const session = await stripe.billingPortal.sessions.create({
+  const session = await getStripe().billingPortal.sessions.create({
     customer: customers.data[0].id,
-    return_url: `${APP_URL}/app`,
+    return_url: `${appUrl}/app`,
   });
 
   res.json({ url: session.url });
@@ -60,7 +64,7 @@ async function handleWebhookEvent(event) {
   if (type === 'checkout.session.completed') {
     const userSub = obj.client_reference_id;
     if (userSub && obj.customer) {
-      await stripe.customers.update(obj.customer, {
+      await getStripe().customers.update(obj.customer, {
         metadata: { auth0_sub: userSub },
       });
     }
@@ -69,7 +73,7 @@ async function handleWebhookEvent(event) {
 
   if (type === 'customer.subscription.created' || type === 'customer.subscription.updated') {
     const status = obj.status;
-    const customer = await stripe.customers.retrieve(obj.customer);
+    const customer = await getStripe().customers.retrieve(obj.customer);
     const userSub = customer.metadata?.auth0_sub;
     if (!userSub) return;
 
@@ -82,7 +86,7 @@ async function handleWebhookEvent(event) {
   }
 
   if (type === 'customer.subscription.deleted') {
-    const customer = await stripe.customers.retrieve(obj.customer);
+    const customer = await getStripe().customers.retrieve(obj.customer);
     const userSub = customer.metadata?.auth0_sub;
     if (!userSub) return;
     await removePaidRole(userSub);
@@ -93,7 +97,7 @@ export async function webhookHandler(req, res) {
   const sig = req.headers['stripe-signature'];
   let event;
   try {
-    event = stripe.webhooks.constructEvent(req.body, sig, WEBHOOK_SECRET);
+    event = getStripe().webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
   } catch (err) {
     console.error('[billing/webhook] signature verification failed:', err.message);
     return res.status(400).send(`Webhook Error: ${err.message}`);
