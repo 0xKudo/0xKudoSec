@@ -1,4 +1,4 @@
-const DESKTOP_DOWNLOAD_URL = 'https://github.com/0xKudoX/0xKudoSec-releases/releases/download/v1.2.49/0xKudo-Security-Toolkit-Setup-1.2.49.exe';
+const DESKTOP_DOWNLOAD_URL = 'https://github.com/0xKudoX/0xKudoSec-releases/releases/download/v1.2.50/0xKudo-Security-Toolkit-Setup-1.2.50.exe';
 
 const styles = {
   page: {
@@ -100,7 +100,7 @@ export default function UpgradePage() {
       <div style={styles.divider} />
 
       <div style={styles.freeBox}>
-        <p style={styles.freeHeading}>Free tier — desktop app</p>
+        <p style={styles.freeHeading}>Free tier: desktop app</p>
         <p style={styles.freeBody}>
           Download the desktop app to run the full SIEM locally on your machine. All 19 tools included. No data leaves your device.
         </p>
