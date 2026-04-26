@@ -28,8 +28,8 @@ router.post('/create-checkout-session', requireAuth, async (req, res) => {
     line_items: [{ price: priceId, quantity: 1 }],
     client_reference_id: userSub,
     customer_email: userEmail,
-    success_url: `${appUrl}/app/siem?upgraded=1`,
-    cancel_url: `${appUrl}/app/siem`,
+    success_url: `${appUrl}/siem?upgraded=1`,
+    cancel_url: `${appUrl}/siem`,
     metadata: { auth0_sub: userSub },
   });
 
@@ -51,7 +51,7 @@ router.post('/create-portal-session', requireAuth, async (req, res) => {
 
   const session = await getStripe().billingPortal.sessions.create({
     customer: customers.data[0].id,
-    return_url: `${appUrl}/app`,
+    return_url: `${appUrl}/siem`,
   });
 
   res.json({ url: session.url });
