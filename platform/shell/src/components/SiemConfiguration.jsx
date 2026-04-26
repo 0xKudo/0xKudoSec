@@ -475,6 +475,28 @@ export function SiemConfiguration({ navLayout, setNavLayout, theme, setTheme }) 
   const [pwStatus, setPwStatus] = useState(null);
   const [pwError, setPwError] = useState('');
 
+  // Subscription management state
+  const [managingSubscription, setManagingSubscription] = useState(false);
+  const [subscriptionError, setSubscriptionError] = useState(null);
+
+  async function handleManageSubscription() {
+    setManagingSubscription(true);
+    setSubscriptionError(null);
+    try {
+      const token = await getAccessTokenSilently();
+      const res = await fetch('/api/billing/create-portal-session', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to open portal');
+      window.location.href = data.url;
+    } catch (e) {
+      setSubscriptionError(e.message);
+      setManagingSubscription(false);
+    }
+  }
+
   // Account deletion state
   const [deleteModal, setDeleteModal] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
@@ -867,6 +889,24 @@ winlogbeat.event_logs:
                 </div>
               )}
             </div>
+
+            {/* ── Subscription ── */}
+            {!isElectron && isPaid && (
+              <div style={{ borderTop: '1px solid var(--border)', marginTop: '20px', paddingTop: '20px' }}>
+                <div style={s.sectionTitle}>Subscription</div>
+                <div style={s.sectionDesc}>
+                  Manage your billing, update your payment method, or cancel your subscription.
+                </div>
+                <button style={s.btnPrimary} onClick={handleManageSubscription} disabled={managingSubscription}>
+                  {managingSubscription ? 'Loading...' : 'Manage subscription'}
+                </button>
+                {subscriptionError && (
+                  <div style={{ marginTop: '8px', fontSize: '11px', color: 'var(--severity-critical)' }}>
+                    {subscriptionError}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* ── Danger Zone ── */}
             <div style={{ borderTop: '1px solid var(--severity-critical)', marginTop: '32px', paddingTop: '20px' }}>
