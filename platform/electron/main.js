@@ -139,7 +139,7 @@ function createMainWindow() {
 
   const url = isDev
     ? `http://localhost:${SHELL_PORT}`
-    : PRODUCTION_URL;
+    : (serverProcess ? `http://localhost:${SERVER_PORT}/app` : PRODUCTION_URL);
 
   mainWindow.loadURL(url);
 
@@ -822,6 +822,15 @@ app.whenReady().then(async () => {
     await startServer();
   } catch (e) {
     console.error('Server failed to start:', e.message);
+  }
+
+  // Returning free-tier user: local server must be running before the window loads
+  if (app.isPackaged && store.get('storageMode', 'cloud') === 'local') {
+    try {
+      await startLocalServer();
+    } catch (e) {
+      console.error('Failed to start local server on startup:', e.message);
+    }
   }
 
   createMainWindow();
