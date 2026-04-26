@@ -4,17 +4,19 @@ let cachedPaidRoleId = null;
 
 async function getToken() {
   if (cachedToken && Date.now() < tokenExpiry - 60000) return cachedToken;
-  const domain = process.env.AUTH0_DOMAIN;
+  // AUTH0_MGMT_DOMAIN must be the original tenant domain (e.g. dev-xxx.us.auth0.com),
+  // not the custom domain — Auth0 Management API does not work through custom domains.
+  const mgmtDomain = process.env.AUTH0_MGMT_DOMAIN || process.env.AUTH0_DOMAIN;
   const clientId = process.env.AUTH0_MGMT_CLIENT_ID;
   const clientSecret = process.env.AUTH0_MGMT_CLIENT_SECRET;
-  const res = await fetch(`https://${domain}/oauth/token`, {
+  const res = await fetch(`https://${mgmtDomain}/oauth/token`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       grant_type: 'client_credentials',
       client_id: clientId,
       client_secret: clientSecret,
-      audience: `https://${domain}/api/v2/`,
+      audience: `https://${mgmtDomain}/api/v2/`,
     }),
   });
   if (!res.ok) throw new Error(`Auth0 token fetch failed: ${res.status}`);
@@ -27,7 +29,7 @@ async function getToken() {
 async function getPaidRoleId() {
   if (cachedPaidRoleId) return cachedPaidRoleId;
   const token = await getToken();
-  const res = await fetch(`https://${process.env.AUTH0_DOMAIN}/api/v2/roles`, {
+  const res = await fetch(`https://${process.env.AUTH0_MGMT_DOMAIN || process.env.AUTH0_DOMAIN}/api/v2/roles`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   if (!res.ok) throw new Error(`Auth0 roles fetch failed: ${res.status}`);
@@ -41,7 +43,7 @@ async function getPaidRoleId() {
 export async function assignPaidRole(userSub) {
   const [token, roleId] = await Promise.all([getToken(), getPaidRoleId()]);
   const encodedSub = encodeURIComponent(userSub);
-  const res = await fetch(`https://${process.env.AUTH0_DOMAIN}/api/v2/users/${encodedSub}/roles`, {
+  const res = await fetch(`https://${process.env.AUTH0_MGMT_DOMAIN || process.env.AUTH0_DOMAIN}/api/v2/users/${encodedSub}/roles`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ roles: [roleId] }),
@@ -52,7 +54,7 @@ export async function assignPaidRole(userSub) {
 export async function removePaidRole(userSub) {
   const [token, roleId] = await Promise.all([getToken(), getPaidRoleId()]);
   const encodedSub = encodeURIComponent(userSub);
-  const res = await fetch(`https://${process.env.AUTH0_DOMAIN}/api/v2/users/${encodedSub}/roles`, {
+  const res = await fetch(`https://${process.env.AUTH0_MGMT_DOMAIN || process.env.AUTH0_DOMAIN}/api/v2/users/${encodedSub}/roles`, {
     method: 'DELETE',
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ roles: [roleId] }),
