@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 
 const DESKTOP_DOWNLOAD_URL = 'https://github.com/0xKudoX/0xKudoSec-releases/releases/download/v1.2.50/0xKudo-Security-Toolkit-Setup-1.2.50.exe';
 
@@ -107,9 +107,26 @@ const styles = {
 export default function UpgradePage() {
   const { getAccessTokenSilently } = useAuth0();
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const upgraded = searchParams.get('upgraded') === '1';
   const [loading, setLoading] = useState(null);
   const [error, setError] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
+
+  useEffect(() => {
+    if (!upgraded) return;
+    setRefreshing(true);
+    // Give the webhook a moment to assign the role, then force a fresh token
+    const timer = setTimeout(async () => {
+      try {
+        await getAccessTokenSilently({ cacheMode: 'off' });
+        navigate('/siem', { replace: true });
+      } catch {
+        setRefreshing(false);
+      }
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [upgraded]);
 
   async function startCheckout(plan) {
     setLoading(plan);
@@ -143,7 +160,7 @@ export default function UpgradePage() {
 
       {upgraded ? (
         <div style={styles.successBox}>
-          Payment successful. Log out and back in to activate your plan.
+          {refreshing ? 'Payment successful. Activating your plan...' : 'Payment successful. Redirecting...'}
         </div>
       ) : (
         <>
