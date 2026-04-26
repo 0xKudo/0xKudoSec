@@ -90,15 +90,12 @@ export default function UpgradePage() {
         <h1 style={styles.heading}>Cloud SIEM requires a paid plan</h1>
       </div>
       <p style={styles.body}>
-        The SIEM — log ingestion, alert queue, case management, and real-time AI analysis — runs on dedicated cloud infrastructure. A paid plan covers the server costs.
+        The SIEM covers log ingestion, alert queue, case management, and real-time AI analysis. It runs on dedicated cloud infrastructure, and a paid plan covers the server costs.
       </p>
 
-      <a
-        href="mailto:laynekudo@gmail.com?subject=0xKudo Upgrade"
-        style={styles.upgradeBtn}
-      >
-        Contact to upgrade
-      </a>
+      <button style={styles.upgradeBtn} disabled>
+        Upgrade coming soon
+      </button>
 
       <div style={styles.divider} />
 
