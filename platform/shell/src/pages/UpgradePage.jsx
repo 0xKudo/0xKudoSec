@@ -102,7 +102,7 @@ export default function UpgradePage() {
       <div style={styles.freeBox}>
         <p style={styles.freeHeading}>Free tier: desktop app</p>
         <p style={styles.freeBody}>
-          Download the desktop app to run the full SIEM locally on your machine. All 19 tools included. No data leaves your device.
+          Download the desktop app to run the full SIEM locally on your machine. All 19 tools included.<br />No data leaves your device.
         </p>
         <a href={DESKTOP_DOWNLOAD_URL} style={styles.downloadBtn}>
           Download for Windows
