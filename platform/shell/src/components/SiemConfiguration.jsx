@@ -310,6 +310,12 @@ export function SiemConfiguration({ navLayout, setNavLayout, theme, setTheme }) 
   const isElectron = typeof window !== 'undefined' && window.electron?.isElectron === true;
   const { storageMode } = useTier();
   const isLocalMode = isElectron && storageMode === 'local';
+
+  // Role-based access
+  const ROLES_CLAIM = 'https://0xkudo.com/roles';
+  const userRoles = user?.[ROLES_CLAIM] ?? [];
+  const isConfigEditor = isElectron && userRoles.includes('config-editor');
+
   const localStorageTabIdx = 6 + (isElectron ? 1 : 0) + (isConfigEditor ? 1 : 0);
   const [agentStatus, setAgentStatus] = useState('UNKNOWN');
   const [agentAction, setAgentAction] = useState(null);
@@ -317,11 +323,6 @@ export function SiemConfiguration({ navLayout, setNavLayout, theme, setTheme }) 
   const [fbInfo, setFbInfo] = useState(null); // { installed, version, confPath }
   const [fbInstalling, setFbInstalling] = useState(false);
   const [fbInstallMsg, setFbInstallMsg] = useState(null);
-
-  // Role-based access
-  const ROLES_CLAIM = 'https://0xkudo.com/roles';
-  const userRoles = user?.[ROLES_CLAIM] ?? [];
-  const isConfigEditor = isElectron && userRoles.includes('config-editor');
 
   // Agent config editor state
   const [configText, setConfigText] = useState('');
