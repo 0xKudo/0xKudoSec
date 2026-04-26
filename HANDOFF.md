@@ -33,7 +33,7 @@ Unified cybersecurity tools platform at `0xkudo.com`. Monorepo — shared Expres
 
 **Current version: v1.2.51** — published to GitHub, live at 0xkudo.com.
 
-**Key commits:** `e6dcdb1` (customer pre-create), `468619c` (lazy env vars), `10d5b75` (mgmt domain fix), `6c2a282` (TDZ fix), `00b93bc` (isPaid fix), `17ae391` (terms/privacy)
+**Key commits:** `e6dcdb1` (customer pre-create), `468619c` (lazy env vars), `10d5b75` (mgmt domain fix), `6c2a282` (TDZ fix), `00b93bc` (isPaid fix), `17ae391` (terms/privacy), `b251754` (sidebar terms links)
 
 ### Recently Completed (2026-04-12, v1.2.48 — Dashboard polish + sparkline drilldown)
 
