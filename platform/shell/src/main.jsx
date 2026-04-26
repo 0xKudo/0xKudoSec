@@ -38,6 +38,7 @@ createRoot(document.getElementById('root')).render(
       authorizationParams={{
         redirect_uri: redirectUri,
         audience,
+        prompt: 'login',
       }}
     >
       <Auth0CallbackHandler>

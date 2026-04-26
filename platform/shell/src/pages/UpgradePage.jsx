@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 
-const DESKTOP_DOWNLOAD_URL = 'https://github.com/0xKudoX/0xKudoSec-releases/releases/download/v1.2.51/0xKudo-Security-Toolkit-Setup-1.2.51.exe';
+const DESKTOP_DOWNLOAD_URL = 'https://github.com/0xKudoX/0xKudoSec-releases/releases/download/v1.2.52/0xKudo-Security-Toolkit-Setup-1.2.52.exe';
 
 const styles = {
   page: {
