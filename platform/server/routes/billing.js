@@ -5,8 +5,6 @@ import { assignPaidRole, removePaidRole } from '../services/auth0Mgmt.js';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET;
-const PRICE_MONTHLY = process.env.STRIPE_PRICE_MONTHLY;
-const PRICE_YEARLY = process.env.STRIPE_PRICE_YEARLY;
 const APP_URL = process.env.ALLOWED_ORIGIN || 'https://0xkudo.com';
 
 const router = Router();
@@ -14,7 +12,7 @@ const router = Router();
 // POST /api/billing/create-checkout-session
 router.post('/create-checkout-session', requireAuth, async (req, res) => {
   const { plan } = req.body;
-  const priceId = plan === 'yearly' ? PRICE_YEARLY : plan === 'monthly' ? PRICE_MONTHLY : null;
+  const priceId = plan === 'yearly' ? process.env.STRIPE_PRICE_YEARLY : plan === 'monthly' ? process.env.STRIPE_PRICE_MONTHLY : null;
   if (!priceId) {
     return res.status(400).json({ error: 'Invalid plan. Use "monthly" or "yearly".' });
   }
