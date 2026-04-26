@@ -7,10 +7,14 @@ const isElectronEnv = typeof window !== 'undefined' && window.electron?.isElectr
 export function useTier() {
   const { user, isAuthenticated } = useAuth0();
   const [storageMode, setStorageMode] = useState('cloud');
+  const [storageModeResolved, setStorageModeResolved] = useState(!isElectronEnv);
 
   useEffect(() => {
     if (isElectronEnv && window.electron?.tier?.getStorageMode) {
-      window.electron.tier.getStorageMode().then(setStorageMode);
+      window.electron.tier.getStorageMode().then(mode => {
+        setStorageMode(mode);
+        setStorageModeResolved(true);
+      });
     }
   }, []);
 
@@ -28,6 +32,7 @@ export function useTier() {
     isPaid,
     isElectron: isElectronEnv,
     storageMode,
+    storageModeResolved,
     isAuthenticated,
   };
 }

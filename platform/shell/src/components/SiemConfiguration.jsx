@@ -308,7 +308,7 @@ export function SiemConfiguration({ navLayout, setNavLayout, theme, setTheme }) 
 
   // Electron agent status state
   const isElectron = typeof window !== 'undefined' && window.electron?.isElectron === true;
-  const { storageMode, isPaid } = useTier();
+  const { storageMode, storageModeResolved, isPaid } = useTier();
   const isLocalMode = isElectron && storageMode === 'local';
 
   // Role-based access
@@ -553,10 +553,11 @@ export function SiemConfiguration({ navLayout, setNavLayout, theme, setTheme }) 
   }
 
   useEffect(() => {
+    if (isElectron && !storageModeResolved) return;
     loadKey();
     loadRetention();
     loadSources();
-  }, []);
+  }, [storageModeResolved]);
 
   // Refresh key metadata when user navigates to the API Key tab
   useEffect(() => {
