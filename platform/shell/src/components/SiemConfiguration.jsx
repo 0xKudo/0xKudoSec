@@ -308,7 +308,7 @@ export function SiemConfiguration({ navLayout, setNavLayout, theme, setTheme }) 
 
   // Electron agent status state
   const isElectron = typeof window !== 'undefined' && window.electron?.isElectron === true;
-  const { storageMode } = useTier();
+  const { storageMode, isPaid } = useTier();
   const isLocalMode = isElectron && storageMode === 'local';
 
   // Role-based access
