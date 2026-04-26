@@ -104,7 +104,7 @@ export function PrivacyPage() {
 
       <div style={s.scrollArea}><div style={s.container}>
         <h1 style={s.h1}>Privacy Policy</h1>
-        <div style={s.updated}>Last updated: April 8, 2026</div>
+        <div style={s.updated}>Last updated: April 26, 2026</div>
 
         <p style={s.p}>
           0xKudo ("the platform") is a cybersecurity operations platform operated by Layne Kudo.
@@ -122,9 +122,16 @@ export function PrivacyPage() {
           <li style={s.li}><strong>Usage preferences:</strong> log retention settings you configure.</li>
         </ul>
 
+        <li style={s.li}><strong>Subscription status:</strong> whether your account has an active paid plan. This is stored as a role on your Auth0 identity and checked on each request.</li>
+
+        <h2 style={s.h2}>Payment and Billing</h2>
+        <p style={s.p}>
+          Payments are processed by Stripe. We do not collect, store, or have access to your card number, bank account details, or any other payment instrument. When you subscribe, Stripe creates a customer record linked to your account via an opaque identifier. We store only your subscription status (active or inactive) derived from Stripe webhook events. Stripe's data handling is governed by their privacy policy at stripe.com/privacy.
+        </p>
+
         <h2 style={s.h2}>What We Do Not Collect</h2>
         <ul style={s.ul}>
-          <li style={s.li}>We do not collect payment information.</li>
+          <li style={s.li}>We do not store card numbers, bank details, or any raw payment instrument data.</li>
           <li style={s.li}>We do not use tracking pixels, analytics scripts, or advertising cookies.</li>
           <li style={s.li}>We do not collect browsing behavior or session recordings.</li>
           <li style={s.li}>We do not store passwords; authentication is handled entirely by Auth0.</li>
@@ -138,6 +145,7 @@ export function PrivacyPage() {
         <h2 style={s.h2}>Third-Party Services</h2>
         <ul style={s.ul}>
           <li style={s.li}><strong>Auth0:</strong> handles authentication and identity. Your login credentials and identity are governed by Auth0's privacy policy.</li>
+          <li style={s.li}><strong>Stripe:</strong> processes subscription payments. Card and payment data is stored exclusively by Stripe and never transmitted to our servers. We receive only subscription status events via webhook.</li>
           <li style={s.li}><strong>Anthropic (Claude API):</strong> certain analysis tools (Alert Triage, Incident Report, Phishing Analyzer, Log Anomaly Explainer) send security event data to the Anthropic API to generate analysis. Data sent is limited to the specific event you submit and is not stored persistently by the platform after the response is returned. Anthropic's data handling is governed by their API terms.</li>
           <li style={s.li}><strong>Threat intelligence providers:</strong> tools such as Threat Intelligence Aggregator, OSINT Recon, and CVE Exploit Mapper send IP addresses, domain names, or file hashes to third-party APIs (VirusTotal, Shodan, AbuseIPDB, IPInfo, Hunter.io) when you actively use those tools. Only data you explicitly submit is sent.</li>
         </ul>
