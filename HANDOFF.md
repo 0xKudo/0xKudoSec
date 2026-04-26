@@ -11,7 +11,112 @@ Unified cybersecurity tools platform at `0xkudo.com`. Monorepo — shared Expres
 
 ## Current Status
 
-**All 19 tools complete. Auth complete. SIEM complete. Electron wrapper complete. Noise Advisor Phase 1 + Phase 2 + Phase 3 complete. Multi-model support complete. Vulnerability KB built and confirmed working in v1.2.46-beta.2+.**
+**All 19 tools complete. Auth complete. SIEM complete. Electron complete. Tuning Center complete. Stripe billing complete. Free/paid tier split live.**
+
+### Recently Completed (2026-04-26, v1.2.51 — Stripe billing, free/paid tier split, Terms of Service)
+
+- **Free/paid tier split** — web app requires paid subscription for SIEM access; desktop app (Electron) is free tier with local SQLite storage
+- **SiemGate component** — blocks SIEM for unauthenticated or free web users, renders UpgradePage with plan buttons
+- **UpgradePage** — monthly/yearly plan buttons calling Stripe Checkout, success redirect with auto token refresh, desktop download section
+- **Stripe Checkout** — `POST /api/billing/create-checkout-session`, finds/creates Stripe customer with `auth0_sub` metadata before checkout to avoid race condition
+- **Stripe Billing Portal** — `POST /api/billing/create-portal-session`, Manage Subscription button in Configuration Account tab for paid web users
+- **Stripe webhook** — `customer.subscription.created/updated/deleted` events assign/remove `paid` Auth0 role via Management API
+- **Auth0 Management API integration** — `platform/server/services/auth0Mgmt.js`, uses `AUTH0_MGMT_DOMAIN` (original tenant domain, not custom domain) + `AUTH0_MGMT_CLIENT_ID/SECRET`
+- **useTier hook** — reads `paid` role from JWT claim `https://0xkudo.com/roles`, exposes `isPaid`, `isElectron`, `storageMode`
+- **requirePaid middleware** — gates SIEM server routes in cloud mode
+- **Local Storage tab** — Electron only, shows DB path, Change Location picker, export grid (Logs/Alerts/Cases x JSON/JSONL/CSV)
+- **Export routes** — `GET /api/local/export/logs|alerts|cases?format=json|jsonl|csv`, only mounted when `STORAGE_MODE=local`
+- **Terms of Service** — new page at `/terms`, linked in footer
+- **Privacy Policy updated** — added payment/billing/Stripe section
+- **Bug fixes** — TDZ crash on Configuration page (`isConfigEditor` used before declaration), `isPaid` not destructured from `useTier`
+- **VPS env additions:** `STORAGE_MODE=cloud`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_MONTHLY`, `STRIPE_PRICE_YEARLY`, `AUTH0_MGMT_DOMAIN`, `AUTH0_MGMT_CLIENT_ID`, `AUTH0_MGMT_CLIENT_SECRET`
+
+**Current version: v1.2.51** — published to GitHub, live at 0xkudo.com.
+
+**Key commits:** `e6dcdb1` (customer pre-create), `468619c` (lazy env vars), `10d5b75` (mgmt domain fix), `6c2a282` (TDZ fix), `00b93bc` (isPaid fix), `17ae391` (terms/privacy)
+
+### Recently Completed (2026-04-12, v1.2.48 — Dashboard polish + sparkline drilldown)
+
+- **Clickable sparkline bars** — clicking any bar in the Alert Trend chart opens a modal listing all alerts in that time bucket. Each alert row is clickable and opens the existing event detail modal (Create Case / Add to Existing Case). Back link returns to the bucket list.
+- **Sparkline uses `last_seen`** — re-triggered deduped alerts now appear in the correct time bucket instead of only counting at first creation. Patterns are now visible.
+- **Rule hits table overflow fixed** — `table-layout: fixed` + `text-overflow: ellipsis` prevents long rule names from breaking the layout.
+
+**Key commits:** `78c7e24` (sparkline drilldown), `67557eb` (last_seen), `590d10b` (rule hits overflow)
+
+### Recently Completed (2026-04-12, v1.2.48 — Real-time AI Alert Analysis fully working + signal type redesign)
+
+- **Real-time AI Alert Analysis working end-to-end** — whoami and other detection rule alerts now appear in AI Alert Analysis panel on dashboard after LLM analyzes them
+- **Root causes fixed (chain of bugs):**
+  - `new_alerts` WS broadcast gated on `created > 0` only — deduped alerts (count++) never triggered it. Fixed to `created > 0 || deduped > 0`
+  - `realtime_analysis` table missing UNIQUE constraint — `ON CONFLICT` upsert threw 500. Fixed with `ALTER TABLE ... ADD CONSTRAINT realtime_analysis_user_log_unique UNIQUE (user_id, log_id)`
+  - `cybertools` DB user had no permissions on `realtime_analysis` — every POST returned 403. Fixed with `GRANT SELECT, INSERT, UPDATE, DELETE ON realtime_analysis TO cybertools`
+  - WS connection dropped after `pm2 restart` with no reconnect logic. Fixed with exponential backoff reconnect in `App.jsx` (1s→30s)
+- **Signal types redesigned** — replaced misleading `suspicious/suppression_conflict/first_seen` with semantically correct `critical/conflict/noise`:
+  - `CRITICAL` — LLM flagged `cve_safe: false`, not suppressed (red)
+  - `CONFLICT` — LLM flagged `cve_safe: false`, would be suppressed — dangerous false negative (amber)
+  - `NOISE` — LLM assessed as safe/routine (green)
+- **Beta progression:** beta.5 (dashboard persistence), beta.6 (WS reconnect + broadcast fix), beta.7 (signal type redesign + DB fixes)
+
+**Current version: v1.2.48** — stable release, published to GitHub.
+
+**Key commits:** `a3d6503` (broadcast fix), `782e506` (WS reconnect), `f2c52b3` (signal types), `0834bb6` (beta.7 bump)
+
+### Recently Completed (2026-04-12, v1.2.48-beta.5 — Dashboard persistence + alert trend + bug fixes)
+
+- **Dashboard stays mounted** — `SiemDashboard` always rendered, hidden via `display: none` when not active. Intervals and WebSocket persist across all SIEM tab navigation including Configuration. Electron rebuild required — shipped in beta.5.
+- **Alert trend sparkline time filter** — 1h/6h/24h/48h/7d filter buttons on the sparkline panel. Adaptive bucket sizes: 1h=5min/12bars, 6h=30min/12bars, 24h=2hr/12bars, 48h=4hr/12bars, 7d=1day/7bars. Independent `sparklineHours` state, separate fetch from main time filter.
+- **Realtime analysis POST fix** — `log_id` returned as string by pg for bigint columns; server now coerces with `Number()` before `isInteger` check. Was causing HTTP 400 on every POST.
+- **Realtime alerts query fix** — changed from `a.id > sinceId` to `a.last_seen > NOW() - 5 minutes`. Deduplicated alerts (count++) were invisible to old query since alert id never changes.
+- **Log timestamp fallback** — `COALESCE($7, NOW())` on ingest insert. Events with null `TimeCreated` from Fluent Bit now get a timestamp and appear in recent events table.
+- **Realtime analysis upsert** — changed `ON CONFLICT DO NOTHING` to `ON CONFLICT DO UPDATE` so re-analysis overwrites stale results.
+- **Tab bar vertical centering** — `marginTop: 2px` on tabs to visually center text within stretched row while keeping underline at bottom edge.
+
+**Current version: v1.2.48-beta.5** — Electron built, pending GitHub publish.
+
+**Key commits:** `de3587e` (sparkline filter), `fbf8424` (sparkline buckets), `1f6dfc6` (upsert fix), `3a86318` (last_seen query + timestamp fallback), `21bc8dd` (log_id coercion), `b74cafc` (dashboard persistence), `3925c28` (version bump), `2b75fcd`/`b05d9e2` (tab bar)
+
+### Recently Completed (2026-04-12, v1.2.48-beta.4 — Real-Time Analysis Failsafe)
+
+- **Memory/VRAM failsafe** — `llmWorker.js` checks free RAM before loading model; skips run and sends banner to renderer if < 1.5GB free. On VRAM/context size errors (`runAnalysis` catch), disables toggle and sends error banner.
+- **`llm:realtime-disabled` IPC event** — added to `preload.js`; `App.jsx` listens, sets `noise_realtime_enabled` to false, shows red banner with reason
+- **Requires Electron rebuild** — `llmWorker.js` + `preload.js` changed
+
+**Current version: v1.2.48-beta.4** — built, pending GitHub publish.
+
+**Key commits:** `a351cac` (failsafe), `f47e3b1` (version bump)
+
+### Recently Completed (2026-04-12, v1.2.48-beta.3 — Phase 5 Real-Time LLM Analysis)
+
+- **Real-time alert analysis** — Electron receives `new_alerts` WS broadcast, forwards to `llmWorker.js` via IPC, runs LLM inference per alert, POSTs result to `/api/siem/realtime/result`, VPS broadcasts `realtime_analysis` to all clients
+- **`realtime_analysis` table** — stores per-log LLM results: `signal_type` (suspicious/suppression_conflict/first_seen), `explanation`, `cve_safe`, `cve_note`
+- **AI Alert Analysis panel** — appears on dashboard below Active Alerts; 4-column grid (badge, explanation, host, timestamp); clickable to open event detail modal
+- **Suppression conflict detection** — `scoreSuppressConflicts(userId)` runs after `scoreNoiseCandidates` on every Run Analysis trigger; checks active suppress rules against `vuln_kb`; creates synthetic `noise_candidates` with `is_suppression_conflict = true`; also writes to `realtime_analysis` so conflicts appear on dashboard immediately
+- **`is_suppression_conflict` column** — added to `noise_candidates`; conflict candidates show "SUPPRESSION CONFLICT" label + red border in Tuning Center
+- **Real-time toggles** — enable/disable + separate "Start on launch" (defaults off); startup always resets `noise_realtime_enabled` to off unless start-on-launch is set
+- **NoiseAdvisor → TuningCenter rename** — component file, function names, string literals in routes/cron/llmWorker all updated
+- **Dashboard event modal** — Create Case from Alert + Add to Existing Case on all event modals; CVE references are clickable NVD links; signal badge centered; fixed-width toggle buttons in Configuration
+- **Active alerts + AI panel layout** — time column widened to 160px, right-aligned; AI panel uses same 4-column grid as active alerts
+
+**Current version: v1.2.48-beta.3** — Electron built, pending GitHub publish + VPS deploy.
+
+**Key commits:** `a448d03` (rename + suppression conflicts), `535d04c` (conflicts → dashboard), `87d6710` (modal case sections), `3bc2a71` (startup reset), `a409d5d` (timestamp layout)
+
+### Recently Completed (2026-04-11, VPS infrastructure fixes)
+
+PostgreSQL OOM killed by kbCron memory spike — server returned all 502s. Root causes found and fixed:
+
+- **Swap added** — VPS had 0 swap. Added 2GB `/swapfile` (permanent via `/etc/fstab`). Prevents OOM kills during memory spikes.
+- **PostgreSQL restarted** — `postgresql@16-main` service brought back up after OOM kill.
+- **logs table indexes added** — 2.5M rows with no indexes caused 7.8s query times. Added: `idx_logs_timestamp`, `idx_logs_user_id`, `idx_logs_severity`, `idx_logs_user_timestamp (user_id, timestamp DESC)`. Query time dropped from 7.8s to 520ms.
+- **Duplicate suppress rules deleted** — 898 suppress rules existed (3x duplicates from repeated bulk approvals). Deleted 565 duplicates, leaving 333 unique rules. Query time immediately recovered.
+- **Unique constraint added** — `idx_detection_rules_unique_suppress` prevents duplicate suppress rules at DB level.
+- **Code-side 409 check** — `POST /rules` now checks for identical match conditions before insert and returns `409 { error: 'A rule with identical match conditions already exists.' }`.
+- **1.32M noisy rows deleted** — event IDs 5156 (471K) and 5158 (852K) deleted from DB. `VACUUM ANALYZE` run after.
+- **Fluent Bit filters added** — `cybertools.conf` updated to drop 5156/5158, event 5 (process terminated), jcmd.exe for events 1 and 8, postgres.exe for event 1 before ingest.
+- **Normalizer fixed** — `normalizeEvent.js` now correctly extracts process name, user, and file/registry fields for Sysmon events 2 (FileCreateTime), 22 (DNS Query), and 5379 (Credential Read). Previously these returned `{}` and had no process_name in DB.
+- **Fluent Bit domain updated** — `cybertools.conf` HTTP output was pointing to `tools.laynekudo.com`. Updated to `0xkudo.com`.
+
+**Key commits:** `167230a` (duplicate rule 409 check), `c190420` (normalizer events 2/22/5379)
 
 ### Recently Completed (2026-04-11, v1.2.46-beta.2 through beta.5)
 
@@ -69,9 +174,10 @@ Unified cybersecurity tools platform at `0xkudo.com`. Monorepo — shared Expres
 - `platform/shell/src/components/NoiseAdvisor.jsx` — library sync fix on load
 
 **Next:**
-- Test KB context injection in LLM analysis log — should see "Known vulnerabilities relevant to this pattern" in llm.log output
-- Promote to stable v1.2.46 (rebuild Electron with llmProcess.js KB changes)
-- Phase 5 — Real-time event analysis (spec written, not built)
+- Monitor event 22/2/5379 ingestion — verify process_name now populates for new events
+- Decide additional Fluent Bit filters for event 22 (DNS) and 2 (FileCreateTime) based on what processes appear
+- Delete stored noisy rows (event 5, jcmd.exe) from DB that were ingested before filters were applied
+- Phase 5 — Real-time event analysis (spec updated, not built). UI: AI Alert Analysis panel on dashboard below Active Alerts. Tab panel moves to right column under donut. Three signal types: suspicious, suppression conflict, first seen. Rows clickable, same modal as Recent Events with Create Case / Add to Case actions.
 - Rebuild CUDA binary with multi-arch flags for wider GPU compatibility
 - macOS build (spec at `docs/specs/2026-04-11-macos-build.md`)
 - Wireshark/tshark tool (spec at `docs/specs/wireshark-tshark-tool.md`)
