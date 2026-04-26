@@ -29,7 +29,7 @@ router.post('/create-checkout-session', requireAuth, async (req, res) => {
     client_reference_id: userSub,
     customer_email: userEmail,
     success_url: `${appUrl}/app/siem?upgraded=1`,
-    cancel_url: `${appUrl}/app`,
+    cancel_url: `${appUrl}/app/siem`,
     metadata: { auth0_sub: userSub },
   });
 
