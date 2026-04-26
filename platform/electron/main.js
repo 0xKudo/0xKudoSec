@@ -217,7 +217,7 @@ function startLocalServer() {
     env.STORAGE_MODE = 'local';
     env.SQLITE_PATH = dbPath;
     env.PORT = String(SERVER_PORT);
-    env.ALLOWED_ORIGIN = `http://localhost:${SHELL_PORT}`;
+    env.ALLOWED_ORIGIN = `http://localhost:${SERVER_PORT}`;
 
     serverProcess = fork(serverEntry, [], { env, stdio: 'pipe', execArgv: [] });
     serverProcess.stdout?.on('data', d => console.log('[local-server]', d.toString().trim()));
@@ -830,6 +830,8 @@ app.whenReady().then(async () => {
       await startLocalServer();
     } catch (e) {
       console.error('Failed to start local server on startup:', e.message);
+      // Kill the failed process so createMainWindow falls back to the VPS
+      if (serverProcess) { serverProcess.kill(); serverProcess = null; }
     }
   }
 
