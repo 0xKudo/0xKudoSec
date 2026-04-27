@@ -198,7 +198,7 @@ function startLocalServer() {
     if (serverProcess) { resolve(); return; }
 
     const serverEntry = app.isPackaged
-      ? path.join(process.resourcesPath, 'app.asar.unpacked', 'platform', 'server', 'index.js')
+      ? path.join(process.resourcesPath, 'platform', 'server', 'index.js')
       : path.join(__dirname, '..', 'server', 'index.js');
 
     const dbPath = store.get('sqlitePath', getSubScopedDbPath());
@@ -234,6 +234,9 @@ function startLocalServer() {
       if (jwt) env.USER_JWT = jwt;
     }
 
+    if (app.isPackaged) {
+      env.NODE_PATH = path.join(process.resourcesPath, 'app.asar.unpacked', 'node_modules');
+    }
     serverProcess = fork(serverEntry, [], { env, stdio: 'pipe', execArgv: [] });
     serverProcess.stdout?.on('data', d => console.log('[local-server]', d.toString().trim()));
     serverProcess.stderr?.on('data', d => console.error('[local-server]', d.toString().trim()));

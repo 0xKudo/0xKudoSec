@@ -32,6 +32,14 @@ nsis:
 extraResources:
   - from: "assets/fluent-bit-installer.exe"
     to: "assets/fluent-bit-installer.exe"
+  - from: "../../platform/server"
+    to: "platform/server"
+  - from: "../../platform/shared"
+    to: "platform/shared"
+  - from: "../../tools"
+    to: "tools"
+  - from: "../../platform/shell/dist"
+    to: "platform/shell/dist"
 
 # Files to include in the package
 files:
