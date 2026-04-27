@@ -102,7 +102,7 @@ export default app;
 import { fileURLToPath } from 'url';
 if (!process.env.VITEST) {
   const PORT = process.env.PORT || 4000;
-  createApp().then(() => {
+  createApp().then(async () => {
     const server = app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
       console.log(`Allowed origin: ${process.env.ALLOWED_ORIGIN}`);
