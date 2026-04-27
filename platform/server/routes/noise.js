@@ -7,11 +7,8 @@ import { scoreNoiseCandidates, runAutoSuppress, scoreSuppressConflicts } from '.
 import { syncKnowledgeBase } from '../services/kbCron.js';
 
 const router = Router();
-if (process.env.STORAGE_MODE !== 'local') {
-  router.use(requireAuth, requirePaid);
-} else {
-  router.use(requireAuth);
-}
+// All noise routes require auth. Write routes additionally require paid.
+router.use(requireAuth);
 const pool = () => db.getPool();
 const uid = req => req.auth.sub;
 
@@ -58,7 +55,7 @@ router.get('/candidates', requireAuth, async (req, res) => {
 
 // PATCH /api/siem/noise/candidates/:id/llm-result
 // Called by Electron after LLM analysis completes — writes explanation + CVE verdict back to the server.
-router.patch('/candidates/:id/llm-result', requireAuth, async (req, res) => {
+router.patch('/candidates/:id/llm-result', requireAuth, requirePaid, async (req, res) => {
   const { llm_explanation, llm_cve_safe, llm_cve_note } = req.body;
 
   if (typeof llm_explanation !== 'string' || llm_explanation.length > 2000) {
@@ -86,7 +83,7 @@ router.patch('/candidates/:id/llm-result', requireAuth, async (req, res) => {
 });
 
 // PATCH /api/siem/noise/candidates/:id
-router.patch('/candidates/:id', requireAuth, async (req, res) => {
+router.patch('/candidates/:id', requireAuth, requirePaid, async (req, res) => {
   const { status, llm_override, llm_override_note } = req.body;
   if (!['approved', 'rejected'].includes(status)) {
     return res.status(400).json({ error: 'status must be approved or rejected' });
@@ -160,7 +157,7 @@ router.patch('/candidates/:id', requireAuth, async (req, res) => {
 });
 
 // POST /api/siem/noise/candidates/bulk
-router.post('/candidates/bulk', requireAuth, async (req, res) => {
+router.post('/candidates/bulk', requireAuth, requirePaid, async (req, res) => {
   const { ids, status } = req.body;
   if (!Array.isArray(ids) || !ids.length) return res.status(400).json({ error: 'ids required' });
   if (!['approved', 'rejected'].includes(status)) return res.status(400).json({ error: 'invalid status' });
@@ -231,7 +228,7 @@ router.post('/candidates/bulk', requireAuth, async (req, res) => {
 });
 
 // POST /api/siem/noise/candidates/:id/undo
-router.post('/candidates/:id/undo', requireAuth, async (req, res) => {
+router.post('/candidates/:id/undo', requireAuth, requirePaid, async (req, res) => {
   const { rows } = await pool().query(
     `SELECT * FROM noise_candidates WHERE id = $1 AND user_id = $2`,
     [req.params.id, uid(req)]
@@ -257,7 +254,7 @@ router.post('/candidates/:id/undo', requireAuth, async (req, res) => {
 });
 
 // POST /api/siem/noise/candidates/rescan — reset LLM fields so candidates are re-analyzed
-router.post('/candidates/rescan', requireAuth, async (req, res) => {
+router.post('/candidates/rescan', requireAuth, requirePaid, async (req, res) => {
   const { ids } = req.body;
   if (!Array.isArray(ids) || !ids.length) return res.status(400).json({ error: 'ids required' });
   const safeIds = ids.filter(id => typeof id === 'string' && /^[0-9a-f-]{36}$/.test(id));
@@ -313,7 +310,7 @@ router.get('/settings', requireAuth, async (req, res) => {
 });
 
 // PATCH /api/siem/noise/settings
-router.patch('/settings', requireAuth, async (req, res) => {
+router.patch('/settings', requireAuth, requirePaid, async (req, res) => {
   const allowed = ['noise_auto_suppress', 'noise_llm_enabled', 'noise_llm_trigger',
     'llm_model', 'llm_custom_model_path', 'noise_min_score',
     'noise_learning_days', 'noise_learning_events', 'kb_auto_update'];
@@ -444,7 +441,7 @@ router.get('/context', requireAuth, async (req, res) => {
 });
 
 // POST /api/siem/noise/run — manual trigger for scoring job
-router.post('/run', requireAuth, async (req, res) => {
+router.post('/run', requireAuth, requirePaid, async (req, res) => {
   const userId = uid(req);
   try {
     const result = await scoreNoiseCandidates(userId);
@@ -480,7 +477,7 @@ router.get('/kb/status', requireAuth, async (req, res) => {
 
 // POST /api/siem/noise/kb/sync — manual KB sync trigger
 let kbSyncRunning = false;
-router.post('/kb/sync', requireAuth, async (req, res) => {
+router.post('/kb/sync', requireAuth, requirePaid, async (req, res) => {
   if (kbSyncRunning) return res.status(409).json({ ok: false, error: 'Sync already in progress' });
   const { sources } = req.body; // optional: ['nvd', 'cisa', 'mitre']
   kbSyncRunning = true;

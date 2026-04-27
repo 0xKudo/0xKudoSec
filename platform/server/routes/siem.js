@@ -20,11 +20,8 @@ import { ingestKeyLimiter, ruleImportLimiter } from '../middleware/rateLimiter.j
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const router = Router();
-if (process.env.STORAGE_MODE !== 'local') {
-  router.use(requireAuth, requirePaid);
-} else {
-  router.use(requireAuth);
-}
+// All SIEM routes require auth. Write routes additionally require paid.
+router.use(requireAuth);
 
 // Wrap async route handlers so unhandled promise rejections reach the error middleware
 function wrap(fn) {
@@ -566,7 +563,7 @@ router.get('/ingest-key', async (req, res) => {
   } : null);
 });
 
-router.post('/ingest-key', ingestKeyLimiter, async (req, res) => {
+router.post('/ingest-key', ingestKeyLimiter, requirePaid, async (req, res) => {
   const key = randomBytes(32).toString('hex');
   const hashed = hashKey(key);
 
@@ -647,7 +644,7 @@ router.get('/rules', wrap(async (req, res) => {
   res.json(rows);
 }));
 
-router.post('/rules', wrap(async (req, res) => {
+router.post('/rules', requirePaid, wrap(async (req, res) => {
   const { name, description, enabled, severity, action, match_event_id, match_category,
           match_severity, match_username, match_host, match_message,
           match_process, match_src_ip, match_dest_ip, match_dest_port } = req.body;
@@ -710,7 +707,7 @@ router.post('/rules', wrap(async (req, res) => {
   res.json(rows[0]);
 }));
 
-router.patch('/rules/:id', wrap(async (req, res) => {
+router.patch('/rules/:id', requirePaid, wrap(async (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (isNaN(id)) return res.status(400).json({ error: 'invalid id' });
   // Only allow toggling enabled or updating name/description/severity/conditions
@@ -743,7 +740,7 @@ router.patch('/rules/:id', wrap(async (req, res) => {
   res.json(rows[0]);
 }));
 
-router.delete('/rules/:id', wrap(async (req, res) => {
+router.delete('/rules/:id', requirePaid, wrap(async (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (isNaN(id)) return res.status(400).json({ error: 'invalid id' });
   const { rows: ruleRows } = await pool.query('SELECT name FROM detection_rules WHERE user_id = $1 AND id = $2', [uid(req), id]);
@@ -767,7 +764,7 @@ router.get('/rules/export', wrap(async (req, res) => {
   res.json(rows);
 }));
 
-router.post('/rules/import', ruleImportLimiter, wrap(async (req, res) => {
+router.post('/rules/import', ruleImportLimiter, requirePaid, wrap(async (req, res) => {
   // Reject anything that isn't application/json — prevents multipart/file-based attacks
   if (!req.is('application/json')) return res.status(415).json({ error: 'content-type must be application/json' });
   const rules = req.body;
@@ -819,7 +816,7 @@ router.post('/rules/import', ruleImportLimiter, wrap(async (req, res) => {
 }));
 
 // Run all enabled rules against last 24 hours of logs (manual trigger)
-router.post('/rules/run', wrap(async (req, res) => {
+router.post('/rules/run', requirePaid, wrap(async (req, res) => {
   const { created, deduped } = await runDetectionRules(uid(req), null);
   res.json({ created, deduped });
 }));
@@ -851,7 +848,7 @@ router.get('/alerts/counts', wrap(async (req, res) => {
   res.json(rows);
 }));
 
-router.patch('/alerts/:id', wrap(async (req, res) => {
+router.patch('/alerts/:id', requirePaid, wrap(async (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (isNaN(id)) return res.status(400).json({ error: 'invalid id' });
   const validStatuses = ['new', 'acknowledged', 'resolved'];
@@ -867,7 +864,7 @@ router.patch('/alerts/:id', wrap(async (req, res) => {
   res.json(rows[0]);
 }));
 
-router.post('/alerts/bulk', wrap(async (req, res) => {
+router.post('/alerts/bulk', requirePaid, wrap(async (req, res) => {
   const { ids, action, status } = req.body;
   if (!Array.isArray(ids) || ids.length === 0) return res.status(400).json({ error: 'ids required' });
   const safeIds = ids.map(Number).filter(n => !isNaN(n) && n > 0);
@@ -885,7 +882,7 @@ router.post('/alerts/bulk', wrap(async (req, res) => {
   res.json({ ok: true, count: safeIds.length });
 }));
 
-router.delete('/alerts/:id', wrap(async (req, res) => {
+router.delete('/alerts/:id', requirePaid, wrap(async (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (isNaN(id)) return res.status(400).json({ error: 'invalid id' });
   await pool.query('DELETE FROM alerts WHERE user_id = $1 AND id = $2', [uid(req), id]);
@@ -909,7 +906,7 @@ router.get('/cases', wrap(async (req, res) => {
   res.json(rows);
 }));
 
-router.post('/cases', wrap(async (req, res) => {
+router.post('/cases', requirePaid, wrap(async (req, res) => {
   const { title, description, severity } = req.body;
   if (!title || typeof title !== 'string' || !title.trim()) return res.status(400).json({ error: 'title required' });
   const validSev = ['critical', 'high', 'medium', 'low', 'info'];
@@ -924,7 +921,7 @@ router.post('/cases', wrap(async (req, res) => {
   res.json(rows[0]);
 }));
 
-router.patch('/cases/:id', wrap(async (req, res) => {
+router.patch('/cases/:id', requirePaid, wrap(async (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (isNaN(id)) return res.status(400).json({ error: 'invalid id' });
   const allowed = ['title', 'description', 'severity', 'status'];
@@ -951,7 +948,7 @@ router.patch('/cases/:id', wrap(async (req, res) => {
   res.json(rows[0]);
 }));
 
-router.delete('/cases/:id', wrap(async (req, res) => {
+router.delete('/cases/:id', requirePaid, wrap(async (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (isNaN(id)) return res.status(400).json({ error: 'invalid id' });
   await pool.query('DELETE FROM cases WHERE user_id = $1 AND id = $2', [uid(req), id]);
@@ -959,7 +956,7 @@ router.delete('/cases/:id', wrap(async (req, res) => {
   res.json({ ok: true });
 }));
 
-router.post('/cases/:id/alerts', wrap(async (req, res) => {
+router.post('/cases/:id/alerts', requirePaid, wrap(async (req, res) => {
   const caseId = parseInt(req.params.id, 10);
   const alertId = parseInt(req.body.alert_id, 10);
   if (isNaN(caseId) || isNaN(alertId)) return res.status(400).json({ error: 'invalid ids' });
@@ -997,7 +994,7 @@ router.get('/settings', wrap(async (req, res) => {
   res.json(rows[0] || { log_retention_days: 90, audit_log_retention_enabled: true, audit_log_retention_days: 365 });
 }));
 
-router.patch('/settings', wrap(async (req, res) => {
+router.patch('/settings', requirePaid, wrap(async (req, res) => {
   const days = parseInt(req.body.log_retention_days, 10);
   if (isNaN(days) || days < 1 || days > 3650) {
     return res.status(400).json({ error: 'log_retention_days must be between 1 and 3650' });
@@ -1068,7 +1065,7 @@ router.get('/logs/export', wrap(async (req, res) => {
 }));
 
 // ── Change password (email/password accounts only) ────────────────────────────
-router.post('/change-password', wrap(async (req, res) => {
+router.post('/change-password', requirePaid, wrap(async (req, res) => {
   const sub = uid(req);
 
   // Only auth0 database connection users can change password
@@ -1123,7 +1120,7 @@ router.post('/change-password', wrap(async (req, res) => {
 // Deletes all user data across all tables. Audit log entries are anonymized
 // (user_id set to '[deleted]') rather than deleted — required for legal traceability.
 // Also deletes the Auth0 user via Management API.
-router.delete('/account', wrap(async (req, res) => {
+router.delete('/account', requirePaid, wrap(async (req, res) => {
   const userId = uid(req);
   const domain       = process.env.AUTH0_DOMAIN;
   const clientId     = process.env.AUTH0_MGMT_CLIENT_ID;
@@ -1252,7 +1249,7 @@ router.get('/realtime/alerts', wrap(async (req, res) => {
 // POST /siem/realtime/result
 // Called by Electron after LLM analysis of a single event.
 // Stores the result and broadcasts to all WS clients.
-router.post('/realtime/result', wrap(async (req, res) => {
+router.post('/realtime/result', requirePaid, wrap(async (req, res) => {
   const { signal_type, explanation, cve_safe, cve_note } = req.body || {};
   const log_id = Number(req.body?.log_id);
   const userId = uid(req);

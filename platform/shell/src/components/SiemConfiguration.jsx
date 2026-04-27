@@ -210,7 +210,6 @@ const s = {
 };
 
 const BASE_TABS = ['API Key', 'Connect a Source', 'Log Retention', 'Active Sources', 'Account', 'App Settings'];
-const LOCAL_TABS = ['Connect a Source', 'Active Sources', 'Account', 'App Settings'];
 const SHIPPER_TABS = ['Fluent Bit', 'Winlogbeat 7', 'Manual API', 'Wireshark'];
 
 const FLUENT_BIT_CONFIG = (apiKey) => `[SERVICE]
@@ -311,11 +310,6 @@ export function SiemConfiguration({ navLayout, setNavLayout, theme, setTheme }) 
   const isElectron = typeof window !== 'undefined' && window.electron?.isElectron === true;
   const { storageMode, storageModeResolved, isPaid } = useTier();
   const isLocalMode = isElectron && storageMode === 'local';
-
-  // For local-mode Electron users, skip cloud-only tab 0 (API Key) — land on Connect a Source
-  useEffect(() => {
-    if (isLocalMode && tab === 0) setTab(1);
-  }, [isLocalMode]);
 
   // Role-based access
   const ROLES_CLAIM = 'https://0xkudo.com/roles';
@@ -559,15 +553,14 @@ export function SiemConfiguration({ navLayout, setNavLayout, theme, setTheme }) 
   }
 
   useEffect(() => {
-    if (isElectron && !storageModeResolved) return;
-    if (!isLocalMode) loadKey();
-    if (!isLocalMode) loadRetention();
+    loadKey();
+    loadRetention();
     loadSources();
-  }, [storageModeResolved, isLocalMode]);
+  }, []);
 
   // Refresh key metadata when user navigates to the API Key tab
   useEffect(() => {
-    if (tab === 0 && !newKey && !isLocalMode) loadKey();
+    if (tab === 0 && !newKey) loadKey();
   }, [tab]);
 
   async function generateKey() {
@@ -764,19 +757,15 @@ winlogbeat.event_logs:
       </div>
 
       <div style={isMobile ? s.tabsMobile : s.tabs}>
-        {(isElectronUnauth ? ['Tuning Center Models'] : [...BASE_TABS, ...(isElectron ? ['Tuning Center Models'] : []), ...(isConfigEditor ? ['Edit Config'] : []), ...(isLocalMode ? ['Local Storage'] : [])]).map((t, i) => {
-          // Hide cloud-only tabs for local-mode Electron users
-          if (isLocalMode && (t === 'API Key' || t === 'Log Retention')) return null;
-          return (
-            <button
-              key={t}
-              style={isMobile ? s.tabMobile(tab === (isElectronUnauth ? 6 : i)) : s.tab(tab === (isElectronUnauth ? 6 : i))}
-              onClick={() => setTab(isElectronUnauth ? 6 : i)}
-              onMouseEnter={e => { if (tab !== (isElectronUnauth ? 6 : i)) e.currentTarget.style.color = 'var(--text-primary)'; }}
-              onMouseLeave={e => { if (tab !== (isElectronUnauth ? 6 : i)) e.currentTarget.style.color = 'var(--text-muted)'; }}
-            >{t}</button>
-          );
-        })}
+        {(isElectronUnauth ? ['Tuning Center Models'] : [...BASE_TABS, ...(isElectron ? ['Tuning Center Models'] : []), ...(isConfigEditor ? ['Edit Config'] : []), ...(isLocalMode ? ['Local Storage'] : [])]).map((t, i) => (
+          <button
+            key={t}
+            style={isMobile ? s.tabMobile(tab === (isElectronUnauth ? 6 : i)) : s.tab(tab === (isElectronUnauth ? 6 : i))}
+            onClick={() => setTab(isElectronUnauth ? 6 : i)}
+            onMouseEnter={e => { if (tab !== (isElectronUnauth ? 6 : i)) e.currentTarget.style.color = 'var(--text-primary)'; }}
+            onMouseLeave={e => { if (tab !== (isElectronUnauth ? 6 : i)) e.currentTarget.style.color = 'var(--text-muted)'; }}
+          >{t}</button>
+        ))}
       </div>
 
       <div style={s.body}>
