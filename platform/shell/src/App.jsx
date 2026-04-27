@@ -330,14 +330,14 @@ function AppInner() {
     const path = window.location.pathname;
     if (!isElectron && !NO_AUTH_ROUTES.includes(path)) return <LandingPage />;
     if (isElectron && !NO_AUTH_ROUTES.includes(path)) {
-      if (activeApp === 'siem') {
+      if (activeApp === 'siem' && siemView !== 'configuration') {
         return (
           <div style={styles.layout}>
             <TopNav activeApp="siem" onSwitchApp={setActiveApp} theme={theme} setTheme={setTheme} onMenuToggle={() => {}} menuOpen={false} />
             <div style={{ ...styles.body, overflow: 'visible' }}>
               <ElectronCollapsibleSiemSidebar siemView={siemView} setSiemView={setSiemView} onSwitchToTools={() => setActiveApp('tools')} />
-              <main style={{ flex: 1, minHeight: 0, overflow: siemView === 'configuration' ? 'hidden' : 'auto', display: 'flex', flexDirection: 'column', background: 'var(--bg-primary)', minWidth: 0, ...(siemView !== 'configuration' ? { alignItems: 'center', justifyContent: 'center' } : {}) }}>
-                {siemView === 'configuration' ? <SiemConfiguration navLayout={navLayout} setNavLayout={setNavLayoutAndPersist} theme={theme} setTheme={setTheme} /> : <RequireAuth />}
+              <main style={{ flex: 1, minHeight: 0, overflow: 'auto', display: 'flex', flexDirection: 'column', background: 'var(--bg-primary)', minWidth: 0, alignItems: 'center', justifyContent: 'center' }}>
+                <RequireAuth />
               </main>
             </div>
           </div>

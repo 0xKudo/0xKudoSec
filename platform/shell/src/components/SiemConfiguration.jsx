@@ -296,11 +296,6 @@ export function SiemConfiguration({ navLayout, setNavLayout, theme, setTheme }) 
   const isElectronUnauth = typeof window !== 'undefined' && window.electron?.isElectron === true && !isAuthenticated;
   const [tab, setTab] = useState(isElectronUnauth ? 6 : 0);
 
-  // Reset tab when auth state changes in Electron
-  useEffect(() => {
-    if (isElectronUnauth) setTab(6);
-  }, [isElectronUnauth]);
-
   // For local-mode Electron users, skip cloud-only tab 0 (API Key) — land on Connect a Source
   useEffect(() => {
     if (isLocalMode && tab === 0) setTab(1);
