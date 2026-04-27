@@ -944,15 +944,12 @@ app.whenReady().then(async () => {
     console.error('Server failed to start:', e.message);
   }
 
-  // Returning free-tier user: local server must be running before the window loads
-  if (app.isPackaged && store.get('storageMode', 'cloud') === 'local') {
-    try {
-      await startLocalServer();
-    } catch (e) {
-      console.error('Failed to start local server on startup:', e.message);
-      // Kill the failed process so createMainWindow falls back to the VPS
-      if (serverProcess) { serverProcess.kill(); serverProcess = null; }
-    }
+  // Start local server for all Electron users (free = local storage, paid = local + optional cloud forward)
+  try {
+    await startLocalServer();
+  } catch (e) {
+    console.error('Failed to start local server on startup:', e.message);
+    if (serverProcess) { serverProcess.kill(); serverProcess = null; }
   }
 
   createMainWindow();
