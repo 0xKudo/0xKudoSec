@@ -861,7 +861,7 @@ winlogbeat.event_logs:
       </div>
 
       <div style={isMobile ? s.tabsMobile : s.tabs}>
-        {(isElectronUnauth ? ['Tuning Center Models'] : [...BASE_TABS, ...(isElectron ? ['Tuning Center Models'] : []), ...(isConfigEditor ? ['Edit Config'] : []), ...(isLocalMode ? ['Local Storage'] : [])]).map((t, i) => (
+        {(isElectronUnauth ? ['Tuning Center Models'] : [...BASE_TABS, ...(isElectron ? ['Tuning Center Models'] : []), ...(isConfigEditor ? ['Edit Config'] : []), ...(isElectron ? ['Local Storage'] : [])]).map((t, i) => (
           <button
             key={t}
             style={isMobile ? s.tabMobile(tab === (isElectronUnauth ? 6 : i)) : s.tab(tab === (isElectronUnauth ? 6 : i))}
@@ -1304,9 +1304,9 @@ winlogbeat.event_logs:
           </div>
         )}
 
-        {/* ── Local Storage tab (Electron local mode only) ── */}
-        {isLocalMode && tab === localStorageTabIdx && (
-          <LocalStorageTab s={s} isPaid={isPaid} />
+        {/* ── Local Storage tab (all Electron users) ── */}
+        {isElectron && tab === localStorageTabIdx && (
+          <LocalStorageTab s={s} isPaid={isPaid} isLocalMode={isLocalMode} />
         )}
 
         {/* ── Tab 2: Log Retention ── */}
@@ -2120,7 +2120,7 @@ function RealtimeAnalysisToggle({ s }) {
   );
 }
 
-function LocalStorageTab({ s, isPaid }) {
+function LocalStorageTab({ s, isPaid, isLocalMode }) {
   const [storagePath, setStoragePath] = useState(null);
   const [picking, setPicking] = useState(false);
   const [pickMsg, setPickMsg] = useState(null);
@@ -2209,10 +2209,10 @@ function LocalStorageTab({ s, isPaid }) {
     <div style={s.section}>
       <div style={s.sectionTitle}>Local Storage</div>
       <div style={s.sectionDesc}>
-        All SIEM data is stored locally on your device. Nothing is sent to the cloud.
+        {isLocalMode ? 'All SIEM data is stored locally on your device. Nothing is sent to the cloud.' : 'Manage local storage settings and cloud forwarding preferences.'}
       </div>
 
-      <div style={{ marginBottom: '28px' }}>
+      {isLocalMode && <div style={{ marginBottom: '28px' }}>
         <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>Database location</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
           <span style={{ fontSize: '12px', color: 'var(--text-primary)', fontFamily: 'var(--font)', background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '4px', padding: '6px 10px', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -2230,7 +2230,7 @@ function LocalStorageTab({ s, isPaid }) {
         <div style={{ marginTop: '8px', fontSize: '11px', color: 'var(--text-muted)', lineHeight: 1.5 }}>
           Changing the location copies your existing database to the new folder and restarts the local server.
         </div>
-      </div>
+      </div>}
 
       {isPaid && (
         <div style={{ marginBottom: '28px' }}>
@@ -2258,7 +2258,7 @@ function LocalStorageTab({ s, isPaid }) {
         </div>
       )}
 
-      <div>
+      {isLocalMode && <div>
         <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '12px' }}>Export data</div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, auto)', gap: '8px', justifyContent: 'start' }}>
           {EXPORTS.map(({ label, resource }) =>
@@ -2277,7 +2277,7 @@ function LocalStorageTab({ s, isPaid }) {
             })
           )}
         </div>
-      </div>
+      </div>}
     </div>
   );
 }
