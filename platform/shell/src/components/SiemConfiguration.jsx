@@ -296,11 +296,6 @@ export function SiemConfiguration({ navLayout, setNavLayout, theme, setTheme }) 
   const isElectronUnauth = typeof window !== 'undefined' && window.electron?.isElectron === true && !isAuthenticated;
   const [tab, setTab] = useState(isElectronUnauth ? 6 : 0);
 
-  // For local-mode Electron users, skip cloud-only tab 0 (API Key) — land on Connect a Source
-  useEffect(() => {
-    if (isLocalMode && tab === 0) setTab(1);
-  }, [isLocalMode]);
-
   // API Key state
   const [keyMeta, setKeyMeta] = useState(undefined);
   const [newKey, setNewKey] = useState(null);
@@ -316,6 +311,11 @@ export function SiemConfiguration({ navLayout, setNavLayout, theme, setTheme }) 
   const isElectron = typeof window !== 'undefined' && window.electron?.isElectron === true;
   const { storageMode, storageModeResolved, isPaid } = useTier();
   const isLocalMode = isElectron && storageMode === 'local';
+
+  // For local-mode Electron users, skip cloud-only tab 0 (API Key) — land on Connect a Source
+  useEffect(() => {
+    if (isLocalMode && tab === 0) setTab(1);
+  }, [isLocalMode]);
 
   // Role-based access
   const ROLES_CLAIM = 'https://0xkudo.com/roles';
