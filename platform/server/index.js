@@ -17,6 +17,7 @@ import billingRoutes, { webhookHandler } from './routes/billing.js';
 import { loadTools } from './loader.js';
 import { migrateLocal } from './db/migrate-sqlite.js';
 import { attachWebSocketServer } from './services/wsBroadcast.js';
+import { attachIngestReceiver } from './ws/ingestReceiver.js';
 import { startRetentionCron } from './services/retentionCron.js';
 import { scheduleNoiseCron } from './services/noiseCron.js';
 import { scheduleKbCron } from './services/kbCron.js';
@@ -108,6 +109,7 @@ if (!process.env.VITEST) {
       console.log(`Allowed origin: ${process.env.ALLOWED_ORIGIN}`);
     });
     attachWebSocketServer(server);
+    if (process.env.STORAGE_MODE !== 'local') attachIngestReceiver(server);
     startRetentionCron();
     scheduleNoiseCron();
     scheduleKbCron();

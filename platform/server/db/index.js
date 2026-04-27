@@ -32,12 +32,20 @@ function getSqlite() {
   return _sqlite;
 }
 
+function toSqliteSql(sql) {
+  return sql
+    .replace(/\$\d+/g, '?')        // $1/$2 → ?
+    .replace(/\bILIKE\b/gi, 'LIKE') // ILIKE → LIKE (SQLite LIKE is case-insensitive for ASCII)
+    .replace(/::text\b/gi, '')       // remove pg type casts
+    .replace(/::integer\b/gi, '')
+    .replace(/::bigint\b/gi, '');
+}
+
 // Unified query interface — returns { rows: [...] } in both modes.
 export async function query(sql, params = []) {
   if (process.env.STORAGE_MODE === 'local') {
     const db = getSqlite();
-    // Convert $1/$2 pg-style params to ? for SQLite
-    const sqliteSql = sql.replace(/\$\d+/g, '?');
+    const sqliteSql = toSqliteSql(sql);
     const trimmed = sql.trim().toUpperCase();
     if (trimmed.startsWith('SELECT') || trimmed.startsWith('WITH')) {
       const rows = db.prepare(sqliteSql).all(...params);

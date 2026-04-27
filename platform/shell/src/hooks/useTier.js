@@ -5,7 +5,7 @@ const ROLES_CLAIM = 'https://0xkudo.com/roles';
 const isElectronEnv = typeof window !== 'undefined' && window.electron?.isElectron === true;
 
 export function useTier() {
-  const { user, isAuthenticated } = useAuth0();
+  const { user, isAuthenticated, getAccessTokenSilently } = useAuth0();
   const [storageMode, setStorageMode] = useState('cloud');
   const [storageModeResolved, setStorageModeResolved] = useState(!isElectronEnv);
 
@@ -21,12 +21,18 @@ export function useTier() {
   const roles = user?.[ROLES_CLAIM] ?? [];
   const isPaid = roles.includes('paid');
 
-  // After auth resolves, notify Electron main process of tier so it can start local server if needed
+  // After auth resolves, notify Electron main process of tier, identity, and JWT
   useEffect(() => {
-    if (isElectronEnv && isAuthenticated && window.electron?.tier?.setTier) {
-      window.electron.tier.setTier(isPaid);
+    if (!isElectronEnv || !isAuthenticated || !user?.sub) return;
+    if (window.electron?.tier?.setUserSub) window.electron.tier.setUserSub(user.sub);
+    if (window.electron?.tier?.setTier) window.electron.tier.setTier(isPaid);
+    // Push fresh JWT so the local server can forward events to VPS if cloud storage is on
+    if (window.electron?.auth?.setJwt) {
+      getAccessTokenSilently().then(token => {
+        window.electron.auth.setJwt(token);
+      }).catch(() => {});
     }
-  }, [isAuthenticated, isPaid]);
+  }, [isAuthenticated, isPaid, user?.sub]);
 
   return {
     isPaid,

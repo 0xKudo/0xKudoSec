@@ -212,6 +212,82 @@ const s = {
 const BASE_TABS = ['API Key', 'Connect a Source', 'Log Retention', 'Active Sources', 'Account', 'App Settings'];
 const SHIPPER_TABS = ['Fluent Bit', 'Winlogbeat 7', 'Manual API', 'Wireshark'];
 
+const FLUENT_BIT_CONFIG_LOCAL = (apiKey) => `[SERVICE]
+    Flush        2
+    Daemon       Off
+    Log_Level    info
+
+[INPUT]
+    Name         winevtlog
+    Channels     Security
+    Interval_Sec 5
+    DB           C:\\Program Files\\fluent-bit\\conf\\cybertools-security.db
+
+[INPUT]
+    Name         winevtlog
+    Channels     Microsoft-Windows-Sysmon/Operational
+    Interval_Sec 5
+    DB           C:\\Program Files\\fluent-bit\\conf\\cybertools-sysmon.db
+
+[INPUT]
+    Name         winevtlog
+    Channels     System
+    Interval_Sec 10
+    DB           C:\\Program Files\\fluent-bit\\conf\\cybertools-system.db
+
+[INPUT]
+    Name         winevtlog
+    Channels     Application
+    Interval_Sec 10
+    DB           C:\\Program Files\\fluent-bit\\conf\\cybertools-application.db
+
+[INPUT]
+    Name         winevtlog
+    Channels     Microsoft-Windows-PowerShell/Operational
+    Interval_Sec 5
+    DB           C:\\Program Files\\fluent-bit\\conf\\cybertools-powershell.db
+
+[INPUT]
+    Name         winevtlog
+    Channels     Microsoft-Windows-WMI-Activity/Operational
+    Interval_Sec 10
+    DB           C:\\Program Files\\fluent-bit\\conf\\cybertools-wmi.db
+
+[INPUT]
+    Name         winevtlog
+    Channels     Microsoft-Windows-TaskScheduler/Operational
+    Interval_Sec 10
+    DB           C:\\Program Files\\fluent-bit\\conf\\cybertools-taskscheduler.db
+
+[INPUT]
+    Name         winevtlog
+    Channels     Microsoft-Windows-Windows Defender/Operational
+    Interval_Sec 10
+    DB           C:\\Program Files\\fluent-bit\\conf\\cybertools-defender.db
+
+[INPUT]
+    Name         winevtlog
+    Channels     Microsoft-Windows-Windows Firewall With Advanced Security/Firewall
+    Interval_Sec 10
+    DB           C:\\Program Files\\fluent-bit\\conf\\cybertools-firewall.db
+
+[INPUT]
+    Name         winevtlog
+    Channels     Microsoft-Windows-TerminalServices-RemoteConnectionManager/Operational
+    Interval_Sec 10
+    DB           C:\\Program Files\\fluent-bit\\conf\\cybertools-rdp.db
+
+[OUTPUT]
+    Name         http
+    Match        *
+    Host         127.0.0.1
+    Port         4000
+    URI          /api/ingest/beats
+    Format       json
+    tls          Off
+    Header       Authorization Bearer ${apiKey}
+    Header       Content-Type application/json`;
+
 const FLUENT_BIT_CONFIG = (apiKey) => `[SERVICE]
     Flush        2
     Daemon       Off
@@ -531,14 +607,19 @@ export function SiemConfiguration({ navLayout, setNavLayout, theme, setTheme }) 
 
   async function loadKey() {
     try {
-      const token = await getAccessTokenSilently();
-      const res = await fetch('/api/siem/ingest-key', { headers: { Authorization: `Bearer ${token}` } });
-      const meta = await res.json();
-      setKeyMeta(meta);
-      if (meta?.expiry_days) {
-        const preset = ['30','90','180','365'].includes(String(meta.expiry_days));
-        setExpiryDays(String(meta.expiry_days));
-        setExpiryCustom(!preset);
+      if (isElectron) {
+        const result = await window.electron.ingest.hasKey();
+        setKeyMeta(result.exists ? { exists: true, created_at: result.created_at } : null);
+      } else {
+        const token = await getAccessTokenSilently();
+        const res = await fetch('/api/siem/ingest-key', { headers: { Authorization: `Bearer ${token}` } });
+        const meta = await res.json();
+        setKeyMeta(meta);
+        if (meta?.expiry_days) {
+          const preset = ['30','90','180','365'].includes(String(meta.expiry_days));
+          setExpiryDays(String(meta.expiry_days));
+          setExpiryCustom(!preset);
+        }
       }
     } catch {}
     setLoading(false);
@@ -580,16 +661,25 @@ export function SiemConfiguration({ navLayout, setNavLayout, theme, setTheme }) 
   async function generateKey() {
     setGenerating(true);
     try {
-      const token = await getAccessTokenSilently();
-      const res = await fetch('/api/siem/ingest-key', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ expiry_days: parseInt(expiryDays, 10) }),
-      });
-      const data = await res.json();
-      setNewKey(data.api_key);
-      setKeyMeta({ exists: true, created_at: data.created_at, expires_at: data.expires_at, expiry_days: data.expiry_days });
-      setCopied(false);
+      if (isElectron) {
+        const result = await window.electron.ingest.generateKey();
+        if (result.ok) {
+          setNewKey(result.api_key);
+          setKeyMeta({ exists: true, created_at: result.created_at });
+          setCopied(false);
+        }
+      } else {
+        const token = await getAccessTokenSilently();
+        const res = await fetch('/api/siem/ingest-key', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ expiry_days: parseInt(expiryDays, 10) }),
+        });
+        const data = await res.json();
+        setNewKey(data.api_key);
+        setKeyMeta({ exists: true, created_at: data.created_at, expires_at: data.expires_at, expiry_days: data.expiry_days });
+        setCopied(false);
+      }
     } catch {}
     setGenerating(false);
   }
@@ -697,8 +787,8 @@ export function SiemConfiguration({ navLayout, setNavLayout, theme, setTheme }) 
   }
 
   const apiKey = newKey || 'YOUR_API_KEY_HERE';
-  const ingestUrl = 'https://0xkudo.com/api/ingest/beats';
-  const fluentBitConfig = FLUENT_BIT_CONFIG(apiKey);
+  const ingestUrl = isElectron ? 'http://localhost:4000/api/ingest/beats' : 'https://0xkudo.com/api/ingest/beats';
+  const fluentBitConfig = isElectron ? FLUENT_BIT_CONFIG_LOCAL(apiKey) : FLUENT_BIT_CONFIG(apiKey);
   const winlogbeatConfig = `output.elasticsearch:
   enabled: false
 
@@ -792,8 +882,8 @@ winlogbeat.event_logs:
               Your API key authorizes log shippers to send events to this platform. It is only shown once at generation time. Store it securely.
             </div>
 
-            {/* Expiry selector — always visible so user can change before generate/regenerate */}
-            <div style={{ marginBottom: '16px' }}>
+            {/* Expiry selector — web only, local keys don't use VPS-managed expiry */}
+            {!isElectron && <div style={{ marginBottom: '16px' }}>
               <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px' }}>Key expiry</div>
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
                 {['30','90','180','365'].map(d => (
@@ -818,7 +908,7 @@ winlogbeat.event_logs:
                   />
                 )}
               </div>
-            </div>
+            </div>}
 
             {loading ? (
               <div style={s.keyMuted}>Loading...</div>
@@ -855,9 +945,9 @@ winlogbeat.event_logs:
                 })()}
                 <div style={s.keyMuted}>
                   Generated {new Date(keyMeta.created_at).toLocaleString()}
-                  {keyMeta.expires_at && <span> · expires {new Date(keyMeta.expires_at).toLocaleDateString()}</span>}
-                  {keyMeta.last_used_at && <span> · last used {new Date(keyMeta.last_used_at).toLocaleString()}</span>}
-                  {!keyMeta.last_used_at && <span> · never used</span>}
+                  {!isElectron && keyMeta.expires_at && <span> · expires {new Date(keyMeta.expires_at).toLocaleDateString()}</span>}
+                  {!isElectron && keyMeta.last_used_at && <span> · last used {new Date(keyMeta.last_used_at).toLocaleString()}</span>}
+                  {!isElectron && !keyMeta.last_used_at && <span> · never used</span>}
                 </div>
                 <button style={s.btn} onClick={generateKey} disabled={generating}>
                   {generating ? 'Generating...' : 'Regenerate Key'}
@@ -1216,7 +1306,7 @@ winlogbeat.event_logs:
 
         {/* ── Local Storage tab (Electron local mode only) ── */}
         {isLocalMode && tab === localStorageTabIdx && (
-          <LocalStorageTab s={s} />
+          <LocalStorageTab s={s} isPaid={isPaid} />
         )}
 
         {/* ── Tab 2: Log Retention ── */}
@@ -2030,17 +2120,42 @@ function RealtimeAnalysisToggle({ s }) {
   );
 }
 
-function LocalStorageTab({ s }) {
+function LocalStorageTab({ s, isPaid }) {
   const [storagePath, setStoragePath] = useState(null);
   const [picking, setPicking] = useState(false);
   const [pickMsg, setPickMsg] = useState(null);
   const [exporting, setExporting] = useState(null);
+  const [cloudStorage, setCloudStorage] = useState(false);
+  const [cloudStorageMsg, setCloudStorageMsg] = useState(null);
+  const [togglingCloud, setTogglingCloud] = useState(false);
 
   useEffect(() => {
     if (window.electron?.storage?.getStoragePath) {
       window.electron.storage.getStoragePath().then(setStoragePath);
     }
-  }, []);
+    if (isPaid && window.electron?.storage?.getCloudStorage) {
+      window.electron.storage.getCloudStorage().then(setCloudStorage);
+    }
+  }, [isPaid]);
+
+  async function handleCloudStorageToggle() {
+    setTogglingCloud(true);
+    setCloudStorageMsg(null);
+    try {
+      const next = !cloudStorage;
+      const result = await window.electron.storage.setCloudStorage(next);
+      if (result?.ok === false) {
+        setCloudStorageMsg({ ok: false, text: result.error || 'Failed to update setting.' });
+      } else {
+        setCloudStorage(next);
+        setCloudStorageMsg({ ok: true, text: next ? 'Cloud storage enabled. Logs will forward to VPS.' : 'Cloud storage disabled. Logs stored locally only.' });
+      }
+    } catch (e) {
+      setCloudStorageMsg({ ok: false, text: e.message });
+    } finally {
+      setTogglingCloud(false);
+    }
+  }
 
   async function handlePickPath() {
     setPicking(true);
@@ -2116,6 +2231,32 @@ function LocalStorageTab({ s }) {
           Changing the location copies your existing database to the new folder and restarts the local server.
         </div>
       </div>
+
+      {isPaid && (
+        <div style={{ marginBottom: '28px' }}>
+          <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>Cloud Storage</div>
+          <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '12px', lineHeight: 1.5 }}>
+            Forward logs to the VPS and access your SIEM from any device. Local SQLite is always kept as a cache.
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <button
+              style={{ ...s.btnPrimary, background: cloudStorage ? 'var(--severity-low)' : undefined, color: cloudStorage ? '#fff' : undefined, minWidth: '120px' }}
+              onClick={handleCloudStorageToggle}
+              disabled={togglingCloud}
+            >
+              {togglingCloud ? 'Updating...' : cloudStorage ? 'Cloud: ON' : 'Cloud: OFF'}
+            </button>
+            <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+              {cloudStorage ? 'Logs are forwarded to 0xkudo.com' : 'Logs stay on this device only'}
+            </span>
+          </div>
+          {cloudStorageMsg && (
+            <div style={{ marginTop: '8px', fontSize: '11px', color: cloudStorageMsg.ok ? 'var(--severity-low)' : 'var(--severity-critical)' }}>
+              {cloudStorageMsg.text}
+            </div>
+          )}
+        </div>
+      )}
 
       <div>
         <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '12px' }}>Export data</div>

@@ -1,7 +1,9 @@
 // platform/server/routes/ingest.js
 import { Router } from 'express';
-import { createHash } from 'crypto';
+import { createHash, randomUUID } from 'crypto';
 import multer from 'multer';
+import { WebSocket } from 'ws';
+import { bufferEvents, flushBuffer } from '../services/forwardBuffer.js';
 import db from '../services/db.js';
 const pool = db; // main pool — RLS enforced (cybertools role has NOBYPASSRLS)
 // ingestAuthPool — BYPASSRLS role used only for key lookups before user_id is known
@@ -25,6 +27,76 @@ const upload = multer({
 
 const router = Router();
 
+// ── VPS WebSocket forwarding (local mode, cloud storage enabled) ──────────
+// WS client is created once and reused. On disconnect it is nulled so the next
+// call to getVpsWs() triggers a reconnect. While disconnected, events are written
+// to the SQLite forward_buffer table and flushed oldest-first on reconnect.
+let _vpsWs = null;
+let _vpsWsConnecting = false;
+
+function _sendBatch(ws, events) {
+  return new Promise((resolve, reject) => {
+    const batchId = randomUUID();
+    const payload = JSON.stringify({ type: 'ingest', batchId, events });
+
+    const onMsg = (data) => {
+      try {
+        const msg = JSON.parse(data.toString());
+        if (msg.type === 'ack' && msg.batchId === batchId) {
+          ws.off('message', onMsg);
+          resolve();
+        }
+      } catch {}
+    };
+    ws.on('message', onMsg);
+
+    if (ws.readyState !== 1) { ws.off('message', onMsg); reject(new Error('WS not open')); return; }
+    ws.send(payload);
+
+    // Treat no ACK within 15s as a send failure
+    setTimeout(() => { ws.off('message', onMsg); reject(new Error('ACK timeout')); }, 15000);
+  });
+}
+
+function getVpsWs() {
+  if (_vpsWs && _vpsWs.readyState === 1) return _vpsWs;
+  if (_vpsWsConnecting) return null;
+
+  const url = process.env.VPS_WS_URL;
+  const jwt = process.env.USER_JWT;
+  if (!url || !jwt) return null;
+
+  _vpsWsConnecting = true;
+  const ws = new WebSocket(url, { headers: { Authorization: `Bearer ${jwt}` } });
+
+  ws.on('open', () => {
+    _vpsWs = ws;
+    _vpsWsConnecting = false;
+    // Flush buffered events before accepting new ingest
+    flushBuffer(events => _sendBatch(ws, events)).catch(() => {});
+  });
+
+  ws.on('close', () => { _vpsWs = null; _vpsWsConnecting = false; });
+  ws.on('error', () => { _vpsWs = null; _vpsWsConnecting = false; });
+
+  return null; // not ready yet — caller should buffer
+}
+
+async function forwardToVps(events) {
+  const ws = getVpsWs();
+  if (!ws) {
+    // WS disconnected or connecting — write to durable buffer
+    bufferEvents(events);
+    return;
+  }
+  try {
+    await _sendBatch(ws, events);
+  } catch {
+    // Send failed mid-flight — buffer so it's retried on next reconnect
+    bufferEvents(events);
+  }
+}
+
 function hashKey(key) {
   return createHash('sha256').update(key).digest('hex');
 }
@@ -39,13 +111,23 @@ async function requireIngestKey(req, res, next) {
   const token = header.startsWith('Bearer ') ? header.slice(7) : null;
   if (!token) return res.status(401).json({ error: 'Unauthorized' });
 
-  // Use ingest_auth role (BYPASSRLS) — user_id is not yet known at this stage
+  // Local mode: verify against LOCAL_INGEST_KEY_HASH passed in env by main.js.
+  // Single-user server — no user_id scoping needed, use LOCAL_USER_ID env var.
+  if (process.env.STORAGE_MODE === 'local') {
+    const localHash = process.env.LOCAL_INGEST_KEY_HASH;
+    if (localHash && hashKey(token) === localHash) {
+      req.ingestUserId = process.env.LOCAL_USER_ID || 'local';
+      return next();
+    }
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  // Cloud mode: look up key in PostgreSQL via ingest_auth role (BYPASSRLS)
   try {
     const { rows } = await getIngestAuthPool().query(
       'SELECT user_id, expires_at FROM user_ingest_keys WHERE api_key = $1', [hashKey(token)]
     );
     if (rows.length) {
-      // Check expiry
       if (rows[0].expires_at && new Date(rows[0].expires_at) < new Date()) {
         return res.status(401).json({ error: 'Ingest key expired. Rotate your key in Configuration.' });
       }
@@ -80,10 +162,16 @@ router.post('/beats', ingestBeatsLimiter, requireIngestKey, async (req, res) => 
   const events = Array.isArray(body) ? body : [body];
   const accepted = await insertEvents(events, req.ingestUserId);
   if (accepted > 0) broadcast('new_events', { count: accepted });
+
+  // In local mode, forward to VPS if cloud storage is enabled (paid users only)
+  if (process.env.STORAGE_MODE === 'local' && process.env.CLOUD_STORAGE === 'true' && accepted > 0) {
+    forwardToVps(events).catch(() => {});
+  }
+
   res.json({ accepted });
 });
 
-async function insertEvents(events, userId) {
+export async function insertEvents(events, userId) {
   let accepted = 0;
   const insertedIds = [];
   for (const raw of events) {

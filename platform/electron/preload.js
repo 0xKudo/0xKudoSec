@@ -43,17 +43,27 @@ contextBridge.exposeInMainWorld('electron', {
 
   auth: {
     onCallback: (cb) => ipcRenderer.on('auth0:callback', (_e, url) => cb(url)),
+    setJwt: (token) => ipcRenderer.invoke('electron:setJwt', token),
   },
 
   tier: {
     setTier: (isPaid) => ipcRenderer.invoke('electron:setTier', isPaid),
     getStorageMode: () => ipcRenderer.invoke('electron:getStorageMode'),
     getIsPaid: () => ipcRenderer.invoke('electron:getIsPaid'),
+    setUserSub: (sub) => ipcRenderer.invoke('electron:setUserSub', sub),
   },
 
   storage: {
     getStoragePath: () => ipcRenderer.invoke('electron:getStoragePath'),
     pickStoragePath: () => ipcRenderer.invoke('electron:pickStoragePath'),
+    getCloudStorage: () => ipcRenderer.invoke('electron:getCloudStorage'),
+    setCloudStorage: (enabled) => ipcRenderer.invoke('electron:setCloudStorage', enabled),
+  },
+
+  ingest: {
+    generateKey: () => ipcRenderer.invoke('electron:generateIngestKey'),
+    hasKey: () => ipcRenderer.invoke('electron:hasIngestKey'),
+    revokeKey: () => ipcRenderer.invoke('electron:revokeIngestKey'),
   },
 
   window: {

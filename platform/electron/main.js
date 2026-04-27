@@ -201,7 +201,8 @@ function startLocalServer() {
       ? path.join(process.resourcesPath, 'app.asar.unpacked', 'platform', 'server', 'index.js')
       : path.join(__dirname, '..', 'server', 'index.js');
 
-    const dbPath = store.get('sqlitePath', path.join(app.getPath('userData'), 'siem.db'));
+    const dbPath = store.get('sqlitePath', getSubScopedDbPath());
+    fs.mkdirSync(path.dirname(dbPath), { recursive: true });
 
     const ALLOWED_ENV_VARS = [
       'AUTH0_DOMAIN', 'AUTH0_CLIENT_ID', 'AUTH0_AUDIENCE',
@@ -218,6 +219,20 @@ function startLocalServer() {
     env.SQLITE_PATH = dbPath;
     env.PORT = String(SERVER_PORT);
     env.ALLOWED_ORIGIN = `http://localhost:${SERVER_PORT}`;
+    const ingestKeyHash = store.get('ingestKeyHash', '');
+    if (ingestKeyHash) env.LOCAL_INGEST_KEY_HASH = ingestKeyHash;
+    const userSub = store.get('userSub', '');
+    if (userSub) env.LOCAL_USER_ID = userSub;
+
+    // Cloud storage forwarding (paid users only)
+    const isPaid = store.get('isPaid', false);
+    env.IS_PAID = String(isPaid);
+    if (isPaid && store.get('cloudStorage', false)) {
+      env.CLOUD_STORAGE = 'true';
+      env.VPS_WS_URL = 'wss://0xkudo.com/ws/ingest';
+      const jwt = store.get('userJwt', '');
+      if (jwt) env.USER_JWT = jwt;
+    }
 
     serverProcess = fork(serverEntry, [], { env, stdio: 'pipe', execArgv: [] });
     serverProcess.stdout?.on('data', d => console.log('[local-server]', d.toString().trim()));
@@ -238,6 +253,44 @@ function startLocalServer() {
     setTimeout(poll, 500);
   });
 }
+
+// Returns %APPDATA%\0xKudo\<sanitized-sub>\siem.db for the current user.
+// Falls back to the flat path if no sub is stored yet (first launch before auth).
+function getSubScopedDbPath() {
+  const sub = store.get('userSub', '');
+  const safeSub = sub.replace(/\|/g, '-').replace(/[^a-zA-Z0-9\-_]/g, '_');
+  if (!safeSub) return path.join(app.getPath('userData'), 'siem.db');
+  return path.join(app.getPath('userData'), safeSub, 'siem.db');
+}
+
+ipcMain.handle('electron:setUserSub', (event, sub) => {
+  if (!isValidSender(event)) return;
+  if (typeof sub !== 'string' || sub.length > 256) return;
+  const current = store.get('userSub', '');
+  if (current === sub) return;
+  store.set('userSub', sub);
+
+  // Migrate existing siem.db from old flat path to sub-scoped path if needed
+  const safeSub = sub.replace(/\|/g, '-').replace(/[^a-zA-Z0-9\-_]/g, '_');
+  const newDir = path.join(app.getPath('userData'), safeSub);
+  const newPath = path.join(newDir, 'siem.db');
+  const oldFlatPath = path.join(app.getPath('userData'), 'siem.db');
+  const oldStoredPath = store.get('sqlitePath', '');
+
+  if (!fs.existsSync(newPath)) {
+    // Create the sub directory
+    fs.mkdirSync(newDir, { recursive: true });
+    // Copy from old stored path first, then flat path as fallback
+    const source = (oldStoredPath && fs.existsSync(oldStoredPath)) ? oldStoredPath
+      : fs.existsSync(oldFlatPath) ? oldFlatPath : null;
+    if (source) {
+      try { fs.copyFileSync(source, newPath); } catch (_) {}
+    }
+  }
+
+  // Update stored path to the sub-scoped location
+  store.set('sqlitePath', newPath);
+});
 
 ipcMain.handle('electron:setTier', async (event, isPaid) => {
   if (!isValidSender(event)) return;
@@ -268,7 +321,7 @@ ipcMain.handle('electron:getIsPaid', (event) => {
 
 ipcMain.handle('electron:getStoragePath', (event) => {
   if (!isValidSender(event)) return null;
-  return store.get('sqlitePath', path.join(app.getPath('userData'), 'siem.db'));
+  return store.get('sqlitePath', getSubScopedDbPath());
 });
 
 ipcMain.handle('electron:pickStoragePath', async (event) => {
@@ -276,7 +329,7 @@ ipcMain.handle('electron:pickStoragePath', async (event) => {
 
   const result = await dialog.showOpenDialog(mainWindow, {
     title: 'Choose log storage location',
-    defaultPath: path.dirname(store.get('sqlitePath', path.join(app.getPath('userData'), 'siem.db'))),
+    defaultPath: path.dirname(store.get('sqlitePath', getSubScopedDbPath())),
     properties: ['openDirectory'],
   });
 
@@ -284,7 +337,7 @@ ipcMain.handle('electron:pickStoragePath', async (event) => {
 
   const newDir = result.filePaths[0];
   const newPath = path.join(newDir, 'siem.db');
-  const oldPath = store.get('sqlitePath', path.join(app.getPath('userData'), 'siem.db'));
+  const oldPath = store.get('sqlitePath', getSubScopedDbPath());
 
   if (newPath === oldPath) return { cancelled: true };
 
@@ -697,6 +750,73 @@ ipcMain.handle('settings:verifyPin', (event, pin) => {
       return { ok: false, err: 'Too many attempts. Try again in 60 seconds.' };
     }
     return { ok: false, err: 'Incorrect PIN' };
+  }
+});
+
+// ── Local ingest key IPC ──────────────────────────────────────────────────
+const { randomBytes: _randomBytes, createHash: _createHash } = require('crypto');
+
+function hashIngestKey(key) {
+  return _createHash('sha256').update(key).digest('hex');
+}
+
+ipcMain.handle('electron:generateIngestKey', (event) => {
+  if (!isValidSender(event)) return { ok: false, err: 'Unauthorized' };
+  const key = _randomBytes(32).toString('hex');
+  const hash = hashIngestKey(key);
+  store.set('ingestKeyHash', hash);
+  store.set('ingestKeyCreatedAt', new Date().toISOString());
+  return { ok: true, api_key: key, created_at: store.get('ingestKeyCreatedAt') };
+});
+
+ipcMain.handle('electron:hasIngestKey', (event) => {
+  if (!isValidSender(event)) return { ok: false };
+  const exists = store.has('ingestKeyHash');
+  return { ok: true, exists, created_at: store.get('ingestKeyCreatedAt', null) };
+});
+
+ipcMain.handle('electron:revokeIngestKey', (event) => {
+  if (!isValidSender(event)) return { ok: false, err: 'Unauthorized' };
+  store.delete('ingestKeyHash');
+  store.delete('ingestKeyCreatedAt');
+  return { ok: true };
+});
+
+// ── JWT + Cloud Storage IPC ───────────────────────────────────────────────
+ipcMain.handle('electron:setJwt', (event, token) => {
+  if (!isValidSender(event)) return;
+  if (typeof token !== 'string' || token.length > 8192) return;
+  store.set('userJwt', token);
+  // Propagate to running local server via restart-with-updated-env if cloud storage active
+  if (store.get('cloudStorage', false) && store.get('isPaid', false) && serverProcess) {
+    serverProcess.kill();
+    serverProcess = null;
+    startLocalServer().catch(e => console.error('Failed to restart local server after JWT update:', e.message));
+  }
+});
+
+ipcMain.handle('electron:getCloudStorage', (event) => {
+  if (!isValidSender(event)) return false;
+  return store.get('cloudStorage', false);
+});
+
+ipcMain.handle('electron:setCloudStorage', async (event, enabled) => {
+  if (!isValidSender(event)) return { ok: false };
+  // Only paid users may enable cloud storage
+  if (enabled && !store.get('isPaid', false)) {
+    return { ok: false, error: 'Cloud storage requires a paid subscription.' };
+  }
+  store.set('cloudStorage', !!enabled);
+  // Restart local server with updated env
+  if (serverProcess) {
+    serverProcess.kill();
+    serverProcess = null;
+  }
+  try {
+    await startLocalServer();
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e.message };
   }
 });
 
