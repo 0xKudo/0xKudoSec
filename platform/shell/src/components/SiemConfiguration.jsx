@@ -485,13 +485,27 @@ export function SiemConfiguration({ navLayout, setNavLayout, theme, setTheme }) 
     setSubscriptionError(null);
     try {
       const token = await getAccessTokenSilently();
-      const res = await fetch('/api/billing/create-portal-session', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to open portal');
-      window.location.href = data.url;
+      if (!isPaid) {
+        // Free user — start checkout for monthly plan
+        const res = await fetch('/api/billing/create-checkout-session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ plan: 'monthly' }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed to start checkout');
+        window.location.href = data.url;
+        if (window.electron?.isElectron) setManagingSubscription(false);
+      } else {
+        // Paid user — open Stripe billing portal
+        const res = await fetch('/api/billing/create-portal-session', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed to open portal');
+        window.location.href = data.url;
+      }
     } catch (e) {
       setSubscriptionError(e.message);
       setManagingSubscription(false);
@@ -892,14 +906,16 @@ winlogbeat.event_logs:
             </div>
 
             {/* ── Subscription ── */}
-            {isPaid && (
+            {(
               <div style={{ borderTop: '1px solid var(--border)', marginTop: '20px', paddingTop: '20px' }}>
                 <div style={s.sectionTitle}>Subscription</div>
                 <div style={s.sectionDesc}>
-                  Manage your billing, update your payment method, or cancel your subscription.
+                  {isPaid
+                    ? 'Manage your billing, update your payment method, or cancel your subscription.'
+                    : 'Upgrade to a paid plan to ingest logs, create cases, and use the full cloud SIEM.'}
                 </div>
                 <button style={s.btnPrimary} onClick={handleManageSubscription} disabled={managingSubscription}>
-                  {managingSubscription ? 'Loading...' : 'Manage subscription'}
+                  {managingSubscription ? 'Loading...' : isPaid ? 'Manage subscription' : 'Upgrade'}
                 </button>
                 {subscriptionError && (
                   <div style={{ marginTop: '8px', fontSize: '11px', color: 'var(--severity-critical)' }}>
