@@ -2267,7 +2267,7 @@ function LocalStorageTab({ s, isPaid, isLocalMode }) {
         </div>
       )}
 
-      {isLocalMode && <div style={{ marginBottom: '28px' }}>
+      {window.electron?.debug && <div style={{ marginBottom: '28px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
           <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Server Log</div>
           {serverLogs.length > 0 && (
