@@ -240,7 +240,7 @@ function startLocalServer() {
     }
 
     if (app.isPackaged) {
-      env.NODE_PATH = path.join(process.resourcesPath, 'app.asar.unpacked', 'node_modules');
+      env.NODE_PATH = path.join(process.resourcesPath, 'node_modules');
     }
     serverProcess = fork(serverEntry, [], { env, stdio: 'pipe', execArgv: [] });
     serverProcess.stdout?.on('data', d => {

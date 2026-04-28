@@ -40,6 +40,8 @@ extraResources:
     to: "tools"
   - from: "../../platform/shell/dist"
     to: "platform/shell/dist"
+  - from: "../../node_modules"
+    to: "node_modules"
 
 # Files to include in the package
 files:
