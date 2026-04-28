@@ -210,6 +210,7 @@ function startLocalServer() {
     fs.mkdirSync(path.dirname(dbPath), { recursive: true });
 
     const ALLOWED_ENV_VARS = [
+      'ANTHROPIC_API_KEY',
       'AUTH0_DOMAIN', 'AUTH0_CLIENT_ID', 'AUTH0_AUDIENCE',
       'SHODAN_API_KEY', 'VIRUSTOTAL_API_KEY', 'HUNTER_API_KEY',
       'IPINFO_TOKEN', 'ABUSEIPDB_API_KEY', 'ABUSECH_API_KEY',
