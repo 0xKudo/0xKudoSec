@@ -42,6 +42,24 @@ extraResources:
     to: "platform/shell/dist"
   - from: "../../node_modules"
     to: "node_modules"
+    filter:
+      - "!@node-llama-cpp/**"
+      - "!node-llama-cpp/**"
+      - "!electron/**"
+      - "!app-builder-bin/**"
+      - "!typescript/**"
+      - "!@esbuild/**"
+      - "!7zip-bin/**"
+      - "!@octokit/**"
+      - "!@babel/**"
+      - "!rxjs/**"
+      - "!@rollup/**"
+      - "!@electron/**"
+      - "!react-dom/**"
+      - "!caniuse-lite/**"
+      - "!app-builder-lib/**"
+      - "!vite/**"
+      - "!@vitejs/**"
 
 # Files to include in the package
 files:
