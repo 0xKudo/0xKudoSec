@@ -152,9 +152,11 @@ function createMainWindow() {
   mainWindow.webContents.on('before-input-event', (e, input) => {
     if (input.type !== 'keyDown') return;
 
-    // F12 DevTools — dev only
+    // F12 DevTools — always allowed while DEBUG_DEVTOOLS is set
     if (input.key === 'F12') {
-      if (!app.isPackaged) mainWindow.webContents.toggleDevTools();
+      if (!app.isPackaged || process.env.DEBUG_DEVTOOLS) {
+        mainWindow.webContents.toggleDevTools();
+      }
       e.preventDefault();
       return;
     }
@@ -163,8 +165,11 @@ function createMainWindow() {
     if (input.key === 'F5') { e.preventDefault(); return; }
     if (input.control && input.key === 'r') { e.preventDefault(); return; }
 
-    // Block DevTools / inspect shortcuts
+    // Block DevTools / inspect shortcuts (relaxed when DEBUG_DEVTOOLS set)
     if (input.control && input.shift && ['i', 'I', 'j', 'J', 'c', 'C'].includes(input.key)) {
+      if (!app.isPackaged || process.env.DEBUG_DEVTOOLS) {
+        mainWindow.webContents.toggleDevTools();
+      }
       e.preventDefault();
       return;
     }
@@ -238,9 +243,20 @@ function startLocalServer() {
       env.NODE_PATH = path.join(process.resourcesPath, 'app.asar.unpacked', 'node_modules');
     }
     serverProcess = fork(serverEntry, [], { env, stdio: 'pipe', execArgv: [] });
-    serverProcess.stdout?.on('data', d => console.log('[local-server]', d.toString().trim()));
-    serverProcess.stderr?.on('data', d => console.error('[local-server]', d.toString().trim()));
-    serverProcess.on('error', reject);
+    serverProcess.stdout?.on('data', d => {
+      const msg = d.toString().trim();
+      console.log('[local-server]', msg);
+      if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('debug:server-log', { level: 'log', msg });
+    });
+    serverProcess.stderr?.on('data', d => {
+      const msg = d.toString().trim();
+      console.error('[local-server]', msg);
+      if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('debug:server-log', { level: 'error', msg });
+    });
+    serverProcess.on('error', (err) => {
+      if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('debug:server-log', { level: 'error', msg: `[fork error] ${err.message}` });
+      reject(err);
+    });
 
     const deadline = Date.now() + 15000;
     function poll() {
@@ -356,10 +372,7 @@ ipcMain.handle('electron:pickStoragePath', async (event) => {
   store.set('sqlitePath', newPath);
 
   // Restart local server with new path
-  if (serverProcess) {
-    serverProcess.kill();
-    serverProcess = null;
-  }
+  await killLocalServer();
   try {
     await startLocalServer();
   } catch (e) {
@@ -775,7 +788,16 @@ ipcMain.handle('electron:generateIngestKey', (event) => {
 ipcMain.handle('electron:hasIngestKey', (event) => {
   if (!isValidSender(event)) return { ok: false };
   const exists = store.has('ingestKeyHash');
-  return { ok: true, exists, created_at: store.get('ingestKeyCreatedAt', null) };
+  let last_used_at = null;
+  try {
+    const dbPath = store.get('sqlitePath', getSubScopedDbPath());
+    const sidecarPath = dbPath.replace(/\.db$/, '.ingest-meta.json');
+    if (fs.existsSync(sidecarPath)) {
+      const meta = JSON.parse(fs.readFileSync(sidecarPath, 'utf8'));
+      last_used_at = meta.last_used_at || null;
+    }
+  } catch {}
+  return { ok: true, exists, created_at: store.get('ingestKeyCreatedAt', null), last_used_at };
 });
 
 ipcMain.handle('electron:revokeIngestKey', (event) => {
@@ -786,15 +808,25 @@ ipcMain.handle('electron:revokeIngestKey', (event) => {
 });
 
 // ── JWT + Cloud Storage IPC ───────────────────────────────────────────────
+function killLocalServer() {
+  return new Promise((resolve) => {
+    if (!serverProcess) { resolve(); return; }
+    const proc = serverProcess;
+    serverProcess = null;
+    proc.once('exit', () => setTimeout(resolve, 300));
+    proc.kill();
+    // Safety: if exit never fires, resolve after 3s
+    setTimeout(resolve, 3000);
+  });
+}
+
 ipcMain.handle('electron:setJwt', (event, token) => {
   if (!isValidSender(event)) return;
   if (typeof token !== 'string' || token.length > 8192) return;
   store.set('userJwt', token);
   // Propagate to running local server via restart-with-updated-env if cloud storage active
   if (store.get('cloudStorage', false) && store.get('isPaid', false) && serverProcess) {
-    serverProcess.kill();
-    serverProcess = null;
-    startLocalServer().catch(e => console.error('Failed to restart local server after JWT update:', e.message));
+    killLocalServer().then(() => startLocalServer()).catch(e => console.error('Failed to restart local server after JWT update:', e.message));
   }
 });
 
@@ -810,11 +842,7 @@ ipcMain.handle('electron:setCloudStorage', async (event, enabled) => {
     return { ok: false, error: 'Cloud storage requires a paid subscription.' };
   }
   store.set('cloudStorage', !!enabled);
-  // Restart local server with updated env
-  if (serverProcess) {
-    serverProcess.kill();
-    serverProcess = null;
-  }
+  await killLocalServer();
   try {
     await startLocalServer();
     return { ok: true };

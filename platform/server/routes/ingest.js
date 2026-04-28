@@ -1,6 +1,8 @@
 // platform/server/routes/ingest.js
 import { Router } from 'express';
 import { createHash, randomUUID } from 'crypto';
+import { writeFileSync, mkdirSync } from 'fs';
+import { dirname } from 'path';
 import multer from 'multer';
 import { WebSocket } from 'ws';
 import { bufferEvents, flushBuffer } from '../services/forwardBuffer.js';
@@ -117,6 +119,16 @@ async function requireIngestKey(req, res, next) {
     const localHash = process.env.LOCAL_INGEST_KEY_HASH;
     if (localHash && hashKey(token) === localHash) {
       req.ingestUserId = process.env.LOCAL_USER_ID || 'local';
+      // Write last_used_at to sidecar file — read by Electron main via IPC
+      try {
+        const sidecarPath = process.env.SQLITE_PATH
+          ? process.env.SQLITE_PATH.replace(/\.db$/, '.ingest-meta.json')
+          : null;
+        if (sidecarPath) {
+          mkdirSync(dirname(sidecarPath), { recursive: true });
+          writeFileSync(sidecarPath, JSON.stringify({ last_used_at: new Date().toISOString() }), 'utf8');
+        }
+      } catch {}
       return next();
     }
     return res.status(401).json({ error: 'Unauthorized' });

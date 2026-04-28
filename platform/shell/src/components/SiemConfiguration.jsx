@@ -609,7 +609,7 @@ export function SiemConfiguration({ navLayout, setNavLayout, theme, setTheme }) 
     try {
       if (isElectron) {
         const result = await window.electron.ingest.hasKey();
-        setKeyMeta(result.exists ? { exists: true, created_at: result.created_at } : null);
+        setKeyMeta(result.exists ? { exists: true, created_at: result.created_at, last_used_at: result.last_used_at } : null);
       } else {
         const token = await getAccessTokenSilently();
         const res = await fetch('/api/siem/ingest-key', { headers: { Authorization: `Bearer ${token}` } });
@@ -946,8 +946,8 @@ winlogbeat.event_logs:
                 <div style={s.keyMuted}>
                   Generated {new Date(keyMeta.created_at).toLocaleString()}
                   {!isElectron && keyMeta.expires_at && <span> · expires {new Date(keyMeta.expires_at).toLocaleDateString()}</span>}
-                  {!isElectron && keyMeta.last_used_at && <span> · last used {new Date(keyMeta.last_used_at).toLocaleString()}</span>}
-                  {!isElectron && !keyMeta.last_used_at && <span> · never used</span>}
+                  {keyMeta.last_used_at && <span> · last used {new Date(keyMeta.last_used_at).toLocaleString()}</span>}
+                  {!keyMeta.last_used_at && <span> · never used</span>}
                 </div>
                 <button style={s.btn} onClick={generateKey} disabled={generating}>
                   {generating ? 'Generating...' : 'Regenerate Key'}
@@ -2128,6 +2128,9 @@ function LocalStorageTab({ s, isPaid, isLocalMode }) {
   const [cloudStorage, setCloudStorage] = useState(false);
   const [cloudStorageMsg, setCloudStorageMsg] = useState(null);
   const [togglingCloud, setTogglingCloud] = useState(false);
+  const [serverLogs, setServerLogs] = useState([]);
+  const logsEndRef = useRef(null);
+  useEffect(() => { logsEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [serverLogs]);
 
   useEffect(() => {
     if (window.electron?.storage?.getStoragePath) {
@@ -2135,6 +2138,12 @@ function LocalStorageTab({ s, isPaid, isLocalMode }) {
     }
     if (isPaid && window.electron?.storage?.getCloudStorage) {
       window.electron.storage.getCloudStorage().then(setCloudStorage);
+    }
+    if (window.electron?.debug?.onServerLog) {
+      window.electron.debug.onServerLog(({ level, msg }) => {
+        const ts = new Date().toLocaleTimeString();
+        setServerLogs(prev => [...prev.slice(-99), { level, msg, ts }]);
+      });
     }
   }, [isPaid]);
 
@@ -2257,6 +2266,26 @@ function LocalStorageTab({ s, isPaid, isLocalMode }) {
           )}
         </div>
       )}
+
+      {isLocalMode && <div style={{ marginBottom: '28px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+          <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Server Log</div>
+          {serverLogs.length > 0 && (
+            <button style={{ ...s.btn, padding: '2px 8px', fontSize: '10px' }} onClick={() => setServerLogs([])}>Clear</button>
+          )}
+        </div>
+        <div style={{ background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '4px', padding: '8px', height: '160px', overflowY: 'auto', fontFamily: 'var(--font)', fontSize: '11px', lineHeight: 1.6 }}>
+          {serverLogs.length === 0
+            ? <span style={{ color: 'var(--text-muted)' }}>No server output yet. Logs appear here when the local server writes to stdout/stderr.</span>
+            : serverLogs.map((entry, i) => (
+              <div key={i} style={{ color: entry.level === 'error' ? 'var(--severity-critical)' : 'var(--text-muted)', wordBreak: 'break-all' }}>
+                <span style={{ opacity: 0.5, marginRight: '6px' }}>{entry.ts}</span>{entry.msg}
+              </div>
+            ))
+          }
+          <div ref={logsEndRef} />
+        </div>
+      </div>}
 
       {isLocalMode && <div>
         <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '12px' }}>Export data</div>

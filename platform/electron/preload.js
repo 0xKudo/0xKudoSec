@@ -86,6 +86,10 @@ contextBridge.exposeInMainWorld('electron', {
     dismiss: () => ipcRenderer.invoke('update:dismiss'),
   },
 
+  debug: {
+    onServerLog: (cb) => ipcRenderer.on('debug:server-log', (_e, entry) => cb(entry)),
+  },
+
   llm: {
     // Query / control
     getStatus: () => ipcRenderer.invoke('llm:status'),
