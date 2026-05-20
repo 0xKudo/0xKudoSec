@@ -148,8 +148,7 @@ export function SecurityPage() {
 
         <h2 style={s.h2}>Contact</h2>
         <p style={s.p}>
-          For security questions or to report a vulnerability, contact:{' '}
-          <span style={s.muted}>contact@laynekudo.com</span>
+          For security questions or to report a vulnerability, contact the operator via the platform.
         </p>
       </div></div>
     </div>
