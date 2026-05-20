@@ -107,7 +107,7 @@ export function PrivacyPage() {
         <div style={s.updated}>Last updated: April 26, 2026</div>
 
         <p style={s.p}>
-          0xKudo ("the platform") is a cybersecurity operations platform operated by Layne Kudo.
+          0xKudo ("the platform") is a cybersecurity operations platform operated by the operator.
           This policy explains what data is collected, how it is used, how long it is retained, and your rights as a user.
         </p>
 
@@ -175,8 +175,7 @@ export function PrivacyPage() {
 
         <h2 style={s.h2}>Contact</h2>
         <p style={s.p}>
-          For privacy questions or data requests, contact:{' '}
-          <span style={s.muted}>contact@laynekudo.com</span>
+          For privacy questions or data requests, contact the operator via the platform.
         </p>
       </div></div>
     </div>

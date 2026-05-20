@@ -102,7 +102,7 @@ export function TermsPage() {
         <div style={s.updated}>Last updated: April 26, 2026</div>
 
         <p style={s.p}>
-          These Terms of Service govern your access to and use of 0xKudo ("the platform"), a cybersecurity operations platform operated by Layne Kudo. By creating an account or using the platform, you agree to these terms.
+          These Terms of Service govern your access to and use of 0xKudo ("the platform"), a cybersecurity operations platform operated by the operator. By creating an account or using the platform, you agree to these terms.
         </p>
 
         <h2 style={s.h2}>Acceptable Use</h2>
@@ -164,7 +164,7 @@ export function TermsPage() {
 
         <h2 style={s.h2}>Limitation of Liability</h2>
         <p style={s.p}>
-          To the maximum extent permitted by applicable law, Layne Kudo shall not be liable for any indirect, incidental, special, consequential, or punitive damages, including loss of data, loss of revenue, or security incidents arising from use of or inability to use the platform, even if advised of the possibility of such damages. Our total liability for any claim arising out of or related to these terms shall not exceed the amount you paid for the service in the twelve months preceding the claim.
+          To the maximum extent permitted by applicable law, the operator shall not be liable for any indirect, incidental, special, consequential, or punitive damages, including loss of data, loss of revenue, or security incidents arising from use of or inability to use the platform, even if advised of the possibility of such damages. Our total liability for any claim arising out of or related to these terms shall not exceed the amount you paid for the service in the twelve months preceding the claim.
         </p>
 
         <h2 style={s.h2}>Changes to These Terms</h2>
@@ -174,7 +174,7 @@ export function TermsPage() {
 
         <h2 style={s.h2}>Contact</h2>
         <p style={s.p}>
-          For questions about these terms, contact: <span style={s.muted}>contact@laynekudo.com</span>
+          For questions about these terms, contact the operator via the platform.
         </p>
       </div></div>
     </div>
