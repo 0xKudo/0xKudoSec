@@ -47,6 +47,7 @@ let mainWindow = null;
 let splashWindow = null;
 let serverProcess = null;
 let tray = null;
+const serverStartupLog = [];
 
 function isValidSender(event) {
   const url = event.senderFrame?.url ?? '';
@@ -243,18 +244,22 @@ function startLocalServer() {
     if (app.isPackaged) {
       env.NODE_PATH = path.join(process.resourcesPath, 'node_modules');
     }
+    serverStartupLog.length = 0;
     serverProcess = fork(serverEntry, [], { env, stdio: 'pipe', execArgv: [] });
     serverProcess.stdout?.on('data', d => {
       const msg = d.toString().trim();
       console.log('[local-server]', msg);
+      serverStartupLog.push(msg);
       if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('debug:server-log', { level: 'log', msg });
     });
     serverProcess.stderr?.on('data', d => {
       const msg = d.toString().trim();
       console.error('[local-server]', msg);
+      serverStartupLog.push(msg);
       if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('debug:server-log', { level: 'error', msg });
     });
     serverProcess.on('error', (err) => {
+      serverStartupLog.push(`[fork error] ${err.message}`);
       if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('debug:server-log', { level: 'error', msg: `[fork error] ${err.message}` });
       reject(err);
     });
@@ -1018,7 +1023,12 @@ app.whenReady().then(async () => {
     await startLocalServer();
   } catch (e) {
     console.error('Failed to start local server on startup:', e.message);
+    const recentLog = serverStartupLog.join('\n').slice(-2000);
     if (serverProcess) { serverProcess.kill(); serverProcess = null; }
+    dialog.showErrorBox(
+      'Local server failed to start',
+      `${e.message}\n\nThe app will fall back to the hosted version at ${PRODUCTION_URL}. Local/offline mode and direct log ingestion will not be available this session.\n\nRecent server output:\n${recentLog || '(none captured)'}`
+    );
   }
 
   createMainWindow();
