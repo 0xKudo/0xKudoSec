@@ -1,12 +1,14 @@
 {
   "name": "@cybertools/electron",
-  "version": "1.2.68-beta.3",
+  "version": "1.2.68-beta.4",
   "description": "0xKudo Security Toolkit desktop app",
   "author": "Layne Kudo",
   "private": true,
   "main": "main.js",
   "scripts": {
     "start": "electron .",
+    "rebuild-native": "electron-rebuild -f -w better-sqlite3 -m ../.. -v 34.5.8",
+    "prebuild": "npm run rebuild-native",
     "build": "electron-builder"
   },
   "dependencies": {
