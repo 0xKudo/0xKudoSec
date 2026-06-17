@@ -1077,6 +1077,28 @@ ipcMain.handle('update:dismiss', (event) => {
   }
 });
 
+// ── Global safety net ───────────────────────────────────────────────────
+// Without this, an uncaught exception or unhandled rejection anywhere in the
+// main process is silent in a packaged app — no console, no dialog, just a
+// frozen/blank window. Surface it instead of letting the app hang invisibly.
+process.on('uncaughtException', (err) => {
+  console.error('[uncaughtException]', err.message, err.stack);
+  if (splashWindow && !splashWindow.isDestroyed()) {
+    splashWindow.destroy();
+    splashWindow = null;
+  }
+  dialog.showErrorBox('Unexpected error', `${err.message}\n\n${err.stack || ''}`);
+});
+process.on('unhandledRejection', (reason) => {
+  const msg = reason instanceof Error ? `${reason.message}\n\n${reason.stack || ''}` : String(reason);
+  console.error('[unhandledRejection]', msg);
+  if (splashWindow && !splashWindow.isDestroyed()) {
+    splashWindow.destroy();
+    splashWindow = null;
+  }
+  dialog.showErrorBox('Unexpected error', msg);
+});
+
 // ── App lifecycle ─────────────────────────────────────────────────────────
 app.whenReady().then(async () => {
   // Remove default application menu — eliminates Chromium's built-in
@@ -1107,18 +1129,30 @@ app.whenReady().then(async () => {
     );
   }
 
-  createMainWindow();
+  try {
+    createMainWindow();
 
-  // Tray is set up after main window exists
-  const { createTray } = require('./tray');
-  tray = createTray(mainWindow, store, navigateTo, runSc);
+    // Tray is set up after main window exists
+    const { createTray } = require('./tray');
+    tray = createTray(mainWindow, store, navigateTo, runSc);
 
-  // LLM IPC — registered after mainWindow exists so progress events can be sent
-  const { setupLlmIpc, scheduleStartupUpdateCheck } = require('./llmWorker');
-  setupLlmIpc(mainWindow);
-  scheduleStartupUpdateCheck(mainWindow);
+    // LLM IPC — registered after mainWindow exists so progress events can be sent
+    const { setupLlmIpc, scheduleStartupUpdateCheck } = require('./llmWorker');
+    setupLlmIpc(mainWindow);
+    scheduleStartupUpdateCheck(mainWindow);
 
-  setupAutoUpdater();
+    setupAutoUpdater();
+  } catch (e) {
+    console.error('Startup failed after local server init:', e.message, e.stack);
+    if (splashWindow && !splashWindow.isDestroyed()) {
+      splashWindow.destroy();
+      splashWindow = null;
+    }
+    dialog.showErrorBox(
+      'Startup failed',
+      `${e.message}\n\n${e.stack || ''}`
+    );
+  }
 });
 
 app.on('window-all-closed', () => {
