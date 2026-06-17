@@ -608,6 +608,43 @@ ipcMain.handle('fluent-bit:write-config', async (event, configText) => {
   }
 });
 
+// ── Windows Event Log direct ingestion IPC (free/local tier) ──────────────
+const eventLogCollector = require('./eventLogCollector');
+const EVENTLOG_ALLOWED_CHANNELS = ['Security', 'System', 'Application'];
+
+ipcMain.handle('eventlog:getChannels', (event) => {
+  if (!isValidSender(event)) return { selected: [], available: EVENTLOG_ALLOWED_CHANNELS };
+  return {
+    selected: store.get('eventLogChannelsSelected', []),
+    available: EVENTLOG_ALLOWED_CHANNELS,
+  };
+});
+
+ipcMain.handle('eventlog:setChannels', (event, channels) => {
+  if (!isValidSender(event)) return { ok: false, err: 'Unauthorized' };
+  if (!Array.isArray(channels)) return { ok: false, err: 'Invalid channels' };
+  const valid = channels.filter(c => EVENTLOG_ALLOWED_CHANNELS.includes(c));
+  store.set('eventLogChannelsSelected', valid);
+  return { ok: true, selected: valid };
+});
+
+ipcMain.handle('eventlog:start', (event) => {
+  if (!isValidSender(event)) return { ok: false, err: 'Unauthorized' };
+  const channels = store.get('eventLogChannelsSelected', []);
+  const intervalSeconds = store.get('eventLogPollIntervalSeconds', 15);
+  return eventLogCollector.startEventLogPolling(store, channels, intervalSeconds);
+});
+
+ipcMain.handle('eventlog:stop', (event) => {
+  if (!isValidSender(event)) return { ok: false, err: 'Unauthorized' };
+  return eventLogCollector.stopEventLogPolling();
+});
+
+ipcMain.handle('eventlog:status', (event) => {
+  if (!isValidSender(event)) return { running: false };
+  return eventLogCollector.getStatus();
+});
+
 // ── PIN IPC ───────────────────────────────────────────────────────────────
 const { scryptSync, randomBytes, timingSafeEqual } = require('crypto');
 

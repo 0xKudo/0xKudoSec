@@ -2132,6 +2132,12 @@ function LocalStorageTab({ s, isPaid, isLocalMode }) {
   const logsEndRef = useRef(null);
   useEffect(() => { logsEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [serverLogs]);
 
+  // Direct Windows Event Log ingestion (free/local tier — no Fluent Bit required)
+  const [evtChannels, setEvtChannels] = useState({ selected: [], available: [] });
+  const [evtStatus, setEvtStatus] = useState({ running: false, lastPollAt: null, lastEventCount: 0, lastError: null });
+  const [evtToggling, setEvtToggling] = useState(false);
+  const [evtMsg, setEvtMsg] = useState(null);
+
   useEffect(() => {
     if (window.electron?.storage?.getStoragePath) {
       window.electron.storage.getStoragePath().then(setStoragePath);
@@ -2146,6 +2152,53 @@ function LocalStorageTab({ s, isPaid, isLocalMode }) {
       });
     }
   }, [isPaid]);
+
+  useEffect(() => {
+    if (!isLocalMode || !window.electron?.eventLog) return;
+    window.electron.eventLog.getChannels().then(setEvtChannels);
+    function pollEvtStatus() {
+      window.electron.eventLog.getStatus().then(setEvtStatus);
+    }
+    pollEvtStatus();
+    const t = setInterval(pollEvtStatus, 10000);
+    return () => clearInterval(t);
+  }, [isLocalMode]);
+
+  async function handleEvtChannelToggle(channel) {
+    const next = evtChannels.selected.includes(channel)
+      ? evtChannels.selected.filter(c => c !== channel)
+      : [...evtChannels.selected, channel];
+    const result = await window.electron.eventLog.setChannels(next);
+    if (result?.ok) setEvtChannels(prev => ({ ...prev, selected: result.selected }));
+  }
+
+  async function handleEvtToggleEnabled() {
+    setEvtToggling(true);
+    setEvtMsg(null);
+    try {
+      if (evtStatus.running) {
+        await window.electron.eventLog.stop();
+        setEvtStatus(s => ({ ...s, running: false }));
+        setEvtMsg({ ok: true, text: 'Local log ingestion stopped.' });
+      } else {
+        if (!evtChannels.selected.length) {
+          setEvtMsg({ ok: false, text: 'Select at least one event log channel first.' });
+          return;
+        }
+        const result = await window.electron.eventLog.start();
+        if (result?.ok) {
+          setEvtStatus(s => ({ ...s, running: true }));
+          setEvtMsg({ ok: true, text: 'Local log ingestion enabled. A UAC prompt may appear for the Security channel.' });
+        } else {
+          setEvtMsg({ ok: false, text: result?.err || 'Failed to start local log ingestion.' });
+        }
+      }
+    } catch (e) {
+      setEvtMsg({ ok: false, text: e.message });
+    } finally {
+      setEvtToggling(false);
+    }
+  }
 
   async function handleCloudStorageToggle() {
     setTogglingCloud(true);
@@ -2239,6 +2292,48 @@ function LocalStorageTab({ s, isPaid, isLocalMode }) {
         <div style={{ marginTop: '8px', fontSize: '11px', color: 'var(--text-muted)', lineHeight: 1.5 }}>
           Changing the location copies your existing database to the new folder and restarts the local server.
         </div>
+      </div>}
+
+      {isLocalMode && <div style={{ marginBottom: '28px' }}>
+        <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>Direct Log Ingestion</div>
+        <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '12px', lineHeight: 1.5 }}>
+          Read Windows Event Logs directly — no Fluent Bit install required. Fluent Bit is only needed to forward logs to the cloud SIEM (paid tier).
+        </div>
+        <div style={{ display: 'flex', gap: '16px', marginBottom: '12px', flexWrap: 'wrap' }}>
+          {evtChannels.available.map(channel => (
+            <label key={channel} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--text-primary)', cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={evtChannels.selected.includes(channel)}
+                onChange={() => handleEvtChannelToggle(channel)}
+                disabled={evtStatus.running}
+              />
+              {channel}
+            </label>
+          ))}
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <button
+            style={{ ...s.btnPrimary, background: evtStatus.running ? 'var(--severity-low)' : undefined, color: evtStatus.running ? '#fff' : undefined, minWidth: '180px' }}
+            onClick={handleEvtToggleEnabled}
+            disabled={evtToggling}
+          >
+            {evtToggling ? 'Updating...' : evtStatus.running ? 'Ingestion: ON' : 'Enable local log ingestion'}
+          </button>
+          <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+            {evtStatus.running
+              ? `Last poll: ${evtStatus.lastPollAt ? new Date(evtStatus.lastPollAt).toLocaleTimeString() : 'pending'} · ${evtStatus.lastEventCount} event(s)`
+              : 'Stopped'}
+          </span>
+        </div>
+        {evtStatus.lastError && (
+          <div style={{ marginTop: '8px', fontSize: '11px', color: 'var(--severity-critical)' }}>{evtStatus.lastError}</div>
+        )}
+        {evtMsg && (
+          <div style={{ marginTop: '8px', fontSize: '11px', color: evtMsg.ok ? 'var(--severity-low)' : 'var(--severity-critical)' }}>
+            {evtMsg.text}
+          </div>
+        )}
       </div>}
 
       {isPaid && (

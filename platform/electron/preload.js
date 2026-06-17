@@ -66,6 +66,14 @@ contextBridge.exposeInMainWorld('electron', {
     revokeKey: () => ipcRenderer.invoke('electron:revokeIngestKey'),
   },
 
+  eventLog: {
+    getChannels: () => ipcRenderer.invoke('eventlog:getChannels'),
+    setChannels: (channels) => ipcRenderer.invoke('eventlog:setChannels', channels),
+    start: () => ipcRenderer.invoke('eventlog:start'),
+    stop: () => ipcRenderer.invoke('eventlog:stop'),
+    getStatus: () => ipcRenderer.invoke('eventlog:status'),
+  },
+
   window: {
     minimize: () => ipcRenderer.send('window:minimize'),
     maximize: () => ipcRenderer.send('window:maximize'),
