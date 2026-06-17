@@ -12,6 +12,46 @@ const { autoUpdater } = require('electron-updater');
 // package name (@cybertools/electron → "electron")
 app.setPath('userData', path.join(app.getPath('appData'), '0xKudo'));
 
+// ── Local-mode API keys (encrypted, never bundled in the installer) ────────
+// The forked local server needs ANTHROPIC_API_KEY (and a few optional OSINT
+// keys) to function in STORAGE_MODE=local, but a packaged/installed app has
+// no .env file and main.js never loaded one — process.env.ANTHROPIC_API_KEY
+// was always undefined in the installed app. Rather than bundling the real
+// .env into the installer (which would ship plaintext secrets to every
+// install), these keys are entered once via a setup UI and stored in the
+// same encrypted electron-store already used for ingestKeyHash/PIN (AES via
+// safeStorage/DPAPI — see initStore() below). In dev (unpacked) mode, fall
+// back to reading the repo-root .env directly so existing dev workflows are
+// unaffected.
+const LOCAL_API_KEY_FIELDS = [
+  'ANTHROPIC_API_KEY',
+  'SHODAN_API_KEY', 'VIRUSTOTAL_API_KEY', 'HUNTER_API_KEY',
+  'IPINFO_TOKEN', 'ABUSEIPDB_API_KEY', 'ABUSECH_API_KEY',
+];
+
+function loadDevEnvFallback() {
+  if (app.isPackaged) return;
+  const envPath = path.join(__dirname, '..', '..', '.env');
+  if (!fs.existsSync(envPath)) return;
+  try {
+    const text = fs.readFileSync(envPath, 'utf8');
+    for (const line of text.split('\n')) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith('#')) continue;
+      const eq = trimmed.indexOf('=');
+      if (eq === -1) continue;
+      const key = trimmed.slice(0, eq).trim();
+      let value = trimmed.slice(eq + 1).trim();
+      if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+        value = value.slice(1, -1);
+      }
+      if (process.env[key] === undefined) process.env[key] = value;
+    }
+  } catch (e) {
+    console.error('Failed to load dev .env:', e.message);
+  }
+}
+
 let store = null;
 
 // ── Encrypted store initialisation ────────────────────────────────────────
@@ -210,17 +250,20 @@ function startLocalServer() {
     const dbPath = store.get('sqlitePath', getSubScopedDbPath());
     fs.mkdirSync(path.dirname(dbPath), { recursive: true });
 
-    const ALLOWED_ENV_VARS = [
-      'ANTHROPIC_API_KEY',
-      'AUTH0_DOMAIN', 'AUTH0_CLIENT_ID', 'AUTH0_AUDIENCE',
-      'SHODAN_API_KEY', 'VIRUSTOTAL_API_KEY', 'HUNTER_API_KEY',
-      'IPINFO_TOKEN', 'ABUSEIPDB_API_KEY', 'ABUSECH_API_KEY',
-    ];
+    const PUBLIC_ENV_VARS = ['AUTH0_DOMAIN', 'AUTH0_CLIENT_ID', 'AUTH0_AUDIENCE'];
     const env = Object.fromEntries(
-      ALLOWED_ENV_VARS
+      PUBLIC_ENV_VARS
         .filter(k => process.env[k] !== undefined)
         .map(k => [k, process.env[k]])
     );
+    // Secret API keys: encrypted store in packaged builds (set via the
+    // first-run setup dialog), dev .env fallback otherwise — never read a
+    // bundled plaintext .env in a packaged app.
+    for (const k of LOCAL_API_KEY_FIELDS) {
+      const storedVal = store.get(`apiKey_${k}`, '');
+      const val = storedVal || process.env[k];
+      if (val) env[k] = val;
+    }
     env.NODE_ENV = 'production';
     env.STORAGE_MODE = 'local';
     env.SQLITE_PATH = dbPath;
@@ -904,6 +947,38 @@ ipcMain.handle('settings:setTrayOnClose', (event, val) => {
   store.set('trayOnClose', val);
 });
 
+// ── Local-mode API key setup IPC ───────────────────────────────────────────
+// Lets the renderer show a one-time setup screen for ANTHROPIC_API_KEY (and
+// optional OSINT keys) when running in local mode without a dev .env. Values
+// are stored in the same AES-encrypted store as PIN/ingest-key data — never
+// written to disk in plaintext, never bundled in the installer.
+ipcMain.handle('apiKeys:getStatus', (event) => {
+  if (!isValidSender(event)) return { hasRequired: false, fields: [] };
+  const fields = LOCAL_API_KEY_FIELDS.map(k => ({
+    key: k,
+    set: !!(store.get(`apiKey_${k}`, '') || process.env[k]),
+  }));
+  const hasRequired = fields.find(f => f.key === 'ANTHROPIC_API_KEY')?.set ?? false;
+  return { hasRequired, fields };
+});
+
+ipcMain.handle('apiKeys:set', async (event, key, value) => {
+  if (!isValidSender(event)) return { ok: false, err: 'Unauthorized' };
+  if (!LOCAL_API_KEY_FIELDS.includes(key)) return { ok: false, err: 'Unknown key' };
+  if (typeof value !== 'string' || value.length > 512) return { ok: false, err: 'Invalid value' };
+  if (value) store.set(`apiKey_${key}`, value);
+  else store.delete(`apiKey_${key}`);
+
+  // Re-fork the local server so the new key takes effect immediately
+  await killLocalServer();
+  try {
+    await startLocalServer();
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, err: e.message };
+  }
+});
+
 // ── Window control IPC ────────────────────────────────────────────────────
 ipcMain.on('window:minimize', (event) => {
   if (!isValidSender(event)) return;
@@ -1009,6 +1084,7 @@ app.whenReady().then(async () => {
   Menu.setApplicationMenu(null);
 
   initStore();
+  loadDevEnvFallback();
   startCallbackServer();
   createSplash();
 

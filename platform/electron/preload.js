@@ -41,6 +41,11 @@ contextBridge.exposeInMainWorld('electron', {
     resetWithPassphrase: (passphrase) => ipcRenderer.invoke('settings:resetWithPassphrase', passphrase),
   },
 
+  apiKeys: {
+    getStatus: () => ipcRenderer.invoke('apiKeys:getStatus'),
+    set: (key, value) => ipcRenderer.invoke('apiKeys:set', key, value),
+  },
+
   auth: {
     onCallback: (cb) => ipcRenderer.on('auth0:callback', (_e, url) => cb(url)),
     setJwt: (token) => ipcRenderer.invoke('electron:setJwt', token),

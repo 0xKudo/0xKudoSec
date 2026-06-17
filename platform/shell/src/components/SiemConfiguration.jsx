@@ -2138,6 +2138,13 @@ function LocalStorageTab({ s, isPaid, isLocalMode }) {
   const [evtToggling, setEvtToggling] = useState(false);
   const [evtMsg, setEvtMsg] = useState(null);
 
+  // Local-mode API key setup — required so the forked local server (no .env
+  // in a packaged app) has ANTHROPIC_API_KEY. Stored encrypted via electron-store.
+  const [apiKeyStatus, setApiKeyStatus] = useState({ hasRequired: true, fields: [] });
+  const [anthropicKeyInput, setAnthropicKeyInput] = useState('');
+  const [savingApiKey, setSavingApiKey] = useState(false);
+  const [apiKeyMsg, setApiKeyMsg] = useState(null);
+
   useEffect(() => {
     if (window.electron?.storage?.getStoragePath) {
       window.electron.storage.getStoragePath().then(setStoragePath);
@@ -2151,7 +2158,30 @@ function LocalStorageTab({ s, isPaid, isLocalMode }) {
         setServerLogs(prev => [...prev.slice(-99), { level, msg, ts }]);
       });
     }
+    if (window.electron?.apiKeys?.getStatus) {
+      window.electron.apiKeys.getStatus().then(setApiKeyStatus);
+    }
   }, [isPaid]);
+
+  async function handleSaveAnthropicKey() {
+    if (!anthropicKeyInput.trim()) return;
+    setSavingApiKey(true);
+    setApiKeyMsg(null);
+    try {
+      const result = await window.electron.apiKeys.set('ANTHROPIC_API_KEY', anthropicKeyInput.trim());
+      if (result?.ok) {
+        setApiKeyMsg({ ok: true, text: 'Key saved. Local server restarted.' });
+        setAnthropicKeyInput('');
+        window.electron.apiKeys.getStatus().then(setApiKeyStatus);
+      } else {
+        setApiKeyMsg({ ok: false, text: result?.err || 'Failed to save key.' });
+      }
+    } catch (e) {
+      setApiKeyMsg({ ok: false, text: e.message });
+    } finally {
+      setSavingApiKey(false);
+    }
+  }
 
   useEffect(() => {
     if (!isLocalMode || !window.electron?.eventLog) return;
@@ -2273,6 +2303,32 @@ function LocalStorageTab({ s, isPaid, isLocalMode }) {
       <div style={s.sectionDesc}>
         {isLocalMode ? 'All SIEM data is stored locally on your device. Nothing is sent to the cloud.' : 'Manage local storage settings and cloud forwarding preferences.'}
       </div>
+
+      {isLocalMode && !apiKeyStatus.hasRequired && (
+        <div style={{ marginBottom: '28px', padding: '12px', border: '1px solid var(--severity-high)', borderRadius: '4px', background: 'var(--bg-primary)' }}>
+          <div style={{ fontSize: '11px', color: 'var(--severity-high)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>Setup required</div>
+          <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '12px', lineHeight: 1.5 }}>
+            The local server needs an Anthropic API key to run AI-powered tools. This is stored encrypted on your device and never leaves it.
+          </div>
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            <input
+              type="password"
+              value={anthropicKeyInput}
+              onChange={(e) => setAnthropicKeyInput(e.target.value)}
+              placeholder="sk-ant-..."
+              style={{ flex: 1, minWidth: '240px', fontSize: '12px', fontFamily: 'var(--font)', background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '4px', padding: '6px 10px', color: 'var(--text-primary)' }}
+            />
+            <button style={s.btnPrimary} onClick={handleSaveAnthropicKey} disabled={savingApiKey || !anthropicKeyInput.trim()}>
+              {savingApiKey ? 'Saving...' : 'Save Key'}
+            </button>
+          </div>
+          {apiKeyMsg && (
+            <div style={{ marginTop: '8px', fontSize: '11px', color: apiKeyMsg.ok ? 'var(--severity-low)' : 'var(--severity-critical)' }}>
+              {apiKeyMsg.text}
+            </div>
+          )}
+        </div>
+      )}
 
       {isLocalMode && <div style={{ marginBottom: '28px' }}>
         <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>Database location</div>
