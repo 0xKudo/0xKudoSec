@@ -184,6 +184,28 @@ function createMainWindow() {
 
   mainWindow.loadURL(url);
 
+  // Renderer-side diagnostics — the uncaughtException/unhandledRejection
+  // handlers added for the main process have no visibility into failures
+  // inside the webpage itself (failed asset loads, CSP violations, JS
+  // exceptions, renderer crashes). Without these, a blank white page is
+  // silent with no error anywhere. Deliberately not gated behind dev-only
+  // or DEBUG_DEVTOOLS — this needs to fire in the exact packaged build
+  // where the blank screen is being reproduced.
+  mainWindow.webContents.on('did-fail-load', (_e, errorCode, errorDescription, validatedURL) => {
+    if (errorCode === -3) return; // ERR_ABORTED — fires on ordinary redirects, not a real failure
+    console.error('[renderer did-fail-load]', errorCode, errorDescription, validatedURL);
+    dialog.showErrorBox('Page failed to load', `${errorDescription} (${errorCode})\nURL: ${validatedURL}`);
+  });
+  mainWindow.webContents.on('console-message', (_e, level, message, line, sourceId) => {
+    if (level < 2) return; // 0=verbose, 1=info/warning, 2=error — skip noise
+    console.error('[renderer console]', message, `${sourceId}:${line}`);
+    dialog.showErrorBox('Renderer console error', `${message}\n\n${sourceId}:${line}`);
+  });
+  mainWindow.webContents.on('render-process-gone', (_e, details) => {
+    console.error('[renderer-process-gone]', details.reason);
+    dialog.showErrorBox('Renderer crashed', `Reason: ${details.reason}`);
+  });
+
   // Disable built-in Electron reload shortcuts at the session level
   mainWindow.webContents.on('did-finish-load', () => {
     mainWindow.webContents.setIgnoreMenuShortcuts(true);
