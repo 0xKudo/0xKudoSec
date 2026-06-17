@@ -91,6 +91,19 @@ export async function createApp() {
 
     const { default: exportRoutes } = await import('./routes/export.js');
     app.use('/api/local/export', apiRateLimiter, exportRoutes);
+
+    // Serve the bundled shell at /app — Electron's mainWindow.loadURL points
+    // here in local mode. The cloud/VPS deployment serves the shell via nginx
+    // separately, so this is local-mode-only. Resolved relative to this file's
+    // own location (same sibling-directory assumption already relied on for
+    // serverEntry resolution in platform/electron/main.js): platform/server/
+    // and platform/shell/dist/ are siblings under platform/ in both dev and
+    // the packaged app's resources directory.
+    const shellDistPath = resolve(_dirname, '../shell/dist');
+    app.use('/app', express.static(shellDistPath));
+    app.get(/^\/app(\/.*)?$/, (req, res) => {
+      res.sendFile(join(shellDistPath, 'index.html'));
+    });
   }
   await loadTools(app);
   return app;
