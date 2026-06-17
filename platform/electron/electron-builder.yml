@@ -68,6 +68,7 @@ files:
   - "llmWorker.js"
   - "llmProcess.js"
   - "tray.js"
+  - "eventLogCollector.js"
   - "splash.html"
   - "assets/**"
   - "node_modules/**"
