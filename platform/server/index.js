@@ -100,6 +100,15 @@ export async function createApp() {
     // and platform/shell/dist/ are siblings under platform/ in both dev and
     // the packaged app's resources directory.
     const shellDistPath = resolve(_dirname, '../shell/dist');
+    // Vite builds index.html with root-relative asset paths (/assets/...),
+    // since it assumes the app is served from "/". In local mode it's served
+    // from "/app" instead, so the browser requests /assets/... at the bare
+    // server root — not /app/assets/.... Serve the same dist/assets directory
+    // at the root-level /assets path too so those absolute references resolve
+    // correctly without needing a separate Vite build config per deployment
+    // target. Scoped to /assets specifically (not the whole "/") so it can't
+    // shadow /api or /health regardless of registration order.
+    app.use('/assets', express.static(resolve(shellDistPath, 'assets')));
     app.use('/app', express.static(shellDistPath));
     app.get(/^\/app(\/.*)?$/, (req, res) => {
       // If express.static didn't find this (e.g. a transient miss right after
