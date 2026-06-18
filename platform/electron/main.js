@@ -272,11 +272,21 @@ function startLocalServer() {
     const dbPath = store.get('sqlitePath', getSubScopedDbPath());
     fs.mkdirSync(path.dirname(dbPath), { recursive: true });
 
-    const PUBLIC_ENV_VARS = ['AUTH0_DOMAIN', 'AUTH0_CLIENT_ID', 'AUTH0_AUDIENCE'];
+    // Public OAuth config (not secrets — already visible in any browser's
+    // network tab / the shell's own JS bundle). In dev, loadDevEnvFallback()
+    // populates process.env from the repo-root .env; a packaged app has no
+    // .env at all, so process.env.AUTH0_DOMAIN etc. are always undefined
+    // there — without these fallbacks, the forked server's CSP connectSrc
+    // ended up allowing "https://undefined" and every Auth0 token-exchange
+    // request was silently blocked, breaking login entirely in local mode.
+    const PUBLIC_AUTH0_DEFAULTS = {
+      AUTH0_DOMAIN: 'auth.0xkudo.com',
+      AUTH0_CLIENT_ID: 'TzIyCNnyNhhlKpm0W7uAhPKgcEnv1Cda',
+      AUTH0_AUDIENCE: 'https://tools.laynekudo.com/api',
+    };
     const env = Object.fromEntries(
-      PUBLIC_ENV_VARS
-        .filter(k => process.env[k] !== undefined)
-        .map(k => [k, process.env[k]])
+      Object.keys(PUBLIC_AUTH0_DEFAULTS)
+        .map(k => [k, process.env[k] || PUBLIC_AUTH0_DEFAULTS[k]])
     );
     // Secret API keys: encrypted store in packaged builds (set via the
     // first-run setup dialog), dev .env fallback otherwise — never read a
