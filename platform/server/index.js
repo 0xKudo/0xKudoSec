@@ -40,6 +40,12 @@ app.use(helmet({
       fontSrc: ["'self'", 'https://fonts.gstatic.com'],
       imgSrc: ["'self'", 'data:'],
       connectSrc: ["'self'", `https://${AUTH0_DOMAIN}`, wsOrigin],
+      // Some bundled dependency spins up a Web Worker via a blob: URL
+      // (CSP error message confirms this — "worker-src was not explicitly
+      // set, so script-src is used as a fallback", and script-src 'self'
+      // doesn't cover blob: workers). Allow it explicitly rather than
+      // loosening script-src itself.
+      workerSrc: ["'self'", 'blob:'],
       frameAncestors: ["'none'"],
       reportUri: ['/api/csp-report'],
     },
