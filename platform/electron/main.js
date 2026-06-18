@@ -321,6 +321,7 @@ function startLocalServer() {
     }
     serverStartupLog.length = 0;
     serverProcess = fork(serverEntry, [], { env, stdio: 'pipe', execArgv: [] });
+    const forkedProcess = serverProcess; // stable reference for the exit handler below
     serverProcess.stdout?.on('data', d => {
       const msg = d.toString().trim();
       console.log('[local-server]', msg);
@@ -337,6 +338,28 @@ function startLocalServer() {
       serverStartupLog.push(`[fork error] ${err.message}`);
       if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('debug:server-log', { level: 'error', msg: `[fork error] ${err.message}` });
       reject(err);
+    });
+    // Catches a crash/exit AFTER the server already started successfully —
+    // the startup try/catch around startLocalServer() only covers failures
+    // during the initial 15s poll window. Without this, the forked process
+    // dying later (e.g. an uncaught exception inside an API route handler)
+    // was completely silent: serverProcess kept pointing at a dead process,
+    // every subsequent fetch() from the renderer got connection-refused with
+    // no dialog, no log, nothing to explain why.
+    forkedProcess.on('exit', (code, signal) => {
+      // killLocalServer() already calls proc.kill() after nulling out the
+      // module-level serverProcess var — if that's what happened, serverProcess
+      // either points at nothing (this was the only/last process) or at a
+      // DIFFERENT, newer process (a restart raced ahead of this exit event).
+      // Either way, an intentional kill means serverProcess !== forkedProcess.
+      const wasIntentionalShutdown = serverProcess !== forkedProcess;
+      if (wasIntentionalShutdown) return;
+      serverProcess = null;
+      const recentLog = serverStartupLog.join('\n').slice(-2000);
+      dialog.showErrorBox(
+        'Local server stopped unexpectedly',
+        `The local server process exited (code ${code}, signal ${signal || 'none'}) after it had already started. The app will need to be restarted to use local/offline mode again.\n\nRecent server output:\n${recentLog || '(none captured)'}`
+      );
     });
 
     const deadline = Date.now() + 15000;
