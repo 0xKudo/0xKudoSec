@@ -102,6 +102,15 @@ export async function createApp() {
     const shellDistPath = resolve(_dirname, '../shell/dist');
     app.use('/app', express.static(shellDistPath));
     app.get(/^\/app(\/.*)?$/, (req, res) => {
+      // If express.static didn't find this (e.g. a transient miss right after
+      // a fresh install, or a typo'd path), don't mask it as index.html —
+      // that previously caused "Refused to apply style... MIME type text/html"
+      // errors when a CSS/JS asset request fell through here instead of 404ing.
+      // Only the SPA's actual client-side routes (no file extension) should
+      // get the index.html fallback.
+      if (/\.[a-zA-Z0-9]+$/.test(req.path)) {
+        return res.status(404).end();
+      }
       res.sendFile(join(shellDistPath, 'index.html'));
     });
   }
