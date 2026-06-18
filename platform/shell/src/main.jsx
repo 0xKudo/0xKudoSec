@@ -32,12 +32,21 @@ createRoot(document.getElementById('root')).render(
         This is intentional: storing tokens in localStorage exposes them to XSS.
         Do NOT add cacheLocation: 'localstorage'. Tokens are never written to
         localStorage or sessionStorage anywhere in the codebase. */}
+    {/* useRefreshTokens: silent token renewal otherwise defaults to a hidden
+        iframe loading the Auth0 domain, which the app's CSP (no frame-src
+        exception) correctly blocks -- without this, tokens never refresh and
+        every getAccessTokenSilently() call (useTier, the WebSocket alert
+        listener, etc.) fails once the initial token expires. Requires
+        "offline_access" scope and Refresh Token Rotation enabled on this
+        application in the Auth0 dashboard. */}
     <Auth0Provider
       domain={domain}
       clientId={clientId}
+      useRefreshTokens
       authorizationParams={{
         redirect_uri: redirectUri,
         audience,
+        scope: 'openid profile email offline_access',
         prompt: 'login',
       }}
     >
