@@ -33,8 +33,11 @@ app.use(helmet({
     directives: {
       defaultSrc: ["'self'"],
       scriptSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
-      fontSrc: ["'self'"],
+      // Fira Code is loaded via @import in theme.css from Google Fonts —
+      // styleSrc allows the CSS import, fontSrc allows the actual font
+      // files Google's stylesheet references (served from a different host).
+      styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+      fontSrc: ["'self'", 'https://fonts.gstatic.com'],
       imgSrc: ["'self'", 'data:'],
       connectSrc: ["'self'", `https://${AUTH0_DOMAIN}`, wsOrigin],
       frameAncestors: ["'none'"],
