@@ -6,7 +6,18 @@ const os = require('os');
 const path = require('path');
 
 const SERVER_PORT = 4000;
-const ALLOWED_CHANNELS = new Set(['Security', 'System', 'Application']);
+const ALLOWED_CHANNELS = new Set([
+  'Security',
+  'System',
+  'Application',
+  'Microsoft-Windows-Sysmon/Operational',
+  'Microsoft-Windows-PowerShell/Operational',
+  'Microsoft-Windows-WMI-Activity/Operational',
+  'Microsoft-Windows-TaskScheduler/Operational',
+  'Microsoft-Windows-Windows Defender/Operational',
+  'Microsoft-Windows-Windows Firewall With Advanced Security/Firewall',
+  'Microsoft-Windows-TerminalServices-RemoteConnectionManager/Operational',
+]);
 const ELEVATED_CHANNELS = new Set(['Security']);
 const MAX_EVENTS_PER_POLL = 500;
 

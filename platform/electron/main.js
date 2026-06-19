@@ -720,7 +720,18 @@ ipcMain.handle('fluent-bit:write-config', async (event, configText) => {
 
 // ── Windows Event Log direct ingestion IPC (free/local tier) ──────────────
 const eventLogCollector = require('./eventLogCollector');
-const EVENTLOG_ALLOWED_CHANNELS = ['Security', 'System', 'Application'];
+const EVENTLOG_ALLOWED_CHANNELS = [
+  'Security',
+  'System',
+  'Application',
+  'Microsoft-Windows-Sysmon/Operational',
+  'Microsoft-Windows-PowerShell/Operational',
+  'Microsoft-Windows-WMI-Activity/Operational',
+  'Microsoft-Windows-TaskScheduler/Operational',
+  'Microsoft-Windows-Windows Defender/Operational',
+  'Microsoft-Windows-Windows Firewall With Advanced Security/Firewall',
+  'Microsoft-Windows-TerminalServices-RemoteConnectionManager/Operational',
+];
 
 ipcMain.handle('eventlog:getChannels', (event) => {
   if (!isValidSender(event)) return { selected: [], available: EVENTLOG_ALLOWED_CHANNELS };
