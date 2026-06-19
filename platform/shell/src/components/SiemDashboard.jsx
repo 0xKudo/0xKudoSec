@@ -538,7 +538,11 @@ export function SiemDashboard({ onNavigate }) {
 
   // Wrap setters to also persist
   function setHours(v) { setHoursRaw(v); savePersistedState({ hours: v, sevFilters: [...sevFilters], catFilter, srcFilter, visibleCols }); }
-  function setSevFilters(next) { setSevFiltersRaw(next); savePersistedState({ hours, sevFilters: [...next], catFilter, srcFilter, visibleCols }); }
+  function setSevFilters(next) {
+    const resolved = typeof next === 'function' ? next(sevFilters) : next;
+    setSevFiltersRaw(resolved);
+    savePersistedState({ hours, sevFilters: [...resolved], catFilter, srcFilter, visibleCols });
+  }
   function toggleSevFilter(sev) {
     setSevFilters(prev => {
       const next = new Set(prev);

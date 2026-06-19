@@ -87,7 +87,7 @@ function buildQueryScript(channel, sinceIso) {
   // sinceIso always originates from our own ISO-formatted cursor writes (see
   // pollChannel below), never from user/IPC input, but validate defensively
   // since it's interpolated into the script text.
-  const since = sinceIso && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(sinceIso)
+  const since = sinceIso && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/.test(sinceIso)
     ? `[datetime]'${sinceIso}'`
     : '(Get-Date).AddMinutes(-5)';
   return `
@@ -131,7 +131,9 @@ function postBatch(events) {
 
 async function pollChannel(channel) {
   const cursorKey = `eventLogCursor_${channel}`;
+  const cursorSkipKey = `eventLogCursorSkip_${channel}`;
   const since = store.get(cursorKey, null);
+  const skipCount = store.get(cursorSkipKey, 0);
   const elevated = ELEVATED_CHANNELS.has(channel);
   const script = buildQueryScript(channel, since);
 
@@ -147,8 +149,23 @@ async function pollChannel(channel) {
   } catch {
     return 0;
   }
-  const events = Array.isArray(parsed) ? parsed : [parsed];
+  let events = Array.isArray(parsed) ? parsed : [parsed];
   if (!events.length) return 0;
+
+  // Skip events at the cursor boundary that were already sent in the previous poll.
+  // Windows event timestamps have sub-millisecond precision so +1ms cursor doesn't
+  // always advance past all events at the same timestamp.
+  if (since && skipCount > 0) {
+    let skipped = 0;
+    events = events.filter(e => {
+      if (skipped < skipCount && e.TimeCreated === since) {
+        skipped++;
+        return false;
+      }
+      return true;
+    });
+    if (!events.length) return 0;
+  }
 
   await postBatch(events);
 
@@ -158,8 +175,9 @@ async function pollChannel(channel) {
     .sort()
     .pop();
   if (latestTimestamp) {
-    const next = new Date(new Date(latestTimestamp).getTime() + 1).toISOString();
-    store.set(cursorKey, next);
+    const countAtLatest = events.filter(e => e.TimeCreated === latestTimestamp).length;
+    store.set(cursorKey, latestTimestamp);
+    store.set(cursorSkipKey, countAtLatest);
   }
 
   return events.length;
