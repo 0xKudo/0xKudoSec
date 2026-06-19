@@ -58,18 +58,50 @@ export async function runDetectionRules(userId, logIds = null) {
       params
     );
     for (const log of matches) {
-      const result = await pool.query(
-        `INSERT INTO alerts (user_id, rule_id, log_id, title, severity, host, source_ip, username, event_id, message, count, last_seen)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 1, NOW())
-         ON CONFLICT ON CONSTRAINT alerts_dedup
-         DO UPDATE SET count = alerts.count + 1, last_seen = NOW(), log_id = EXCLUDED.log_id
-         RETURNING (xmax = 0) AS inserted`,
-        [userId, rule.id, log.id, rule.name, rule.severity,
-         log.host, log.source_ip, log.username, log.event_id,
-         log.message ? log.message.slice(0, 500) : null]
-      );
+      const alertValues = [userId, rule.id, log.id, rule.name, rule.severity,
+        log.host, log.source_ip, log.username, log.event_id,
+        log.message ? log.message.slice(0, 500) : null];
+
+      let inserted;
+      if (process.env.STORAGE_MODE === 'local') {
+        // SQLite has no equivalent to Postgres's xmax system column (used
+        // below to distinguish insert-vs-update from a single upsert
+        // statement), so check existence first via the same unique key the
+        // alerts_dedup constraint covers (user_id, rule_id, event_id), then
+        // branch. Two statements instead of one, but only on the local path —
+        // the Postgres/cloud path keeps its existing single-statement upsert.
+        const { rows: existingRows } = await pool.query(
+          'SELECT id FROM alerts WHERE user_id = $1 AND rule_id = $2 AND event_id = $3',
+          [userId, rule.id, log.event_id]
+        );
+        if (existingRows.length) {
+          await pool.query(
+            'UPDATE alerts SET count = count + 1, last_seen = NOW(), log_id = $1 WHERE id = $2',
+            [log.id, existingRows[0].id]
+          );
+          inserted = false;
+        } else {
+          await pool.query(
+            `INSERT INTO alerts (user_id, rule_id, log_id, title, severity, host, source_ip, username, event_id, message, count, last_seen)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 1, NOW())`,
+            alertValues
+          );
+          inserted = true;
+        }
+      } else {
+        const result = await pool.query(
+          `INSERT INTO alerts (user_id, rule_id, log_id, title, severity, host, source_ip, username, event_id, message, count, last_seen)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 1, NOW())
+           ON CONFLICT ON CONSTRAINT alerts_dedup
+           DO UPDATE SET count = alerts.count + 1, last_seen = NOW(), log_id = EXCLUDED.log_id
+           RETURNING (xmax = 0) AS inserted`,
+          alertValues
+        );
+        inserted = result.rows[0]?.inserted;
+      }
+
       alertedLogIds.add(log.id);
-      if (result.rows[0]?.inserted) created++;
+      if (inserted) created++;
       else deduped++;
     }
   }

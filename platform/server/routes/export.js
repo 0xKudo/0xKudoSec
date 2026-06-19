@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { requireAuth } from '../middleware/requireAuth.js';
-import { query } from '../db/index.js';
+import db from '../services/db.js';
+const { query } = db;
 
 const router = Router();
 

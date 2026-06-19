@@ -151,6 +151,18 @@ CREATE TABLE IF NOT EXISTS ingest_sources (
   UNIQUE(name, user_id)
 );
 
+-- Was missing from the SQLite schema entirely (Postgres-only, see
+-- docs/schema.sql) — local-mode ingest key generation always failed
+-- before this was added.
+CREATE TABLE IF NOT EXISTS user_ingest_keys (
+  user_id TEXT PRIMARY KEY,
+  api_key TEXT NOT NULL,
+  expiry_days INTEGER NOT NULL DEFAULT 365,
+  expires_at DATETIME NOT NULL DEFAULT (datetime('now', '+365 days')),
+  last_used_at DATETIME,
+  created_at DATETIME DEFAULT (datetime('now'))
+);
+
 CREATE TABLE IF NOT EXISTS audit_log (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   user_id TEXT,
@@ -185,6 +197,6 @@ CREATE INDEX IF NOT EXISTS idx_alerts_user_status ON alerts(user_id, status);
 CREATE INDEX IF NOT EXISTS idx_alerts_user_last_seen ON alerts(user_id, last_seen DESC);
 CREATE INDEX IF NOT EXISTS idx_detection_rules_user ON detection_rules(user_id);
 CREATE INDEX IF NOT EXISTS idx_noise_candidates_user_status ON noise_candidates(user_id, status);
-CREATE INDEX IF NOT EXISTS idx_realtime_analysis_user ON realtime_analysis(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_realtime_analysis_user ON realtime_analysis(user_id, analyzed_at DESC);
 CREATE INDEX IF NOT EXISTS idx_audit_log_user ON audit_log(user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_ingest_sources_user ON ingest_sources(user_id);
