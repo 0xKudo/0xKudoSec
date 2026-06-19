@@ -23,9 +23,10 @@ function hashIngestKey(key) {
 // rotates/revokes their key via the existing Configuration UI flow, the old
 // plaintext cached here becomes useless — detect that and mint a fresh one
 // silently, never surfaced to the renderer.
-function ensureCollectorIngestKey() {
-  const currentHash = store.get('ingestKeyHash', '');
-  const cachedPlaintext = store.get('eventLogIngestKeyPlaintext', '');
+function ensureCollectorIngestKey(storeOverride) {
+  const s = storeOverride || store;
+  const currentHash = s.get('ingestKeyHash', '');
+  const cachedPlaintext = s.get('eventLogIngestKeyPlaintext', '');
 
   if (cachedPlaintext && currentHash && hashIngestKey(cachedPlaintext) === currentHash) {
     return cachedPlaintext;
@@ -33,9 +34,9 @@ function ensureCollectorIngestKey() {
 
   const key = randomBytes(32).toString('hex');
   const hash = hashIngestKey(key);
-  store.set('ingestKeyHash', hash);
-  store.set('ingestKeyCreatedAt', new Date().toISOString());
-  store.set('eventLogIngestKeyPlaintext', key);
+  s.set('ingestKeyHash', hash);
+  s.set('ingestKeyCreatedAt', new Date().toISOString());
+  s.set('eventLogIngestKeyPlaintext', key);
   return key;
 }
 
@@ -55,18 +56,12 @@ function runPowerShell(script, elevated) {
       return;
     }
 
-    // Elevated path: still no shell string interpolation of untrusted data —
-    // the only value passed to Start-Process is the already-base64-encoded
-    // script (opaque, non-shell-meaningful characters only: A-Za-z0-9+/=).
+    // Elevated path: the entire Start-Process invocation is passed as a single
+    // -Command string so PowerShell doesn't tokenize the -ArgumentList value.
+    // The encoded script contains only A-Za-z0-9+/= so it's safe to interpolate.
     const outFile = path.join(os.tmpdir(), `eventlog_poll_${randomBytes(8).toString('hex')}.json`);
-    const launcherArgs = [
-      '-NoProfile', '-NonInteractive', '-Command',
-      'Start-Process', 'powershell.exe',
-      '-ArgumentList', `'-NoProfile -NonInteractive -EncodedCommand ${encoded}'`,
-      '-Verb', 'RunAs', '-WindowStyle', 'Hidden', '-Wait',
-      '-RedirectStandardOutput', `'${outFile}'`,
-    ];
-    execFile('powershell.exe', launcherArgs, { windowsHide: true }, (err, _stdout, stderr) => {
+    const cmd = `Start-Process powershell.exe -ArgumentList '-NoProfile -NonInteractive -EncodedCommand ${encoded}' -Verb RunAs -WindowStyle Hidden -Wait -RedirectStandardOutput '${outFile}'`;
+    execFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', cmd], { windowsHide: true }, (err, _stdout, stderr) => {
       let out = '';
       try { out = fs.readFileSync(outFile, 'utf8'); } catch {}
       try { fs.unlinkSync(outFile); } catch {}
@@ -225,4 +220,5 @@ module.exports = {
   startEventLogPolling,
   stopEventLogPolling,
   getStatus,
+  ensureCollectorIngestKey,
 };

@@ -265,6 +265,13 @@ function startLocalServer() {
   return new Promise((resolve, reject) => {
     if (serverProcess) { resolve(); return; }
 
+    // Ensure a collector ingest key exists before forking — the server reads
+    // ingestKeyHash from the store at startup and bakes it into its env.
+    // If ensureCollectorIngestKey() ran *after* the fork, it would generate a
+    // new hash and overwrite the store, leaving the server checking the old hash
+    // while the collector posts with the new key (every ingest POST → 401).
+    eventLogCollector.ensureCollectorIngestKey(store);
+
     const serverEntry = app.isPackaged
       ? path.join(process.resourcesPath, 'platform', 'server', 'index.js')
       : path.join(__dirname, '..', 'server', 'index.js');
