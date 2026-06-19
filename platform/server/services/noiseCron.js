@@ -135,9 +135,7 @@ export async function scoreNoiseCandidates(userId, onProgress = null) {
 }
 
 export async function runAutoSuppress(userId) {
-  const pool = db.getPool();
-
-  const { rows: settingRows } = await pool.query(
+  const { rows: settingRows } = await db.query(
     `SELECT noise_auto_suppress FROM user_settings WHERE user_id = $1`,
     [userId]
   );
@@ -149,7 +147,7 @@ export async function runAutoSuppress(userId) {
     ? `confidence = 'high'`
     : `confidence IN ('high', 'medium')`;
 
-  const { rows: candidates } = await pool.query(`
+  const { rows: candidates } = await db.query(`
     SELECT * FROM noise_candidates
     WHERE user_id = $1
       AND status = 'pending'
@@ -163,7 +161,7 @@ export async function runAutoSuppress(userId) {
     const processLabel = sig.process_name ? ` [${sig.process_name}]` : '';
     const ruleName = `[Auto] Suppress ${sig.event_category}${eventIdLabel}${processLabel} from ${sig.source}`;
 
-    const { rows: ruleRows } = await pool.query(`
+    const { rows: ruleRows } = await db.query(`
       INSERT INTO detection_rules
         (user_id, name, description, action, enabled, match_category, match_event_id, match_process, match_username)
       VALUES ($1, $2, $3, 'suppress', true, $4, $5::integer, $6, $7)
@@ -180,7 +178,7 @@ export async function runAutoSuppress(userId) {
 
     const ruleId = ruleRows[0].id;
 
-    await pool.query(`
+    await db.query(`
       UPDATE noise_candidates
       SET status = 'auto_created', suppression_rule_id = $2, updated_at = NOW()
       WHERE id = $1

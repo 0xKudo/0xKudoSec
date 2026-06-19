@@ -9,19 +9,19 @@ import { syncKnowledgeBase } from '../services/kbCron.js';
 const router = Router();
 // All noise routes require auth. Write routes additionally require paid.
 router.use(requireAuth);
-const pool = () => db.getPool();
 const uid = req => req.auth.sub;
+const isLocal = () => process.env.STORAGE_MODE === 'local';
 
 // GET /api/siem/noise/status
 router.get('/status', requireAuth, async (req, res) => {
-  const { rows: eventRows } = await pool().query(`
+  const { rows: eventRows } = await db.query(`
     SELECT
       COUNT(*) AS total_events,
       EXTRACT(EPOCH FROM (NOW() - MIN(timestamp))) / 86400 AS days_ingested
     FROM logs WHERE user_id = $1
   `, [uid(req)]);
 
-  const { rows: candidateRows } = await pool().query(`
+  const { rows: candidateRows } = await db.query(`
     SELECT confidence, COUNT(*) AS count
     FROM noise_candidates
     WHERE user_id = $1 AND status = 'pending'
@@ -49,7 +49,7 @@ router.get('/candidates', requireAuth, async (req, res) => {
     params.push(confidence);
   }
   query += ` ORDER BY score DESC`;
-  const { rows } = await pool().query(query, params);
+  const { rows } = await db.query(query, params);
   res.json(rows);
 });
 
@@ -67,7 +67,7 @@ router.patch('/candidates/:id/llm-result', requireAuth, requirePaid, async (req,
 
   const note = typeof llm_cve_note === 'string' ? llm_cve_note.slice(0, 1000) : null;
 
-  const { rows } = await pool().query(`
+  const { rows } = await db.query(`
     UPDATE noise_candidates
     SET llm_explanation = $1,
         llm_cve_safe = $2::boolean,
@@ -93,7 +93,7 @@ router.patch('/candidates/:id', requireAuth, requirePaid, async (req, res) => {
   }
 
   // Fetch the candidate first — we need to check CVE safety before approving
-  const { rows: existing } = await pool().query(
+  const { rows: existing } = await db.query(
     `SELECT * FROM noise_candidates WHERE id = $1 AND user_id = $2`,
     [req.params.id, uid(req)]
   );
@@ -110,14 +110,14 @@ router.patch('/candidates/:id', requireAuth, requirePaid, async (req, res) => {
   // If overriding, update the CVE verdict and log the analyst's reasoning
   if (llm_override && llm_override_note) {
     const safeNote = llm_override_note.slice(0, 1000);
-    await pool().query(
+    await db.query(
       `UPDATE noise_candidates SET llm_cve_safe = true, llm_cve_note = $1, updated_at = NOW() WHERE id = $2 AND user_id = $3`,
       [`[Analyst override] ${safeNote}`, req.params.id, uid(req)]
     );
     await audit(uid(req), 'noise.llm_override', { candidate_id: req.params.id, note: safeNote }, req.ip);
   }
 
-  const { rows } = await pool().query(`
+  const { rows } = await db.query(`
     UPDATE noise_candidates SET status = $1, updated_at = NOW()
     WHERE id = $2 AND user_id = $3
     RETURNING *
@@ -130,7 +130,7 @@ router.patch('/candidates/:id', requireAuth, requirePaid, async (req, res) => {
     const eventIdLabel = sig.event_id ? ` (Event ID ${sig.event_id})` : '';
     const processLabel = sig.process_name ? ` [${sig.process_name}]` : '';
     const ruleName = `[Auto] Suppress ${sig.event_category}${eventIdLabel}${processLabel} from ${sig.source}`;
-    const { rows: ruleRows } = await pool().query(`
+    const { rows: ruleRows } = await db.query(`
       INSERT INTO detection_rules
         (user_id, name, description, action, enabled, match_category, match_event_id, match_process, match_username)
       VALUES ($1, $2, $3, 'suppress', true, $4, $5::integer, $6, $7)
@@ -144,7 +144,7 @@ router.patch('/candidates/:id', requireAuth, requirePaid, async (req, res) => {
       sig.process_name || null,
       sig.username || null,
     ]);
-    await pool().query(
+    await db.query(
       `UPDATE noise_candidates SET suppression_rule_id = $1 WHERE id = $2`,
       [ruleRows[0].id, req.params.id]
     );
@@ -170,7 +170,7 @@ router.post('/candidates/bulk', requireAuth, requirePaid, async (req, res) => {
   const cveBlocked = [];
   if (status === 'approved') {
     const selectPh = safeIds.map((_, i) => `$${i + 2}`).join(',');
-    const { rows: candidates } = await pool().query(
+    const { rows: candidates } = await db.query(
       `SELECT id FROM noise_candidates WHERE user_id = $1 AND id IN (${selectPh}) AND llm_cve_safe = false`,
       [uid(req), ...safeIds]
     );
@@ -187,7 +187,7 @@ router.post('/candidates/bulk', requireAuth, requirePaid, async (req, res) => {
   }
 
   const placeholders = approveIds.map((_, i) => `$${i + 3}`).join(',');
-  await pool().query(
+  await db.query(
     `UPDATE noise_candidates SET status = $1, updated_at = NOW()
      WHERE user_id = $2 AND id IN (${placeholders})`,
     [status, uid(req), ...approveIds]
@@ -195,7 +195,7 @@ router.post('/candidates/bulk', requireAuth, requirePaid, async (req, res) => {
 
   if (status === 'approved') {
     const selectPlaceholders = approveIds.map((_, i) => `$${i + 2}`).join(',');
-    const { rows: candidates } = await pool().query(
+    const { rows: candidates } = await db.query(
       `SELECT * FROM noise_candidates WHERE user_id = $1 AND id IN (${selectPlaceholders})`,
       [uid(req), ...approveIds]
     );
@@ -203,7 +203,7 @@ router.post('/candidates/bulk', requireAuth, requirePaid, async (req, res) => {
       const sig = candidate.field_signature;
       const eventIdLabel = sig.event_id ? ` (Event ID ${sig.event_id})` : '';
       const processLabel = sig.process_name ? ` [${sig.process_name}]` : '';
-      const { rows: ruleRows } = await pool().query(`
+      const { rows: ruleRows } = await db.query(`
         INSERT INTO detection_rules (user_id, name, description, action, enabled, match_category, match_event_id, match_process, match_username)
         VALUES ($1, $2, $3, 'suppress', true, $4, $5::integer, $6, $7)
         RETURNING id
@@ -216,7 +216,7 @@ router.post('/candidates/bulk', requireAuth, requirePaid, async (req, res) => {
         sig.process_name || null,
         sig.username || null,
       ]);
-      await pool().query(
+      await db.query(
         `UPDATE noise_candidates SET suppression_rule_id = $1 WHERE id = $2`,
         [ruleRows[0].id, candidate.id]
       );
@@ -229,7 +229,7 @@ router.post('/candidates/bulk', requireAuth, requirePaid, async (req, res) => {
 
 // POST /api/siem/noise/candidates/:id/undo
 router.post('/candidates/:id/undo', requireAuth, requirePaid, async (req, res) => {
-  const { rows } = await pool().query(
+  const { rows } = await db.query(
     `SELECT * FROM noise_candidates WHERE id = $1 AND user_id = $2`,
     [req.params.id, uid(req)]
   );
@@ -237,13 +237,13 @@ router.post('/candidates/:id/undo', requireAuth, requirePaid, async (req, res) =
 
   const candidate = rows[0];
   if (candidate.suppression_rule_id) {
-    await pool().query(
+    await db.query(
       `DELETE FROM detection_rules WHERE id = $1 AND user_id = $2`,
       [candidate.suppression_rule_id, uid(req)]
     );
   }
 
-  await pool().query(
+  await db.query(
     `UPDATE noise_candidates SET status = 'pending', suppression_rule_id = NULL, updated_at = NOW()
      WHERE id = $1`,
     [req.params.id]
@@ -261,7 +261,7 @@ router.post('/candidates/rescan', requireAuth, requirePaid, async (req, res) => 
   if (!safeIds.length) return res.status(400).json({ error: 'no valid ids' });
 
   const placeholders = safeIds.map((_, i) => `$${i + 2}`).join(',');
-  const { rowCount } = await pool().query(
+  const { rowCount } = await db.query(
     `UPDATE noise_candidates
      SET status = 'pending', llm_explanation = NULL, llm_cve_safe = NULL, llm_cve_note = NULL,
          llm_checked_at = NULL, suppression_rule_id = NULL, updated_at = NOW()
@@ -275,7 +275,7 @@ router.post('/candidates/rescan', requireAuth, requirePaid, async (req, res) => 
 
 // GET /api/siem/noise/activity
 router.get('/activity', requireAuth, async (req, res) => {
-  const { rows } = await pool().query(`
+  const { rows } = await db.query(`
     SELECT nc.*, dr.name AS rule_name
     FROM noise_candidates nc
     LEFT JOIN detection_rules dr ON dr.id = nc.suppression_rule_id
@@ -289,7 +289,7 @@ router.get('/activity', requireAuth, async (req, res) => {
 
 // GET /api/siem/noise/settings
 router.get('/settings', requireAuth, async (req, res) => {
-  const { rows } = await pool().query(
+  const { rows } = await db.query(
     `SELECT noise_auto_suppress, noise_llm_enabled, noise_llm_trigger, llm_model,
             llm_custom_model_path, noise_min_score, noise_learning_days,
             noise_learning_events, kb_auto_update
@@ -327,7 +327,7 @@ router.patch('/settings', requireAuth, requirePaid, async (req, res) => {
   const insertCols = keys.join(', ');
   const insertVals = keys.map((_, i) => `$${i + 2}`).join(', ');
 
-  await pool().query(
+  await db.query(
     `INSERT INTO user_settings (user_id, ${insertCols})
      VALUES ($1, ${insertVals})
      ON CONFLICT (user_id) DO UPDATE SET ${setClauses}, updated_at = NOW()`,
@@ -347,7 +347,7 @@ router.get('/context', requireAuth, async (req, res) => {
   const userId = uid(req);
 
   // 1. Past noise candidate decisions (approved + rejected + overrides)
-  const { rows: candidateRows } = await pool().query(`
+  const { rows: candidateRows } = await db.query(`
     SELECT
       field_signature,
       status,
@@ -373,7 +373,7 @@ router.get('/context', requireAuth, async (req, res) => {
   `, [userId, event_category || null, source || null, process_name || null]);
 
   // 2. Active suppression rules (manually created ones too, not just Tuning Center)
-  const { rows: ruleRows } = await pool().query(`
+  const { rows: ruleRows } = await db.query(`
     SELECT name, description, match_category, match_event_id, match_process, match_username, created_at
     FROM detection_rules
     WHERE user_id = $1
@@ -387,23 +387,27 @@ router.get('/context', requireAuth, async (req, res) => {
     LIMIT 5
   `, [userId, event_category || null, process_name || null]);
 
-  // 3. Vulnerability KB — match on attack_patterns (process names) and event_category
-  const { rows: kbRows } = await pool().query(`
-    SELECT id, source, title, description, severity, cvss_score, affected_products, attack_patterns
-    FROM vuln_kb
-    WHERE
-      ($1::text IS NOT NULL AND attack_patterns @> $1::jsonb)
-      OR ($2::text IS NOT NULL AND attack_patterns @> $2::jsonb)
-      OR (source = 'cisa' AND affected_products::text ILIKE $3)
-    ORDER BY
-      CASE source WHEN 'cisa' THEN 0 WHEN 'nvd' THEN 1 ELSE 2 END,
-      cvss_score DESC NULLS LAST
-    LIMIT 5
-  `, [
-    process_name ? JSON.stringify([process_name]) : null,
-    event_category ? JSON.stringify([event_category]) : null,
-    process_name ? `%${process_name.replace('.exe', '')}%` : '%',
-  ]);
+  // 3. Vulnerability KB — JSONB @> containment not available in SQLite; skip in local mode
+  let kbRows = [];
+  if (!isLocal()) {
+    const { rows } = await db.query(`
+      SELECT id, source, title, description, severity, cvss_score, affected_products, attack_patterns
+      FROM vuln_kb
+      WHERE
+        ($1::text IS NOT NULL AND attack_patterns @> $1::jsonb)
+        OR ($2::text IS NOT NULL AND attack_patterns @> $2::jsonb)
+        OR (source = 'cisa' AND affected_products::text ILIKE $3)
+      ORDER BY
+        CASE source WHEN 'cisa' THEN 0 WHEN 'nvd' THEN 1 ELSE 2 END,
+        cvss_score DESC NULLS LAST
+      LIMIT 5
+    `, [
+      process_name ? JSON.stringify([process_name]) : null,
+      event_category ? JSON.stringify([event_category]) : null,
+      process_name ? `%${process_name.replace('.exe', '')}%` : '%',
+    ]);
+    kbRows = rows;
+  }
 
   // Format as structured context for prompt injection
   const decisions = candidateRows.map(r => {
@@ -444,8 +448,14 @@ router.get('/context', requireAuth, async (req, res) => {
 router.post('/run', requireAuth, requirePaid, async (req, res) => {
   const userId = uid(req);
   try {
-    const result = await scoreNoiseCandidates(userId);
-    const conflictResult = await scoreSuppressConflicts(userId);
+    // scoreNoiseCandidates and scoreSuppressConflicts use PostgreSQL-specific SQL (STDDEV, JSONB @>)
+    // and are skipped in local mode; runAutoSuppress uses standard SQL and runs in both modes
+    let result = { scored: 0 };
+    let conflictResult = { scored: 0 };
+    if (!isLocal()) {
+      result = await scoreNoiseCandidates(userId);
+      conflictResult = await scoreSuppressConflicts(userId);
+    }
     await runAutoSuppress(userId);
     await audit(userId, 'noise.manual_run', { ...result, suppression_conflicts: conflictResult.scored }, req.ip);
     res.json({ ok: true, result: { ...result, suppression_conflicts: conflictResult.scored } });
@@ -458,7 +468,7 @@ router.post('/run', requireAuth, requirePaid, async (req, res) => {
 // GET /api/siem/noise/kb/status — KB entry counts and last sync times
 router.get('/kb/status', requireAuth, async (req, res) => {
   try {
-    const { rows } = await pool().query(`
+    const { rows } = await db.query(`
       SELECT
         source,
         COUNT(*) AS count,

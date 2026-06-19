@@ -152,8 +152,10 @@ if (!process.env.VITEST) {
       const { attachIngestReceiver } = await import('./ws/ingestReceiver.js');
       attachIngestReceiver(server);
     }
-    startRetentionCron();
-    scheduleNoiseCron();
-    scheduleKbCron();
+    if (process.env.STORAGE_MODE !== 'local') {
+      startRetentionCron();
+      scheduleNoiseCron();
+      scheduleKbCron();
+    }
   });
 }
