@@ -56,15 +56,22 @@ function runPowerShell(script, elevated) {
       return;
     }
 
-    // Elevated path: the entire Start-Process invocation is passed as a single
-    // -Command string so PowerShell doesn't tokenize the -ArgumentList value.
-    // The encoded script contains only A-Za-z0-9+/= so it's safe to interpolate.
-    const outFile = path.join(os.tmpdir(), `eventlog_poll_${randomBytes(8).toString('hex')}.json`);
-    const cmd = `Start-Process powershell.exe -ArgumentList '-NoProfile -NonInteractive -EncodedCommand ${encoded}' -Verb RunAs -WindowStyle Hidden -Wait -RedirectStandardOutput '${outFile}'`;
+    // Elevated path: write the script to a temp .ps1 file and use
+    // Start-Process to run it elevated. Passing -EncodedCommand via
+    // -ArgumentList in a single -Command string causes PS 5.1 to misparse
+    // the quoted argument list (AmbiguousParameterSet). Writing to a file
+    // avoids all quoting/escaping issues — the only untrusted-ish data in
+    // the script is sinceIso, which is regex-validated above.
+    const suffix = randomBytes(8).toString('hex');
+    const scriptFile = path.join(os.tmpdir(), `eventlog_poll_${suffix}.ps1`);
+    const outFile = path.join(os.tmpdir(), `eventlog_poll_${suffix}.json`);
+    fs.writeFileSync(scriptFile, script, 'utf8');
+    const cmd = `Start-Process powershell.exe -ArgumentList @('-NoProfile','-NonInteractive','-File','${scriptFile.replace(/'/g, "''")}') -Verb RunAs -WindowStyle Hidden -Wait -RedirectStandardOutput '${outFile.replace(/'/g, "''")}'`;
     execFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', cmd], { windowsHide: true }, (err, _stdout, stderr) => {
       let out = '';
       try { out = fs.readFileSync(outFile, 'utf8'); } catch {}
       try { fs.unlinkSync(outFile); } catch {}
+      try { fs.unlinkSync(scriptFile); } catch {}
       resolve({ err: err ? (stderr || err.message) : null, stdout: out });
     });
   });

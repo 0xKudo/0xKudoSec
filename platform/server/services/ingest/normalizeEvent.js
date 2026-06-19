@@ -379,7 +379,7 @@ function normalizeFluentBit(raw) {
     : String(eventType || '').toLowerCase();
 
   return {
-    source: 'fluent-bit',
+    source: raw.Channel ? 'direct-eventlog' : 'fluent-bit',
     host,
     source_ip: fields.source_ip || null,
     dest_ip: fields.dest_ip || null,
