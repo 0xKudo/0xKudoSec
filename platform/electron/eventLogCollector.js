@@ -76,8 +76,11 @@ function runPowerShell(script, elevated) {
     const suffix = randomBytes(8).toString('hex');
     const scriptFile = path.join(os.tmpdir(), `eventlog_poll_${suffix}.ps1`);
     const outFile = path.join(os.tmpdir(), `eventlog_poll_${suffix}.json`);
-    fs.writeFileSync(scriptFile, script, 'utf8');
-    const cmd = `Start-Process powershell.exe -ArgumentList @('-NoProfile','-NonInteractive','-File','${scriptFile.replace(/'/g, "''")}') -Verb RunAs -WindowStyle Hidden -Wait -RedirectStandardOutput '${outFile.replace(/'/g, "''")}'`;
+    // -RedirectStandardOutput cannot be combined with -Verb RunAs in PS 5.1 (AmbiguousParameterSet).
+    // Write output from inside the script instead.
+    const scriptWithOutput = script + `\n| Out-File -FilePath '${outFile.replace(/'/g, "''")}' -Encoding utf8`;
+    fs.writeFileSync(scriptFile, scriptWithOutput, 'utf8');
+    const cmd = `Start-Process powershell.exe -ArgumentList @('-NoProfile','-NonInteractive','-File','${scriptFile.replace(/'/g, "''")}') -Verb RunAs -WindowStyle Hidden -Wait`;
     execFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', cmd], { windowsHide: true }, (err, _stdout, stderr) => {
       let out = '';
       try { out = fs.readFileSync(outFile, 'utf8'); } catch {}
