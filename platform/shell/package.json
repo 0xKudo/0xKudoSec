@@ -1,6 +1,6 @@
 {
   "name": "@cybertools/shell",
-  "version": "1.2.68-beta.15",
+  "version": "1.2.68-beta.16",
   "type": "module",
   "scripts": {
     "dev": "vite",
