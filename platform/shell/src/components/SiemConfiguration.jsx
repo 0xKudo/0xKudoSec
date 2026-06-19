@@ -1306,7 +1306,7 @@ winlogbeat.event_logs:
 
         {/* ── Local Storage tab (all Electron users) ── */}
         {isElectron && tab === localStorageTabIdx && (
-          <LocalStorageTab s={s} isPaid={isPaid} isLocalMode={isLocalMode} />
+          <LocalStorageTab s={s} isPaid={isPaid} isLocalMode={isLocalMode} isElectron={isElectron} />
         )}
 
         {/* ── Tab 2: Log Retention ── */}
@@ -2120,7 +2120,7 @@ function RealtimeAnalysisToggle({ s }) {
   );
 }
 
-function LocalStorageTab({ s, isPaid, isLocalMode }) {
+function LocalStorageTab({ s, isPaid, isLocalMode, isElectron }) {
   const [storagePath, setStoragePath] = useState(null);
   const [picking, setPicking] = useState(false);
   const [pickMsg, setPickMsg] = useState(null);
@@ -2330,7 +2330,7 @@ function LocalStorageTab({ s, isPaid, isLocalMode }) {
         </div>
       )}
 
-      {isLocalMode && <div style={{ marginBottom: '28px' }}>
+      {isElectron && <div style={{ marginBottom: '28px' }}>
         <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>Database location</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
           <span style={{ fontSize: '12px', color: 'var(--text-primary)', fontFamily: 'var(--font)', background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '4px', padding: '6px 10px', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -2350,7 +2350,7 @@ function LocalStorageTab({ s, isPaid, isLocalMode }) {
         </div>
       </div>}
 
-      {isLocalMode && <div style={{ marginBottom: '28px' }}>
+      {isElectron && <div style={{ marginBottom: '28px' }}>
         <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>Direct Log Ingestion</div>
         <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '12px', lineHeight: 1.5 }}>
           Read Windows Event Logs directly — no Fluent Bit install required. Fluent Bit is only needed to forward logs to the cloud SIEM (paid tier).

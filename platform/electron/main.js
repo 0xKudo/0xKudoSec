@@ -1184,6 +1184,15 @@ app.whenReady().then(async () => {
     );
   }
 
+  // Auto-resume event log polling if it was enabled before the app was closed
+  if (store.get('eventLogIngestionEnabled', false)) {
+    const channels = store.get('eventLogChannelsSelected', []);
+    const intervalSeconds = store.get('eventLogPollIntervalSeconds', 15);
+    if (channels.length) {
+      eventLogCollector.startEventLogPolling(store, channels, intervalSeconds);
+    }
+  }
+
   try {
     createMainWindow();
 
