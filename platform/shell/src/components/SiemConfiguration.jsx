@@ -2184,7 +2184,7 @@ function LocalStorageTab({ s, isPaid, isLocalMode, isElectron }) {
   }
 
   useEffect(() => {
-    if (!isLocalMode || !window.electron?.eventLog) return;
+    if (!isElectron || !window.electron?.eventLog) return;
     window.electron.eventLog.getChannels().then(setEvtChannels);
     function pollEvtStatus() {
       window.electron.eventLog.getStatus().then(setEvtStatus);
@@ -2192,7 +2192,7 @@ function LocalStorageTab({ s, isPaid, isLocalMode, isElectron }) {
     pollEvtStatus();
     const t = setInterval(pollEvtStatus, 10000);
     return () => clearInterval(t);
-  }, [isLocalMode]);
+  }, [isElectron]);
 
   async function handleEvtChannelToggle(channel) {
     const next = evtChannels.selected.includes(channel)
