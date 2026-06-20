@@ -56,18 +56,24 @@ function buildPollScript(channels, intervalSeconds, outDirPath, keyFile) {
     if (!ALLOWED_CHANNELS.has(ch)) throw new Error(`Unrecognized channel: ${ch}`);
   }
   const channelArray = channels.map(c => `'${c.replace(/'/g, "''")}'`).join(',');
-  const outDirPs = outDirPath.replace(/\\/g, '\\\\');
-  const keyFilePs = keyFile.replace(/\\/g, '\\\\');
+  // Single-quoted PS strings treat backslashes as literals — no escaping needed.
+  // Double-escaping produces UNC-style paths (\\) that PS cannot resolve.
+  const outDirPs = outDirPath.replace(/'/g, "''");
+  const keyFilePs = keyFile.replace(/'/g, "''");
 
   return `
-$outDir = '${outDirPs.replace(/'/g, "''")}'
-$keyFile = '${keyFilePs.replace(/'/g, "''")}'
+$ErrorActionPreference = 'Stop'
+$outDir = '${outDirPs}'
+$keyFile = '${keyFilePs}'
 $intervalSeconds = ${Math.floor(intervalSeconds)}
 $channels = @(${channelArray})
 $maxEvents = ${MAX_EVENTS_PER_POLL}
 
+if (-not (Test-Path $keyFile)) { exit 1 }
 $ingestKey = (Get-Content -Path $keyFile -Raw).Trim()
+if ([string]::IsNullOrWhiteSpace($ingestKey)) { exit 1 }
 Remove-Item -Path $keyFile -Force
+$ErrorActionPreference = 'SilentlyContinue'
 
 $cursors = @{}
 foreach ($ch in $channels) {
@@ -120,17 +126,21 @@ while ($true) {
 // The task runs as SYSTEM so we pass the absolute outDir path explicitly —
 // never rely on %TEMP% which resolves differently under SYSTEM context.
 function buildSecurityPollScript(outDirPath, keyFile, intervalSeconds) {
-  const outDirPs = outDirPath.replace(/\\/g, '\\\\');
-  const keyFilePs = keyFile.replace(/\\/g, '\\\\');
+  const outDirPs = outDirPath.replace(/'/g, "''");
+  const keyFilePs = keyFile.replace(/'/g, "''");
 
   return `
-$outDir = '${outDirPs.replace(/'/g, "''")}'
-$keyFile = '${keyFilePs.replace(/'/g, "''")}'
+$ErrorActionPreference = 'Stop'
+$outDir = '${outDirPs}'
+$keyFile = '${keyFilePs}'
 $intervalSeconds = ${Math.floor(intervalSeconds)}
 $maxEvents = ${MAX_EVENTS_PER_POLL}
 
+if (-not (Test-Path $keyFile)) { exit 1 }
 $ingestKey = (Get-Content -Path $keyFile -Raw).Trim()
+if ([string]::IsNullOrWhiteSpace($ingestKey)) { exit 1 }
 Remove-Item -Path $keyFile -Force
+$ErrorActionPreference = 'SilentlyContinue'
 
 $cursor = $null
 $safe = 'Security'
@@ -339,7 +349,7 @@ function startEventLogPolling(electronStore, channels, intervalSeconds) {
     execFile(
       'powershell.exe',
       ['-NoProfile', '-NonInteractive', '-WindowStyle', 'Hidden', '-File', scriptFile],
-      { windowsHide: true },
+      { windowsHide: true, maxBuffer: 10 * 1024 * 1024 },
       (err, _stdout, stderr) => {
         if (err) lastStatus.lastError = stderr || err.message;
       }
