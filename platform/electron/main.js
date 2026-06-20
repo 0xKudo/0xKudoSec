@@ -88,6 +88,9 @@ let splashWindow = null;
 let serverProcess = null;
 let tray = null;
 const serverStartupLog = [];
+// Tracks the ingest key hash baked into the running server's env so we can
+// detect when ensureCollectorIngestKey() regenerated a new key after fork.
+let forkTimeIngestKeyHash = '';
 
 function isValidSender(event) {
   const url = event.senderFrame?.url ?? '';
@@ -310,6 +313,7 @@ function startLocalServer() {
     env.ALLOWED_ORIGIN = `http://localhost:${SERVER_PORT}`;
     const ingestKeyHash = store.get('ingestKeyHash', '');
     if (ingestKeyHash) env.LOCAL_INGEST_KEY_HASH = ingestKeyHash;
+    forkTimeIngestKeyHash = ingestKeyHash;
     const userSub = store.get('userSub', '');
     if (userSub) env.LOCAL_USER_ID = userSub;
 
@@ -749,11 +753,28 @@ ipcMain.handle('eventlog:setChannels', (event, channels) => {
   return { ok: true, selected: valid };
 });
 
-ipcMain.handle('eventlog:start', (event) => {
+ipcMain.handle('eventlog:start', async (event) => {
   if (!isValidSender(event)) return { ok: false, err: 'Unauthorized' };
   const channels = store.get('eventLogChannelsSelected', []);
   const intervalSeconds = store.get('eventLogPollIntervalSeconds', 15);
-  return eventLogCollector.startEventLogPolling(store, channels, intervalSeconds);
+  const result = eventLogCollector.startEventLogPolling(store, channels, intervalSeconds);
+  if (result.ok && !result.alreadyRunning) {
+    // ensureCollectorIngestKey() inside startEventLogPolling may have regenerated
+    // the ingest key, changing ingestKeyHash in the store. If so the running
+    // server still holds the old hash (baked at fork time) — every ingest POST
+    // would return 401 and no events would appear. Restart the server so it
+    // picks up the updated hash.
+    const currentHash = store.get('ingestKeyHash', '');
+    if (currentHash && currentHash !== forkTimeIngestKeyHash && serverProcess) {
+      try {
+        await killLocalServer();
+        await startLocalServer();
+      } catch (e) {
+        console.error('Failed to restart server after ingest key change:', e.message);
+      }
+    }
+  }
+  return result;
 });
 
 ipcMain.handle('eventlog:stop', (event) => {

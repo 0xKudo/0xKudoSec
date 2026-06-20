@@ -191,21 +191,21 @@ Register-ScheduledTask -TaskName '${SECURITY_TASK_NAME}' -Action $action -Trigge
   });
 }
 
-// Unregister the Security scheduled task. Also requires one elevated call.
+// Unregister the Security scheduled task. Runs non-elevated — admin users can
+// unregister their own scheduled tasks without a UAC prompt.
 function unregisterSecurityTask(callback) {
-  const unregScript = `
-Unregister-ScheduledTask -TaskName '${SECURITY_TASK_NAME}' -Confirm:$false -ErrorAction SilentlyContinue
-`.trim();
-
-  const suffix = randomBytes(8).toString('hex');
-  const scriptFile = path.join(os.tmpdir(), `sec_unregister_${suffix}.ps1`);
-  fs.writeFileSync(scriptFile, unregScript, 'utf8');
-
-  const cmd = `Start-Process powershell.exe -ArgumentList @('-NoProfile','-NonInteractive','-File','${scriptFile.replace(/'/g, "''")}') -Verb RunAs -WindowStyle Hidden -Wait`;
-  execFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', cmd], { windowsHide: true }, (err, _stdout, stderr) => {
-    try { fs.unlinkSync(scriptFile); } catch {}
-    if (callback) callback(err ? (stderr || err.message) : null);
-  });
+  execFile(
+    'powershell.exe',
+    [
+      '-NoProfile', '-NonInteractive', '-WindowStyle', 'Hidden',
+      '-Command',
+      `Unregister-ScheduledTask -TaskName '${SECURITY_TASK_NAME}' -Confirm:$false -ErrorAction SilentlyContinue`,
+    ],
+    { windowsHide: true },
+    (err, _stdout, stderr) => {
+      if (callback) callback(err ? (stderr || err.message) : null);
+    }
+  );
 }
 
 function postBatch(events, key) {
