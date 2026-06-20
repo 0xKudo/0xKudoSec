@@ -18,22 +18,17 @@ const ALLOWED_CHANNELS = new Set([
   'Microsoft-Windows-Windows Firewall With Advanced Security/Firewall',
   'Microsoft-Windows-TerminalServices-RemoteConnectionManager/Operational',
 ]);
-const ELEVATED_CHANNELS = new Set(['Security']);
 const MAX_EVENTS_PER_POLL = 500;
 
 let store = null;
-let pollTimer = null;
+let watcher = null;
+let outDir = null;
 let lastStatus = { running: false, lastPollAt: null, lastEventCount: 0, lastError: null };
 
 function hashIngestKey(key) {
   return createHash('sha256').update(key).digest('hex');
 }
 
-// Keeps the collector's cached plaintext key in sync with whichever key the
-// server is actually checking against (store.ingestKeyHash). If the user
-// rotates/revokes their key via the existing Configuration UI flow, the old
-// plaintext cached here becomes useless — detect that and mint a fresh one
-// silently, never surfaced to the renderer.
 function ensureCollectorIngestKey(storeOverride) {
   const s = storeOverride || store;
   const currentHash = s.get('ingestKeyHash', '');
@@ -51,73 +46,87 @@ function ensureCollectorIngestKey(storeOverride) {
   return key;
 }
 
-function runPowerShell(script, elevated) {
-  return new Promise((resolve) => {
-    const encoded = Buffer.from(script, 'utf16le').toString('base64');
+// Build the long-running PowerShell poll script. It runs an infinite loop,
+// collecting from all channels on each tick and writing batches to outDir.
+// Node watches outDir for .done sentinel files to know when a batch is ready.
+function buildPollScript(channels, intervalSeconds, outDirPs, keyFile) {
+  // Validate all channel names before interpolating into the script
+  for (const ch of channels) {
+    if (!ALLOWED_CHANNELS.has(ch)) throw new Error(`Unrecognized channel: ${ch}`);
+  }
 
-    if (!elevated) {
-      execFile(
-        'powershell.exe',
-        ['-NoProfile', '-NonInteractive', '-EncodedCommand', encoded],
-        { windowsHide: true, maxBuffer: 1024 * 1024 * 16 },
-        (err, stdout, stderr) => {
-          resolve({ err: err ? (stderr || err.message) : null, stdout: stdout || '' });
-        }
-      );
-      return;
-    }
+  // Build the PS array literal from the validated channel list
+  const channelArray = channels.map(c => `'${c.replace(/'/g, "''")}'`).join(',');
 
-    // Elevated path: write the script to a temp .ps1 file and use
-    // Start-Process to run it elevated. Passing -EncodedCommand via
-    // -ArgumentList in a single -Command string causes PS 5.1 to misparse
-    // the quoted argument list (AmbiguousParameterSet). Writing to a file
-    // avoids all quoting/escaping issues — the only untrusted-ish data in
-    // the script is sinceIso, which is regex-validated above.
-    const suffix = randomBytes(8).toString('hex');
-    const scriptFile = path.join(os.tmpdir(), `eventlog_poll_${suffix}.ps1`);
-    const outFile = path.join(os.tmpdir(), `eventlog_poll_${suffix}.json`);
-    // -RedirectStandardOutput cannot be combined with -Verb RunAs in PS 5.1 (AmbiguousParameterSet).
-    // Write output from inside the script instead.
-    const scriptWithOutput = script + `\n| Out-File -FilePath '${outFile.replace(/'/g, "''")}' -Encoding utf8`;
-    fs.writeFileSync(scriptFile, scriptWithOutput, 'utf8');
-    const cmd = `Start-Process powershell.exe -ArgumentList @('-NoProfile','-NonInteractive','-File','${scriptFile.replace(/'/g, "''")}') -Verb RunAs -WindowStyle Hidden -Wait`;
-    execFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', cmd], { windowsHide: true }, (err, _stdout, stderr) => {
-      let out = '';
-      try { out = fs.readFileSync(outFile, 'utf8'); } catch {}
-      try { fs.unlinkSync(outFile); } catch {}
-      try { fs.unlinkSync(scriptFile); } catch {}
-      resolve({ err: err ? (stderr || err.message) : null, stdout: out });
-    });
-  });
+  return `
+$outDir = '${outDirPs.replace(/'/g, "''")}'
+$keyFile = '${keyFile.replace(/'/g, "''")}'
+$intervalSeconds = ${Math.floor(intervalSeconds)}
+$channels = @(${channelArray})
+$maxEvents = ${MAX_EVENTS_PER_POLL}
+
+# Read the ingest key and immediately delete the handoff file
+$ingestKey = (Get-Content -Path $keyFile -Raw).Trim()
+Remove-Item -Path $keyFile -Force
+
+# Per-channel cursors held in memory for the lifetime of this process
+$cursors = @{}
+
+# Pre-load cursors from cursor files written by a previous session
+foreach ($ch in $channels) {
+  $safe = $ch -replace '[\\/:*?"<>|]', '_'
+  $cf = Join-Path $outDir "cursor_$safe.txt"
+  if (Test-Path $cf) {
+    $cursors[$ch] = (Get-Content $cf -Raw).Trim()
+  }
 }
 
-// Builds a Get-WinEvent query for one channel since a given timestamp,
-// shaped to match normalizeFluentBit()'s expected field names
-// (EventID, Computer, Channel, Message, Level, TimeCreated, StringInserts).
-function buildQueryScript(channel, sinceIso) {
-  if (!ALLOWED_CHANNELS.has(channel)) {
-    throw new Error(`Refusing to query unrecognized event log channel: ${channel}`);
+while ($true) {
+  # Check for stop sentinel
+  $stopFile = Join-Path $outDir 'STOP'
+  if (Test-Path $stopFile) {
+    Remove-Item $stopFile -Force
+    break
   }
-  // sinceIso always originates from our own ISO-formatted cursor writes (see
-  // pollChannel below), never from user/IPC input, but validate defensively
-  // since it's interpolated into the script text.
-  const since = sinceIso && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/.test(sinceIso)
-    ? `[datetime]'${sinceIso}'`
-    : '(Get-Date).AddMinutes(-5)';
-  return `
-$ErrorActionPreference = 'SilentlyContinue'
-$events = Get-WinEvent -FilterHashtable @{ LogName = '${channel}'; StartTime = ${since} } -MaxEvents ${MAX_EVENTS_PER_POLL} |
-  Select-Object @{n='EventID';e={$_.Id}}, @{n='Computer';e={$_.MachineName}}, @{n='Channel';e={$_.LogName}},
-    @{n='Message';e={$_.Message}}, @{n='Level';e={$_.Level}}, @{n='TimeCreated';e={$_.TimeCreated.ToUniversalTime().ToString('o')}},
-    @{n='StringInserts';e={$_.Properties | ForEach-Object { $_.Value }}}
-$events | ConvertTo-Json -Compress -Depth 4
+
+  $batchId = [System.Guid]::NewGuid().ToString('N')
+  $allEvents = [System.Collections.Generic.List[object]]::new()
+
+  foreach ($ch in $channels) {
+    $ErrorActionPreference = 'SilentlyContinue'
+    $since = if ($cursors[$ch]) { [datetime]$cursors[$ch] } else { (Get-Date).AddMinutes(-5) }
+    $raw = Get-WinEvent -FilterHashtable @{ LogName = $ch; StartTime = $since } -MaxEvents $maxEvents |
+      Select-Object @{n='EventID';e={$_.Id}}, @{n='Computer';e={$_.MachineName}},
+        @{n='Channel';e={$_.LogName}}, @{n='Message';e={$_.Message}},
+        @{n='Level';e={$_.Level}},
+        @{n='TimeCreated';e={$_.TimeCreated.ToUniversalTime().ToString('o')}},
+        @{n='StringInserts';e={$_.Properties | ForEach-Object { $_.Value }}}
+    if ($raw) {
+      foreach ($e in $raw) { $allEvents.Add($e) }
+      $latest = ($raw | Sort-Object TimeCreated | Select-Object -Last 1).TimeCreated
+      $cursors[$ch] = $latest
+      # Persist cursor so Node can resume after restart
+      $safe = $ch -replace '[\\/:*?"<>|]', '_'
+      $latest | Out-File -FilePath (Join-Path $outDir "cursor_$safe.txt") -Encoding utf8 -NoNewline
+    }
+  }
+
+  if ($allEvents.Count -gt 0) {
+    $jsonFile = Join-Path $outDir "$batchId.json"
+    $doneFile = Join-Path $outDir "$batchId.done"
+    $allEvents | ConvertTo-Json -Compress -Depth 4 | Out-File -FilePath $jsonFile -Encoding utf8
+    # Write ingest key to done sentinel — Node reads it, then deletes it
+    $ingestKey | Out-File -FilePath $doneFile -Encoding utf8 -NoNewline
+  }
+
+  Start-Sleep -Seconds $intervalSeconds
+}
 `.trim();
 }
 
-function postBatch(events) {
+function postBatch(events, key) {
   return new Promise((resolve, reject) => {
     if (!events.length) { resolve(); return; }
-    const key = ensureCollectorIngestKey();
     const payload = Buffer.from(JSON.stringify(events), 'utf8');
     const req = http.request(
       {
@@ -143,82 +152,65 @@ function postBatch(events) {
   });
 }
 
-async function pollChannel(channel) {
-  const cursorKey = `eventLogCursor_${channel}`;
-  const cursorSkipKey = `eventLogCursorSkip_${channel}`;
-  const since = store.get(cursorKey, null);
-  const skipCount = store.get(cursorSkipKey, 0);
-  const elevated = ELEVATED_CHANNELS.has(channel);
-  const script = buildQueryScript(channel, since);
-
-  const { err, stdout } = await runPowerShell(script, elevated);
-  if (err) throw new Error(`${channel}: ${err}`);
-
-  const trimmed = stdout.trim();
-  if (!trimmed) return 0;
-
-  let parsed;
-  try {
-    parsed = JSON.parse(trimmed);
-  } catch {
-    return 0;
+// Update electron-store cursors from a received batch so restarts resume cleanly.
+// The PS process also writes cursor files to outDir, but electron-store is the
+// authoritative resume source (outDir is ephemeral per-session).
+function updateCursorsFromBatch(events) {
+  const latest = {};
+  for (const e of events) {
+    const ch = e.Channel;
+    if (!ch || !e.TimeCreated) continue;
+    if (!latest[ch] || e.TimeCreated > latest[ch]) latest[ch] = e.TimeCreated;
   }
-  let events = Array.isArray(parsed) ? parsed : [parsed];
-  if (!events.length) return 0;
-
-  // Skip events at the cursor boundary that were already sent in the previous poll.
-  // Windows event timestamps have sub-millisecond precision so +1ms cursor doesn't
-  // always advance past all events at the same timestamp.
-  if (since && skipCount > 0) {
-    let skipped = 0;
-    events = events.filter(e => {
-      if (skipped < skipCount && e.TimeCreated === since) {
-        skipped++;
-        return false;
-      }
-      return true;
-    });
-    if (!events.length) return 0;
+  for (const [ch, ts] of Object.entries(latest)) {
+    store.set(`eventLogCursor_${ch}`, ts);
+    // Count events at this exact timestamp for skipCount dedup on resume
+    const count = events.filter(e => e.Channel === ch && e.TimeCreated === ts).length;
+    store.set(`eventLogCursorSkip_${ch}`, count);
   }
-
-  await postBatch(events);
-
-  const latestTimestamp = events
-    .map(e => e.TimeCreated)
-    .filter(Boolean)
-    .sort()
-    .pop();
-  if (latestTimestamp) {
-    const countAtLatest = events.filter(e => e.TimeCreated === latestTimestamp).length;
-    store.set(cursorKey, latestTimestamp);
-    store.set(cursorSkipKey, countAtLatest);
-  }
-
-  return events.length;
 }
 
-async function pollAllChannels() {
-  const channels = store.get('eventLogChannelsSelected', []);
-  let total = 0;
-  let lastErr = null;
-  for (const channel of channels) {
-    try {
-      total += await pollChannel(channel);
-    } catch (e) {
-      lastErr = e.message;
-    }
-  }
-  lastStatus = {
-    running: true,
-    lastPollAt: new Date().toISOString(),
-    lastEventCount: total,
-    lastError: lastErr,
-  };
+function startWatcher(dir) {
+  if (watcher) { try { watcher.close(); } catch {} watcher = null; }
+
+  watcher = fs.watch(dir, (eventType, filename) => {
+    if (!filename || !filename.endsWith('.done')) return;
+    const batchId = filename.slice(0, -5); // strip .done
+    const jsonFile = path.join(dir, `${batchId}.json`);
+    const doneFile = path.join(dir, filename);
+
+    // Small delay to ensure the .json write is fully flushed before we read it
+    setTimeout(() => {
+      let raw;
+      try { raw = fs.readFileSync(jsonFile, 'utf8'); } catch { return; }
+      let key;
+      try { key = fs.readFileSync(doneFile, 'utf8').trim(); } catch { return; }
+      try { fs.unlinkSync(jsonFile); } catch {}
+      try { fs.unlinkSync(doneFile); } catch {}
+
+      let events;
+      try { events = JSON.parse(raw); } catch { return; }
+      if (!Array.isArray(events)) events = [events];
+      if (!events.length) return;
+
+      postBatch(events, key).catch(err => {
+        lastStatus.lastError = err.message;
+      });
+      updateCursorsFromBatch(events);
+
+      lastStatus.lastPollAt = new Date().toISOString();
+      lastStatus.lastEventCount = events.length;
+    }, 100);
+  });
+
+  watcher.on('error', (err) => {
+    lastStatus.lastError = `Watcher error: ${err.message}`;
+  });
 }
 
 function startEventLogPolling(electronStore, channels, intervalSeconds) {
   store = electronStore;
-  if (pollTimer) return { ok: true, alreadyRunning: true };
+  if (watcher) return { ok: true, alreadyRunning: true };
 
   const validChannels = Array.isArray(channels)
     ? channels.filter(c => ALLOWED_CHANNELS.has(c))
@@ -233,26 +225,77 @@ function startEventLogPolling(electronStore, channels, intervalSeconds) {
   store.set('eventLogChannelsSelected', validChannels);
   store.set('eventLogPollIntervalSeconds', safeInterval);
   store.set('eventLogIngestionEnabled', true);
-  ensureCollectorIngestKey();
+  const ingestKey = ensureCollectorIngestKey();
 
-  pollAllChannels().catch(() => {});
-  pollTimer = setInterval(() => { pollAllChannels().catch(() => {}); }, safeInterval * 1000);
-  lastStatus.running = true;
+  // Create a fresh session directory
+  const suffix = randomBytes(8).toString('hex');
+  outDir = path.join(os.tmpdir(), `cybertools_eventlog_${suffix}`);
+  fs.mkdirSync(outDir, { recursive: true });
+
+  // Write the ingest key to a handoff file — PS reads and deletes it immediately
+  const keyFile = path.join(outDir, `key_${randomBytes(8).toString('hex')}.txt`);
+  fs.writeFileSync(keyFile, ingestKey, 'utf8');
+
+  // Seed cursor files from electron-store so the PS process resumes from where we left off
+  for (const ch of validChannels) {
+    const ts = store.get(`eventLogCursor_${ch}`, null);
+    if (ts) {
+      const safe = ch.replace(/[\\/:*?"<>|]/g, '_');
+      fs.writeFileSync(path.join(outDir, `cursor_${safe}.txt`), ts, 'utf8');
+    }
+  }
+
+  // Build the long-running poll script and write it to a .ps1 file
+  let script;
+  try {
+    script = buildPollScript(validChannels, safeInterval, outDir, keyFile);
+  } catch (e) {
+    return { ok: false, err: e.message };
+  }
+  const scriptFile = path.join(outDir, 'poll.ps1');
+  fs.writeFileSync(scriptFile, script, 'utf8');
+
+  // Launch exactly one elevated PS process — UAC fires once here
+  const cmd = `Start-Process powershell.exe -ArgumentList @('-NoProfile','-NonInteractive','-File','${scriptFile.replace(/'/g, "''")}') -Verb RunAs -WindowStyle Hidden`;
+  execFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', cmd], { windowsHide: true }, (err, _stdout, stderr) => {
+    if (err) {
+      lastStatus.lastError = stderr || err.message;
+      lastStatus.running = false;
+    }
+  });
+
+  startWatcher(outDir);
+  lastStatus = { running: true, lastPollAt: null, lastEventCount: 0, lastError: null };
   return { ok: true };
 }
 
 function stopEventLogPolling() {
-  if (pollTimer) {
-    clearInterval(pollTimer);
-    pollTimer = null;
+  // Signal the PS loop to exit cleanly
+  if (outDir) {
+    try { fs.writeFileSync(path.join(outDir, 'STOP'), '', 'utf8'); } catch {}
   }
+
+  if (watcher) {
+    try { watcher.close(); } catch {}
+    watcher = null;
+  }
+
+  // Clean up the session directory after a short delay to let PS exit
+  const dirToClean = outDir;
+  outDir = null;
+  if (dirToClean) {
+    setTimeout(() => {
+      try { fs.rmSync(dirToClean, { recursive: true, force: true }); } catch {}
+    }, 5000);
+  }
+
   if (store) store.set('eventLogIngestionEnabled', false);
   lastStatus.running = false;
   return { ok: true };
 }
 
 function getStatus() {
-  return { ...lastStatus, running: !!pollTimer };
+  return { ...lastStatus, running: !!watcher };
 }
 
 module.exports = {
