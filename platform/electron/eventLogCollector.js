@@ -164,12 +164,16 @@ while ($true) {
 }
 
 // Register a Scheduled Task that runs the Security poll script as SYSTEM.
+// The script body is passed as a Base64 -EncodedCommand directly in the task action —
+// no script file is written to disk, eliminating the user-writable SYSTEM-executed file
+// LPE vector (a user-writable .ps1 run by SYSTEM is a privilege escalation path).
 // Requires one elevated Start-Process -Verb RunAs -Wait call — UAC fires once.
-function registerSecurityTask(secScriptFile, intervalSeconds, callback) {
+function registerSecurityTask(encodedScript, intervalSeconds, callback) {
   const interval = Math.floor(intervalSeconds);
+  const taskArgument = `-NoProfile -NonInteractive -WindowStyle Hidden -EncodedCommand ${encodedScript}`;
   const registerScript = `
 $ErrorActionPreference = 'Stop'
-$action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument '-NoProfile -NonInteractive -WindowStyle Hidden -File "${secScriptFile.replace(/"/g, '`"')}"'
+$action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument '${taskArgument.replace(/'/g, "''")}'
 $trigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddSeconds(2) -RepetitionInterval (New-TimeSpan -Seconds ${interval})
 $principal = New-ScheduledTaskPrincipal -UserId 'SYSTEM' -LogonType ServiceAccount -RunLevel Highest
 $settings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit ([TimeSpan]::Zero) -MultipleInstances IgnoreNew
@@ -342,16 +346,19 @@ function startEventLogPolling(electronStore, channels, intervalSeconds) {
     );
   }
 
-  // Register a Scheduled Task for Security (runs as SYSTEM, one UAC prompt)
+  // Register a Scheduled Task for Security (runs as SYSTEM, one UAC prompt).
+  // The key handoff file is the only remaining user-writable artifact — it is deleted
+  // by the PS script immediately on first read, so the exposure window is brief.
   if (hasSecurityChannel) {
     const secKeyFile = path.join(outDir, `seckey_${randomBytes(8).toString('hex')}.txt`);
     fs.writeFileSync(secKeyFile, ingestKey, 'utf8');
 
     const secScript = buildSecurityPollScript(outDir, secKeyFile, safeInterval);
-    const secScriptFile = path.join(outDir, 'poll_security.ps1');
-    fs.writeFileSync(secScriptFile, secScript, 'utf8');
+    // Encode as UTF-16LE Base64 for -EncodedCommand — no script file written to disk,
+    // eliminating the user-writable SYSTEM-executed file LPE path.
+    const encodedScript = Buffer.from(secScript, 'utf16le').toString('base64');
 
-    registerSecurityTask(secScriptFile, safeInterval, (err) => {
+    registerSecurityTask(encodedScript, safeInterval, (err) => {
       if (err) {
         lastStatus.lastError = `Security task registration failed: ${err}`;
       } else {
