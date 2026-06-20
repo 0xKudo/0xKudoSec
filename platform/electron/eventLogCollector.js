@@ -18,11 +18,14 @@ const ALLOWED_CHANNELS = new Set([
   'Microsoft-Windows-Windows Firewall With Advanced Security/Firewall',
   'Microsoft-Windows-TerminalServices-RemoteConnectionManager/Operational',
 ]);
+const ELEVATED_CHANNELS = new Set(['Security']);
+const SECURITY_TASK_NAME = '0xKudoSec_EventLogSecurity';
 const MAX_EVENTS_PER_POLL = 500;
 
 let store = null;
 let watcher = null;
 let outDir = null;
+let taskRegistered = false;
 let lastStatus = { running: false, lastPollAt: null, lastEventCount: 0, lastError: null };
 
 function hashIngestKey(key) {
@@ -46,46 +49,36 @@ function ensureCollectorIngestKey(storeOverride) {
   return key;
 }
 
-// Build the long-running PowerShell poll script. It runs an infinite loop,
-// collecting from all channels on each tick and writing batches to outDir.
-// Node watches outDir for .done sentinel files to know when a batch is ready.
-function buildPollScript(channels, intervalSeconds, outDirPs, keyFile) {
-  // Validate all channel names before interpolating into the script
+// Build the long-running non-elevated PS poll script for normal channels.
+// Runs as the current user via execFile — no UAC, same %TEMP% as Node.
+function buildPollScript(channels, intervalSeconds, outDirPath, keyFile) {
   for (const ch of channels) {
     if (!ALLOWED_CHANNELS.has(ch)) throw new Error(`Unrecognized channel: ${ch}`);
   }
-
-  // Build the PS array literal from the validated channel list
   const channelArray = channels.map(c => `'${c.replace(/'/g, "''")}'`).join(',');
+  const outDirPs = outDirPath.replace(/\\/g, '\\\\');
+  const keyFilePs = keyFile.replace(/\\/g, '\\\\');
 
   return `
 $outDir = '${outDirPs.replace(/'/g, "''")}'
-$keyFile = '${keyFile.replace(/'/g, "''")}'
+$keyFile = '${keyFilePs.replace(/'/g, "''")}'
 $intervalSeconds = ${Math.floor(intervalSeconds)}
 $channels = @(${channelArray})
 $maxEvents = ${MAX_EVENTS_PER_POLL}
 
-# Read the ingest key and immediately delete the handoff file
 $ingestKey = (Get-Content -Path $keyFile -Raw).Trim()
 Remove-Item -Path $keyFile -Force
 
-# Per-channel cursors held in memory for the lifetime of this process
 $cursors = @{}
-
-# Pre-load cursors from cursor files written by a previous session
 foreach ($ch in $channels) {
-  $safe = $ch -replace '[\\/:*?"<>|]', '_'
+  $safe = $ch -replace '[\\\\/:*?"<>|]', '_'
   $cf = Join-Path $outDir "cursor_$safe.txt"
-  if (Test-Path $cf) {
-    $cursors[$ch] = (Get-Content $cf -Raw).Trim()
-  }
+  if (Test-Path $cf) { $cursors[$ch] = (Get-Content $cf -Raw).Trim() }
 }
 
 while ($true) {
-  # Check for stop sentinel
-  $stopFile = Join-Path $outDir 'STOP'
-  if (Test-Path $stopFile) {
-    Remove-Item $stopFile -Force
+  if (Test-Path (Join-Path $outDir 'STOP')) {
+    Remove-Item (Join-Path $outDir 'STOP') -Force
     break
   }
 
@@ -105,23 +98,110 @@ while ($true) {
       foreach ($e in $raw) { $allEvents.Add($e) }
       $latest = ($raw | Sort-Object TimeCreated | Select-Object -Last 1).TimeCreated
       $cursors[$ch] = $latest
-      # Persist cursor so Node can resume after restart
-      $safe = $ch -replace '[\\/:*?"<>|]', '_'
+      $safe = $ch -replace '[\\\\/:*?"<>|]', '_'
       $latest | Out-File -FilePath (Join-Path $outDir "cursor_$safe.txt") -Encoding utf8 -NoNewline
     }
   }
 
   if ($allEvents.Count -gt 0) {
-    $jsonFile = Join-Path $outDir "$batchId.json"
-    $doneFile = Join-Path $outDir "$batchId.done"
+    $batchId2 = [System.Guid]::NewGuid().ToString('N')
+    $jsonFile = Join-Path $outDir "$batchId2.json"
+    $doneFile = Join-Path $outDir "$batchId2.done"
     $allEvents | ConvertTo-Json -Compress -Depth 4 | Out-File -FilePath $jsonFile -Encoding utf8
-    # Write ingest key to done sentinel — Node reads it, then deletes it
     $ingestKey | Out-File -FilePath $doneFile -Encoding utf8 -NoNewline
   }
 
   Start-Sleep -Seconds $intervalSeconds
 }
 `.trim();
+}
+
+// Build the Security-only poll script used by the Scheduled Task.
+// The task runs as SYSTEM so we pass the absolute outDir path explicitly —
+// never rely on %TEMP% which resolves differently under SYSTEM context.
+function buildSecurityPollScript(outDirPath, keyFile, intervalSeconds) {
+  const outDirPs = outDirPath.replace(/\\/g, '\\\\');
+  const keyFilePs = keyFile.replace(/\\/g, '\\\\');
+
+  return `
+$outDir = '${outDirPs.replace(/'/g, "''")}'
+$keyFile = '${keyFilePs.replace(/'/g, "''")}'
+$intervalSeconds = ${Math.floor(intervalSeconds)}
+$maxEvents = ${MAX_EVENTS_PER_POLL}
+
+$ingestKey = (Get-Content -Path $keyFile -Raw).Trim()
+Remove-Item -Path $keyFile -Force
+
+$cursor = $null
+$safe = 'Security'
+$cf = Join-Path $outDir "cursor_$safe.txt"
+if (Test-Path $cf) { $cursor = (Get-Content $cf -Raw).Trim() }
+
+while ($true) {
+  $ErrorActionPreference = 'SilentlyContinue'
+  $since = if ($cursor) { [datetime]$cursor } else { (Get-Date).AddMinutes(-5) }
+  $raw = Get-WinEvent -FilterHashtable @{ LogName = 'Security'; StartTime = $since } -MaxEvents $maxEvents |
+    Select-Object @{n='EventID';e={$_.Id}}, @{n='Computer';e={$_.MachineName}},
+      @{n='Channel';e={$_.LogName}}, @{n='Message';e={$_.Message}},
+      @{n='Level';e={$_.Level}},
+      @{n='TimeCreated';e={$_.TimeCreated.ToUniversalTime().ToString('o')}},
+      @{n='StringInserts';e={$_.Properties | ForEach-Object { $_.Value }}}
+
+  if ($raw) {
+    $cursor = ($raw | Sort-Object TimeCreated | Select-Object -Last 1).TimeCreated
+    $cursor | Out-File -FilePath (Join-Path $outDir 'cursor_Security.txt') -Encoding utf8 -NoNewline
+
+    $batchId = [System.Guid]::NewGuid().ToString('N')
+    $jsonFile = Join-Path $outDir "$batchId.json"
+    $doneFile = Join-Path $outDir "$batchId.done"
+    $raw | ConvertTo-Json -Compress -Depth 4 | Out-File -FilePath $jsonFile -Encoding utf8
+    $ingestKey | Out-File -FilePath $doneFile -Encoding utf8 -NoNewline
+  }
+
+  Start-Sleep -Seconds $intervalSeconds
+}
+`.trim();
+}
+
+// Register a Scheduled Task that runs the Security poll script as SYSTEM.
+// Requires one elevated Start-Process -Verb RunAs -Wait call — UAC fires once.
+function registerSecurityTask(secScriptFile, intervalSeconds, callback) {
+  const interval = Math.floor(intervalSeconds);
+  const registerScript = `
+$ErrorActionPreference = 'Stop'
+$action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument '-NoProfile -NonInteractive -WindowStyle Hidden -File "${secScriptFile.replace(/"/g, '`"')}"'
+$trigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddSeconds(2) -RepetitionInterval (New-TimeSpan -Seconds ${interval})
+$principal = New-ScheduledTaskPrincipal -UserId 'SYSTEM' -LogonType ServiceAccount -RunLevel Highest
+$settings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit ([TimeSpan]::Zero) -MultipleInstances IgnoreNew
+Register-ScheduledTask -TaskName '${SECURITY_TASK_NAME}' -Action $action -Trigger $trigger -Principal $principal -Settings $settings -Force
+`.trim();
+
+  const suffix = randomBytes(8).toString('hex');
+  const regScript = path.join(os.tmpdir(), `sec_register_${suffix}.ps1`);
+  fs.writeFileSync(regScript, registerScript, 'utf8');
+
+  const cmd = `Start-Process powershell.exe -ArgumentList @('-NoProfile','-NonInteractive','-File','${regScript.replace(/'/g, "''")}') -Verb RunAs -WindowStyle Hidden -Wait`;
+  execFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', cmd], { windowsHide: true }, (err, _stdout, stderr) => {
+    try { fs.unlinkSync(regScript); } catch {}
+    callback(err ? (stderr || err.message) : null);
+  });
+}
+
+// Unregister the Security scheduled task. Also requires one elevated call.
+function unregisterSecurityTask(callback) {
+  const unregScript = `
+Unregister-ScheduledTask -TaskName '${SECURITY_TASK_NAME}' -Confirm:$false -ErrorAction SilentlyContinue
+`.trim();
+
+  const suffix = randomBytes(8).toString('hex');
+  const scriptFile = path.join(os.tmpdir(), `sec_unregister_${suffix}.ps1`);
+  fs.writeFileSync(scriptFile, unregScript, 'utf8');
+
+  const cmd = `Start-Process powershell.exe -ArgumentList @('-NoProfile','-NonInteractive','-File','${scriptFile.replace(/'/g, "''")}') -Verb RunAs -WindowStyle Hidden -Wait`;
+  execFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', cmd], { windowsHide: true }, (err, _stdout, stderr) => {
+    try { fs.unlinkSync(scriptFile); } catch {}
+    if (callback) callback(err ? (stderr || err.message) : null);
+  });
 }
 
 function postBatch(events, key) {
@@ -152,9 +232,6 @@ function postBatch(events, key) {
   });
 }
 
-// Update electron-store cursors from a received batch so restarts resume cleanly.
-// The PS process also writes cursor files to outDir, but electron-store is the
-// authoritative resume source (outDir is ephemeral per-session).
 function updateCursorsFromBatch(events) {
   const latest = {};
   for (const e of events) {
@@ -164,7 +241,6 @@ function updateCursorsFromBatch(events) {
   }
   for (const [ch, ts] of Object.entries(latest)) {
     store.set(`eventLogCursor_${ch}`, ts);
-    // Count events at this exact timestamp for skipCount dedup on resume
     const count = events.filter(e => e.Channel === ch && e.TimeCreated === ts).length;
     store.set(`eventLogCursorSkip_${ch}`, count);
   }
@@ -175,11 +251,11 @@ function startWatcher(dir) {
 
   watcher = fs.watch(dir, (eventType, filename) => {
     if (!filename || !filename.endsWith('.done')) return;
-    const batchId = filename.slice(0, -5); // strip .done
+    const batchId = filename.slice(0, -5);
     const jsonFile = path.join(dir, `${batchId}.json`);
     const doneFile = path.join(dir, filename);
 
-    // Small delay to ensure the .json write is fully flushed before we read it
+    // Small delay to ensure the .json write is fully flushed before we read
     setTimeout(() => {
       let raw;
       try { raw = fs.readFileSync(jsonFile, 'utf8'); } catch { return; }
@@ -193,14 +269,11 @@ function startWatcher(dir) {
       if (!Array.isArray(events)) events = [events];
       if (!events.length) return;
 
-      postBatch(events, key).catch(err => {
-        lastStatus.lastError = err.message;
-      });
+      postBatch(events, key).catch(err => { lastStatus.lastError = err.message; });
       updateCursorsFromBatch(events);
-
       lastStatus.lastPollAt = new Date().toISOString();
       lastStatus.lastEventCount = events.length;
-    }, 100);
+    }, 150);
   });
 
   watcher.on('error', (err) => {
@@ -227,16 +300,13 @@ function startEventLogPolling(electronStore, channels, intervalSeconds) {
   store.set('eventLogIngestionEnabled', true);
   const ingestKey = ensureCollectorIngestKey();
 
-  // Create a fresh session directory
+  // Create a fresh session directory in the current user's temp — both the non-elevated
+  // PS process and Node's fs.watch run in this same user context, so paths always match.
   const suffix = randomBytes(8).toString('hex');
   outDir = path.join(os.tmpdir(), `cybertools_eventlog_${suffix}`);
   fs.mkdirSync(outDir, { recursive: true });
 
-  // Write the ingest key to a handoff file — PS reads and deletes it immediately
-  const keyFile = path.join(outDir, `key_${randomBytes(8).toString('hex')}.txt`);
-  fs.writeFileSync(keyFile, ingestKey, 'utf8');
-
-  // Seed cursor files from electron-store so the PS process resumes from where we left off
+  // Seed cursor files from electron-store for resume-from-last-position
   for (const ch of validChannels) {
     const ts = store.get(`eventLogCursor_${ch}`, null);
     if (ts) {
@@ -245,24 +315,50 @@ function startEventLogPolling(electronStore, channels, intervalSeconds) {
     }
   }
 
-  // Build the long-running poll script and write it to a .ps1 file
-  let script;
-  try {
-    script = buildPollScript(validChannels, safeInterval, outDir, keyFile);
-  } catch (e) {
-    return { ok: false, err: e.message };
-  }
-  const scriptFile = path.join(outDir, 'poll.ps1');
-  fs.writeFileSync(scriptFile, script, 'utf8');
+  // Split channels: Security needs a Scheduled Task; everything else runs non-elevated
+  const normalChannels = validChannels.filter(c => !ELEVATED_CHANNELS.has(c));
+  const hasSecurityChannel = validChannels.includes('Security');
 
-  // Launch exactly one elevated PS process — UAC fires once here
-  const cmd = `Start-Process powershell.exe -ArgumentList @('-NoProfile','-NonInteractive','-File','${scriptFile.replace(/'/g, "''")}') -Verb RunAs -WindowStyle Hidden`;
-  execFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', cmd], { windowsHide: true }, (err, _stdout, stderr) => {
-    if (err) {
-      lastStatus.lastError = stderr || err.message;
-      lastStatus.running = false;
-    }
-  });
+  // Launch the non-elevated long-running loop for normal channels
+  if (normalChannels.length > 0) {
+    const keyFile = path.join(outDir, `key_${randomBytes(8).toString('hex')}.txt`);
+    fs.writeFileSync(keyFile, ingestKey, 'utf8');
+
+    let script;
+    try { script = buildPollScript(normalChannels, safeInterval, outDir, keyFile); }
+    catch (e) { return { ok: false, err: e.message }; }
+
+    const scriptFile = path.join(outDir, 'poll.ps1');
+    fs.writeFileSync(scriptFile, script, 'utf8');
+
+    // Direct execFile — no Start-Process, no UAC, same user temp space as watcher
+    execFile(
+      'powershell.exe',
+      ['-NoProfile', '-NonInteractive', '-WindowStyle', 'Hidden', '-File', scriptFile],
+      { windowsHide: true },
+      (err, _stdout, stderr) => {
+        if (err) lastStatus.lastError = stderr || err.message;
+      }
+    );
+  }
+
+  // Register a Scheduled Task for Security (runs as SYSTEM, one UAC prompt)
+  if (hasSecurityChannel) {
+    const secKeyFile = path.join(outDir, `seckey_${randomBytes(8).toString('hex')}.txt`);
+    fs.writeFileSync(secKeyFile, ingestKey, 'utf8');
+
+    const secScript = buildSecurityPollScript(outDir, secKeyFile, safeInterval);
+    const secScriptFile = path.join(outDir, 'poll_security.ps1');
+    fs.writeFileSync(secScriptFile, secScript, 'utf8');
+
+    registerSecurityTask(secScriptFile, safeInterval, (err) => {
+      if (err) {
+        lastStatus.lastError = `Security task registration failed: ${err}`;
+      } else {
+        taskRegistered = true;
+      }
+    });
+  }
 
   startWatcher(outDir);
   lastStatus = { running: true, lastPollAt: null, lastEventCount: 0, lastError: null };
@@ -270,9 +366,17 @@ function startEventLogPolling(electronStore, channels, intervalSeconds) {
 }
 
 function stopEventLogPolling() {
-  // Signal the PS loop to exit cleanly
+  // Signal the non-elevated PS loop to exit
   if (outDir) {
     try { fs.writeFileSync(path.join(outDir, 'STOP'), '', 'utf8'); } catch {}
+  }
+
+  // Unregister the Security scheduled task if it was registered
+  if (taskRegistered) {
+    taskRegistered = false;
+    unregisterSecurityTask((err) => {
+      if (err) console.error('Failed to unregister Security task:', err);
+    });
   }
 
   if (watcher) {
@@ -280,13 +384,12 @@ function stopEventLogPolling() {
     watcher = null;
   }
 
-  // Clean up the session directory after a short delay to let PS exit
   const dirToClean = outDir;
   outDir = null;
   if (dirToClean) {
     setTimeout(() => {
       try { fs.rmSync(dirToClean, { recursive: true, force: true }); } catch {}
-    }, 5000);
+    }, 8000);
   }
 
   if (store) store.set('eventLogIngestionEnabled', false);
