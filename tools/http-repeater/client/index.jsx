@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useIsMobile } from '../../../platform/shell/src/hooks/useIsMobile.js';
+import { Button, Input } from '../../../platform/shell/src/components/ui/index.js';
 
 const METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'];
 
@@ -290,7 +291,7 @@ export default function HttpRepeater() {
             ))}
           </div>
           {history.length > 0 && (
-            <button style={styles.clearBtn} onClick={clearHistory}>Clear history</button>
+            <Button variant="ghost" onClick={clearHistory}>Clear history</Button>
           )}
         </div>
 
@@ -300,8 +301,8 @@ export default function HttpRepeater() {
           <div style={styles.section}>
             {isMobile ? (
               <>
-                <input
-                  style={{ ...styles.urlInput, width: '100%', marginBottom: '8px', boxSizing: 'border-box' }}
+                <Input
+                  style={{ width: '100%', marginBottom: '8px' }}
                   placeholder="https://example.com/api/endpoint"
                   value={url}
                   onChange={e => setUrl(e.target.value)}
@@ -310,39 +311,39 @@ export default function HttpRepeater() {
                 />
                 <div style={{ display: 'flex', gap: '8px' }}>
                   <select
-                    style={styles.select}
+                    className="kudo-input kudo-select" style={{ minWidth: '100px' }}
                     value={method}
                     onChange={e => setMethod(e.target.value)}
                     disabled={loading}
                   >
                     {METHODS.map(m => <option key={m} value={m}>{m}</option>)}
                   </select>
-                  <button style={styles.button(!canSend)} onClick={handleSend} disabled={!canSend}>
-                    {loading ? 'Sending...' : 'Send'}
-                  </button>
+                  <Button loading={loading} onClick={handleSend} disabled={!canSend}>
+                    {loading ? 'Sending…' : 'Send'}
+                  </Button>
                 </div>
               </>
             ) : (
               <div style={styles.requestBar}>
                 <select
-                  style={styles.select}
+                  className="kudo-input kudo-select" style={{ minWidth: '100px' }}
                   value={method}
                   onChange={e => setMethod(e.target.value)}
                   disabled={loading}
                 >
                   {METHODS.map(m => <option key={m} value={m}>{m}</option>)}
                 </select>
-                <input
-                  style={{ ...styles.urlInput, minWidth: 0 }}
+                <Input
+                  style={{ flex: 1, minWidth: 0 }}
                   placeholder="https://example.com/api/endpoint"
                   value={url}
                   onChange={e => setUrl(e.target.value)}
                   disabled={loading}
                   onKeyDown={e => e.key === 'Enter' && canSend && handleSend()}
                 />
-                <button style={styles.button(!canSend)} onClick={handleSend} disabled={!canSend}>
-                  {loading ? 'Sending...' : 'Send'}
-                </button>
+                <Button loading={loading} onClick={handleSend} disabled={!canSend}>
+                  {loading ? 'Sending…' : 'Send'}
+                </Button>
               </div>
             )}
           </div>

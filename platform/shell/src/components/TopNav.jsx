@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { useLocation } from 'react-router-dom';
+import { Sun, Moon } from 'lucide-react';
+import { setThemeWithTransition } from '../lib/viewTransition';
 
 const isElectron = typeof window !== 'undefined' && window.electron?.isElectron === true;
 
@@ -278,7 +280,7 @@ export function TopNav({ activeApp, onSwitchApp, onMenuToggle, menuOpen, theme, 
   const { isAuthenticated, user, loginWithRedirect, logout } = useAuth0();
   const isMobile = useIsMobile();
 
-  const toggleTheme = () => setTheme(t => t === 'dark' ? 'light' : 'dark');
+  const toggleTheme = () => setThemeWithTransition(theme === 'dark' ? 'light' : 'dark', setTheme);
 
   return (
     <>
@@ -308,7 +310,7 @@ export function TopNav({ activeApp, onSwitchApp, onMenuToggle, menuOpen, theme, 
             ) : (
               <button style={{ ...styles.authBtn, padding: '4px 8px', fontSize: '10px' }} onClick={() => loginWithRedirect()}>login</button>
             )}
-            <button style={{ ...styles.themeToggle, padding: '4px 8px' }} onClick={toggleTheme}>{theme === 'dark' ? '☀' : '☾'}</button>
+            <button style={{ ...styles.themeToggle, padding: '4px 8px', display: 'inline-flex', alignItems: 'center' }} onClick={toggleTheme} aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'} title={theme === 'dark' ? 'Light mode' : 'Dark mode'}>{theme === 'dark' ? <Sun size={14} strokeWidth={2} /> : <Moon size={14} strokeWidth={2} />}</button>
           </div>
         </>
       ) : (
@@ -351,7 +353,7 @@ export function TopNav({ activeApp, onSwitchApp, onMenuToggle, menuOpen, theme, 
             ) : (
               <button style={styles.authBtn} onClick={() => loginWithRedirect()}>[ login ]</button>
             )}
-            <button style={styles.themeToggle} onClick={toggleTheme}>{theme === 'dark' ? '☀' : '☾'}</button>
+            <button style={{ ...styles.themeToggle, display: 'inline-flex', alignItems: 'center' }} onClick={toggleTheme} aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'} title={theme === 'dark' ? 'Light mode' : 'Dark mode'}>{theme === 'dark' ? <Sun size={16} strokeWidth={2} /> : <Moon size={16} strokeWidth={2} />}</button>
           </div>
           {isElectron && (
             <div style={styles.winControls}>

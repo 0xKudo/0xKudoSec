@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useWorkspace } from '../../../platform/shell/src/context/WorkspaceContext.jsx';
 import { useIsMobile } from '../../../platform/shell/src/hooks/useIsMobile.js';
+import { Button, TextArea, Input } from '../../../platform/shell/src/components/ui/index.js';
 
 const CHARSET_OPTIONS = [
   { value: 'lowercase', label: 'Lowercase (a-z)' },
@@ -271,8 +272,8 @@ export default function WordlistGenerator() {
               ))}
             </div>
             {charsets.includes('custom') && (
-              <input
-                style={styles.inputWide}
+              <Input
+                style={{ width: '200px' }}
                 placeholder="e.g. abc123!@"
                 value={customChars}
                 onChange={e => setCustomChars(e.target.value)}
@@ -284,15 +285,15 @@ export default function WordlistGenerator() {
           <div style={{ ...styles.row, flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-start' : 'center' }}>
             <div>
               <span style={styles.label}>Min Length</span>
-              <input style={styles.input} type="number" min="1" max="16" value={minLength} onChange={e => setMinLength(e.target.value)} disabled={loading} />
+              <Input style={{ width: '80px' }} type="number" min="1" max="16" value={minLength} onChange={e => setMinLength(e.target.value)} disabled={loading} />
             </div>
             <div>
               <span style={styles.label}>Max Length</span>
-              <input style={styles.input} type="number" min="1" max="16" value={maxLength} onChange={e => setMaxLength(e.target.value)} disabled={loading} />
+              <Input style={{ width: '80px' }} type="number" min="1" max="16" value={maxLength} onChange={e => setMaxLength(e.target.value)} disabled={loading} />
             </div>
-            <button style={{ ...styles.button(!canGenerate), marginTop: isMobile ? '4px' : '18px' }} onClick={handleGenerate} disabled={!canGenerate}>
-              {loading ? 'Generating...' : 'Generate'}
-            </button>
+            <Button style={{ marginTop: isMobile ? '4px' : '18px' }} loading={loading} onClick={handleGenerate} disabled={!canGenerate}>
+              {loading ? 'Generating…' : 'Generate'}
+            </Button>
           </div>
         </>
       )}
@@ -300,9 +301,9 @@ export default function WordlistGenerator() {
       {activeTab === 'pattern' && (
         <>
           <div style={styles.section}>
-            <span style={styles.label}>Base Words (one per line, max 20)</span>
-            <textarea
-              style={styles.textarea}
+            <TextArea
+              label="Base Words (one per line, max 20)"
+              rows={5}
               placeholder={'password\nadmin\ncompany name\nuser\'s name'}
               value={baseWordsText}
               onChange={e => setBaseWordsText(e.target.value)}
@@ -331,11 +332,11 @@ export default function WordlistGenerator() {
             <div style={styles.row}>
               <div>
                 <span style={styles.label}>Year Start</span>
-                <input style={styles.input} type="number" value={yearStart} onChange={e => setYearStart(e.target.value)} disabled={loading} />
+                <Input style={{ width: '80px' }} type="number" value={yearStart} onChange={e => setYearStart(e.target.value)} disabled={loading} />
               </div>
               <div>
                 <span style={styles.label}>Year End</span>
-                <input style={styles.input} type="number" value={yearEnd} onChange={e => setYearEnd(e.target.value)} disabled={loading} />
+                <Input style={{ width: '80px' }} type="number" value={yearEnd} onChange={e => setYearEnd(e.target.value)} disabled={loading} />
               </div>
             </div>
           )}
@@ -344,15 +345,15 @@ export default function WordlistGenerator() {
             <div style={styles.row}>
               <div>
                 <span style={styles.label}>Symbols to use</span>
-                <input style={styles.inputWide} placeholder="!@#$" value={symbols} onChange={e => setSymbols(e.target.value)} disabled={loading} />
+                <Input style={{ width: '200px' }} placeholder="!@#$" value={symbols} onChange={e => setSymbols(e.target.value)} disabled={loading} />
               </div>
             </div>
           )}
 
           <div style={styles.row}>
-            <button style={styles.button(!canGenerate)} onClick={handleGenerate} disabled={!canGenerate}>
-              {loading ? 'Generating...' : 'Generate'}
-            </button>
+            <Button loading={loading} onClick={handleGenerate} disabled={!canGenerate}>
+              {loading ? 'Generating…' : 'Generate'}
+            </Button>
           </div>
         </>
       )}
@@ -370,9 +371,9 @@ export default function WordlistGenerator() {
                   ? ' (no limit — local mode)'
                   : ` (~${Math.max(1, Math.ceil(result.estimated / 100000))} MB estimated)`}
             </span>
-            <button style={styles.secondaryBtn} onClick={handleCharsetDownload}>
+            <Button variant="ghost" onClick={handleCharsetDownload}>
               Download Full List (.txt)
-            </button>
+            </Button>
           </div>
           {result.estimated > 100000 && (
             <p style={styles.truncatedNote}>
@@ -393,8 +394,8 @@ export default function WordlistGenerator() {
           <div style={{ ...styles.resultHeader, flexWrap: 'wrap', gap: '8px' }}>
             <span style={styles.resultMeta}>{result.count.toLocaleString()} entries generated</span>
             <div style={styles.actionRow}>
-              <button style={styles.secondaryBtn} onClick={handleCopyAll}>Copy All</button>
-              <button style={styles.secondaryBtn} onClick={handleDownload}>Download .txt</button>
+              <Button variant="ghost" onClick={handleCopyAll}>Copy All</Button>
+              <Button variant="ghost" onClick={handleDownload}>Download .txt</Button>
             </div>
           </div>
           {result.truncated && (

@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { useIsMobile } from '../../../platform/shell/src/hooks/useIsMobile.js';
+import { Button, TextArea } from '../../../platform/shell/src/components/ui/index.js';
+import { ArrowUpDown } from 'lucide-react';
 
 const OPERATION_GROUPS = [
   {
@@ -315,9 +317,9 @@ export default function Decoder() {
       <div>
         {/* Main panel */}
         <div style={styles.mainPanel}>
-          <span style={styles.label}>Input — {opLabel}</span>
-          <textarea
-            style={styles.textarea}
+          <TextArea
+            label={`Input — ${opLabel}`}
+            rows={8}
             placeholder="Paste input here..."
             value={input}
             onChange={e => setInput(e.target.value)}
@@ -325,12 +327,12 @@ export default function Decoder() {
           />
 
           <div style={styles.actionRow}>
-            <button style={styles.button(!canTransform)} onClick={handleTransform} disabled={!canTransform}>
-              {loading ? 'Processing...' : 'Transform'}
-            </button>
-            <button style={styles.secondaryBtn} onClick={() => { setInput(''); setOutput(''); setError(null); }}>
+            <Button loading={loading} onClick={handleTransform} disabled={!canTransform}>
+              {loading ? 'Processing…' : 'Transform'}
+            </Button>
+            <Button variant="ghost" onClick={() => { setInput(''); setOutput(''); setError(null); }}>
               Clear
-            </button>
+            </Button>
           </div>
 
           {error && <p style={styles.error}>{error}</p>}
@@ -340,12 +342,12 @@ export default function Decoder() {
               <div style={styles.outputLabel}>
                 <span>Output</span>
                 <div style={{ display: 'flex', gap: '8px' }}>
-                  <button style={styles.secondaryBtn} onClick={handleSwap} title="Use output as next input">
-                    ↕ Use as input
-                  </button>
-                  <button style={styles.secondaryBtn} onClick={handleCopy}>
+                  <Button variant="ghost" icon={<ArrowUpDown size={12} />} onClick={handleSwap} title="Use output as next input">
+                    Use as input
+                  </Button>
+                  <Button variant="ghost" onClick={handleCopy}>
                     Copy
-                  </button>
+                  </Button>
                 </div>
               </div>
               <div style={styles.outputBox}>{output}</div>

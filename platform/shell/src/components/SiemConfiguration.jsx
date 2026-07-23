@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useIsMobile } from '../hooks/useIsMobile.js';
+import { setThemeWithTransition } from '../lib/viewTransition';
 
 // ── Custom DateTimePicker ─────────────────────────────────────────────────────
 const DAYS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
@@ -934,7 +935,7 @@ winlogbeat.event_logs:
                   return (
                     <button
                       key={opt.value}
-                      onClick={() => setTheme && setTheme(opt.value)}
+                      onClick={() => setTheme && setThemeWithTransition(opt.value, setTheme)}
                       style={{
                         background: active ? 'var(--btn-primary-bg)' : 'none',
                         color: active ? 'var(--btn-primary-text)' : 'var(--text-muted)',

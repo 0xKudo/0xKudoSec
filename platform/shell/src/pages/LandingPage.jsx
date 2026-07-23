@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useIsMobile } from '../hooks/useIsMobile';
+import { Sun, Moon } from 'lucide-react';
+import { setThemeWithTransition } from '../lib/viewTransition';
 
 // ── Update this URL with each Electron release ────────────────────────────────
 const DESKTOP_DOWNLOAD_URL = 'https://github.com/0xKudoX/0xKudoSec-releases/releases/download/v1.2.49/0xKudo-Security-Toolkit-Setup-1.2.49.exe';
@@ -116,7 +118,7 @@ const s = {
   // hero
   hero: { textAlign: 'center', padding: '88px 48px 72px', borderBottom: '1px solid var(--border)', position: 'relative', overflow: 'hidden' },
   heroGrid: { position: 'absolute', inset: 0, backgroundImage: 'linear-gradient(var(--border-subtle) 1px, transparent 1px), linear-gradient(90deg, var(--border-subtle) 1px, transparent 1px)', backgroundSize: '48px 48px', opacity: 0.35, pointerEvents: 'none' },
-  heroTag: { display: 'inline-block', fontSize: '10px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--accent-amber)', border: '1px solid var(--accent-amber)', padding: '4px 12px', marginBottom: '28px', position: 'relative' },
+  heroTag: { display: 'inline-block', fontSize: '10px', lineHeight: 1, letterSpacing: '0.14em', textIndent: '0.14em', textTransform: 'uppercase', color: 'var(--accent-amber)', border: '1px solid var(--accent-amber)', padding: '5px 12px', marginBottom: '28px', position: 'relative' },
   heroHeadline: { fontSize: '46px', fontWeight: 600, lineHeight: 1.15, color: 'var(--text-primary)', marginBottom: '22px', letterSpacing: '-0.02em', position: 'relative' },
   heroHeadlineAccent: { color: 'var(--accent-amber)' },
   heroSub: { fontSize: '14px', color: 'var(--text-muted)', lineHeight: 1.75, maxWidth: '500px', margin: '0 auto 36px', position: 'relative' },
@@ -130,10 +132,10 @@ const s = {
   heroCtasMobile: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px', marginBottom: '16px', position: 'relative' },
 
   // buttons
-  btnPrimary: { background: '#e8e6e3', color: '#111110', border: '1px solid #e8e6e3', fontFamily: 'var(--font)', fontSize: '12px', fontWeight: 600, padding: '11px 28px', cursor: 'pointer', letterSpacing: '0.06em', textTransform: 'uppercase' },
-  btnPrimaryFull: { background: '#e8e6e3', color: '#111110', border: '1px solid #e8e6e3', fontFamily: 'var(--font)', fontSize: '12px', fontWeight: 600, padding: '11px 28px', cursor: 'pointer', letterSpacing: '0.06em', textTransform: 'uppercase', width: '100%' },
-  btnSecondary: { background: 'none', color: 'var(--text-muted)', border: '1px solid var(--border)', fontFamily: 'var(--font)', fontSize: '12px', padding: '11px 28px', cursor: 'pointer', letterSpacing: '0.04em' },
-  btnSecondaryFull: { background: 'none', color: 'var(--text-muted)', border: '1px solid var(--border)', fontFamily: 'var(--font)', fontSize: '12px', padding: '11px 28px', cursor: 'pointer', letterSpacing: '0.04em', width: '100%' },
+  btnPrimary: { background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-text)', border: '1px solid var(--btn-primary-bg)', fontFamily: 'var(--font)', fontSize: '12px', lineHeight: 1, fontWeight: 600, padding: '12px 28px 10px', cursor: 'pointer', letterSpacing: '0.06em', textTransform: 'uppercase' },
+  btnPrimaryFull: { background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-text)', border: '1px solid var(--btn-primary-bg)', fontFamily: 'var(--font)', fontSize: '12px', lineHeight: 1, fontWeight: 600, padding: '12px 28px 10px', cursor: 'pointer', letterSpacing: '0.06em', textTransform: 'uppercase', width: '100%' },
+  btnSecondary: { background: 'none', color: 'var(--text-muted)', border: '1px solid var(--border)', fontFamily: 'var(--font)', fontSize: '12px', lineHeight: 1, padding: '12px 28px 10px', cursor: 'pointer', letterSpacing: '0.04em' },
+  btnSecondaryFull: { background: 'none', color: 'var(--text-muted)', border: '1px solid var(--border)', fontFamily: 'var(--font)', fontSize: '12px', lineHeight: 1, padding: '12px 28px 10px', cursor: 'pointer', letterSpacing: '0.04em', width: '100%' },
 
   // stat bar
   statBar: { display: 'flex', borderBottom: '1px solid var(--border)', background: 'var(--bg-surface)' },
@@ -263,7 +265,7 @@ function LandingNav({ onLogin, onScrollToTools, isMobile }) {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('cybertools_theme', theme);
   }, [theme]);
-  const toggleTheme = () => setTheme(t => t === 'dark' ? 'light' : 'dark');
+  const toggleTheme = () => setThemeWithTransition(theme === 'dark' ? 'light' : 'dark', setTheme);
 
   if (isMobile) {
     return (
@@ -275,7 +277,7 @@ function LandingNav({ onLogin, onScrollToTools, isMobile }) {
         </div>
         <div style={s.navMobileRight}>
           <button style={{ ...s.navBtn, padding: '4px 8px', fontSize: '10px' }} onClick={onLogin}>login</button>
-          <button style={{ ...s.navBtn, padding: '4px 8px' }} onClick={toggleTheme}>{theme === 'dark' ? '☀' : '☾'}</button>
+          <button style={{ ...s.navBtn, padding: '4px 8px', display: 'inline-flex', alignItems: 'center' }} onClick={toggleTheme} aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'} title={theme === 'dark' ? 'Light mode' : 'Dark mode'}>{theme === 'dark' ? <Sun size={14} strokeWidth={2} /> : <Moon size={14} strokeWidth={2} />}</button>
         </div>
       </nav>
     );
@@ -295,7 +297,7 @@ function LandingNav({ onLogin, onScrollToTools, isMobile }) {
       </div>
       <div style={s.navRight}>
         <button style={s.navBtn} onClick={onLogin}>[ login ]</button>
-        <button style={s.navBtn} onClick={toggleTheme}>{theme === 'dark' ? '☀' : '☾'}</button>
+        <button style={{ ...s.navBtn, display: 'inline-flex', alignItems: 'center' }} onClick={toggleTheme} aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'} title={theme === 'dark' ? 'Light mode' : 'Dark mode'}>{theme === 'dark' ? <Sun size={14} strokeWidth={2} /> : <Moon size={14} strokeWidth={2} />}</button>
       </div>
     </nav>
   );
@@ -437,7 +439,7 @@ function DesktopLanding({ onLogin }) {
       {/* Hero */}
       <section style={s.hero}>
         <div style={s.heroGrid} />
-        <div style={s.heroTag}>// Open Security Operations Platform</div>
+        <div style={s.heroTag}>Open Security Operations Platform</div>
         <h1 style={s.heroHeadline}>
           Security operations,{' '}
           <span style={s.heroHeadlineAccent}>unified.</span>
@@ -490,7 +492,7 @@ function DesktopLanding({ onLogin }) {
       {/* SIEM capabilities */}
       <div style={s.editorial}>
         <div style={s.editorialLabelCol}>
-          <div style={s.editorialTag}>// SIEM</div>
+          <div style={s.editorialTag}>SIEM</div>
           <div style={s.editorialTitle}>SIEM &amp; Log Management</div>
         </div>
         <div style={s.editorialContent}>
@@ -512,7 +514,7 @@ function DesktopLanding({ onLogin }) {
       {/* How it works */}
       <div style={s.editorial}>
         <div style={s.editorialLabelCol}>
-          <div style={s.editorialTag}>// SIEM</div>
+          <div style={s.editorialTag}>SIEM</div>
           <div style={s.editorialTitle}>How it works</div>
         </div>
         <div style={s.editorialContent}>
@@ -532,7 +534,7 @@ function DesktopLanding({ onLogin }) {
       {/* Security Tools */}
       <div ref={toolsRef} style={{ ...s.editorial, borderTop: '1px solid var(--border)' }}>
         <div style={s.editorialLabelCol}>
-          <div style={s.editorialTag}>// Tools</div>
+          <div style={s.editorialTag}>Tools</div>
           <div style={s.editorialTitle}>Security Tools</div>
         </div>
         <div style={s.editorialContent}>
@@ -599,7 +601,7 @@ function MobileLanding({ onLogin }) {
       {/* Hero */}
       <section style={s.heroMobile}>
         <div style={s.heroGrid} />
-        <div style={{ ...s.heroTag, marginBottom: '20px' }}>// Open Security Operations Platform</div>
+        <div style={{ ...s.heroTag, marginBottom: '20px' }}>Open Security Operations Platform</div>
         <h1 style={s.heroHeadlineMobile}>
           Security operations,{' '}
           <span style={s.heroHeadlineAccent}>unified.</span>
@@ -635,7 +637,7 @@ function MobileLanding({ onLogin }) {
       {/* SIEM capabilities — no dashboard preview on mobile, flat list */}
       <div style={s.editorialMobile}>
         <div style={s.editorialMobileHeader}>
-          <span style={{ fontSize: '10px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--accent-amber)' }}>// SIEM</span>
+          <span style={{ fontSize: '10px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--accent-amber)' }}>SIEM</span>
           <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>Log Management &amp; Alerting</span>
         </div>
         <div style={s.editorialMobileContent}>
@@ -654,7 +656,7 @@ function MobileLanding({ onLogin }) {
       {/* How it works — mobile */}
       <div style={{ ...s.editorialMobile }}>
         <div style={s.editorialMobileHeader}>
-          <span style={{ fontSize: '10px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--accent-amber)' }}>// SIEM</span>
+          <span style={{ fontSize: '10px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--accent-amber)' }}>SIEM</span>
           <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>How it works</span>
         </div>
         <div style={s.editorialMobileContent}>
@@ -674,7 +676,7 @@ function MobileLanding({ onLogin }) {
       {/* Security Tools — mobile */}
       <div ref={toolsRef} style={s.editorialMobile}>
         <div style={s.editorialMobileHeader}>
-          <span style={{ fontSize: '10px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--accent-amber)' }}>// Tools</span>
+          <span style={{ fontSize: '10px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--accent-amber)' }}>Tools</span>
           <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>Security Tools</span>
         </div>
         <div style={s.editorialMobileContent}>

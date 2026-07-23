@@ -519,7 +519,7 @@ function AppInner() {
                     path={t.route}
                     element={
                       <ErrorBoundary>
-                        <div style={{ padding: isMobile ? '16px' : '24px' }}>
+                        <div className="kudo-view-enter" style={{ padding: isMobile ? '16px' : '24px' }}>
                           {t.requiresAuth ? (
                             <RequireAuth><ToolLoader toolId={t.id} /></RequireAuth>
                           ) : (

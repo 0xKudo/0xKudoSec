@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useWorkspace } from '../../../platform/shell/src/context/WorkspaceContext.jsx';
 import { useIsMobile } from '../../../platform/shell/src/hooks/useIsMobile.js';
+import { Button, TextArea, Skeleton } from '../../../platform/shell/src/components/ui/index.js';
 
 const SEVERITY_COLORS = {
   critical: 'var(--severity-critical)',
@@ -89,7 +90,8 @@ const styles = {
   error: { color: 'var(--severity-critical)', fontSize: '13px', marginTop: '12px' },
   results: { marginTop: '24px' },
   summaryCard: {
-    background: 'var(--bg-primary)',
+    background: 'var(--surface)',
+    borderRadius: 'var(--radius-md)',
     border: '1px solid var(--border)',
     padding: '20px',
     marginBottom: '16px',
@@ -221,8 +223,8 @@ export default function NetworkThreatAnalyzer() {
       </div>
 
       {tab === 'paste' ? (
-        <textarea
-          style={styles.textarea}
+        <TextArea
+          rows={8}
           placeholder={`Paste log data here...\n\nExamples:\n  Apr 29 10:23:01 fw kernel: IN=eth0 SRC=1.2.3.4 DST=10.0.0.1 PROTO=TCP DPT=22\n  {"timestamp":"2024-01-01","src_ip":"192.168.1.5","dst_port":443,"bytes":15000}\n  conn.log: 1234567890 CxYz1 1.2.3.4 4567 10.0.0.1 80 tcp ...`}
           value={logData}
           onChange={e => setLogData(e.target.value)}
@@ -248,15 +250,21 @@ export default function NetworkThreatAnalyzer() {
       )}
 
       <div style={{ ...styles.controlRow, marginTop: '8px' }}>
-        <select style={styles.select} value={logType} onChange={e => setLogType(e.target.value)} disabled={loading}>
+        <select className="kudo-input kudo-select" value={logType} onChange={e => setLogType(e.target.value)} disabled={loading}>
           {LOG_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
         </select>
-        <button style={styles.button(loading)} onClick={handleAnalyze} disabled={!canAnalyze}>
-          {loading ? 'Analyzing...' : 'Analyze'}
-        </button>
+        <Button loading={loading} onClick={handleAnalyze} disabled={!canAnalyze}>
+          {loading ? 'Analyzing…' : 'Analyze'}
+        </Button>
       </div>
 
       {error && <p style={styles.error}>{error}</p>}
+
+      {loading && !result && (
+        <div className="kudo-card kudo-reveal" style={{ marginTop: '24px' }}>
+          <Skeleton lines={5} />
+        </div>
+      )}
 
       {result && (
         <div style={styles.results}>

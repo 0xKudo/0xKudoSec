@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useWorkspace } from '../../../platform/shell/src/context/WorkspaceContext.jsx';
 import { useIsMobile } from '../../../platform/shell/src/hooks/useIsMobile.js';
+import { Button, Input, Skeleton } from '../../../platform/shell/src/components/ui/index.js';
 
 const RISK_COLORS = {
   critical: 'var(--severity-critical)',
@@ -56,7 +57,8 @@ const styles = {
   error: { color: 'var(--severity-critical)', fontSize: '13px', marginTop: '12px' },
   results: { marginTop: '24px' },
   summaryCard: {
-    background: 'var(--bg-primary)',
+    background: 'var(--surface)',
+    borderRadius: 'var(--radius-md)',
     border: '1px solid var(--border)',
     padding: '20px',
     marginBottom: '16px',
@@ -273,8 +275,8 @@ export default function OsintReconTool() {
       </div>
 
       <div style={{ ...styles.inputRow, flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-start' : undefined }}>
-        <input
-          style={isMobile ? { ...styles.input, width: '100%', boxSizing: 'border-box' } : styles.input}
+        <Input
+          style={isMobile ? { width: '100%' } : { flex: 1 }}
           placeholder="example.com, 192.168.1.1, or user@example.com"
           value={target}
           onChange={e => setTarget(e.target.value)}
@@ -282,7 +284,7 @@ export default function OsintReconTool() {
           disabled={loading}
         />
         <select
-          style={styles.select}
+          className="kudo-input kudo-select"
           value={targetType}
           onChange={e => setTargetType(e.target.value)}
           disabled={loading}
@@ -292,16 +294,23 @@ export default function OsintReconTool() {
           <option value="ip">IP Address</option>
           <option value="email">Email</option>
         </select>
-        <button
-          style={{ ...styles.button(loading), alignSelf: 'flex-start' }}
+        <Button
+          style={{ alignSelf: 'flex-start' }}
+          loading={loading}
           onClick={handleAnalyze}
           disabled={loading || !target.trim()}
         >
-          {loading ? 'Scanning...' : 'Run Recon'}
-        </button>
+          {loading ? 'Scanning…' : 'Run Recon'}
+        </Button>
       </div>
 
       {error && <p style={styles.error}>{error}</p>}
+
+      {loading && !result && (
+        <div className="kudo-card kudo-reveal" style={{ marginTop: '24px' }}>
+          <Skeleton lines={5} />
+        </div>
+      )}
 
       {result && (
         <div style={styles.results}>

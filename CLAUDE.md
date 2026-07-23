@@ -43,6 +43,36 @@ Open http://localhost:5173
 
 ---
 
+## Local Database (Docker) — full SIEM locally, no VPS
+
+The production schema is versioned at `db/schema.sql` (exported via `pg_dump --schema-only` from the VPS). Local Postgres runs in Docker and auto-loads it.
+
+```bash
+npm run db:up                                    # Postgres 16, creates DB + loads schema.sql
+SEED_USER_ID='google-oauth2|...' npm run db:seed # synthetic logs/alerts/cases/rules
+npm run dev
+```
+
+| Command | What it does |
+|---------|--------------|
+| `npm run db:up` / `db:down` | Start / stop the container (data persists) |
+| `npm run db:reset` | Destroy the volume and rebuild from `schema.sql` |
+| `npm run db:seed` | Seed synthetic SIEM data for one user (`-- --reset` to wipe first) |
+
+**Critical gotcha — port 5433, not 5432.** This machine has a **native PostgreSQL 18.3 on 5432** holding an older, diverged `cybertools` DB (missing `process_guid`, `parent_process_id`, `parent_process_guid`). The Docker container therefore publishes on **5433**:
+
+```
+DATABASE_URL=postgresql://postgres:postgres@localhost:5433/cybertools
+```
+
+Pointing at 5432 silently hits the stale native DB and produces confusing "column ... does not exist" errors. The native install is left untouched.
+
+**Auth for local testing:** the shell needs `platform/shell/.env` with `VITE_AUTH0_DOMAIN` / `VITE_AUTH0_CLIENT_ID` / `VITE_AUTH0_AUDIENCE` (public SPA values; see `.env.example`). Auth0 must also list `http://localhost:5173` in Allowed Callback URLs, Logout URLs, and Web Origins. Note the 4 no-auth tools (Decoder, Reverse Shell, Wordlist, Payload Generator) need none of this.
+
+Full details: `db/README.md`.
+
+---
+
 ## Architecture (All Decisions Settled)
 
 - **Monorepo** — npm workspaces, `platform/server` + `platform/shell` + `platform/shared` + `tools/*`

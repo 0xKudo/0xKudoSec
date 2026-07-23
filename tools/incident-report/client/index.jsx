@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useWorkspace } from '../../../platform/shell/src/context/WorkspaceContext.jsx';
 import { useIsMobile } from '../../../platform/shell/src/hooks/useIsMobile.js';
+import { Button, TextArea } from '../../../platform/shell/src/components/ui/index.js';
 
 const SEVERITY_COLORS = {
   critical: 'var(--severity-critical)',
@@ -261,8 +262,8 @@ export default function IncidentReportTool() {
         </div>
       )}
 
-      <textarea
-        style={styles.textarea}
+      <TextArea
+        rows={8}
         placeholder="Paste incident description or alert text here..."
         value={incidentText}
         onChange={e => setIncidentText(e.target.value)}
@@ -271,7 +272,7 @@ export default function IncidentReportTool() {
 
       <div style={{ ...styles.controlsRow, flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-start' : 'center' }}>
         <select
-          style={styles.select}
+          className="kudo-input kudo-select"
           value={severityOverride}
           onChange={e => setSeverityOverride(e.target.value)}
           disabled={loading}
@@ -281,19 +282,19 @@ export default function IncidentReportTool() {
             <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
           ))}
         </select>
-        <button
-          style={styles.button(loading)}
+        <Button
+          loading={loading}
           onClick={handleGenerate}
           disabled={loading || !incidentText.trim()}
         >
-          {loading ? 'Generating...' : 'Generate Report'}
-        </button>
+          {loading ? 'Generating…' : 'Generate Report'}
+        </Button>
       </div>
 
       {error && <p style={styles.error}>{error}</p>}
 
       {report && (
-        <div style={styles.results}>
+        <div className="kudo-card" style={{ marginTop: '24px' }}>
           <div style={styles.reportHeader}>
             <div style={styles.severityBadge(report.severity)}>{report.severity}</div>
             <div style={styles.reportTitle}>{report.title}</div>
@@ -318,9 +319,9 @@ export default function IncidentReportTool() {
           <ReportSection label="Recommended Remediation" value={report.recommendedRemediation} />
           <ReportSection label="Lessons Learned" value={report.lessonsLearned} />
 
-          <button style={styles.exportButton} onClick={handleExport}>
+          <Button variant="ghost" onClick={handleExport}>
             {copied ? 'Copied!' : 'Copy as Plain Text'}
-          </button>
+          </Button>
         </div>
       )}
     </div>

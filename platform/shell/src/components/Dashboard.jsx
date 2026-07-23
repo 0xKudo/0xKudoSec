@@ -1,6 +1,8 @@
 import { useNavigate } from 'react-router-dom';
+import { Clock, Layers } from 'lucide-react';
 import { useTools } from '../context/ToolRegistry';
 import { useWorkspace } from '../context/WorkspaceContext';
+import { EmptyState } from './ui/index.js';
 
 const RECENT_TOOLS_KEY = 'cybertools_recent_tools';
 const MAX_RECENT = 6;
@@ -213,7 +215,7 @@ export function Dashboard() {
             <div style={s.panelHeader}>Recently Used</div>
             <div style={s.panelScroll}>
             {recentTools.length === 0 ? (
-              <div style={s.emptyState}>No recent tools — launch one from the sidebar.</div>
+              <EmptyState icon={<Clock size={24} />} text="No recent tools — launch one from the sidebar." />
             ) : (
               recentTools.map(tool => (
                 <div
@@ -246,7 +248,7 @@ export function Dashboard() {
             </div>
             <div style={s.panelScroll}>
             {workspaceItems.length === 0 ? (
-              <div style={s.emptyState}>No workspace items — results from tools appear here.</div>
+              <EmptyState icon={<Layers size={24} />} text="No workspace items — results from tools appear here." />
             ) : (
               workspaceItems.map(item => {
                 const tool = tools.find(t => t.id === item.source);
@@ -277,7 +279,7 @@ export function Dashboard() {
         {/* Quick Launch */}
         <div style={s.fullWidthPanel}>
           <div style={s.panelHeader}>Quick Launch</div>
-          <div style={s.quickLaunchGrid}>
+          <div className="kudo-stagger" style={s.quickLaunchGrid}>
             {quickTools.map(q => (
               <div
                 key={q.id}

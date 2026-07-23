@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useWorkspace } from '../../../platform/shell/src/context/WorkspaceContext.jsx';
 import { useIsMobile } from '../../../platform/shell/src/hooks/useIsMobile.js';
+import { Button, Input, Skeleton } from '../../../platform/shell/src/components/ui/index.js';
 
 const THREAT_COLORS = {
   critical: 'var(--severity-critical)',
@@ -56,7 +57,8 @@ const styles = {
   error: { color: 'var(--severity-critical)', fontSize: '13px', marginTop: '12px' },
   results: { marginTop: '24px' },
   summaryCard: {
-    background: 'var(--bg-primary)',
+    background: 'var(--surface)',
+    borderRadius: 'var(--radius-md)',
     border: '1px solid var(--border)',
     padding: '20px',
     marginBottom: '16px',
@@ -296,8 +298,8 @@ export default function ThreatIntelTool() {
       </div>
 
       <div style={{ ...styles.inputRow, flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-start' : undefined }}>
-        <input
-          style={isMobile ? { ...styles.input, width: '100%', boxSizing: 'border-box' } : styles.input}
+        <Input
+          style={isMobile ? { width: '100%' } : { flex: 1 }}
           placeholder="1.2.3.4, example.com, https://..., or md5/sha256 hash"
           value={indicator}
           onChange={e => setIndicator(e.target.value)}
@@ -305,7 +307,7 @@ export default function ThreatIntelTool() {
           disabled={loading}
         />
         <select
-          style={styles.select}
+          className="kudo-input kudo-select"
           value={indicatorType}
           onChange={e => setIndicatorType(e.target.value)}
           disabled={loading}
@@ -316,16 +318,22 @@ export default function ThreatIntelTool() {
           <option value="url">URL</option>
           <option value="hash">File Hash</option>
         </select>
-        <button
-          style={styles.button(loading)}
+        <Button
+          loading={loading}
           onClick={handleAnalyze}
           disabled={loading || !indicator.trim()}
         >
-          {loading ? 'Scanning...' : 'Analyze'}
-        </button>
+          {loading ? 'Scanning…' : 'Analyze'}
+        </Button>
       </div>
 
       {error && <p style={styles.error}>{error}</p>}
+
+      {loading && !result && (
+        <div className="kudo-card kudo-reveal" style={{ marginTop: '24px' }}>
+          <Skeleton lines={5} />
+        </div>
+      )}
 
       {result && (
         <div style={styles.results}>

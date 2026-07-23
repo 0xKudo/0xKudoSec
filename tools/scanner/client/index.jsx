@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useWorkspace } from '../../../platform/shell/src/context/WorkspaceContext.jsx';
 import { useIsMobile } from '../../../platform/shell/src/hooks/useIsMobile.js';
+import { Button, Input, EmptyState } from '../../../platform/shell/src/components/ui/index.js';
+import { ShieldCheck } from 'lucide-react';
 
 const SEVERITY_ORDER = ['critical', 'high', 'medium', 'low', 'info'];
 const SEVERITY_COLOR = {
@@ -81,7 +83,8 @@ const styles = {
   error: { color: 'var(--severity-critical)', fontSize: '13px', marginBottom: '12px' },
   results: { marginTop: '24px' },
   analysisCard: {
-    background: 'var(--bg-primary)',
+    background: 'var(--surface)',
+    borderRadius: 'var(--radius-md)',
     border: '1px solid var(--border)',
     padding: '16px',
     marginBottom: '20px',
@@ -221,17 +224,17 @@ export default function Scanner() {
       <div style={styles.section}>
         <span style={styles.label}>Target URL</span>
         <div style={{ ...styles.inputRow, flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-start' : undefined }}>
-          <input
-            style={isMobile ? { ...styles.input, minWidth: 0, width: '100%', boxSizing: 'border-box' } : styles.input}
+          <Input
+            style={isMobile ? { width: '100%', minWidth: 0 } : { flex: 1, minWidth: '280px' }}
             placeholder="https://example.com"
             value={url}
             onChange={e => setUrl(e.target.value)}
             disabled={loading}
             onKeyDown={e => e.key === 'Enter' && canScan && handleScan()}
           />
-          <button style={styles.button(!canScan)} onClick={handleScan} disabled={!canScan}>
-            {loading ? 'Scanning...' : 'Scan'}
-          </button>
+          <Button loading={loading} onClick={handleScan} disabled={!canScan}>
+            {loading ? 'Scanning…' : 'Scan'}
+          </Button>
         </div>
       </div>
 
@@ -311,7 +314,7 @@ export default function Scanner() {
 
           {/* Findings grouped by severity */}
           {result.findings.length === 0 ? (
-            <p style={styles.emptyState}>No issues found.</p>
+            <EmptyState icon={<ShieldCheck size={24} />} text="No issues found." />
           ) : (
             SEVERITY_ORDER.filter(s => findingsBySeverity[s]).map(sev => (
               <div key={sev}>

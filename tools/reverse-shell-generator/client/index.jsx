@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useWorkspace } from '../../../platform/shell/src/context/WorkspaceContext.jsx';
 import { useIsMobile } from '../../../platform/shell/src/hooks/useIsMobile.js';
+import { Button, Input } from '../../../platform/shell/src/components/ui/index.js';
 
 const SHELL_TYPE_LABELS = {
   'bash':             'Bash (/dev/tcp)',
@@ -221,8 +222,8 @@ export default function ReverseShellGenerator() {
       <div style={{ ...styles.formRow, flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-start' : 'flex-end' }}>
         <div style={styles.fieldGroup}>
           <span style={styles.label}>Attacker IP (LHOST)</span>
-          <input
-            style={styles.input}
+          <Input
+            style={{ width: '200px' }}
             placeholder="10.10.14.1"
             value={lhost}
             onChange={e => setLhost(e.target.value)}
@@ -232,8 +233,8 @@ export default function ReverseShellGenerator() {
 
         <div style={styles.fieldGroup}>
           <span style={styles.label}>Port (LPORT)</span>
-          <input
-            style={{ ...styles.input, width: isMobile ? '100%' : '100px' }}
+          <Input
+            style={{ width: isMobile ? '100%' : '100px' }}
             placeholder="4444"
             value={lport}
             onChange={e => setLport(e.target.value)}
@@ -243,7 +244,7 @@ export default function ReverseShellGenerator() {
 
         <div style={styles.fieldGroup}>
           <span style={styles.label}>Shell Type</span>
-          <select style={styles.select} value={shellType} onChange={e => setShellType(e.target.value)} disabled={loading}>
+          <select className="kudo-input kudo-select" value={shellType} onChange={e => setShellType(e.target.value)} disabled={loading}>
             {SHELL_GROUPS.map(group => (
               <optgroup key={group.label} label={group.label}>
                 {group.types.map(t => (
@@ -254,9 +255,9 @@ export default function ReverseShellGenerator() {
           </select>
         </div>
 
-        <button style={{ ...styles.button(!canGenerate), alignSelf: isMobile ? 'flex-start' : 'flex-end' }} onClick={handleGenerate} disabled={!canGenerate}>
+        <Button style={{ alignSelf: isMobile ? 'flex-start' : 'flex-end' }} onClick={handleGenerate} disabled={!canGenerate}>
           Generate
-        </button>
+        </Button>
       </div>
 
       {error && <p style={styles.error}>{error}</p>}

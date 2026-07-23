@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useWorkspace } from '../../../platform/shell/src/context/WorkspaceContext.jsx';
 import { useIsMobile } from '../../../platform/shell/src/hooks/useIsMobile.js';
+import { Button, Input } from '../../../platform/shell/src/components/ui/index.js';
 
 const RISK_COLORS = {
   critical: 'var(--severity-critical)',
@@ -124,7 +125,8 @@ const styles = {
   },
   results: { marginTop: '24px' },
   summaryCard: {
-    background: 'var(--bg-primary)',
+    background: 'var(--surface)',
+    borderRadius: 'var(--radius-md)',
     border: '1px solid var(--border)',
     padding: '20px',
     marginBottom: '16px',
@@ -321,8 +323,8 @@ export default function NetworkScanner() {
 
       {isMobile ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>
-          <input
-            style={{ ...styles.input, width: '100%', boxSizing: 'border-box' }}
+          <Input
+            style={{ width: '100%' }}
             placeholder="192.168.1.1, 192.168.1.0/24, or hostname"
             value={target}
             onChange={e => setTarget(e.target.value)}
@@ -330,7 +332,7 @@ export default function NetworkScanner() {
             disabled={loading}
           />
           <select
-            style={{ ...styles.select, alignSelf: 'flex-start' }}
+            className="kudo-input kudo-select" style={{ alignSelf: 'flex-start' }}
             value={scanType}
             onChange={e => setScanType(e.target.value)}
             disabled={loading}
@@ -340,17 +342,15 @@ export default function NetworkScanner() {
             ))}
           </select>
           {loading ? (
-            <button style={{ ...styles.stopBtn, alignSelf: 'flex-start' }} onClick={handleStop}>Stop</button>
+            <Button variant="danger" style={{ alignSelf: 'flex-start' }} onClick={handleStop}>Stop</Button>
           ) : (
-            <button style={{ ...styles.scanBtn, alignSelf: 'flex-start' }} onClick={handleScan} disabled={!target.trim()}>
-              Scan
-            </button>
+            <Button style={{ alignSelf: 'flex-start' }} onClick={handleScan} disabled={!target.trim()}>Scan</Button>
           )}
         </div>
       ) : (
         <div style={styles.inputRow}>
-          <input
-            style={styles.input}
+          <Input
+            style={{ flex: 1 }}
             placeholder="192.168.1.1, 192.168.1.0/24, or hostname"
             value={target}
             onChange={e => setTarget(e.target.value)}
@@ -358,7 +358,7 @@ export default function NetworkScanner() {
             disabled={loading}
           />
           <select
-            style={styles.select}
+            className="kudo-input kudo-select"
             value={scanType}
             onChange={e => setScanType(e.target.value)}
             disabled={loading}
@@ -368,11 +368,9 @@ export default function NetworkScanner() {
             ))}
           </select>
           {loading ? (
-            <button style={styles.stopBtn} onClick={handleStop}>Stop</button>
+            <Button variant="danger" onClick={handleStop}>Stop</Button>
           ) : (
-            <button style={styles.scanBtn} onClick={handleScan} disabled={!target.trim()}>
-              Scan
-            </button>
+            <Button onClick={handleScan} disabled={!target.trim()}>Scan</Button>
           )}
         </div>
       )}
@@ -426,9 +424,9 @@ export default function NetworkScanner() {
 
           {result.rawOutput && (
             <div>
-              <button style={styles.toggleBtn} onClick={() => setShowRaw(v => !v)}>
+              <Button variant="ghost" onClick={() => setShowRaw(v => !v)}>
                 {showRaw ? 'Hide' : 'Show'} Raw nmap Output
-              </button>
+              </Button>
               {showRaw && <div style={styles.rawOutput}>{result.rawOutput}</div>}
             </div>
           )}
