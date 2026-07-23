@@ -248,7 +248,7 @@ export function LogSources() {
   const [uploadResult, setUploadResult] = useState(null); // { accepted, total } or { error }
   const fileInputRef = useState(null);
 
-  // Export state — default to last 7 days
+  // Export state: default to last 7 days
   const [exportFrom, setExportFrom] = useState(() => { const d = new Date(); d.setDate(d.getDate() - 7); d.setSeconds(0,0); return d; });
   const [exportTo, setExportTo] = useState(() => { const d = new Date(); d.setSeconds(0,0); return d; });
   const [exporting, setExporting] = useState(false);
@@ -286,7 +286,7 @@ export function LogSources() {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
-      // data.api_key is the one-time reveal — store locally only
+      // data.api_key is the one-time reveal: store locally only
       setNewKey(data.api_key);
       setKeyMeta({ exists: true, created_at: data.created_at });
       setCopied(false);
@@ -369,10 +369,10 @@ export function LogSources() {
         {isLoading ? (
           <div style={s.keyMuted}>Loading...</div>
         ) : newKey ? (
-          // One-time reveal state — key just generated/regenerated
+          // One-time reveal state: key just generated/regenerated
           <>
             <div style={s.warning}>
-              This is the only time this key will be shown. Copy it now — if you leave this page without copying it, you will need to regenerate.
+              This is the only time this key will be shown. Copy it now. If you leave this page without copying it, you will need to regenerate.
             </div>
             <div style={s.keyBox}>{newKey}</div>
             <div style={{ display: 'flex', alignItems: 'center' }}>
@@ -382,7 +382,7 @@ export function LogSources() {
             </div>
             <div style={s.note}>
               Use this key as the Bearer token in your log shipper's Authorization header when posting to <code>POST /api/ingest/beats</code>.<br />
-              Regenerating will invalidate the old key — update any configured log sources after.
+              Regenerating will invalidate the old key. Update any configured log sources after.
             </div>
           </>
         ) : keyMeta?.exists ? (
@@ -395,7 +395,7 @@ export function LogSources() {
               {generating ? 'Generating...' : 'Regenerate Key'}
             </button>
             <div style={s.note}>
-              Regenerating will invalidate the current key — update any configured log sources after.
+              Regenerating will invalidate the current key. Update any configured log sources after.
             </div>
           </>
         ) : (
@@ -412,7 +412,7 @@ export function LogSources() {
         )}
       </div>
 
-      {/* Shipper Setup — shown whenever a key exists */}
+      {/* Shipper Setup: shown whenever a key exists */}
       {(keyMeta?.exists || newKey) && (() => {
         const apiKey = newKey || 'YOUR_API_KEY_HERE';
         const ingestUrl = 'https://0xkudo.com/api/ingest/beats';
@@ -510,7 +510,7 @@ winlogbeat.event_logs:
             {shipperTab === 0 && (
               <div>
                 <div style={s.note}>
-                  <strong style={{ color: 'var(--text-primary)' }}>Fluent Bit</strong> — lightweight, production-grade log shipper. Recommended for Windows.<br />
+                  <strong style={{ color: 'var(--text-primary)' }}>Fluent Bit</strong>: lightweight, production-grade log shipper. Recommended for Windows.<br />
                   Download from <strong>fluentbit.io</strong>, then save the config below and run as a service.
                 </div>
                 <pre style={{ ...s.keyBox, marginTop: '12px', fontSize: '11px', lineHeight: 1.7, overflowX: 'auto' }}>{fluentBitConfig}</pre>
@@ -521,7 +521,7 @@ winlogbeat.event_logs:
                 </div>
                 <div style={s.note}>
                   <strong style={{ color: 'var(--text-primary)' }}>Setup (Windows):</strong><br />
-                  1. Install Fluent Bit — <code>winget install Fluent.FluentBit</code> or download from fluentbit.io<br />
+                  1. Install Fluent Bit: <code>winget install Fluent.FluentBit</code> or download from fluentbit.io<br />
                   2. Save config to <code>C:\Program Files\fluent-bit\conf\cybertools.conf</code><br />
                   3. Register as a service (run as Administrator):<br />
                   <code style={{ display: 'block', marginTop: '6px', marginLeft: '12px' }}>
@@ -537,7 +537,7 @@ winlogbeat.event_logs:
             {shipperTab === 1 && (
               <div>
                 <div style={s.note}>
-                  <strong style={{ color: 'var(--text-primary)' }}>Winlogbeat 7</strong> — Elastic's Windows event log shipper. Use version 7.x only — v8+ dropped generic HTTP output.<br />
+                  <strong style={{ color: 'var(--text-primary)' }}>Winlogbeat 7</strong>: Elastic's Windows event log shipper. Use version 7.x only. v8+ dropped generic HTTP output.<br />
                   Download from <strong>elastic.co/downloads/past-releases</strong>, search for Winlogbeat 7.17.
                 </div>
                 <pre style={{ ...s.keyBox, marginTop: '12px', fontSize: '11px', lineHeight: 1.7, overflowX: 'auto' }}>{winlogbeatConfig}</pre>
@@ -561,7 +561,7 @@ winlogbeat.event_logs:
             {shipperTab === 2 && (
               <div>
                 <div style={s.note}>
-                  <strong style={{ color: 'var(--text-primary)' }}>Manual API</strong> — POST JSON events directly. Use for custom integrations, scripts, or any platform.<br />
+                  <strong style={{ color: 'var(--text-primary)' }}>Manual API</strong>: POST JSON events directly. Use for custom integrations, scripts, or any platform.<br />
                   Send a JSON array of event objects to the ingest endpoint with your API key as a Bearer token.
                 </div>
                 <pre style={{ ...s.keyBox, marginTop: '12px', fontSize: '11px', lineHeight: 1.7, overflowX: 'auto' }}>{curlExample}</pre>
@@ -586,7 +586,7 @@ winlogbeat.event_logs:
       <div style={s.section}>
         <div style={s.sectionTitle}>Upload Log File</div>
         <div style={s.note} >
-          Upload a Winlogbeat JSON export — either a JSON array (<code>[{'{'}...{'}'}]</code>) or newline-delimited JSON (one event per line). Max 50 MB / 100,000 events.
+          Upload a Winlogbeat JSON export: either a JSON array (<code>[{'{'}...{'}'}]</code>) or newline-delimited JSON (one event per line). Max 50 MB / 100,000 events.
         </div>
         <div style={{ marginTop: '12px', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
           <label style={{
@@ -650,7 +650,7 @@ winlogbeat.event_logs:
           <div>
             {sources.length === 0 && (
               <div style={{ padding: '20px', fontSize: '12px', color: 'var(--text-muted)' }}>
-                No sources yet — start the shipper to begin ingesting logs.
+                No sources yet. Start the shipper to begin ingesting logs.
               </div>
             )}
             {sources.map(src => (
@@ -660,7 +660,7 @@ winlogbeat.event_logs:
                 <div style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '2px' }}>Type</div>
                 <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '6px' }}>{src.type} · {Number(src.event_count).toLocaleString()} events</div>
                 <div style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '2px' }}>Last Seen</div>
-                <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{src.last_seen ? new Date(src.last_seen).toLocaleString() : '—'}</div>
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{src.last_seen ? new Date(src.last_seen).toLocaleString() : '-'}</div>
               </div>
             ))}
           </div>
@@ -676,14 +676,14 @@ winlogbeat.event_logs:
             <tbody>
               {sources.length === 0 && (
                 <tr><td colSpan={4} style={{ ...s.td, color: 'var(--text-muted)' }}>
-                  No sources yet — start the shipper to begin ingesting logs.
+                  No sources yet. Start the shipper to begin ingesting logs.
                 </td></tr>
               )}
               {sources.map(src => (
                 <tr key={src.id}>
                   <td style={{ ...s.td, color: 'var(--text-primary)' }}>{src.name}</td>
                   <td style={s.td}>{src.type}</td>
-                  <td style={s.td}>{src.last_seen ? new Date(src.last_seen).toLocaleString() : '—'}</td>
+                  <td style={s.td}>{src.last_seen ? new Date(src.last_seen).toLocaleString() : '-'}</td>
                   <td style={s.td}>{Number(src.event_count).toLocaleString()}</td>
                 </tr>
               ))}

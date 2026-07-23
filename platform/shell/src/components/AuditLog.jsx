@@ -142,12 +142,12 @@ const styles = {
 };
 
 function formatMeta(meta) {
-  if (!meta || !Object.keys(meta).length) return '—';
+  if (!meta || !Object.keys(meta).length) return '-';
   return Object.entries(meta).map(([k, v]) => `${k}: ${v}`).join('  ·  ');
 }
 
 function formatTime(ts) {
-  if (!ts) return '—';
+  if (!ts) return '-';
   const d = new Date(ts);
   return d.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' });
 }
@@ -298,7 +298,7 @@ export function AuditLog() {
                       {ACTION_LABELS[row.action] || row.action}
                     </span>
                   </td>
-                  <td style={styles.td}>{row.ip || '—'}</td>
+                  <td style={styles.td}>{row.ip || '-'}</td>
                   <td style={styles.td}>
                     <span style={styles.meta}>{formatMeta(row.meta)}</span>
                   </td>

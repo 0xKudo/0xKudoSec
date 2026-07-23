@@ -752,7 +752,7 @@ winlogbeat.event_logs:
               Your API key authorizes log shippers to send events to this platform. It is only shown once at generation time. Store it securely.
             </div>
 
-            {/* Expiry selector — always visible so user can change before generate/regenerate */}
+            {/* Expiry selector: always visible so user can change before generate/regenerate */}
             <div style={{ marginBottom: '16px' }}>
               <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px' }}>Key expiry</div>
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
@@ -1004,7 +1004,7 @@ winlogbeat.event_logs:
               Access restricted to users with the <strong>config-editor</strong> role.
             </div>
 
-            {/* PIN not set — prompt to create one */}
+            {/* PIN not set: prompt to create one */}
             {pinState === 'unset' && (
               <div style={{ marginTop: '24px', maxWidth: '320px' }}>
                 <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '16px' }}>
@@ -1035,7 +1035,7 @@ winlogbeat.event_logs:
               </div>
             )}
 
-            {/* PIN set but no recovery passphrase — prompt to add one */}
+            {/* PIN set but no recovery passphrase: prompt to add one */}
             {pinState === 'needs-recovery' && (
               <div style={{ marginTop: '24px', maxWidth: '320px' }}>
                 <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '16px' }}>
@@ -1063,7 +1063,7 @@ winlogbeat.event_logs:
               </div>
             )}
 
-            {/* PIN set — locked, prompt to unlock */}
+            {/* PIN set: locked, prompt to unlock */}
             {pinState === 'locked' && (
               <div style={{ marginTop: '24px', maxWidth: '320px' }}>
                 <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '16px' }}>
@@ -1088,7 +1088,7 @@ winlogbeat.event_logs:
               </div>
             )}
 
-            {/* Recovery — enter passphrase to reset PIN */}
+            {/* Recovery: enter passphrase to reset PIN */}
             {pinState === 'recovering' && (
               <div style={{ marginTop: '24px', maxWidth: '320px' }}>
                 <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '16px' }}>
@@ -1113,7 +1113,7 @@ winlogbeat.event_logs:
               </div>
             )}
 
-            {/* Unlocked — show editor */}
+            {/* Unlocked: show editor */}
             {pinState === 'unlocked' && (
               configLoading ? (
                 <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '16px' }}>Loading...</div>
@@ -1452,7 +1452,7 @@ winlogbeat.event_logs:
                     <div style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '2px' }}>Type</div>
                     <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '6px' }}>{src.type} · {Number(src.event_count).toLocaleString()} events</div>
                     <div style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '2px' }}>Last Seen</div>
-                    <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{src.last_seen ? new Date(src.last_seen).toLocaleString() : '—'}</div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{src.last_seen ? new Date(src.last_seen).toLocaleString() : '-'}</div>
                   </div>
                 ))}
               </div>
@@ -1475,7 +1475,7 @@ winlogbeat.event_logs:
                     <tr key={src.id}>
                       <td style={{ ...s.td, color: 'var(--text-primary)' }}>{src.name}</td>
                       <td style={s.td}>{src.type}</td>
-                      <td style={s.td}>{src.last_seen ? new Date(src.last_seen).toLocaleString() : '—'}</td>
+                      <td style={s.td}>{src.last_seen ? new Date(src.last_seen).toLocaleString() : '-'}</td>
                       <td style={s.td}>{Number(src.event_count).toLocaleString()}</td>
                     </tr>
                   ))}
@@ -1665,7 +1665,7 @@ function TuningCenterModelsTab({ s }) {
   };
 
   const fmtSize = (bytes) => {
-    if (!bytes) return '—';
+    if (!bytes) return '-';
     if (bytes >= 1e9) return `${(bytes / 1e9).toFixed(1)}GB`;
     return `${Math.round(bytes / 1e6)}MB`;
   };
@@ -1676,7 +1676,7 @@ function TuningCenterModelsTab({ s }) {
     if (m.status === 'missing') return 'file missing';
     if (m.status === 'incompatible') return 'incompatible';
     if (m.status === 'ready') return 'ready';
-    return m.status || '—';
+    return m.status || '-';
   };
 
   const statusColor = (m) => {
@@ -1730,7 +1730,7 @@ function TuningCenterModelsTab({ s }) {
                     <td style={s.td}>{m.type === 'managed' ? 'Managed' : 'Custom'}</td>
                     <td style={s.td}>{fmtSize(m.sizeBytes)}</td>
                     <td style={s.td}>{fmtSize(m.ramEstimateBytes)}</td>
-                    <td style={s.td}>{m.quantization || '—'}</td>
+                    <td style={s.td}>{m.quantization || '-'}</td>
                     <td style={s.td}>
                       <span style={{ color: statusColor(m), fontSize: '11px' }}>{statusLabel(m)}</span>
                       {isDownloading && pct !== undefined && (
@@ -1793,7 +1793,7 @@ function TuningCenterModelsTab({ s }) {
           </table>
         )}
 
-        {/* Add custom model — browse local file */}
+        {/* Add custom model: browse local file */}
         <div style={{ marginBottom: '16px' }}>
           <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Add Custom Model</div>
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', marginBottom: '8px' }}>
@@ -1871,12 +1871,12 @@ function TuningCenterModelsTab({ s }) {
                   <tr key={src.source}>
                     <td style={s.td}>{src.source.toUpperCase()}</td>
                     <td style={s.td}>{parseInt(src.count).toLocaleString()}</td>
-                    <td style={s.td}>{src.last_synced ? new Date(src.last_synced).toLocaleString() : '—'}</td>
+                    <td style={s.td}>{src.last_synced ? new Date(src.last_synced).toLocaleString() : '-'}</td>
                   </tr>
                 ))}
                 {kbStatus.sources.length === 0 && (
                   <tr>
-                    <td colSpan={3} style={{ ...s.td, color: 'var(--text-muted)', textAlign: 'center' }}>No entries yet — run a sync to populate the KB.</td>
+                    <td colSpan={3} style={{ ...s.td, color: 'var(--text-muted)', textAlign: 'center' }}>No entries yet. Run a sync to populate the KB.</td>
                   </tr>
                 )}
               </tbody>

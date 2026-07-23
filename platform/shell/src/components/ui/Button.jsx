@@ -1,13 +1,13 @@
 import { Spinner } from '../Spinner.jsx';
 
 /**
- * Button — token-driven, consistent across all tools.
+ * Button: token-driven, consistent across all tools.
  *
  * Props:
  *   variant: 'primary' | 'ghost' | 'danger'  (default 'primary')
  *   size:    'sm' | 'md'                      (default 'sm')
- *   loading: boolean  — shows a spinner and disables the button
- *   icon:    ReactNode — optional leading icon (e.g. a Lucide icon)
+ *   loading: boolean : shows a spinner and disables the button
+ *   icon:    ReactNode: optional leading icon (e.g. a Lucide icon)
  *   ...rest passes through to <button> (onClick, disabled, type, style, aria-*)
  */
 export function Button({

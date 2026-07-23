@@ -474,7 +474,7 @@ export function DetectionRules({ onNavigate }) {
                       <input type="radio" name="action" value={a} checked={form.action === a} onChange={() => set('action', a)} />
                       <span style={{ textTransform: 'capitalize' }}>{a}</span>
                       <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
-                        {a === 'alert' ? '— create alert when matched' : '— silently ignore matched events'}
+                        {a === 'alert' ? 'create alert when matched' : 'silently ignore matched events'}
                       </span>
                     </label>
                   ))}
@@ -504,13 +504,13 @@ export function DetectionRules({ onNavigate }) {
               <div style={isMobile ? { display: 'flex', flexDirection: 'column', gap: '4px' } : s.formRow}>
                 <span style={s.label}>Category</span>
                 <select style={s.select} value={form.match_category} onChange={e => set('match_category', e.target.value)}>
-                  {CATEGORIES.map(c => <option key={c} value={c}>{c || '— any —'}</option>)}
+                  {CATEGORIES.map(c => <option key={c} value={c}>{c || 'any'}</option>)}
                 </select>
               </div>
               <div style={isMobile ? { display: 'flex', flexDirection: 'column', gap: '4px' } : s.formRow}>
                 <span style={s.label}>Log Severity</span>
                 <select style={s.select} value={form.match_severity} onChange={e => set('match_severity', e.target.value)}>
-                  {SEVERITIES.map(sv => <option key={sv} value={sv}>{sv || '— any —'}</option>)}
+                  {SEVERITIES.map(sv => <option key={sv} value={sv}>{sv || 'any'}</option>)}
                 </select>
               </div>
               <div style={isMobile ? { display: 'flex', flexDirection: 'column', gap: '4px' } : s.formRow}>

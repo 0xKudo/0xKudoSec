@@ -222,7 +222,7 @@ export default function Decoder() {
   // Find current op label for display
   const currentGroup = OPERATION_GROUPS.find(g => g.ops.some(o => o.value === operation));
   const currentOp = currentGroup?.ops.find(o => o.value === operation);
-  const opLabel = currentGroup ? `${currentGroup.label} — ${currentOp?.label}` : operation;
+  const opLabel = currentGroup ? `${currentGroup.label} ${currentOp?.label}` : operation;
 
   return (
     <div style={styles.container}>
@@ -266,7 +266,7 @@ export default function Decoder() {
                 ))}
               </div>
 
-              {/* Sub-tabs — only if group has more than one op */}
+              {/* Sub-tabs: only if group has more than one op */}
               {activeGroup.ops.length > 1 && (
                 <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(activeGroup.ops.length, 2)}, 1fr)`, borderBottom: '1px solid var(--border)', margin: '0 -16px', marginBottom: '16px' }}>
                   {activeGroup.ops.map(op => (
@@ -318,7 +318,7 @@ export default function Decoder() {
         {/* Main panel */}
         <div style={styles.mainPanel}>
           <TextArea
-            label={`Input — ${opLabel}`}
+            label={`Input: ${opLabel}`}
             rows={8}
             placeholder="Paste input here..."
             value={input}

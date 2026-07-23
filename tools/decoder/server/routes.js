@@ -33,20 +33,20 @@ function strToBinary(str) {
 function binaryToStr(bin) {
   const clean = bin.trim().replace(/\s+/g, ' ');
   const bytes = clean.split(' ');
-  if (bytes.some(b => !/^[01]{8}$/.test(b))) throw new Error('Invalid binary — must be 8-bit groups separated by spaces');
+  if (bytes.some(b => !/^[01]{8}$/.test(b))) throw new Error('Invalid binary: must be 8-bit groups separated by spaces');
   return bytes.map(b => String.fromCharCode(parseInt(b, 2))).join('');
 }
 
 function decodeJwt(token) {
   const parts = token.split('.');
-  if (parts.length !== 3) throw new Error('Not a valid JWT — must have 3 parts');
+  if (parts.length !== 3) throw new Error('Not a valid JWT: must have 3 parts');
   function decodeSegment(seg) {
     const padded = seg + '='.repeat((4 - seg.length % 4) % 4);
     return JSON.parse(Buffer.from(padded, 'base64url').toString('utf8'));
   }
   const header = decodeSegment(parts[0]);
   const payload = decodeSegment(parts[1]);
-  return { header, payload, signature: parts[2], note: 'Signature not verified — client-side inspection only' };
+  return { header, payload, signature: parts[2], note: 'Signature not verified, client-side inspection only' };
 }
 
 function decodeUnicode(str) {

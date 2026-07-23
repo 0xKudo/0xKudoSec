@@ -7,7 +7,7 @@ import { setThemeWithTransition } from '../lib/viewTransition';
 // ── Update this URL with each Electron release ────────────────────────────────
 const DESKTOP_DOWNLOAD_URL = 'https://github.com/0xKudoX/0xKudoSec-releases/releases/download/v1.2.49/0xKudo-Security-Toolkit-Setup-1.2.49.exe';
 
-// Donut chart — same algorithm as SiemDashboard.jsx DonutChart
+// Donut chart: same algorithm as SiemDashboard.jsx DonutChart
 function DonutChart({ size = 80 }) {
   const cx = size / 2, cy = size / 2;
   const R = size * 0.41;
@@ -154,7 +154,7 @@ const s = {
   editorialContent: { padding: '56px 60px' },
   editorialIntro: { fontSize: '13px', color: 'var(--text-muted)', lineHeight: 1.75, maxWidth: '600px', marginBottom: '40px' },
 
-  // editorial layout (mobile — no sidebar, flat sections)
+  // editorial layout (mobile: no sidebar, flat sections)
   editorialMobile: { borderTop: '1px solid var(--border)' },
   editorialMobileHeader: { padding: '24px 24px 0', display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' },
   editorialMobileContent: { padding: '16px 24px 32px' },
@@ -187,7 +187,7 @@ const s = {
   toolTags: { display: 'flex', flexWrap: 'wrap', gap: '6px' },
   toolTag: { fontSize: '11px', padding: '5px 12px', border: '1px solid var(--border)', color: 'var(--text-muted)', background: 'var(--bg-surface)', letterSpacing: '0.02em' },
 
-  // SIEM preview (inside editorial, desktop only — hidden on mobile)
+  // SIEM preview (inside editorial, desktop only: hidden on mobile)
   previewWrap: { border: '1px solid var(--border)', background: 'var(--bg-sidebar)', marginBottom: '32px', overflow: 'hidden', fontSize: '11px' },
   previewTopbar: { background: 'var(--bg-surface)', borderBottom: '1px solid var(--border)', padding: '8px 14px', display: 'flex', alignItems: 'center', gap: '8px' },
   previewDot: (c) => ({ width: '7px', height: '7px', borderRadius: '50%', background: c, flexShrink: 0 }),
@@ -334,8 +334,8 @@ function SiemPreview() {
             <span style={s.viewAll}>View All</span>
           </div>
           {[
-            { sev: 'critical', color: '#ef4444', msg: 'Lateral movement detected — WORKSTATION-04', time: '10:32 PM' },
-            { sev: 'high',     color: '#d97706', msg: 'Brute force — 47 failed logins on admin',   time: '10:28 PM' },
+            { sev: 'critical', color: '#ef4444', msg: 'Lateral movement detected: WORKSTATION-04', time: '10:32 PM' },
+            { sev: 'high',     color: '#d97706', msg: 'Brute force: 47 failed logins on admin',   time: '10:28 PM' },
             { sev: 'critical', color: '#ef4444', msg: 'Suspicious scheduled task via svchost',      time: '10:21 PM' },
           ].map((a, i) => (
             <div key={i} style={s.alertRow}>
@@ -407,9 +407,9 @@ function SiemPreview() {
           </thead>
           <tbody>
             {[
-              { time: '9:46:39 PM', sev: 'info', sevColor: '#60a5fa', eid: '1',  cat: 'process', host: 'MSI', src: '—', dst: '—', user: 'admin', msg: 'Process Create: RuleName: UtcTime: 2026-04-03...' },
-              { time: '9:46:39 PM', sev: 'info', sevColor: '#60a5fa', eid: '8',  cat: '—',       host: 'MSI', src: '—', dst: '—', user: 'admin', msg: 'CreateRemoteThread detected: SourceImage: C:\\Windows\\System32...' },
-              { time: '9:46:38 PM', sev: 'info', sevColor: '#60a5fa', eid: '1',  cat: 'process', host: 'MSI', src: '—', dst: '—', user: 'admin', msg: 'Process Create: RuleName: UtcTime: 2026-04-03...' },
+              { time: '9:46:39 PM', sev: 'info', sevColor: '#60a5fa', eid: '1',  cat: 'process', host: 'MSI', src: '-', dst: '-', user: 'admin', msg: 'Process Create: RuleName: UtcTime: 2026-04-03...' },
+              { time: '9:46:39 PM', sev: 'info', sevColor: '#60a5fa', eid: '8',  cat: '-',       host: 'MSI', src: '-', dst: '-', user: 'admin', msg: 'CreateRemoteThread detected: SourceImage: C:\\Windows\\System32...' },
+              { time: '9:46:38 PM', sev: 'info', sevColor: '#60a5fa', eid: '1',  cat: 'process', host: 'MSI', src: '-', dst: '-', user: 'admin', msg: 'Process Create: RuleName: UtcTime: 2026-04-03...' },
             ].map((r, i) => (
               <tr key={i}>
                 <td style={s.eTd}>{r.time}</td>
@@ -619,7 +619,7 @@ function MobileLanding({ onLogin }) {
         </p>
       </section>
 
-      {/* Stat bar — 2x2 grid on mobile */}
+      {/* Stat bar: 2x2 grid on mobile */}
       <div style={s.statBarMobile}>
         {[
           ['SIEM', 'Real-Time Ingestion', true],
@@ -634,7 +634,7 @@ function MobileLanding({ onLogin }) {
         ))}
       </div>
 
-      {/* SIEM capabilities — no dashboard preview on mobile, flat list */}
+      {/* SIEM capabilities: no dashboard preview on mobile, flat list */}
       <div style={s.editorialMobile}>
         <div style={s.editorialMobileHeader}>
           <span style={{ fontSize: '10px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--accent-amber)' }}>SIEM</span>
@@ -653,7 +653,7 @@ function MobileLanding({ onLogin }) {
         </div>
       </div>
 
-      {/* How it works — mobile */}
+      {/* How it works: mobile */}
       <div style={{ ...s.editorialMobile }}>
         <div style={s.editorialMobileHeader}>
           <span style={{ fontSize: '10px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--accent-amber)' }}>SIEM</span>
@@ -673,7 +673,7 @@ function MobileLanding({ onLogin }) {
         </div>
       </div>
 
-      {/* Security Tools — mobile */}
+      {/* Security Tools: mobile */}
       <div ref={toolsRef} style={s.editorialMobile}>
         <div style={s.editorialMobileHeader}>
           <span style={{ fontSize: '10px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--accent-amber)' }}>Tools</span>

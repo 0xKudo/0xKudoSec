@@ -154,7 +154,7 @@ function SourceCard({ title, data }) {
           {data.recentReports?.length > 0 && <>
             <div style={styles.subLabel}>Recent Reports</div>
             {data.recentReports.map((r, i) => (
-              <div key={i} style={styles.iocItem}>{r.reportedAt?.slice(0, 10)} — {r.comment || 'No comment'}</div>
+              <div key={i} style={styles.iocItem}>{r.reportedAt?.slice(0, 10)}: {r.comment || 'No comment'}</div>
             ))}
           </>}
         </>;
@@ -193,7 +193,7 @@ function SourceCard({ title, data }) {
             <div style={styles.subLabel}>Top IOCs</div>
             {data.iocs.map((ioc, i) => (
               <div key={i} style={styles.iocItem}>
-                {ioc.malwarePrintable || 'Unknown'} — Confidence: {ioc.confidence}% ({ioc.firstSeen?.slice(0, 10)})
+                {ioc.malwarePrintable || 'Unknown'}, Confidence: {ioc.confidence}% ({ioc.firstSeen?.slice(0, 10)})
               </div>
             ))}
           </>}
@@ -210,7 +210,7 @@ function SourceCard({ title, data }) {
           {data.urls?.length > 0 && <>
             <div style={styles.subLabel}>Recent URLs</div>
             {data.urls.map((u, i) => (
-              <div key={i} style={styles.iocItem}>{u.urlStatus} — {u.threat} ({u.dateAdded?.slice(0, 10)})</div>
+              <div key={i} style={styles.iocItem}>{u.urlStatus}: {u.threat} ({u.dateAdded?.slice(0, 10)})</div>
             ))}
           </>}
           {data.skipped && <div style={styles.skippedText}>{data.skipped}</div>}
@@ -340,7 +340,7 @@ export default function ThreatIntelTool() {
           <div style={styles.summaryCard}>
             <div style={styles.threatRow}>
               <div style={styles.threatBadge(result.threatLevel)}>{result.threatLevel} threat</div>
-              <span style={styles.targetLabel}>{result.indicatorType} — {result.indicator}</span>
+              <span style={styles.targetLabel}>{result.indicatorType}: {result.indicator}</span>
             </div>
 
             <div style={styles.summaryText}>{result.summary}</div>

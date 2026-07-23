@@ -199,7 +199,7 @@ export default function LogAnomalyExplainer() {
         setError(data.error || 'Analysis failed.');
       } else {
         setResult(data);
-        push('log-anomaly-explainer', `Log Analysis — ${data.logSource}`, data, 'log-anomaly-explainer');
+        push('log-anomaly-explainer', `Log Analysis: ${data.logSource}`, data, 'log-anomaly-explainer');
       }
     } catch {
       setError('Network error. Is the server running?');
@@ -235,7 +235,7 @@ export default function LogAnomalyExplainer() {
       ) : (
         <>
           <div style={styles.uploadBox} onClick={() => fileInputRef.current?.click()}>
-            Click to select a log file (.log, .txt, .csv, .json) — max 500kb
+            Click to select a log file (.log, .txt, .csv, .json): max 500kb
           </div>
           <input
             ref={fileInputRef}
@@ -276,7 +276,7 @@ export default function LogAnomalyExplainer() {
             <div style={styles.summaryText}>{result.summary}</div>
 
             {result.anomalies?.length === 0 && (
-              <div style={styles.cleanBanner}>No anomalies detected — logs appear normal.</div>
+              <div style={styles.cleanBanner}>No anomalies detected. Logs appear normal.</div>
             )}
 
             {result.anomalies?.length > 0 && (

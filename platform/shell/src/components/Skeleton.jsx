@@ -1,5 +1,5 @@
 /**
- * Skeleton — token-driven placeholder block to reserve space while loading.
+ * Skeleton: token-driven placeholder block to reserve space while loading.
  * Usage:
  *   <Skeleton width="100%" height={16} />
  *   <Skeleton lines={3} />           // stacked text lines

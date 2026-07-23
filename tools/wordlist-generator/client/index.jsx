@@ -184,7 +184,7 @@ export default function WordlistGenerator() {
       } else {
         setResult({ ...data, mode: activeTab });
         if (activeTab === 'pattern') {
-          push('wordlist-generator', `Wordlist — ${data.count} entries`, { wordlist: data.wordlist }, 'wordlist-generator');
+          push('wordlist-generator', `Wordlist: ${data.count} entries`, { wordlist: data.wordlist }, 'wordlist-generator');
         }
       }
     } catch {
@@ -368,7 +368,7 @@ export default function WordlistGenerator() {
               {result.capped
                 ? ' (capped at 1,000,000 in production)'
                 : result.isLocal
-                  ? ' (no limit — local mode)'
+                  ? ' (no limit: local mode)'
                   : ` (~${Math.max(1, Math.ceil(result.estimated / 100000))} MB estimated)`}
             </span>
             <Button variant="ghost" onClick={handleCharsetDownload}>
@@ -378,11 +378,11 @@ export default function WordlistGenerator() {
           {result.estimated > 100000 && (
             <p style={styles.truncatedNote}>
               {result.isLocal
-                ? 'Local mode — no entry limit. Very large wordlists may take several minutes to generate.'
-                : 'Large wordlist — download may take a moment to generate.'}
+                ? 'Local mode: no entry limit. Very large wordlists may take several minutes to generate.'
+                : 'Large wordlist: download may take a moment to generate.'}
             </p>
           )}
-          <p style={styles.truncatedNote}>Preview — first {result.preview.length} entries</p>
+          <p style={styles.truncatedNote}>Preview: first {result.preview.length} entries</p>
           <div style={styles.wordlistBox}>
             {result.preview.join('\n')}
           </div>

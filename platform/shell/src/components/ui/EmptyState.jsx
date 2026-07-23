@@ -1,5 +1,5 @@
 /**
- * EmptyState — consistent placeholder for empty panels.
+ * EmptyState: consistent placeholder for empty panels.
  * <EmptyState icon={<Inbox size={28} />} text="No results yet." action={<Button>…</Button>} />
  */
 export function EmptyState({ icon, text, action, className = '', style }) {

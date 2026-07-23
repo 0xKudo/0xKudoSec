@@ -341,7 +341,7 @@ export function Cases({ onNavigate }) {
                   <div key={a.id} style={s.alertRow}>
                     <span style={{ ...s.sevBadge(sevColor(a.severity)), fontSize: '9px' }}>{a.severity}</span>
                     <span style={{ color: 'var(--text-primary)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.title}</span>
-                    <span style={{ fontSize: '11px', flexShrink: 0 }}>{a.host || '—'}</span>
+                    <span style={{ fontSize: '11px', flexShrink: 0 }}>{a.host || '-'}</span>
                     <span style={{ fontSize: '11px', flexShrink: 0, color: 'var(--text-muted)' }}>{new Date(a.created_at).toLocaleDateString()}</span>
                   </div>
                 ))}

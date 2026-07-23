@@ -157,7 +157,7 @@ function AppInner() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Derive activeApp and siemView from URL (web only — Electron stays state-based)
+  // Derive activeApp and siemView from URL (web only: Electron stays state-based)
   const derivedSiemView = !isElectron ? (SIEM_VIEW_PATHS[location.pathname] ?? null) : null;
   const derivedActiveApp = !isElectron
     ? (derivedSiemView !== null || location.pathname === '/' ? 'siem' : 'tools')
@@ -236,7 +236,7 @@ function AppInner() {
       const startOnLaunch = localStorage.getItem('noise_realtime_startup') === 'true';
       localStorage.setItem('noise_realtime_enabled', String(startOnLaunch));
 
-      // Listen for memory/VRAM failsafe — disable toggle and show banner
+      // Listen for memory/VRAM failsafe: disable toggle and show banner
       if (window.electron?.llm?.onRealtimeDisabled) {
         window.electron.llm.onRealtimeDisabled((reason) => {
           localStorage.setItem('noise_realtime_enabled', 'false');
@@ -496,7 +496,7 @@ function AppInner() {
                     {siemView === 'noise' && <TuningCenter />}
                     {!['dashboard','alerts','rules','logsearch','cases','configuration','auditlog','noise'].includes(siemView) && (
                       <div style={{ padding: '40px', color: 'var(--text-muted)', fontSize: '13px' }}>
-                        {siemView.charAt(0).toUpperCase() + siemView.slice(1)} — coming soon
+                        {siemView.charAt(0).toUpperCase() + siemView.slice(1)}: coming soon
                       </div>
                     )}
                   </RequireAuth>

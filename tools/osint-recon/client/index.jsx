@@ -317,7 +317,7 @@ export default function OsintReconTool() {
           <div style={styles.summaryCard}>
             <div style={styles.riskRow}>
               <div style={styles.riskBadge(result.riskLevel)}>{result.riskLevel} risk</div>
-              <span style={styles.targetLabel}>{result.targetType} — {result.target}</span>
+              <span style={styles.targetLabel}>{result.targetType}: {result.target}</span>
             </div>
 
             <div style={styles.summaryText}>{result.summary}</div>

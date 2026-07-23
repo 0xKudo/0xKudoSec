@@ -1,5 +1,5 @@
 /**
- * Spinner — token-driven loading indicator.
+ * Spinner: token-driven loading indicator.
  * Usage: <Spinner /> or <Spinner size={14} label="Analyzing" inline />
  * Respects prefers-reduced-motion via the global rule in theme.css.
  */

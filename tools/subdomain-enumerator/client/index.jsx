@@ -184,7 +184,7 @@ export default function SubdomainEnumerator() {
         setResult(data);
         push(
           'subdomain-enumerator',
-          `Subdomains — ${data.domain} (${data.totalUnique} found)`,
+          `Subdomains: ${data.domain} (${data.totalUnique} found)`,
           { domain: data.domain, subdomains: data.allSubdomains },
           'subdomain-enumerator'
         );
@@ -271,7 +271,7 @@ export default function SubdomainEnumerator() {
       {sources.includes('brute') && (
         <div style={styles.section}>
           <TextArea
-            label="Custom Brute-force Wordlist (one per line — leave empty to use built-in ~70 prefixes)"
+            label="Custom Brute-force Wordlist (one per line, leave empty to use built-in ~70 prefixes)"
             rows={5}
             placeholder={'api\nwww\ndev\nstaging\nadmin'}
             value={bruteCustom}
@@ -357,7 +357,7 @@ export default function SubdomainEnumerator() {
             : styles.resultHeader
           }>
             <span style={styles.sectionHeader}>
-              All Subdomains — {result.totalUnique} unique
+              All Subdomains: {result.totalUnique} unique
             </span>
             <div style={{ display: 'flex', gap: '8px' }}>
               <Button variant="ghost" onClick={() => navigator.clipboard.writeText(result.allSubdomains.join('\n'))}>

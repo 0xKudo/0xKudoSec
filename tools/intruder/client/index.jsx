@@ -216,7 +216,7 @@ export default function Intruder() {
         if (data.summary.flaggedCount > 0) {
           push(
             'intruder',
-            `Intruder — ${data.summary.flaggedCount} anomalies on ${urlTemplate}`,
+            `Intruder: ${data.summary.flaggedCount} anomalies on ${urlTemplate}`,
             { results: data.results, summary: data.summary },
             'intruder'
           );
@@ -270,7 +270,7 @@ export default function Intruder() {
             </div>
           </div>
           <div style={styles.hint}>
-            Wrap injection points with §markers§ — e.g. <code>?id=§1§</code> or <code>user=§admin§&amp;pass=§password§</code>
+            Wrap injection points with §markers§: e.g. <code>?id=§1§</code> or <code>user=§admin§&amp;pass=§password§</code>
           </div>
 
           <span style={styles.label}>Headers (optional)</span>
@@ -343,7 +343,7 @@ export default function Intruder() {
 
           {result.summary.flaggedCount > 0 && (
             <div style={styles.flaggedBanner}>
-              {result.summary.flaggedCount} anomalous response{result.summary.flaggedCount !== 1 ? 's' : ''} detected — highlighted below.
+              {result.summary.flaggedCount} anomalous response{result.summary.flaggedCount !== 1 ? 's' : ''} detected. Highlighted below.
             </div>
           )}
 
@@ -373,10 +373,10 @@ export default function Intruder() {
                       >
                         <td>{idx + 1}</td>
                         <td title={r.payload}>{r.payload}</td>
-                        <td style={{ color: styles.statusCell(r.status).color }}>{r.status || '—'}</td>
+                        <td style={{ color: styles.statusCell(r.status).color }}>{r.status || '-'}</td>
                         <td>{r.length}b</td>
                         <td>{r.durationMs}ms</td>
-                        <td style={{ color: r.error ? 'var(--severity-critical)' : 'var(--text-muted)' }}>{r.error || '—'}</td>
+                        <td style={{ color: r.error ? 'var(--severity-critical)' : 'var(--text-muted)' }}>{r.error || '-'}</td>
                       </tr>
                       {isExpanded && r.body && (
                         <tr key={`${idx}-body`}>

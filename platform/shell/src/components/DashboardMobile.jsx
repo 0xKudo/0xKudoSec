@@ -87,7 +87,7 @@ export function DashboardMobile() {
       <div style={s.panel}>
         <div style={s.panelHeader}>Recently Used</div>
         {recentTools.length === 0 ? (
-          <div style={s.emptyState}>No recent tools — launch one from the menu.</div>
+          <div style={s.emptyState}>No recent tools. Launch one from the menu.</div>
         ) : (
           recentTools.map(tool => (
             <div key={tool.id} style={s.toolRow} onClick={() => navigate(tool.route)}>
@@ -108,7 +108,7 @@ export function DashboardMobile() {
           {items.length > 0 && <button style={s.clearBtn} onClick={clear}>Clear</button>}
         </div>
         {workspaceItems.length === 0 ? (
-          <div style={s.emptyState}>No workspace items — results from tools appear here.</div>
+          <div style={s.emptyState}>No workspace items.<br />Results from tools appear here.</div>
         ) : (
           workspaceItems.map(item => {
             const tool = tools.find(t => t.id === item.source);

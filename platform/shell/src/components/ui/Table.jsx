@@ -1,5 +1,5 @@
 /**
- * Table — consistent data table styling with a horizontal-scroll wrapper.
+ * Table: consistent data table styling with a horizontal-scroll wrapper.
  * Tools supply their own <thead>/<tbody> markup; the .kudo-table class styles
  * th/td (sticky header, row hover, ellipsis). Add className="flagged" on a <tr>
  * to highlight it.

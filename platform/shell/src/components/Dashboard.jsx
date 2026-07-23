@@ -215,7 +215,7 @@ export function Dashboard() {
             <div style={s.panelHeader}>Recently Used</div>
             <div style={s.panelScroll}>
             {recentTools.length === 0 ? (
-              <EmptyState icon={<Clock size={24} />} text="No recent tools — launch one from the sidebar." />
+              <EmptyState icon={<Clock size={24} />} text="No recent tools. Launch one from the sidebar." />
             ) : (
               recentTools.map(tool => (
                 <div
@@ -248,7 +248,7 @@ export function Dashboard() {
             </div>
             <div style={s.panelScroll}>
             {workspaceItems.length === 0 ? (
-              <EmptyState icon={<Layers size={24} />} text="No workspace items — results from tools appear here." />
+              <EmptyState icon={<Layers size={24} />} text={<>No workspace items<br />Results from tools appear here.</>} />
             ) : (
               workspaceItems.map(item => {
                 const tool = tools.find(t => t.id === item.source);

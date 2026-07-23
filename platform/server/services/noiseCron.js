@@ -288,7 +288,7 @@ export async function scoreSuppressConflicts(userId) {
 
       if (logRows.length) {
         const logId = logRows[0].id;
-        const explanation = `Suppression conflict: rule "${rule.name}" suppresses events matching ${kb.title} (CVSS ${kb.cvss_score ?? 'N/A'}). This pattern is associated with known attack techniques — review before keeping the suppression rule active.`;
+        const explanation = `Suppression conflict: rule "${rule.name}" suppresses events matching ${kb.title} (CVSS ${kb.cvss_score ?? 'N/A'}). This pattern is associated with known attack techniques. Review before keeping the suppression rule active.`;
         await pool.query(
           `INSERT INTO realtime_analysis (user_id, log_id, signal_type, explanation, cve_safe, cve_note)
            VALUES ($1, $2, 'suppression_conflict', $3, false, $4)

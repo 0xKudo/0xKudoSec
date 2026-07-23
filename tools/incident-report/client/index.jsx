@@ -215,8 +215,8 @@ export default function IncidentReportTool() {
       `Title: ${report.title}`,
       `Severity: ${report.severity.toUpperCase()}`,
       `Classification: ${report.classification}`,
-      `Detected At: ${report.detectedAt || '—'}`,
-      `Reported At: ${report.reportedAt || '—'}`,
+      `Detected At: ${report.detectedAt || '-'}`,
+      `Reported At: ${report.reportedAt || '-'}`,
       ``,
       `=== EXECUTIVE SUMMARY ===`,
       report.executiveSummary,
@@ -304,11 +304,11 @@ export default function IncidentReportTool() {
           <div style={{ ...styles.timelineRow, flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-start' : undefined, gap: isMobile ? '12px' : '24px' }}>
             <div>
               <div style={styles.label}>Detected At</div>
-              <div style={{ ...styles.value, marginBottom: 0 }}>{report.detectedAt || '—'}</div>
+              <div style={{ ...styles.value, marginBottom: 0 }}>{report.detectedAt || '-'}</div>
             </div>
             <div>
               <div style={styles.label}>Reported At</div>
-              <div style={{ ...styles.value, marginBottom: 0 }}>{report.reportedAt || '—'}</div>
+              <div style={{ ...styles.value, marginBottom: 0 }}>{report.reportedAt || '-'}</div>
             </div>
           </div>
 

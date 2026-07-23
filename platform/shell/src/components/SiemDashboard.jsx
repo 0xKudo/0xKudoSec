@@ -234,11 +234,11 @@ function useResizableColumns(defaults) {
   return { widths, onMouseDown };
 }
 
-function fmt(n) { return n == null ? '—' : Number(n).toLocaleString(); }
+function fmt(n) { return n == null ? '-' : Number(n).toLocaleString(); }
 function sevColor(sev) { return SEV_COLOR[(sev || '').toLowerCase()] || 'var(--text-muted)'; }
 function sevColorHex(sev) { return SEV_COLOR_HEX[(sev || '').toLowerCase()] || '#888'; }
 
-// SVG donut chart — one path per severity slice, interactive
+// SVG donut chart: one path per severity slice, interactive
 function DonutChart({ severities, sevFilter, onSliceClick, size = 88 }) {
   const [hovered, setHovered] = useState(null);
   const cx = size / 2, cy = size / 2, R = size * 0.41, r = size * 0.25;
@@ -274,7 +274,7 @@ function DonutChart({ severities, sevFilter, onSliceClick, size = 88 }) {
     angle += sweep;
   }
 
-  // Single slice — SVG arc can't draw a full circle, render as two rings instead
+  // Single slice: SVG arc can't draw a full circle, render as two rings instead
   if (slices.length === 1) {
     const { sev, count, share } = slices[0];
     return (
@@ -325,7 +325,7 @@ function DonutChart({ severities, sevFilter, onSliceClick, size = 88 }) {
   );
 }
 
-// Alert trend sparkline — bar chart, bucket size adapts to time window
+// Alert trend sparkline: bar chart, bucket size adapts to time window
 // Slot config: always ~24 bars max for readability
 const SPARKLINE_CONFIG = {
   1:   { bucketMs: 5  * 60000, numSlots: 12, fmt: d => d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), mid: '-30m', start: '-1h',  label: '1h'  },
@@ -453,7 +453,7 @@ function FilterPanel({ open, onClose, hours, setHours, sevFilters, toggleSevFilt
           </div>
         </div>
 
-        {/* Category — dynamic from actual data */}
+        {/* Category: dynamic from actual data */}
         <div style={s.panelSection}>
           <div style={s.panelSectionTitle}>Category</div>
           <div style={s.panelBtnRow}>
@@ -466,7 +466,7 @@ function FilterPanel({ open, onClose, hours, setHours, sevFilters, toggleSevFilt
           </div>
         </div>
 
-        {/* Source — dynamic from actual data */}
+        {/* Source: dynamic from actual data */}
         {sourcesList.length > 0 && (
           <div style={s.panelSection}>
             <div style={s.panelSectionTitle}>Source</div>
@@ -597,7 +597,7 @@ export function SiemDashboard({ onNavigate }) {
   }, [search]);
   const { widths, onMouseDown } = useResizableColumns(COL_DEFAULTS_W);
 
-  // Fast refresh: stats + alerts + recent events — triggered by WebSocket and filter changes
+  // Fast refresh: stats + alerts + recent events: triggered by WebSocket and filter changes
   const loadLive = useCallback(async () => {
     if (loadingRef.current) return;
     loadingRef.current = true;
@@ -643,7 +643,7 @@ export function SiemDashboard({ onNavigate }) {
     }
   }, [hours, sevFilters, catFilter, srcFilter, debouncedSearch, showSuppressed, getAccessTokenSilently]);
 
-  // Slow refresh: charts + insights — triggered on mount and every 5 minutes
+  // Slow refresh: charts + insights: triggered on mount and every 5 minutes
   const loadCharts = useCallback(async () => {
     try {
       const token = await getAccessTokenSilently();
@@ -922,7 +922,7 @@ export function SiemDashboard({ onNavigate }) {
                     <span style={{ color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.title}</span>
                     {a.count > 1 && <span style={{ fontSize: '10px', padding: '1px 5px', border: '1px solid var(--text-muted)', color: 'var(--text-muted)', whiteSpace: 'nowrap', flexShrink: 0 }}>{a.count}×</span>}
                   </span>
-                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.host || '—'}</span>
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.host || '-'}</span>
                   <span style={{ fontSize: '11px', color: 'var(--text-muted)', whiteSpace: 'nowrap', textAlign: 'right' }}>{new Date(a.created_at).toLocaleString()}</span>
                 </div>
               ))}
@@ -950,7 +950,7 @@ export function SiemDashboard({ onNavigate }) {
                       <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--text-primary)', fontSize: '11px' }}>
                         {r.explanation || `${r.event_id || ''}${r.host ? ` · ${r.host}` : ''}`}
                       </span>
-                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '11px' }}>{r.host || '—'}</span>
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '11px' }}>{r.host || '-'}</span>
                       <span style={{ fontSize: '11px', color: 'var(--text-muted)', whiteSpace: 'nowrap', textAlign: 'right' }}>{new Date(r.analyzed_at).toLocaleString()}</span>
                     </div>
                   );
@@ -1007,7 +1007,7 @@ export function SiemDashboard({ onNavigate }) {
             </table>
           </div>
         </div>
-        {/* Insights Tabbed Panel — inside right column */}
+        {/* Insights Tabbed Panel: inside right column */}
         {(() => {
         const TABS = [
           { id: 'event-ids', label: 'Top Event IDs' },
@@ -1034,7 +1034,7 @@ export function SiemDashboard({ onNavigate }) {
                 <tbody>
                   {rows.map((r, i) => (
                     <tr key={i} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                      <td style={{ padding: '5px 0', color: 'var(--text-primary)', fontSize: '11px' }}>{r[keyField] || '—'}</td>
+                      <td style={{ padding: '5px 0', color: 'var(--text-primary)', fontSize: '11px' }}>{r[keyField] || '-'}</td>
                       <td style={{ padding: '5px 0', color: 'var(--text-muted)', textAlign: 'right', fontSize: '11px' }}>{Number(r.count).toLocaleString()}</td>
                     </tr>
                   ))}
@@ -1095,9 +1095,9 @@ export function SiemDashboard({ onNavigate }) {
                         {failedLogins.map((r, i) => (
                           <tr key={i} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
                             <td style={{ padding: '5px 8px 5px 0', color: 'var(--text-muted)', fontSize: '11px', whiteSpace: 'nowrap' }}>{new Date(r.timestamp).toLocaleTimeString()}</td>
-                            <td style={{ padding: '5px 8px 5px 0', color: 'var(--text-primary)', fontSize: '11px' }}>{r.username || '—'}</td>
-                            <td style={{ padding: '5px 8px 5px 0', color: 'var(--text-muted)', fontSize: '11px' }}>{r.host || '—'}</td>
-                            <td style={{ padding: '5px 8px 5px 0', color: 'var(--text-muted)', fontSize: '11px' }}>{r.source_ip || '—'}</td>
+                            <td style={{ padding: '5px 8px 5px 0', color: 'var(--text-primary)', fontSize: '11px' }}>{r.username || '-'}</td>
+                            <td style={{ padding: '5px 8px 5px 0', color: 'var(--text-muted)', fontSize: '11px' }}>{r.host || '-'}</td>
+                            <td style={{ padding: '5px 8px 5px 0', color: 'var(--text-muted)', fontSize: '11px' }}>{r.source_ip || '-'}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -1253,15 +1253,15 @@ export function SiemDashboard({ onNavigate }) {
                           style={{ ...s.sevBadge(sevColor(row.severity)), cursor: 'pointer' }}
                           onClick={e => { e.stopPropagation(); if (row.severity) toggleSevFilter(row.severity); }}
                         >
-                          {row.severity || '—'}
+                          {row.severity || '-'}
                         </span>
                       </td>
                     );
                   }
                   if (field === 'timestamp') {
-                    return <td key={i} style={s.td}>{row.timestamp ? new Date(row.timestamp).toLocaleTimeString() : '—'}</td>;
+                    return <td key={i} style={s.td}>{row.timestamp ? new Date(row.timestamp).toLocaleTimeString() : '-'}</td>;
                   }
-                  return <td key={i} style={s.td}>{row[field] || '—'}</td>;
+                  return <td key={i} style={s.td}>{row[field] || '-'}</td>;
                 })}
               </tr>
             ))}
@@ -1304,7 +1304,7 @@ export function SiemDashboard({ onNavigate }) {
                               <span style={{ fontSize: '10px', padding: '1px 5px', border: `1px solid ${sevColor(a.severity)}`, color: sevColor(a.severity) }}>{(a.severity || 'unknown').toUpperCase()}</span>
                             </td>
                             <td style={{ padding: '6px 8px', color: 'var(--text-primary)', maxWidth: '260px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.title}</td>
-                            <td style={{ padding: '6px 8px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{a.host || '—'}</td>
+                            <td style={{ padding: '6px 8px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{a.host || '-'}</td>
                             <td style={{ padding: '6px 8px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{a.count}</td>
                             <td style={{ padding: '6px 8px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{new Date(a.last_seen).toLocaleString()}</td>
                           </tr>
@@ -1324,8 +1324,8 @@ export function SiemDashboard({ onNavigate }) {
             <div style={s.modalHeader}>
               <span style={s.modalTitle}>
                 {sparklineBucket && <span style={{ color: 'var(--text-muted)', cursor: 'pointer', marginRight: '8px' }} onClick={() => { setSelectedEvent(null); setCaseTitle(''); setCases([]); }}>← Back</span>}
-                Event {selectedEvent.event_id || '—'} &nbsp;·&nbsp; {selectedEvent.host || '—'} &nbsp;·&nbsp;
-                <span style={{ color: sevColor(selectedEvent.severity) }}>{selectedEvent.severity || '—'}</span>
+                Event {selectedEvent.event_id || '-'} &nbsp;·&nbsp; {selectedEvent.host || '-'} &nbsp;·&nbsp;
+                <span style={{ color: sevColor(selectedEvent.severity) }}>{selectedEvent.severity || '-'}</span>
               </span>
               <button style={s.modalClose} onClick={() => { setSelectedEvent(null); setCaseTitle(''); setCases([]); }}>✕</button>
             </div>
@@ -1374,7 +1374,7 @@ export function SiemDashboard({ onNavigate }) {
                       {selectedEvent._llm.cve_note && (
                         <div style={{ fontSize: '11px', color: selectedEvent._llm.cve_safe === false ? 'var(--severity-critical)' : 'var(--text-muted)' }}>
                           {cveId
-                            ? <><a href={`https://nvd.nist.gov/vuln/detail/${cveId}`} target="_blank" rel="noreferrer" style={{ color: 'inherit', textDecoration: 'underline' }}>{cveId}</a>{selectedEvent._llm.cve_note.replace(cveId, '').trim() ? ` — ${selectedEvent._llm.cve_note.replace(cveId, '').replace(/^[\s\-—]+/, '')}` : ''}</>
+                            ? <><a href={`https://nvd.nist.gov/vuln/detail/${cveId}`} target="_blank" rel="noreferrer" style={{ color: 'inherit', textDecoration: 'underline' }}>{cveId}</a>{selectedEvent._llm.cve_note.replace(cveId, '').trim() ? `: ${selectedEvent._llm.cve_note.replace(cveId, '').replace(/^[\s\-—]+/, '')}` : ''}</>
                             : selectedEvent._llm.cve_note}
                         </div>
                       )}

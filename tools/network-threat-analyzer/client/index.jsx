@@ -197,7 +197,7 @@ export default function NetworkThreatAnalyzer() {
         setError(data.error || 'Analysis failed.');
       } else {
         setResult(data);
-        push('network-threat-analyzer', `Network Log — ${data.logType}`, data, 'network-threat-analyzer');
+        push('network-threat-analyzer', `Network Log: ${data.logType}`, data, 'network-threat-analyzer');
       }
     } catch {
       setError('Network error. Is the server running?');
@@ -236,7 +236,7 @@ export default function NetworkThreatAnalyzer() {
             style={styles.uploadBox}
             onClick={() => fileInputRef.current?.click()}
           >
-            Click to select a log file (.log, .txt, .csv, .json, .pcap, .cap) — max 500kb
+            Click to select a log file (.log, .txt, .csv, .json, .pcap, .cap): max 500kb
           </div>
           <input
             ref={fileInputRef}

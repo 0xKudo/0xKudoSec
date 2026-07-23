@@ -195,7 +195,7 @@ export default function ReverseShellGenerator() {
         setError(data.error || 'Generation failed.');
       } else {
         setResult(data);
-        push('reverse-shell-generator', `${SHELL_TYPE_LABELS[shellType]} — ${lhost}:${lport}`, data, 'reverse-shell-generator');
+        push('reverse-shell-generator', `${SHELL_TYPE_LABELS[shellType]}: ${lhost}:${lport}`, data, 'reverse-shell-generator');
       }
     } catch {
       setError('Network error. Is the server running?');
@@ -216,7 +216,7 @@ export default function ReverseShellGenerator() {
       </div>
 
       <div style={styles.warning}>
-        AUTHORIZED USE ONLY — Only use against systems you own or have explicit written permission to test. Unauthorized access is illegal.
+        AUTHORIZED USE ONLY: Only use against systems you own or have explicit written permission to test. Unauthorized access is illegal.
       </div>
 
       <div style={{ ...styles.formRow, flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-start' : 'flex-end' }}>

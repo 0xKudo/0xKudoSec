@@ -476,10 +476,10 @@ export function AlertQueue({ onNavigate }) {
                         {a.count > 1 && <span style={{ flexShrink: 0, fontSize: '10px', padding: '1px 5px', border: '1px solid var(--text-muted)', color: 'var(--text-muted)' }}>{a.count}×</span>}
                       </div>
                     </td>
-                    <td style={s.td}>{a.rule_name || '—'}</td>
-                    <td style={s.td}>{a.host || '—'}</td>
-                    <td style={s.td}>{a.username || '—'}</td>
-                    <td style={s.td}>{a.event_id || '—'}</td>
+                    <td style={s.td}>{a.rule_name || '-'}</td>
+                    <td style={s.td}>{a.host || '-'}</td>
+                    <td style={s.td}>{a.username || '-'}</td>
+                    <td style={s.td}>{a.event_id || '-'}</td>
                     <td style={s.td}><span style={s.statusBadge(a.status)}>{a.status}</span></td>
                     <td style={s.td} onClick={e => e.stopPropagation()}>
                       <select

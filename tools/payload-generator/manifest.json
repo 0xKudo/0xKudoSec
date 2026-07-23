@@ -1,7 +1,7 @@
 {
   "id": "payload-generator",
   "name": "Payload Generator",
-  "description": "Generate msfvenom shellcode commands and web attack payloads (XSS, SQLi, CMDi, SSTI, path traversal, XXE, open redirect). Static templates — no AI.",
+  "description": "Generate msfvenom shellcode commands and web attack payloads (XSS, SQLi, CMDi, SSTI, path traversal, XXE, open redirect). Static templates, no AI.",
   "route": "/payload-generator",
   "icon": "bolt",
   "tags": [

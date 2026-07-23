@@ -144,7 +144,7 @@ function UpdateBanner() {
 
   if (state === 'available') return (
     <div style={bannerStyle}>
-      <span>Update available — v{version}</span>
+      <span>Update available: v{version}</span>
       <button style={actionBtn} onClick={() => window.electron.updater.download()}>Download</button>
       <button style={dismissBtn} onClick={() => { setDismissed(true); window.electron.updater.dismiss(); }}>✕</button>
     </div>
@@ -437,7 +437,7 @@ const TOOL_CATEGORIES = [
   { id: 'config',    label: 'Config ↗' },
 ];
 
-// Row 2 — category / view tabs
+// Row 2: category / view tabs
 export function CategoryBar({ activeApp, activeCategory, siemView, onSelectCategory, onSiemNavigate }) {
   const tabs = activeApp === 'siem' ? SIEM_TABS : TOOL_CATEGORIES;
 
@@ -480,7 +480,7 @@ const PHASES = [
   { id: 'simulate',    routes: ['/reverse-shell-generator', '/intruder', '/scanner', '/wordlist-generator', '/http-repeater', '/payload-generator'], comingSoon: ['Proxy'] },
 ];
 
-// Row 3 — tool tabs for the active category
+// Row 3: tool tabs for the active category
 export function ToolBar({ activeCategory, tools, onNavigate }) {
   const location = useLocation();
   const phase = PHASES.find(p => p.id === activeCategory);

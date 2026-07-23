@@ -123,7 +123,7 @@ export default function AlertTriageTool() {
         setError(data.error || 'Analysis failed.');
       } else {
         setResult(data);
-        push('alert-triage', `${data.severity.toUpperCase()} — ${data.attackVector}`, data, 'alert-triage');
+        push('alert-triage', `${data.severity.toUpperCase()}: ${data.attackVector}`, data, 'alert-triage');
       }
     } catch {
       setError('Network error. Is the server running?');
@@ -171,7 +171,7 @@ export default function AlertTriageTool() {
       {result && (
         <div className="kudo-reveal kudo-card" style={{ marginTop: '24px' }}>
           <div style={styles.severityBadge(result.severity)}>
-            {result.severity} — Confidence: {result.confidence}
+            {result.severity}, Confidence: {result.confidence}
           </div>
 
           <div style={styles.label}>Summary</div>

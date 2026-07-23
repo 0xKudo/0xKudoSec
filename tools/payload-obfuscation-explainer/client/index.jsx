@@ -172,7 +172,7 @@ export default function PayloadObfuscationExplainer() {
         setError(data.error || 'Analysis failed.');
       } else {
         setResult(data);
-        push('payload-obfuscation-explainer', `Payload — ${data.payloadType}`, data, 'payload-obfuscation-explainer');
+        push('payload-obfuscation-explainer', `Payload: ${data.payloadType}`, data, 'payload-obfuscation-explainer');
       }
     } catch {
       setError('Network error. Is the server running?');

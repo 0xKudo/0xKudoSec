@@ -313,7 +313,7 @@ export function SiemDashboardMobile({ onNavigate }) {
 
       {/* Severity donut */}
       <div style={s.panel}>
-        <div style={s.panelTitle}>Events by Severity — {HOURS_LABELS[hours]}</div>
+        <div style={s.panelTitle}>Events by Severity: {HOURS_LABELS[hours]}</div>
         <div style={s.donutWrap}>
           <Donut data={bySeverity} size={110} />
           <div style={s.legend}>
@@ -341,7 +341,7 @@ export function SiemDashboardMobile({ onNavigate }) {
         <div style={{ ...s.panelTitle, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <span>
             Recent Events
-            {sevFilters.size > 0 ? ` — ${[...sevFilters].join(', ')}` : ''}
+            {sevFilters.size > 0 ? ` (${[...sevFilters].join(', ')})` : ''}
             {debouncedSearch.trim() ? ` · "${debouncedSearch.trim()}"` : ''}
           </span>
           {(sevFilters.size > 0 || debouncedSearch.trim()) && (
@@ -361,10 +361,10 @@ export function SiemDashboardMobile({ onNavigate }) {
                 style={{ ...s.sevBadge(SEV_COLOR_HEX[e.severity] || '#555'), cursor: 'pointer', WebkitTapHighlightColor: 'transparent' }}
                 onClick={ev => { ev.stopPropagation(); const sev = (e.severity || 'info').toLowerCase(); setSevFilters(prev => { const next = new Set(prev); next.has(sev) ? next.delete(sev) : next.add(sev); return next; }); }}
               >{e.severity || 'info'}</span>
-              <span style={s.eventMsg}>{e.message || e.event_category || '—'}</span>
+              <span style={s.eventMsg}>{e.message || e.event_category || '-'}</span>
             </div>
             <div style={s.eventMeta}>
-              {e.host || '—'} · {e.event_id ? `EID ${e.event_id}` : ''} · {e.timestamp ? new Date(e.timestamp).toLocaleTimeString() : ''}
+              {e.host || '-'} · {e.event_id ? `EID ${e.event_id}` : ''} · {e.timestamp ? new Date(e.timestamp).toLocaleTimeString() : ''}
             </div>
           </div>
         ))}
@@ -376,8 +376,8 @@ export function SiemDashboardMobile({ onNavigate }) {
           <div style={s.modal} onClick={ev => ev.stopPropagation()}>
             <div style={s.modalHeader}>
               <span style={s.modalTitle}>
-                Event {selectedEvent.event_id || '—'} &nbsp;·&nbsp;{' '}
-                <span style={{ color: sevColor(selectedEvent.severity) }}>{selectedEvent.severity || '—'}</span>
+                Event {selectedEvent.event_id || '-'} &nbsp;·&nbsp;{' '}
+                <span style={{ color: sevColor(selectedEvent.severity) }}>{selectedEvent.severity || '-'}</span>
               </span>
               <button style={s.modalClose} onClick={() => setSelectedEvent(null)}>✕</button>
             </div>

@@ -161,7 +161,7 @@ export default function SecurityPolicyTranslator() {
         setError(data.error || 'Translation failed.');
       } else {
         setResult(data);
-        push('security-policy-translator', `Policy — ${data.framework}`, data, 'security-policy-translator');
+        push('security-policy-translator', `Policy: ${data.framework}`, data, 'security-policy-translator');
       }
     } catch {
       setError('Network error. Is the server running?');

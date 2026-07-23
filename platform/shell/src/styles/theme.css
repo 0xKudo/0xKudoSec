@@ -161,7 +161,7 @@ button:not(:disabled):active,
 
 /* --- Redesign Phase B: motion layer --- */
 
-/* Entrance keyframes (transform + opacity only — GPU-friendly) */
+/* Entrance keyframes (transform + opacity only: GPU-friendly) */
 @keyframes kudo-fade-in {
   from { opacity: 0; }
   to { opacity: 1; }
@@ -181,7 +181,7 @@ button:not(:disabled):active,
   animation: kudo-fade-in-up var(--dur-base) var(--ease-out) both;
 }
 
-/* Staggered children (dashboard cards, lists) — set on the container */
+/* Staggered children (dashboard cards, lists): set on the container */
 .kudo-stagger > * {
   animation: kudo-fade-in-up var(--dur-base) var(--ease-out) both;
 }
@@ -252,7 +252,7 @@ button:not(:disabled):active,
   padding: var(--space-4);
 }
 
-/* Bare input — for inline use inside flex rows (no label wrapper, no forced width) */
+/* Bare input: for inline use inside flex rows (no label wrapper, no forced width) */
 .kudo-input {
   background: var(--bg-primary);
   border: 1px solid var(--border);
@@ -267,7 +267,7 @@ button:not(:disabled):active,
 .kudo-input:focus { border-color: var(--focus-ring); }
 .kudo-input:disabled { opacity: 0.6; }
 
-/* Bare select — shares the input look, adds pointer + arrow room */
+/* Bare select: shares the input look, adds pointer + arrow room */
 .kudo-select { cursor: pointer; padding-right: 28px; }
 .kudo-select:disabled { cursor: not-allowed; }
 
@@ -297,7 +297,7 @@ textarea.kudo-field__control { min-height: 140px; resize: vertical; }
 .kudo-field__error { font-size: 12px; color: var(--severity-critical); }
 .kudo-field__count { font-size: 10px; color: var(--text-subtle); }
 
-/* Table — consistent data tables (sticky header, row hover, ellipsis) */
+/* Table: consistent data tables (sticky header, row hover, ellipsis) */
 .kudo-table-wrap { overflow-x: auto; }
 .kudo-table {
   width: 100%;

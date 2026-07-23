@@ -1,5 +1,5 @@
 /**
- * Field primitives — consistent labelled inputs with inline error + optional char count.
+ * Field primitives: consistent labelled inputs with inline error + optional char count.
  *
  * <TextField label="Target" value=... onChange=... error=... />
  * <TextArea  label="Alert"  value=... onChange=... maxLength={20000} showCount />
@@ -26,7 +26,7 @@ let uid = 0;
 function nextId(prefix) { return `${prefix}-${++uid}`; }
 
 /**
- * Input — bare, unlabelled input for inline use inside flex rows / control bars.
+ * Input: bare, unlabelled input for inline use inside flex rows / control bars.
  * Token-styled with a working focus state (unlike the old inline inputs that set
  * outline:none and showed no focus indicator). Pass `style`/`className` for width.
  */
@@ -35,7 +35,7 @@ export function Input({ className = '', style, ...rest }) {
 }
 
 /**
- * Select — bare, token-styled dropdown for inline use (shares the input look).
+ * Select: bare, token-styled dropdown for inline use (shares the input look).
  * Pass options as <option> children. Pass `style`/`className` for width.
  */
 export function Select({ className = '', style, children, ...rest }) {

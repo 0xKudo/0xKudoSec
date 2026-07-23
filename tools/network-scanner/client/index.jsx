@@ -222,7 +222,7 @@ export default function NetworkScanner() {
     setShowRaw(false);
     scanIdRef.current = null;
 
-    // Step 1 — initiate scan, get scanId
+    // Step 1: initiate scan, get scanId
     let scanId;
     try {
       const token = await getAccessTokenSilently();
@@ -245,7 +245,7 @@ export default function NetworkScanner() {
       return;
     }
 
-    // Step 2 — open SSE stream (EventSource can't send headers, token goes in query param)
+    // Step 2: open SSE stream (EventSource can't send headers, token goes in query param)
     const streamToken = await getAccessTokenSilently();
     const es = new EventSource(`/api/tools/network-scanner/scan-stream/${scanId}?token=${encodeURIComponent(streamToken)}`);
     esRef.current = es;
@@ -282,7 +282,7 @@ export default function NetworkScanner() {
         const data = JSON.parse(e.data);
         setError(data.error || 'Scan error.');
       } catch {
-        // SSE connection error (e.g. server closed) — only show if still loading
+        // SSE connection error (e.g. server closed): only show if still loading
         setError(prev => prev || null);
       }
       setLoading(false);
@@ -377,7 +377,7 @@ export default function NetworkScanner() {
 
       {error && <p style={styles.error}>{error}</p>}
 
-      {/* Live output panel — visible while scanning */}
+      {/* Live output panel: visible while scanning */}
       {(loading || liveLines.length > 0) && !result && (
         <div style={styles.livePanel}>
           <div style={styles.livePanelHeader}>
@@ -398,7 +398,7 @@ export default function NetworkScanner() {
           <div style={styles.summaryCard}>
             <div style={styles.riskRow}>
               <div style={styles.badge(result.riskLevel)}>{result.riskLevel} risk</div>
-              <span style={styles.targetLabel}>{result.scanLabel} — {result.target}</span>
+              <span style={styles.targetLabel}>{result.scanLabel}: {result.target}</span>
             </div>
 
             <div style={styles.summaryText}>{result.summary}</div>

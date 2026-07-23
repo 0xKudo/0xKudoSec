@@ -182,7 +182,7 @@ export default function Scanner() {
         setResult(data);
         push(
           'scanner',
-          `Scan — ${data.url} (${data.findings.length} findings)`,
+          `Scan: ${data.url} (${data.findings.length} findings)`,
           { url: data.url, findings: data.findings, analysis: data.analysis },
           'scanner'
         );
@@ -282,7 +282,7 @@ export default function Scanner() {
                 </span>
               )}
               <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>
-                {result.mode === 'active' ? 'Active scan' : 'Passive scan'} — {result.findings.length} finding{result.findings.length !== 1 ? 's' : ''}
+                {result.mode === 'active' ? 'Active scan' : 'Passive scan'}: {result.findings.length} finding{result.findings.length !== 1 ? 's' : ''}
               </span>
             </div>
             {result.analysis?.summary && (
