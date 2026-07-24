@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useWorkspace } from '../../../platform/shell/src/context/WorkspaceContext.jsx';
 import { useIsMobile } from '../../../platform/shell/src/hooks/useIsMobile.js';
+import { Button, Input, AuthGate } from '../../../platform/shell/src/components/ui/index.js';
 
 const RISK_COLORS = {
   critical: 'var(--severity-critical)',
@@ -35,10 +36,10 @@ const styles = {
   title: { fontSize: '13px', color: 'var(--text-primary)', letterSpacing: '0.02em', margin: 0, fontWeight: 'normal' },
   subtitle: { color: 'var(--text-muted)', fontSize: '11px', margin: 0 },
   warning: {
-    background: 'var(--bg-primary)',
-    border: '1px solid var(--severity-high)',
-    padding: '6px 10px',
-    color: 'var(--severity-high)',
+    background: 'rgba(239,68,68,0.08)',
+    border: '1px solid var(--severity-critical)',
+    padding: '10px 14px',
+    color: 'var(--severity-critical)',
     fontSize: '12px',
     marginBottom: '16px',
     lineHeight: '1.6',
@@ -124,14 +125,14 @@ const styles = {
   },
   results: { marginTop: '24px' },
   summaryCard: {
-    background: 'var(--bg-primary)',
+    background: 'var(--surface)',
     border: '1px solid var(--border)',
     padding: '20px',
     marginBottom: '16px',
   },
   riskRow: { display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' },
   badge: (level) => ({
-    display: 'inline-block',
+    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
     padding: '4px 12px',
     border: `1px solid ${RISK_COLORS[level] || 'var(--border)'}`,
     color: RISK_COLORS[level] || 'var(--text-muted)',
@@ -186,6 +187,7 @@ export default function NetworkScanner() {
   const [liveLines, setLiveLines] = useState([]);
   const [error, setError] = useState(null);
   const [showRaw, setShowRaw] = useState(false);
+  const [authorized, setAuthorized] = useState(false);
   const scanIdRef = useRef(null);
   const esRef = useRef(null);
   const outputRef = useRef(null);
@@ -210,7 +212,8 @@ export default function NetworkScanner() {
   }, [liveLines]);
 
   async function handleScan() {
-    if (!target.trim()) return;
+    // Require the authorization agreement before any scan fires.
+    if (!target.trim() || !authorized) return;
 
     setLoading(true);
     setAnalyzing(false);
@@ -220,7 +223,7 @@ export default function NetworkScanner() {
     setShowRaw(false);
     scanIdRef.current = null;
 
-    // Step 1 — initiate scan, get scanId
+    // Step 1: initiate scan, get scanId
     let scanId;
     try {
       const token = await getAccessTokenSilently();
@@ -243,7 +246,7 @@ export default function NetworkScanner() {
       return;
     }
 
-    // Step 2 — open SSE stream (EventSource can't send headers, token goes in query param)
+    // Step 2: open SSE stream (EventSource can't send headers, token goes in query param)
     const streamToken = await getAccessTokenSilently();
     const es = new EventSource(`/api/tools/network-scanner/scan-stream/${scanId}?token=${encodeURIComponent(streamToken)}`);
     esRef.current = es;
@@ -280,7 +283,7 @@ export default function NetworkScanner() {
         const data = JSON.parse(e.data);
         setError(data.error || 'Scan error.');
       } catch {
-        // SSE connection error (e.g. server closed) — only show if still loading
+        // SSE connection error (e.g. server closed): only show if still loading
         setError(prev => prev || null);
       }
       setLoading(false);
@@ -316,21 +319,25 @@ export default function NetworkScanner() {
       </div>
 
       <div style={styles.warning}>
-        ⚠ Only scan targets you own or have explicit written authorization to test. Unauthorized scanning is illegal in most jurisdictions.
+        ⚠ Only scan targets you own or have explicit written authorization to test. Unauthorized scanning may be illegal in your jurisdiction.
+      </div>
+
+      <div style={{ marginBottom: '14px' }}>
+        <AuthGate checked={authorized} onChange={setAuthorized} disabled={loading} />
       </div>
 
       {isMobile ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>
-          <input
-            style={{ ...styles.input, width: '100%', boxSizing: 'border-box' }}
+          <Input
+            style={{ width: '100%' }}
             placeholder="192.168.1.1, 192.168.1.0/24, or hostname"
             value={target}
             onChange={e => setTarget(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && !loading && target.trim() && handleScan()}
+            onKeyDown={e => e.key === "Enter" && !loading && target.trim() && authorized && handleScan()}
             disabled={loading}
           />
           <select
-            style={{ ...styles.select, alignSelf: 'flex-start' }}
+            className="kudo-input kudo-select" style={{ alignSelf: 'flex-start' }}
             value={scanType}
             onChange={e => setScanType(e.target.value)}
             disabled={loading}
@@ -340,25 +347,23 @@ export default function NetworkScanner() {
             ))}
           </select>
           {loading ? (
-            <button style={{ ...styles.stopBtn, alignSelf: 'flex-start' }} onClick={handleStop}>Stop</button>
+            <Button variant="danger" style={{ alignSelf: 'flex-start' }} onClick={handleStop}>Stop</Button>
           ) : (
-            <button style={{ ...styles.scanBtn, alignSelf: 'flex-start' }} onClick={handleScan} disabled={!target.trim()}>
-              Scan
-            </button>
+            <Button style={{ alignSelf: 'flex-start' }} onClick={handleScan} disabled={!target.trim() || !authorized}>Scan</Button>
           )}
         </div>
       ) : (
         <div style={styles.inputRow}>
-          <input
-            style={styles.input}
+          <Input
+            style={{ flex: 1 }}
             placeholder="192.168.1.1, 192.168.1.0/24, or hostname"
             value={target}
             onChange={e => setTarget(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && !loading && target.trim() && handleScan()}
+            onKeyDown={e => e.key === "Enter" && !loading && target.trim() && authorized && handleScan()}
             disabled={loading}
           />
           <select
-            style={styles.select}
+            className="kudo-input kudo-select"
             value={scanType}
             onChange={e => setScanType(e.target.value)}
             disabled={loading}
@@ -368,18 +373,16 @@ export default function NetworkScanner() {
             ))}
           </select>
           {loading ? (
-            <button style={styles.stopBtn} onClick={handleStop}>Stop</button>
+            <Button variant="danger" onClick={handleStop}>Stop</Button>
           ) : (
-            <button style={styles.scanBtn} onClick={handleScan} disabled={!target.trim()}>
-              Scan
-            </button>
+            <Button onClick={handleScan} disabled={!target.trim() || !authorized}>Scan</Button>
           )}
         </div>
       )}
 
       {error && <p style={styles.error}>{error}</p>}
 
-      {/* Live output panel — visible while scanning */}
+      {/* Live output panel: visible while scanning */}
       {(loading || liveLines.length > 0) && !result && (
         <div style={styles.livePanel}>
           <div style={styles.livePanelHeader}>
@@ -400,7 +403,7 @@ export default function NetworkScanner() {
           <div style={styles.summaryCard}>
             <div style={styles.riskRow}>
               <div style={styles.badge(result.riskLevel)}>{result.riskLevel} risk</div>
-              <span style={styles.targetLabel}>{result.scanLabel} — {result.target}</span>
+              <span style={styles.targetLabel}>{result.scanLabel}: {result.target}</span>
             </div>
 
             <div style={styles.summaryText}>{result.summary}</div>
@@ -426,14 +429,15 @@ export default function NetworkScanner() {
 
           {result.rawOutput && (
             <div>
-              <button style={styles.toggleBtn} onClick={() => setShowRaw(v => !v)}>
+              <Button variant="ghost" onClick={() => setShowRaw(v => !v)}>
                 {showRaw ? 'Hide' : 'Show'} Raw nmap Output
-              </button>
+              </Button>
               {showRaw && <div style={styles.rawOutput}>{result.rawOutput}</div>}
             </div>
           )}
         </div>
       )}
+
     </div>
   );
 }

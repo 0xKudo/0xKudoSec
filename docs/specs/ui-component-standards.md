@@ -467,3 +467,64 @@ These are never acceptable anywhere in the codebase:
 - [ ] Mobile: multi-column layouts collapse to single column via `isMobile`
 - [ ] Mobile: `isMobile` conditional branches audited if bulk style changes were made
 - [ ] Mobile: all inputs, outputs, and actions reachable (tap targets ≥ 44px)
+
+---
+
+## Shared Component Library (UI Redesign — Phase C)
+
+As of the UI redesign, tools should prefer the shared, token-driven components in
+`platform/shell/src/components/ui/` over hand-rolled inline-styled buttons/inputs.
+These centralize hover/focus/press states (via the Phase A global rules) and guarantee
+consistency across all tools. Import from the barrel:
+
+```jsx
+import { Button, TextField, TextArea, Card, EmptyState, Spinner, Skeleton }
+  from '../../../platform/shell/src/components/ui/index.js';
+```
+
+### Button
+`<Button variant="primary|ghost|danger" size="sm|md" loading icon={<Icon/>}>Label</Button>`
+- `primary` (default): inverts with theme via `--btn-primary-bg` / `--btn-primary-text`.
+- `ghost`: bordered, muted text, hover lift.
+- `danger`: severity-critical outline, fills on hover.
+- `loading` shows an inline `<Spinner>` and disables the button — use for every async action
+  so a click never looks dead.
+
+### TextField / TextArea
+`<TextArea label="Alert" value=… onChange=… maxLength={20000} showCount error={err} />`
+- Label sits above the control; errors render inline **below** the field (not at the form top).
+- `showCount` + `maxLength` renders a live `n / max` counter.
+
+### Input (bare)
+`<Input style={{ flex: 1 }} placeholder=… value=… onChange=… />`
+- Unlabelled, token-styled input for **inline use inside flex rows / control bars** (target + select + button).
+- Unlike the old inline inputs (which set `outline:none` and showed no focus indicator), it has a proper focus state and radius token. Pass `style`/`className` for width (`{ flex: 1 }`, `{ width: '80px' }`, etc.).
+- Not for checkboxes/radios — those stay as native `<input type="checkbox">`.
+
+### Select (bare)
+`<Select value=… onChange=…><option/>…</Select>` — token-styled dropdown sharing the input look (pointer cursor, arrow room, working focus). Applied class: `kudo-input kudo-select`.
+
+### Table
+`<Table><thead><tr><th>…</th></tr></thead><tbody>…</tbody></Table>`
+- Wraps in a horizontal-scroll container; `.kudo-table` styles th/td (sticky header, row hover, ellipsis, `--space` padding).
+- Add `className="flagged"` on a `<tr>` to highlight it.
+
+### Card / EmptyState
+- `<Card>` — the single surface (background, border, `--radius-md`, `--space-4` padding).
+- `<EmptyState icon={<Lucide/>} text="…" action={<Button/>} />` — every empty panel gets one.
+
+### Spinner / Skeleton
+- `<Spinner size={14} label="Analyzing" />` and `<Skeleton lines={3} />` — reserve space and
+  show feedback during loads. Both respect `prefers-reduced-motion`.
+
+### Icons
+Standardize on **Lucide** (`lucide-react`). No emoji or dingbat glyphs as icons.
+
+### Note on radius
+The redesign introduces radius tokens (`--radius-sm/md/lg`). The older "No `borderRadius`"
+rule is superseded: use the radius **tokens** (never raw px) on shared components and new UI.
+
+### Migration status
+Components live and in use; Alert Triage is the reference migration. Remaining tools adopt
+these incrementally — replace inline button/input styles with the shared components as each
+tool is touched.

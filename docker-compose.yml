@@ -1,0 +1,36 @@
+# Local Postgres for 0xKudoSec development.
+# Matches production (Postgres 16). The schema in db/schema.sql is loaded
+# automatically the first time the container is created.
+#
+#   npm run db:up      start (creates DB + loads schema on first run)
+#   npm run db:down    stop (keeps data)
+#   npm run db:reset   destroy the volume and rebuild from schema.sql
+#
+# Connection string for your .env (note port 5433 — 5432 is taken by a native install):
+#   DATABASE_URL=postgresql://postgres:postgres@localhost:5433/cybertools
+
+services:
+  db:
+    image: postgres:16
+    container_name: kudo-pg
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: cybertools
+    # 5433 on the host: a native Postgres already occupies 5432 on this machine.
+    ports:
+      - "5433:5432"
+    volumes:
+      - kudo-pg-data:/var/lib/postgresql/data
+      # Runs only on first container creation (empty data dir).
+      # psql handles the \restrict meta-commands in the pg_dump output.
+      - ./db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d cybertools"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  kudo-pg-data:

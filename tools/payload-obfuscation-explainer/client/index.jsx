@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useWorkspace } from '../../../platform/shell/src/context/WorkspaceContext.jsx';
 import { useIsMobile } from '../../../platform/shell/src/hooks/useIsMobile.js';
+import { Button, TextArea } from '../../../platform/shell/src/components/ui/index.js';
 
 const THREAT_COLORS = {
   critical: 'var(--severity-critical)',
@@ -90,14 +91,14 @@ const styles = {
   error: { color: 'var(--severity-critical)', fontSize: '13px', marginTop: '12px' },
   results: { marginTop: '24px' },
   summaryCard: {
-    background: 'var(--bg-primary)',
+    background: 'var(--surface)',
     border: '1px solid var(--border)',
     padding: '20px',
     marginBottom: '16px',
   },
   badgeRow: { display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', flexWrap: 'wrap' },
   badge: (color) => ({
-    display: 'inline-block',
+    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
     padding: '4px 12px',
     border: `1px solid ${color}`,
     color,
@@ -170,7 +171,7 @@ export default function PayloadObfuscationExplainer() {
         setError(data.error || 'Analysis failed.');
       } else {
         setResult(data);
-        push('payload-obfuscation-explainer', `Payload — ${data.payloadType}`, data, 'payload-obfuscation-explainer');
+        push('payload-obfuscation-explainer', `Payload: ${data.payloadType}`, data, 'payload-obfuscation-explainer');
       }
     } catch {
       setError('Network error. Is the server running?');
@@ -182,14 +183,14 @@ export default function PayloadObfuscationExplainer() {
   return (
     <div style={styles.container}>
       <div style={{ ...styles.header, margin: isMobile ? '-16px -16px 20px -16px' : '-24px -24px 20px -24px' }}>
-        <span style={styles.title}>Payload Obfuscation Explainer</span>
+        <span style={styles.title}>Payload Obfuscation Analyzer</span>
         <p style={styles.subtitle}>
           Paste an obfuscated or encoded payload. Claude decodes it and explains what it does in plain English.
         </p>
       </div>
 
-      <textarea
-        style={styles.textarea}
+      <TextArea
+        rows={8}
         placeholder={`Paste payload here...\n\nExamples:\n  cG93ZXJzaGVsbCAtZW5jb2RlZA==  (base64)\n  %70%6f%77%65%72%73%68%65%6c%6c  (URL encoded)\n  powershell -e JABjAD0ATgBlAHcALQBPAGIAagBlAGMAdA...  (PS encoded command)`}
         value={payload}
         onChange={e => setPayload(e.target.value)}
@@ -205,12 +206,12 @@ export default function PayloadObfuscationExplainer() {
       />
 
       <div style={{ ...styles.controlRow, flexWrap: isMobile ? 'wrap' : 'nowrap' }}>
-        <select style={styles.select} value={encodingHint} onChange={e => setEncodingHint(e.target.value)} disabled={loading}>
+        <select className="kudo-input kudo-select" value={encodingHint} onChange={e => setEncodingHint(e.target.value)} disabled={loading}>
           {ENCODING_HINTS.map(h => <option key={h.value} value={h.value}>{h.label}</option>)}
         </select>
-        <button style={styles.button(loading)} onClick={handleAnalyze} disabled={loading || !payload.trim()}>
-          {loading ? 'Analyzing...' : 'Analyze'}
-        </button>
+        <Button loading={loading} onClick={handleAnalyze} disabled={loading || !payload.trim()}>
+          {loading ? 'Analyzing…' : 'Analyze'}
+        </Button>
       </div>
 
       {error && <p style={styles.error}>{error}</p>}

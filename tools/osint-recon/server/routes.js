@@ -123,7 +123,7 @@ async function fetchHunter(target, type) {
 }
 
 async function fetchWhois(target, type) {
-  if (type === 'ip') return { skipped: 'WHOIS lookup not applicable for IPs — use IPInfo instead' };
+  if (type === 'ip') return { skipped: 'WHOIS lookup not applicable for IPs, use IPInfo instead' };
   const domain = type === 'email' ? target.split('@')[1] : target;
   try {
     const res = await fetch(`https://www.whoisjsonapi.com/v1/${encodeURIComponent(domain)}`, {

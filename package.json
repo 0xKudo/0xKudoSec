@@ -14,6 +14,11 @@
     "dev:shell": "npm run dev --workspace=platform/shell",
     "dev:shipper": "node shipper/index.js",
     "test": "npm run test --workspace=platform/server",
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down",
+    "db:reset": "docker compose down -v && docker compose up -d",
+    "db:schema": "node db/apply-schema.mjs",
+    "db:seed": "node db/seed.mjs",
     "electron:dev": "NODE_ENV=development npm run dev & sleep 4 && electron platform/electron/main.js",
     "electron:build": "npm run build --workspace=platform/shell && electron-builder --config platform/electron/electron-builder.yml --projectDir platform/electron"
   },

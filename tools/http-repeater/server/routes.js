@@ -118,7 +118,7 @@ router.post('/send', express.json({ limit: '50kb' }), async (req, res) => {
   const bodyBytes = Buffer.concat(chunks.map(c => Buffer.from(c)));
   const contentType = fetchRes.headers.get('content-type') || '';
   const isText = contentType.includes('text') || contentType.includes('json') || contentType.includes('xml') || contentType.includes('javascript');
-  const bodyStr = isText ? bodyBytes.toString('utf8') : `[Binary data — ${bodyBytes.length} bytes]`;
+  const bodyStr = isText ? bodyBytes.toString('utf8') : `[Binary data, ${bodyBytes.length} bytes]`;
 
   // Collect response headers
   const responseHeaders = {};

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useWorkspace } from '../../../platform/shell/src/context/WorkspaceContext.jsx';
 import { useIsMobile } from '../../../platform/shell/src/hooks/useIsMobile.js';
+import { Button, Input, Skeleton } from '../../../platform/shell/src/components/ui/index.js';
 
 const THREAT_COLORS = {
   critical: 'var(--severity-critical)',
@@ -56,14 +57,14 @@ const styles = {
   error: { color: 'var(--severity-critical)', fontSize: '13px', marginTop: '12px' },
   results: { marginTop: '24px' },
   summaryCard: {
-    background: 'var(--bg-primary)',
+    background: 'var(--surface)',
     border: '1px solid var(--border)',
     padding: '20px',
     marginBottom: '16px',
   },
   threatRow: { display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' },
   threatBadge: (level) => ({
-    display: 'inline-block',
+    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
     padding: '4px 12px',
     border: `1px solid ${THREAT_COLORS[level] || 'var(--border)'}`,
     color: THREAT_COLORS[level] || 'var(--text-muted)',
@@ -152,7 +153,7 @@ function SourceCard({ title, data }) {
           {data.recentReports?.length > 0 && <>
             <div style={styles.subLabel}>Recent Reports</div>
             {data.recentReports.map((r, i) => (
-              <div key={i} style={styles.iocItem}>{r.reportedAt?.slice(0, 10)} — {r.comment || 'No comment'}</div>
+              <div key={i} style={styles.iocItem}>{r.reportedAt?.slice(0, 10)}: {r.comment || 'No comment'}</div>
             ))}
           </>}
         </>;
@@ -191,7 +192,7 @@ function SourceCard({ title, data }) {
             <div style={styles.subLabel}>Top IOCs</div>
             {data.iocs.map((ioc, i) => (
               <div key={i} style={styles.iocItem}>
-                {ioc.malwarePrintable || 'Unknown'} — Confidence: {ioc.confidence}% ({ioc.firstSeen?.slice(0, 10)})
+                {ioc.malwarePrintable || 'Unknown'}, Confidence: {ioc.confidence}% ({ioc.firstSeen?.slice(0, 10)})
               </div>
             ))}
           </>}
@@ -208,7 +209,7 @@ function SourceCard({ title, data }) {
           {data.urls?.length > 0 && <>
             <div style={styles.subLabel}>Recent URLs</div>
             {data.urls.map((u, i) => (
-              <div key={i} style={styles.iocItem}>{u.urlStatus} — {u.threat} ({u.dateAdded?.slice(0, 10)})</div>
+              <div key={i} style={styles.iocItem}>{u.urlStatus}: {u.threat} ({u.dateAdded?.slice(0, 10)})</div>
             ))}
           </>}
           {data.skipped && <div style={styles.skippedText}>{data.skipped}</div>}
@@ -296,8 +297,8 @@ export default function ThreatIntelTool() {
       </div>
 
       <div style={{ ...styles.inputRow, flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-start' : undefined }}>
-        <input
-          style={isMobile ? { ...styles.input, width: '100%', boxSizing: 'border-box' } : styles.input}
+        <Input
+          style={isMobile ? { width: '100%' } : { flex: 1 }}
           placeholder="1.2.3.4, example.com, https://..., or md5/sha256 hash"
           value={indicator}
           onChange={e => setIndicator(e.target.value)}
@@ -305,7 +306,7 @@ export default function ThreatIntelTool() {
           disabled={loading}
         />
         <select
-          style={styles.select}
+          className="kudo-input kudo-select"
           value={indicatorType}
           onChange={e => setIndicatorType(e.target.value)}
           disabled={loading}
@@ -316,23 +317,29 @@ export default function ThreatIntelTool() {
           <option value="url">URL</option>
           <option value="hash">File Hash</option>
         </select>
-        <button
-          style={styles.button(loading)}
+        <Button
+          loading={loading}
           onClick={handleAnalyze}
           disabled={loading || !indicator.trim()}
         >
-          {loading ? 'Scanning...' : 'Analyze'}
-        </button>
+          {loading ? 'Scanning…' : 'Analyze'}
+        </Button>
       </div>
 
       {error && <p style={styles.error}>{error}</p>}
+
+      {loading && !result && (
+        <div className="kudo-card kudo-reveal" style={{ marginTop: '24px' }}>
+          <Skeleton lines={5} />
+        </div>
+      )}
 
       {result && (
         <div style={styles.results}>
           <div style={styles.summaryCard}>
             <div style={styles.threatRow}>
               <div style={styles.threatBadge(result.threatLevel)}>{result.threatLevel} threat</div>
-              <span style={styles.targetLabel}>{result.indicatorType} — {result.indicator}</span>
+              <span style={styles.targetLabel}>{result.indicatorType}: {result.indicator}</span>
             </div>
 
             <div style={styles.summaryText}>{result.summary}</div>

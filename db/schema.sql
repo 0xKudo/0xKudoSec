@@ -1,0 +1,943 @@
+--
+-- PostgreSQL database dump
+--
+
+\restrict WibXmHwGdvMiaTZsihhmkKZXF1x45h6xz7ft0MC6IRnf7haeiI3sQrzWPTeVtMs
+
+-- Dumped from database version 16.14 (Ubuntu 16.14-0ubuntu0.24.04.1)
+-- Dumped by pg_dump version 16.14 (Ubuntu 16.14-0ubuntu0.24.04.1)
+
+SET statement_timeout = 0;
+SET lock_timeout = 0;
+SET idle_in_transaction_session_timeout = 0;
+SET client_encoding = 'UTF8';
+SET standard_conforming_strings = on;
+SELECT pg_catalog.set_config('search_path', '', false);
+SET check_function_bodies = false;
+SET xmloption = content;
+SET client_min_messages = warning;
+SET row_security = off;
+
+SET default_tablespace = '';
+
+SET default_table_access_method = heap;
+
+--
+-- Name: alerts; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.alerts (
+    id bigint NOT NULL,
+    user_id text NOT NULL,
+    rule_id bigint,
+    log_id bigint,
+    title text NOT NULL,
+    severity text NOT NULL,
+    status text DEFAULT 'new'::text,
+    host text,
+    source_ip text,
+    username text,
+    event_id integer,
+    message text,
+    count integer DEFAULT 1 NOT NULL,
+    last_seen timestamp with time zone DEFAULT now(),
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now(),
+    occurrence_times timestamp with time zone[] DEFAULT ARRAY[]::timestamp with time zone[] NOT NULL
+);
+
+ALTER TABLE ONLY public.alerts FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: alerts_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.alerts_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: alerts_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.alerts_id_seq OWNED BY public.alerts.id;
+
+
+--
+-- Name: audit_log; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.audit_log (
+    id bigint NOT NULL,
+    user_id text,
+    action text NOT NULL,
+    meta text,
+    ip text,
+    row_hash text,
+    created_at timestamp with time zone DEFAULT now()
+);
+
+ALTER TABLE ONLY public.audit_log FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: audit_log_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.audit_log_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: audit_log_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.audit_log_id_seq OWNED BY public.audit_log.id;
+
+
+--
+-- Name: case_alerts; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.case_alerts (
+    case_id bigint NOT NULL,
+    alert_id bigint NOT NULL,
+    added_at timestamp with time zone DEFAULT now()
+);
+
+
+--
+-- Name: cases; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.cases (
+    id bigint NOT NULL,
+    user_id text NOT NULL,
+    title text NOT NULL,
+    severity text DEFAULT 'medium'::text,
+    status text DEFAULT 'open'::text NOT NULL,
+    description text,
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now()
+);
+
+ALTER TABLE ONLY public.cases FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: cases_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.cases_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: cases_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.cases_id_seq OWNED BY public.cases.id;
+
+
+--
+-- Name: detection_rules; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.detection_rules (
+    id bigint NOT NULL,
+    user_id text NOT NULL,
+    name text NOT NULL,
+    description text,
+    severity text DEFAULT 'high'::text,
+    enabled boolean DEFAULT true,
+    match_event_id integer,
+    match_category text,
+    match_severity text,
+    match_username text,
+    match_host text,
+    match_message text,
+    match_process text,
+    match_src_ip text,
+    match_dest_ip text,
+    match_dest_port integer,
+    action text DEFAULT 'alert'::text,
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now()
+);
+
+ALTER TABLE ONLY public.detection_rules FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: detection_rules_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.detection_rules_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: detection_rules_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.detection_rules_id_seq OWNED BY public.detection_rules.id;
+
+
+--
+-- Name: ingest_sources; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.ingest_sources (
+    id bigint NOT NULL,
+    user_id text NOT NULL,
+    name text NOT NULL,
+    type text,
+    last_seen timestamp with time zone DEFAULT now(),
+    event_count integer DEFAULT 0 NOT NULL
+);
+
+ALTER TABLE ONLY public.ingest_sources FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: ingest_sources_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.ingest_sources_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: ingest_sources_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.ingest_sources_id_seq OWNED BY public.ingest_sources.id;
+
+
+--
+-- Name: logs; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.logs (
+    id bigint NOT NULL,
+    user_id text NOT NULL,
+    source text,
+    host text,
+    source_ip text,
+    dest_ip text,
+    dest_port integer,
+    protocol text,
+    "timestamp" timestamp with time zone,
+    ingested_at timestamp with time zone DEFAULT now(),
+    level text,
+    severity text,
+    event_id integer,
+    event_category text,
+    message text,
+    username text,
+    domain text,
+    logon_type integer,
+    process_name text,
+    process_id integer,
+    process_guid text,
+    parent_process_name text,
+    parent_process_id integer,
+    parent_process_guid text,
+    file_path text,
+    registry_key text,
+    raw text
+);
+
+ALTER TABLE ONLY public.logs FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: logs_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.logs_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: logs_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.logs_id_seq OWNED BY public.logs.id;
+
+
+--
+-- Name: noise_candidates; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.noise_candidates (
+    id text DEFAULT lower(replace((gen_random_uuid())::text, '-'::text, ''::text)) NOT NULL,
+    user_id text NOT NULL,
+    field_signature text NOT NULL,
+    score integer DEFAULT 0 NOT NULL,
+    confidence text DEFAULT 'low'::text NOT NULL,
+    daily_avg real,
+    first_seen timestamp with time zone,
+    last_seen timestamp with time zone,
+    event_count integer,
+    llm_explanation text,
+    llm_cve_safe boolean,
+    llm_cve_note text,
+    llm_checked_at timestamp with time zone,
+    status text DEFAULT 'pending'::text NOT NULL,
+    suppression_rule_id bigint,
+    is_suppression_conflict integer DEFAULT 0 NOT NULL,
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now()
+);
+
+ALTER TABLE ONLY public.noise_candidates FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: realtime_analysis; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.realtime_analysis (
+    id bigint NOT NULL,
+    user_id text NOT NULL,
+    log_id bigint NOT NULL,
+    signal_type text NOT NULL,
+    explanation text,
+    cve_safe integer,
+    cve_note text,
+    analyzed_at timestamp with time zone DEFAULT now()
+);
+
+ALTER TABLE ONLY public.realtime_analysis FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: realtime_analysis_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.realtime_analysis_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: realtime_analysis_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.realtime_analysis_id_seq OWNED BY public.realtime_analysis.id;
+
+
+--
+-- Name: user_ingest_keys; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE IF NOT EXISTS public.user_ingest_keys_id_seq;
+
+CREATE TABLE public.user_ingest_keys (
+    id bigint DEFAULT nextval('public.user_ingest_keys_id_seq'::regclass) NOT NULL,
+    user_id text NOT NULL,
+    api_key text NOT NULL,
+    name text,
+    expiry_days integer,
+    expires_at timestamp with time zone,
+    created_at timestamp with time zone DEFAULT now(),
+    last_used_at timestamp with time zone
+);
+
+ALTER SEQUENCE public.user_ingest_keys_id_seq OWNED BY public.user_ingest_keys.id;
+
+ALTER TABLE ONLY public.user_ingest_keys FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: user_settings; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.user_settings (
+    user_id text NOT NULL,
+    log_retention_days integer DEFAULT 90 NOT NULL,
+    audit_log_retention_enabled boolean DEFAULT true NOT NULL,
+    audit_log_retention_days integer DEFAULT 365 NOT NULL,
+    noise_auto_suppress text DEFAULT 'off'::text NOT NULL,
+    noise_llm_enabled integer DEFAULT 1 NOT NULL,
+    noise_llm_trigger text DEFAULT 'manual'::text NOT NULL,
+    llm_model text DEFAULT 'phi-3.5-mini-q4'::text NOT NULL,
+    llm_custom_model_path text,
+    noise_min_score integer DEFAULT 40 NOT NULL,
+    noise_learning_days integer DEFAULT 7 NOT NULL,
+    noise_learning_events integer DEFAULT 10000 NOT NULL,
+    kb_auto_update integer DEFAULT 1 NOT NULL,
+    updated_at timestamp with time zone DEFAULT now()
+);
+
+ALTER TABLE ONLY public.user_settings FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: vuln_kb; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.vuln_kb (
+    id text NOT NULL,
+    source text NOT NULL,
+    cve_id text,
+    title text,
+    description text,
+    severity text,
+    cvss_score real,
+    attack_patterns jsonb,
+    affected_products jsonb,
+    is_kev integer DEFAULT 0 NOT NULL,
+    published_at timestamp with time zone,
+    updated_at timestamp with time zone DEFAULT now(),
+    ingested_at timestamp with time zone DEFAULT now()
+);
+
+
+--
+-- Name: wp_protection_rules; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.wp_protection_rules (
+    id bigint NOT NULL,
+    user_id text NOT NULL,
+    rule_type text NOT NULL,
+    pattern character varying(512) NOT NULL,
+    action text DEFAULT 'block'::text NOT NULL,
+    enabled boolean DEFAULT true NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT wp_protection_rules_action_check CHECK ((action = ANY (ARRAY['block'::text, 'log'::text]))),
+    CONSTRAINT wp_protection_rules_rule_type_check CHECK ((rule_type = ANY (ARRAY['ip'::text, 'cidr'::text, 'ua'::text, 'uri'::text, 'rate'::text, 'action'::text, 'allow'::text])))
+);
+
+ALTER TABLE ONLY public.wp_protection_rules FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: wp_protection_rules_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.wp_protection_rules_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: wp_protection_rules_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.wp_protection_rules_id_seq OWNED BY public.wp_protection_rules.id;
+
+
+--
+-- Name: alerts id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.alerts ALTER COLUMN id SET DEFAULT nextval('public.alerts_id_seq'::regclass);
+
+
+--
+-- Name: audit_log id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.audit_log ALTER COLUMN id SET DEFAULT nextval('public.audit_log_id_seq'::regclass);
+
+
+--
+-- Name: cases id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.cases ALTER COLUMN id SET DEFAULT nextval('public.cases_id_seq'::regclass);
+
+
+--
+-- Name: detection_rules id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.detection_rules ALTER COLUMN id SET DEFAULT nextval('public.detection_rules_id_seq'::regclass);
+
+
+--
+-- Name: ingest_sources id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ingest_sources ALTER COLUMN id SET DEFAULT nextval('public.ingest_sources_id_seq'::regclass);
+
+
+--
+-- Name: logs id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.logs ALTER COLUMN id SET DEFAULT nextval('public.logs_id_seq'::regclass);
+
+
+--
+-- Name: realtime_analysis id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.realtime_analysis ALTER COLUMN id SET DEFAULT nextval('public.realtime_analysis_id_seq'::regclass);
+
+
+--
+-- Name: wp_protection_rules id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.wp_protection_rules ALTER COLUMN id SET DEFAULT nextval('public.wp_protection_rules_id_seq'::regclass);
+
+
+--
+-- Name: alerts alerts_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.alerts
+    ADD CONSTRAINT alerts_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: audit_log audit_log_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.audit_log
+    ADD CONSTRAINT audit_log_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: case_alerts case_alerts_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.case_alerts
+    ADD CONSTRAINT case_alerts_pkey PRIMARY KEY (case_id, alert_id);
+
+
+--
+-- Name: cases cases_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.cases
+    ADD CONSTRAINT cases_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: detection_rules detection_rules_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.detection_rules
+    ADD CONSTRAINT detection_rules_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: ingest_sources ingest_sources_name_user_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ingest_sources
+    ADD CONSTRAINT ingest_sources_name_user_id_key UNIQUE (name, user_id);
+
+
+--
+-- Name: ingest_sources ingest_sources_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ingest_sources
+    ADD CONSTRAINT ingest_sources_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: logs logs_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.logs
+    ADD CONSTRAINT logs_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: noise_candidates noise_candidates_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.noise_candidates
+    ADD CONSTRAINT noise_candidates_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: noise_candidates noise_candidates_user_id_field_signature_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.noise_candidates
+    ADD CONSTRAINT noise_candidates_user_id_field_signature_key UNIQUE (user_id, field_signature);
+
+
+--
+-- Name: realtime_analysis realtime_analysis_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.realtime_analysis
+    ADD CONSTRAINT realtime_analysis_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: realtime_analysis realtime_analysis_user_id_log_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.realtime_analysis
+    ADD CONSTRAINT realtime_analysis_user_id_log_id_key UNIQUE (user_id, log_id);
+
+
+--
+-- Name: user_ingest_keys user_ingest_keys_api_key_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.user_ingest_keys
+    ADD CONSTRAINT user_ingest_keys_api_key_key UNIQUE (api_key);
+
+
+--
+-- Name: user_ingest_keys user_ingest_keys_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.user_ingest_keys
+    ADD CONSTRAINT user_ingest_keys_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: user_settings user_settings_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.user_settings
+    ADD CONSTRAINT user_settings_pkey PRIMARY KEY (user_id);
+
+
+--
+-- Name: vuln_kb vuln_kb_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.vuln_kb
+    ADD CONSTRAINT vuln_kb_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: wp_protection_rules wp_protection_rules_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.wp_protection_rules
+    ADD CONSTRAINT wp_protection_rules_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: idx_alerts_user_last_seen; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_alerts_user_last_seen ON public.alerts USING btree (user_id, last_seen DESC);
+
+
+--
+-- Name: idx_user_ingest_keys_user; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_user_ingest_keys_user ON public.user_ingest_keys USING btree (user_id);
+
+
+--
+-- Name: idx_alerts_user_status; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_alerts_user_status ON public.alerts USING btree (user_id, status);
+
+
+--
+-- Name: idx_audit_log_user; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_audit_log_user ON public.audit_log USING btree (user_id, created_at DESC);
+
+
+--
+-- Name: idx_detection_rules_user; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_detection_rules_user ON public.detection_rules USING btree (user_id);
+
+
+--
+-- Name: idx_ingest_sources_user; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_ingest_sources_user ON public.ingest_sources USING btree (user_id);
+
+
+--
+-- Name: idx_logs_user_event_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_logs_user_event_id ON public.logs USING btree (user_id, event_id);
+
+
+--
+-- Name: idx_logs_user_host; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_logs_user_host ON public.logs USING btree (user_id, host);
+
+
+--
+-- Name: idx_logs_user_severity; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_logs_user_severity ON public.logs USING btree (user_id, severity);
+
+
+--
+-- Name: idx_logs_user_timestamp; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_logs_user_timestamp ON public.logs USING btree (user_id, "timestamp" DESC);
+
+
+--
+-- Name: idx_noise_candidates_user_status; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_noise_candidates_user_status ON public.noise_candidates USING btree (user_id, status);
+
+
+--
+-- Name: idx_realtime_analysis_user; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_realtime_analysis_user ON public.realtime_analysis USING btree (user_id, analyzed_at DESC);
+
+
+--
+-- Name: wp_protection_rules_user_enabled; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX wp_protection_rules_user_enabled ON public.wp_protection_rules USING btree (user_id, enabled);
+
+
+--
+-- Name: alerts alerts_log_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.alerts
+    ADD CONSTRAINT alerts_log_id_fkey FOREIGN KEY (log_id) REFERENCES public.logs(id) ON DELETE SET NULL;
+
+
+--
+-- Name: alerts alerts_rule_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.alerts
+    ADD CONSTRAINT alerts_rule_id_fkey FOREIGN KEY (rule_id) REFERENCES public.detection_rules(id) ON DELETE SET NULL;
+
+
+--
+-- Name: case_alerts case_alerts_alert_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.case_alerts
+    ADD CONSTRAINT case_alerts_alert_id_fkey FOREIGN KEY (alert_id) REFERENCES public.alerts(id) ON DELETE CASCADE;
+
+
+--
+-- Name: case_alerts case_alerts_case_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.case_alerts
+    ADD CONSTRAINT case_alerts_case_id_fkey FOREIGN KEY (case_id) REFERENCES public.cases(id) ON DELETE CASCADE;
+
+
+--
+-- Name: noise_candidates noise_candidates_suppression_rule_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.noise_candidates
+    ADD CONSTRAINT noise_candidates_suppression_rule_id_fkey FOREIGN KEY (suppression_rule_id) REFERENCES public.detection_rules(id) ON DELETE SET NULL;
+
+
+--
+-- Name: realtime_analysis realtime_analysis_log_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.realtime_analysis
+    ADD CONSTRAINT realtime_analysis_log_id_fkey FOREIGN KEY (log_id) REFERENCES public.logs(id) ON DELETE CASCADE;
+
+
+--
+-- Name: alerts; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.alerts ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: audit_log; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.audit_log ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: cases; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.cases ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: detection_rules; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.detection_rules ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: ingest_sources; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.ingest_sources ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: logs; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.logs ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: noise_candidates; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.noise_candidates ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: realtime_analysis; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.realtime_analysis ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: user_ingest_keys; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.user_ingest_keys ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: alerts user_isolation; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY user_isolation ON public.alerts USING (((current_setting('app.user_id'::text, true) IS NULL) OR (user_id = current_setting('app.user_id'::text, true)))) WITH CHECK (((current_setting('app.user_id'::text, true) IS NULL) OR (user_id = current_setting('app.user_id'::text, true))));
+
+
+--
+-- Name: audit_log user_isolation; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY user_isolation ON public.audit_log USING (((current_setting('app.user_id'::text, true) IS NULL) OR (user_id = current_setting('app.user_id'::text, true)))) WITH CHECK (((current_setting('app.user_id'::text, true) IS NULL) OR (user_id = current_setting('app.user_id'::text, true))));
+
+
+--
+-- Name: cases user_isolation; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY user_isolation ON public.cases USING (((current_setting('app.user_id'::text, true) IS NULL) OR (user_id = current_setting('app.user_id'::text, true)))) WITH CHECK (((current_setting('app.user_id'::text, true) IS NULL) OR (user_id = current_setting('app.user_id'::text, true))));
+
+
+--
+-- Name: detection_rules user_isolation; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY user_isolation ON public.detection_rules USING (((current_setting('app.user_id'::text, true) IS NULL) OR (user_id = current_setting('app.user_id'::text, true)))) WITH CHECK (((current_setting('app.user_id'::text, true) IS NULL) OR (user_id = current_setting('app.user_id'::text, true))));
+
+
+--
+-- Name: ingest_sources user_isolation; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY user_isolation ON public.ingest_sources USING (((current_setting('app.user_id'::text, true) IS NULL) OR (user_id = current_setting('app.user_id'::text, true)))) WITH CHECK (((current_setting('app.user_id'::text, true) IS NULL) OR (user_id = current_setting('app.user_id'::text, true))));
+
+
+--
+-- Name: logs user_isolation; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY user_isolation ON public.logs USING (((current_setting('app.user_id'::text, true) IS NULL) OR (user_id = current_setting('app.user_id'::text, true)))) WITH CHECK (((current_setting('app.user_id'::text, true) IS NULL) OR (user_id = current_setting('app.user_id'::text, true))));
+
+
+--
+-- Name: noise_candidates user_isolation; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY user_isolation ON public.noise_candidates USING (((current_setting('app.user_id'::text, true) IS NULL) OR (user_id = current_setting('app.user_id'::text, true)))) WITH CHECK (((current_setting('app.user_id'::text, true) IS NULL) OR (user_id = current_setting('app.user_id'::text, true))));
+
+
+--
+-- Name: realtime_analysis user_isolation; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY user_isolation ON public.realtime_analysis USING (((current_setting('app.user_id'::text, true) IS NULL) OR (user_id = current_setting('app.user_id'::text, true)))) WITH CHECK (((current_setting('app.user_id'::text, true) IS NULL) OR (user_id = current_setting('app.user_id'::text, true))));
+
+
+--
+-- Name: user_ingest_keys user_isolation; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY user_isolation ON public.user_ingest_keys USING (((current_setting('app.user_id'::text, true) IS NULL) OR (user_id = current_setting('app.user_id'::text, true)))) WITH CHECK (((current_setting('app.user_id'::text, true) IS NULL) OR (user_id = current_setting('app.user_id'::text, true))));
+
+
+--
+-- Name: user_settings user_isolation; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY user_isolation ON public.user_settings USING (((current_setting('app.user_id'::text, true) IS NULL) OR (user_id = current_setting('app.user_id'::text, true)))) WITH CHECK (((current_setting('app.user_id'::text, true) IS NULL) OR (user_id = current_setting('app.user_id'::text, true))));
+
+
+--
+-- Name: wp_protection_rules user_isolation; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY user_isolation ON public.wp_protection_rules USING (((current_setting('app.user_id'::text, true) IS NULL) OR (user_id = current_setting('app.user_id'::text, true)))) WITH CHECK (((current_setting('app.user_id'::text, true) IS NULL) OR (user_id = current_setting('app.user_id'::text, true))));
+
+
+--
+-- Name: user_settings; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.user_settings ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: wp_protection_rules; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.wp_protection_rules ENABLE ROW LEVEL SECURITY;
+
+--
+-- PostgreSQL database dump complete
+--
+
+\unrestrict WibXmHwGdvMiaTZsihhmkKZXF1x45h6xz7ft0MC6IRnf7haeiI3sQrzWPTeVtMs
+

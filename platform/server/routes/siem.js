@@ -532,6 +532,7 @@ router.get('/alerts/hourly/detail', wrap(async (req, res) => {
   const userId = uid(req);
   const { rows } = await pool.query(
     `SELECT a.id AS alert_id, a.title, a.severity, a.count, a.last_seen, a.host,
+            a.occurrence_times,
             l.id AS log_id, l.event_id, l.event_category, l.source, l.process_name,
             l.username, l.source_ip, l.dest_ip, l.message, l.timestamp
      FROM alerts a
@@ -573,20 +574,18 @@ router.get('/sources', async (req, res) => {
   res.json(rows);
 });
 
-// Ingest key management
+// Ingest key management — multiple named keys per user (one per device/shipper)
+const MAX_INGEST_KEYS = 20;
+
 router.get('/ingest-key', async (req, res) => {
   const { rows } = await pool.query(
-    'SELECT created_at, expires_at, expiry_days, last_used_at FROM user_ingest_keys WHERE user_id = $1',
+    `SELECT id, name, created_at, expires_at, expiry_days, last_used_at
+     FROM user_ingest_keys WHERE user_id = $1
+     ORDER BY created_at DESC`,
     [uid(req)]
   );
-  // Never return the key hash on GET — only plaintext on POST (one-time reveal)
-  res.json(rows[0] ? {
-    exists: true,
-    created_at: rows[0].created_at,
-    expires_at: rows[0].expires_at,
-    expiry_days: rows[0].expiry_days,
-    last_used_at: rows[0].last_used_at,
-  } : null);
+  // Never return the key hash on GET — plaintext is revealed only once on POST.
+  res.json({ keys: rows });
 });
 
 router.post('/ingest-key', ingestKeyLimiter, async (req, res) => {
@@ -600,35 +599,47 @@ router.post('/ingest-key', ingestKeyLimiter, async (req, res) => {
     if (isNaN(expiryDays) || expiryDays < 1 || expiryDays > 3650) {
       return res.status(400).json({ error: 'expiry_days must be between 1 and 3650' });
     }
-  } else {
-    // Preserve existing expiry_days preference on rotate if not specified
-    const { rows: existing } = await pool.query(
-      'SELECT expiry_days FROM user_ingest_keys WHERE user_id = $1', [uid(req)]
-    );
-    if (existing.length) expiryDays = existing[0].expiry_days;
   }
 
-  // Check if key already exists to distinguish create vs rotate
-  const { rows: existing } = await pool.query(
-    'SELECT user_id FROM user_ingest_keys WHERE user_id = $1', [uid(req)]
+  // Optional label so users can tell keys apart per device
+  let name = typeof req.body.name === 'string' ? req.body.name.trim().slice(0, 60) : '';
+  if (!name) name = 'Unnamed key';
+
+  const { rows: countRows } = await pool.query(
+    'SELECT COUNT(*)::int AS n FROM user_ingest_keys WHERE user_id = $1', [uid(req)]
   );
-  const isRotate = existing.length > 0;
+  if (countRows[0].n >= MAX_INGEST_KEYS) {
+    return res.status(400).json({ error: `Maximum of ${MAX_INGEST_KEYS} keys reached. Revoke one first.` });
+  }
 
   const { rows } = await pool.query(
-    `INSERT INTO user_ingest_keys (user_id, api_key, expiry_days, expires_at)
-     VALUES ($1, $2, $3, NOW() + make_interval(days := $3))
-     ON CONFLICT (user_id) DO UPDATE SET
-       api_key = $2,
-       expiry_days = $3,
-       expires_at = NOW() + make_interval(days := $3),
-       last_used_at = NULL,
-       created_at = NOW()
-     RETURNING created_at, expires_at, expiry_days`,
-    [uid(req), hashed, expiryDays]
+    `INSERT INTO user_ingest_keys (user_id, api_key, name, expiry_days, expires_at)
+     VALUES ($1, $2, $3, $4, NOW() + make_interval(days := $4))
+     RETURNING id, name, created_at, expires_at, expiry_days`,
+    [uid(req), hashed, name, expiryDays]
   );
-  audit(uid(req), isRotate ? 'ingest_key.rotate' : 'ingest_key.create', { expiry_days: expiryDays }, req.ip);
-  if (isRotate) broadcast('ingest_key_rotated', { userId: uid(req) });
-  res.json({ api_key: key, created_at: rows[0].created_at, expires_at: rows[0].expires_at, expiry_days: rows[0].expiry_days });
+  audit(uid(req), 'ingest_key.create', { name, expiry_days: expiryDays }, req.ip);
+  res.json({
+    id: rows[0].id,
+    api_key: key,
+    name: rows[0].name,
+    created_at: rows[0].created_at,
+    expires_at: rows[0].expires_at,
+    expiry_days: rows[0].expiry_days,
+  });
+});
+
+// Revoke a single named key
+router.delete('/ingest-key/:id', async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) return res.status(400).json({ error: 'Invalid key id.' });
+  const { rowCount } = await pool.query(
+    'DELETE FROM user_ingest_keys WHERE user_id = $1 AND id = $2', [uid(req), id]
+  );
+  if (!rowCount) return res.status(404).json({ error: 'Key not found.' });
+  audit(uid(req), 'ingest_key.revoke', { id }, req.ip);
+  broadcast('ingest_key_rotated', { userId: uid(req) });
+  res.json({ ok: true });
 });
 
 // --- WordPress protection rules (pushed down to the kudosec-siem plugin) ---
@@ -727,7 +738,7 @@ router.delete('/wp-rules/:id', wrap(async (req, res) => {
 
 router.get('/shipper-download', wrap(async (req, res) => {
   const { rows } = await pool.query(
-    'SELECT api_key FROM user_ingest_keys WHERE user_id = $1',
+    'SELECT api_key FROM user_ingest_keys WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1',
     [uid(req)]
   );
   if (!rows[0]) return res.status(400).json({ error: 'Generate an ingest key first.' });
@@ -1312,7 +1323,8 @@ router.delete('/account', wrap(async (req, res) => {
 router.get('/audit-log', wrap(async (req, res) => {
   const limit = Math.min(parseInt(req.query.limit, 10) || 100, 500);
   const validActions = Object.keys({
-    'ingest_key.rotate': 1, 'rule.create': 1, 'rule.delete': 1, 'rules.import': 1,
+    'ingest_key.create': 1, 'ingest_key.rotate': 1, 'ingest_key.revoke': 1,
+    'rule.create': 1, 'rule.delete': 1, 'rules.import': 1,
     'alerts.bulk_delete': 1, 'alerts.bulk_status': 1, 'case.create': 1, 'case.delete': 1,
   });
   const action = validActions.includes(req.query.action) ? req.query.action : null;

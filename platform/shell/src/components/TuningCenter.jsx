@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useIsMobile } from '../hooks/useIsMobile';
+import { badgeStyle } from './ui/index.js';
 
 const API = '/api/siem/noise';
 const isElectron = typeof window !== 'undefined' && !!window.electron;
@@ -48,7 +49,7 @@ const s = {
   td: { padding: '10px 12px', borderBottom: '1px solid var(--border)', color: 'var(--text-primary)', verticalAlign: 'top' },
   modalOverlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 },
   modal: { background: 'var(--bg-surface)', border: '1px solid var(--border)', padding: '24px', width: '420px', maxWidth: '90vw', display: 'flex', flexDirection: 'column', gap: '12px' },
-  badge: (color) => ({ display: 'inline-block', padding: '2px 8px', fontSize: '10px', border: `1px solid ${color}`, color, letterSpacing: '0.06em' }),
+  badge: (color) => badgeStyle(color, { padding: '1px 8px' }),
   progress: { width: '100%', height: '4px', background: 'var(--border)', marginTop: '6px' },
   progressFill: (pct) => ({ height: '100%', width: `${Math.min(pct, 100)}%`, background: 'var(--accent-amber)', transition: 'width 0.3s' }),
   empty: { padding: '40px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '12px' },
@@ -98,7 +99,7 @@ function CveSafeCell({ candidate, llmResults }) {
       ? <span style={{ color: 'var(--severity-critical)', fontSize: '11px' }} title={candidate.llm_cve_note || ''}>unsafe</span>
       : <span style={{ color: 'var(--severity-low)', fontSize: '11px' }}>safe</span>;
   }
-  return <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>—</span>;
+  return <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>-</span>;
 }
 
 function LlmExplanationCell({ candidate, llmResults }) {
@@ -110,7 +111,7 @@ function LlmExplanationCell({ candidate, llmResults }) {
     <div>
       {explanation
         ? <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{explanation}</span>
-        : <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>—</span>
+        : <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>-</span>
       }
       {kbMatches.length > 0 && (
         <div style={{ marginTop: '4px', padding: '4px 6px', background: 'color-mix(in srgb, var(--severity-high) 8%, transparent)', borderLeft: '2px solid var(--severity-high)', borderRadius: '2px' }}>
@@ -252,7 +253,7 @@ export default function TuningCenter() {
     load();
     loadModelLibrary();
 
-    // Get initial LLM status — restore llmRunning if analysis was in progress when we navigated away
+    // Get initial LLM status: restore llmRunning if analysis was in progress when we navigated away
     if (isElectron) {
       window.electron.llm.getStatus().then(s => {
         if (isMountedRef.current) {
@@ -366,7 +367,7 @@ export default function TuningCenter() {
       return;
     }
 
-    // Results were written to server per-candidate in onCandidateResult — just refresh
+    // Results were written to server per-candidate in onCandidateResult: just refresh
     setLlmResults({});
     await load();
   };
@@ -774,7 +775,7 @@ export default function TuningCenter() {
                             <div style={s.cardTitle}>{c.field_signature.event_category}</div>
                             <div style={s.cardMeta}>
                               {c.is_suppression_conflict
-                                ? `Rule: ${c.field_signature.suppression_rule_name || 'unknown'} — ${c.field_signature.kb_title || 'CVE match'}`
+                                ? `Rule: ${c.field_signature.suppression_rule_name || 'unknown'} (${c.field_signature.kb_title || 'CVE match'})`
                                 : [c.field_signature.source, c.field_signature.event_id ? `Event ID ${c.field_signature.event_id}` : null, c.field_signature.process_name, c.field_signature.username].filter(Boolean).join(' / ') + `, ${parseFloat(c.daily_avg).toFixed(1)}/day`}
                             </div>
                             <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap' }}>
@@ -1033,15 +1034,15 @@ export default function TuningCenter() {
                   <tr><td style={{ padding: '3px 12px 3px 0', color: 'var(--text-muted)' }}>Daily Avg</td><td style={{ padding: '3px 0' }}>{parseFloat(c.daily_avg).toFixed(1)}/day</td></tr>
                   <tr><td style={{ padding: '3px 12px 3px 0', color: 'var(--text-muted)' }}>Score</td><td style={{ padding: '3px 0' }}>{c.score}</td></tr>
                   <tr><td style={{ padding: '3px 12px 3px 0', color: 'var(--text-muted)' }}>Confidence</td><td style={{ padding: '3px 0' }}>{c.confidence}</td></tr>
-                  <tr><td style={{ padding: '3px 12px 3px 0', color: 'var(--text-muted)' }}>First Seen</td><td style={{ padding: '3px 0' }}>{c.first_seen ? new Date(c.first_seen).toLocaleString() : '—'}</td></tr>
-                  <tr><td style={{ padding: '3px 12px 3px 0', color: 'var(--text-muted)' }}>Last Seen</td><td style={{ padding: '3px 0' }}>{c.last_seen ? new Date(c.last_seen).toLocaleString() : '—'}</td></tr>
+                  <tr><td style={{ padding: '3px 12px 3px 0', color: 'var(--text-muted)' }}>First Seen</td><td style={{ padding: '3px 0' }}>{c.first_seen ? new Date(c.first_seen).toLocaleString() : '-'}</td></tr>
+                  <tr><td style={{ padding: '3px 12px 3px 0', color: 'var(--text-muted)' }}>Last Seen</td><td style={{ padding: '3px 0' }}>{c.last_seen ? new Date(c.last_seen).toLocaleString() : '-'}</td></tr>
                 </tbody>
               </table>
 
               {/* LLM Analysis */}
               <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>LLM Analysis</div>
               <div style={{ fontSize: '12px', color: unsafe ? 'var(--severity-critical)' : 'var(--text-muted)', marginBottom: '4px' }}>
-                CVE Safe: {result ? (result.cve_safe ? 'Yes' : 'No') : c.llm_checked_at ? (c.llm_cve_safe ? 'Yes' : 'No') : '—'}
+                CVE Safe: {result ? (result.cve_safe ? 'Yes' : 'No') : c.llm_checked_at ? (c.llm_cve_safe ? 'Yes' : 'No') : '-'}
               </div>
               {(result?.explanation || c.llm_explanation) && (
                 <div style={{ fontSize: '12px', color: 'var(--text-primary)', lineHeight: 1.5, marginBottom: '12px' }}>

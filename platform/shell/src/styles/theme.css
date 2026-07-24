@@ -19,6 +19,49 @@
   --btn-primary-text: #111110;
   --accent-amber: #d97706;
   --font: 'Fira Code', 'Consolas', 'Monaco', monospace;
+
+  /* --- Redesign Phase A: additive tokens (no existing token changed) --- */
+
+  /* Spacing scale (dashboard-dense ramp) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+
+  /* Radius scale */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+
+  /* Shared height for every inline control (input, select, button) so a button
+     always matches the field beside it, regardless of the row's align-items.
+     Rows that omit align-items stretch to this naturally; rows using
+     center/flex-end previously left buttons short. */
+  --control-h: 38px;
+
+  /* Motion tokens */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur-fast: 150ms;
+  --dur-base: 220ms;
+  --dur-slow: 320ms;
+
+  /* Interactive-state tokens (dark) */
+  --hover-bg: rgba(232, 230, 227, 0.06);
+  --active-bg: rgba(232, 230, 227, 0.10);
+  --focus-ring: #60a5fa;
+
+  /* Elevation (subtle, warm-tinted) */
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow-2: 0 4px 16px rgba(0, 0, 0, 0.45);
+
+  /* Semantic aliases (map onto existing primitives) */
+  --surface: var(--bg-surface);
+  --surface-raised: var(--bg-panel);
+  --on-surface: var(--text-primary);
 }
 
 [data-theme="light"] {
@@ -33,6 +76,15 @@
   --text-subtle: #c0b8b0;
   --btn-primary-bg: #1a1714;
   --btn-primary-text: #faf8f5;
+
+  /* Interactive-state tokens (light) */
+  --hover-bg: rgba(26, 23, 20, 0.05);
+  --active-bg: rgba(26, 23, 20, 0.09);
+  --focus-ring: #2563eb;
+
+  /* Elevation (light) */
+  --shadow-1: 0 1px 2px rgba(80, 60, 40, 0.10);
+  --shadow-2: 0 4px 16px rgba(80, 60, 40, 0.14);
 }
 
 * {
@@ -65,6 +117,330 @@ button {
 #root {
   height: 100%;
   zoom: 1.15;
+}
+
+/* --- Redesign Phase A: global interaction polish --- */
+
+/* Smooth transitions on all interactive elements (kills instant snap) */
+button,
+input,
+select,
+textarea,
+a,
+[role="button"] {
+  transition:
+    background-color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
+}
+
+/* Guarantee pointer cursor on actionable controls */
+button:not(:disabled),
+a[href],
+[role="button"]:not([aria-disabled="true"]) {
+  cursor: pointer;
+}
+
+button:disabled,
+[aria-disabled="true"] {
+  cursor: not-allowed;
+}
+
+/* Consistent, visible keyboard focus (accessibility priority #1) */
+:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+/* Suppress the default outline only when the focus-visible ring can replace it */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Tactile press feedback */
+button:not(:disabled):active,
+[role="button"]:not([aria-disabled="true"]):active {
+  transform: scale(0.97);
+}
+
+/* --- Redesign Phase B: motion layer --- */
+
+/* Entrance keyframes (transform + opacity only: GPU-friendly) */
+@keyframes kudo-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes kudo-fade-in-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* Tool / view mount: content arriving as you navigate (lateral fade + subtle rise) */
+.kudo-view-enter {
+  animation: kudo-fade-in-up var(--dur-slow) var(--ease-out) both;
+}
+
+/* Results / panels appearing after an action */
+.kudo-reveal {
+  animation: kudo-fade-in-up var(--dur-base) var(--ease-out) both;
+}
+
+/* Staggered children (dashboard cards, lists): set on the container */
+.kudo-stagger > * {
+  animation: kudo-fade-in-up var(--dur-base) var(--ease-out) both;
+}
+.kudo-stagger > *:nth-child(1)  { animation-delay: 0ms; }
+.kudo-stagger > *:nth-child(2)  { animation-delay: 40ms; }
+.kudo-stagger > *:nth-child(3)  { animation-delay: 80ms; }
+.kudo-stagger > *:nth-child(4)  { animation-delay: 120ms; }
+.kudo-stagger > *:nth-child(5)  { animation-delay: 160ms; }
+.kudo-stagger > *:nth-child(6)  { animation-delay: 200ms; }
+.kudo-stagger > *:nth-child(7)  { animation-delay: 240ms; }
+.kudo-stagger > *:nth-child(8)  { animation-delay: 280ms; }
+.kudo-stagger > *:nth-child(9)  { animation-delay: 320ms; }
+.kudo-stagger > *:nth-child(10) { animation-delay: 360ms; }
+.kudo-stagger > *:nth-child(11) { animation-delay: 400ms; }
+.kudo-stagger > *:nth-child(n+12) { animation-delay: 440ms; }
+
+/* Theme-swap view transition (native document.startViewTransition) */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: var(--dur-slow);
+  animation-timing-function: var(--ease-out);
+}
+
+/* --- Redesign Phase C: shared component classes --- */
+
+/* Button */
+/* Matches the SIEM button exactly: square corners, no line-height override.
+   `line-height: 1` crops the line box and makes the label ride high inside the
+   button (same failure mode as badges) -- keep it `normal` and let inline-flex
+   centering do the work. Do not add a border-radius here: SIEM buttons are
+   square, and the two surfaces must stay visually identical. */
+.kudo-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  font-family: var(--font);
+  font-weight: 500;
+  line-height: normal;
+  border: 1px solid transparent;
+  border-radius: 0;
+  cursor: pointer;
+  white-space: nowrap;
+  user-select: none;
+}
+.kudo-btn--sm { font-size: 11px; padding: 6px 14px; letter-spacing: 0.04em; min-height: var(--control-h); }
+.kudo-btn--md { font-size: 12px; padding: 10px 22px; letter-spacing: 0.06em; min-height: var(--control-h); }
+.kudo-btn--primary {
+  background: var(--btn-primary-bg);
+  color: var(--btn-primary-text);
+  border-color: var(--border);
+}
+.kudo-btn--primary:hover:not(:disabled) { filter: brightness(0.92); }
+.kudo-btn--ghost {
+  background: none;
+  color: var(--text-muted);
+  border-color: var(--border);
+}
+.kudo-btn--ghost:hover:not(:disabled) { background: var(--hover-bg); color: var(--text-primary); }
+.kudo-btn--danger {
+  background: none;
+  color: var(--severity-critical);
+  border-color: var(--severity-critical);
+}
+.kudo-btn--danger:hover:not(:disabled) { background: var(--severity-critical); color: #fff; }
+.kudo-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Card / surface */
+/* Square corners, matching the SIEM surfaces. The SIEM uses no border-radius
+   on any panel, card, input or button, so the tools must not either. */
+.kudo-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0;
+  padding: var(--space-4);
+}
+
+/* Bare input: for inline use inside flex rows (no label wrapper, no forced width) */
+.kudo-input {
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 0;
+  color: var(--text-primary);
+  font-family: var(--font);
+  font-weight: 500;
+  font-size: 13px;
+  padding: 8px 10px;
+  min-height: var(--control-h);
+  outline: none;
+}
+.kudo-input:focus { border-color: var(--focus-ring); }
+.kudo-input:disabled { opacity: 0.6; }
+
+/* Bare select: shares the input look, adds pointer + arrow room */
+.kudo-select { cursor: pointer; padding-right: 28px; }
+.kudo-select:disabled { cursor: not-allowed; }
+
+/* Field (label + control + error) */
+.kudo-field { display: flex; flex-direction: column; gap: var(--space-2); margin-bottom: var(--space-4); }
+.kudo-field__label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+}
+.kudo-field__control {
+  width: 100%;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 0;
+  color: var(--text-primary);
+  font-family: var(--font);
+  font-size: 13px;
+  padding: 8px 10px;
+  min-height: var(--control-h);
+  outline: none;
+}
+.kudo-field__control:focus { border-color: var(--focus-ring); }
+.kudo-field__control:disabled { opacity: 0.6; }
+textarea.kudo-field__control { min-height: 140px; resize: vertical; }
+.kudo-field__row { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-3); }
+.kudo-field__error { font-size: 12px; color: var(--severity-critical); }
+.kudo-field__count { font-size: 10px; color: var(--text-subtle); }
+
+/* Table: consistent data tables (sticky header, row hover, ellipsis) */
+.kudo-table-wrap { overflow-x: auto; }
+.kudo-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font);
+  font-size: 12px;
+}
+.kudo-table th {
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  text-align: left;
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  background: var(--surface);
+}
+.kudo-table td {
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--border);
+  color: var(--text-primary);
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.kudo-table tbody tr:hover > td { background: var(--hover-bg); }
+.kudo-table tr.flagged > td { color: var(--severity-high); background: rgba(217, 119, 6, 0.06); }
+
+/* Empty state */
+.kudo-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  text-align: center;
+  padding: var(--space-7) var(--space-4);
+  color: var(--text-muted);
+}
+.kudo-empty__icon { color: var(--text-subtle); }
+.kudo-empty__text { font-size: 13px; color: var(--text-muted); max-width: 320px; line-height: 1.5; }
+
+/* Badge: status/severity pills. Fira Code uppercase caps sit high in the line
+   box, so line-height:1 + slightly-heavier bottom padding optically centers the ink. */
+.kudo-badge {
+  display: inline-block;
+  line-height: 1;
+  font-size: 10px;
+  padding: 3px 7px 2px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+/* Control row: label/input/select/button on one line, all the same height.
+   `align-items: stretch` lets the button match the field height instead of
+   sitting shorter (kudo-btn padding differs from input padding). */
+.kudo-control-row {
+  display: flex;
+  align-items: stretch;
+  gap: var(--space-3);
+}
+.kudo-control-row > .kudo-btn { align-self: stretch; }
+
+/* Dropdown / send-to menu item: CSS-driven hover so the base always restores
+   (inline onMouseLeave = '' left the button stuck on its hover background). */
+.kudo-menu-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  font-family: var(--font);
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+.kudo-menu-item:hover { background: var(--hover-bg); }
+
+/* Custom app scrollbars: token-driven, replace default browser chrome.
+   Applied to opt-in scroll containers via .kudo-scroll. */
+.kudo-scroll { scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+.kudo-scroll::-webkit-scrollbar { width: 10px; height: 10px; }
+.kudo-scroll::-webkit-scrollbar-track { background: transparent; }
+.kudo-scroll::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 6px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+.kudo-scroll::-webkit-scrollbar-thumb:hover { background: var(--text-subtle); background-clip: content-box; }
+.kudo-scroll::-webkit-scrollbar-corner { background: transparent; }
+
+/* Loading-primitive keyframes (Spinner / Skeleton) */
+@keyframes kudo-spin {
+  to { transform: rotate(360deg); }
+}
+@keyframes kudo-pulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 0.85; }
+}
+
+/* Respect users who prefer reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  button:active,
+  [role="button"]:active {
+    transform: none;
+  }
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
 }
 
 @media (max-width: 767px) {

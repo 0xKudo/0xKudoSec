@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useWorkspace } from '../../../platform/shell/src/context/WorkspaceContext.jsx';
 import { useIsMobile } from '../../../platform/shell/src/hooks/useIsMobile.js';
+import { Button, Input, EmptyState } from '../../../platform/shell/src/components/ui/index.js';
+import { ShieldCheck } from 'lucide-react';
 
 const SEVERITY_ORDER = ['critical', 'high', 'medium', 'low', 'info'];
 const SEVERITY_COLOR = {
@@ -81,7 +83,7 @@ const styles = {
   error: { color: 'var(--severity-critical)', fontSize: '13px', marginBottom: '12px' },
   results: { marginTop: '24px' },
   analysisCard: {
-    background: 'var(--bg-primary)',
+    background: 'var(--surface)',
     border: '1px solid var(--border)',
     padding: '16px',
     marginBottom: '20px',
@@ -89,11 +91,10 @@ const styles = {
   analysisHeader: { display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' },
   analysisTitle: { color: 'var(--text-primary)', fontSize: '14px',  },
   riskBadge: (level) => ({
-    display: 'inline-block',
+    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
     background: SEVERITY_COLOR[level] || SEVERITY_COLOR.info,
     color: '#fff',
     fontSize: '10px',
-    
     padding: '2px 8px',
     textTransform: 'uppercase',
   }),
@@ -102,10 +103,10 @@ const styles = {
   listItem: { color: 'var(--text-primary)', fontSize: '12px', lineHeight: '1.7', marginLeft: '12px' },
   statsRow: { display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '16px' },
   statBadge: (sev) => ({
+    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
     background: SEVERITY_COLOR[sev],
     color: '#fff',
     fontSize: '12px',
-    
     padding: '3px 10px',
   }),
   findingCard: (sev) => ({
@@ -121,7 +122,6 @@ const styles = {
     background: SEVERITY_COLOR[sev],
     color: '#fff',
     fontSize: '10px',
-    
     padding: '1px 6px',
     textTransform: 'uppercase',
     marginRight: '8px',
@@ -179,7 +179,7 @@ export default function Scanner() {
         setResult(data);
         push(
           'scanner',
-          `Scan — ${data.url} (${data.findings.length} findings)`,
+          `Scan: ${data.url} (${data.findings.length} findings)`,
           { url: data.url, findings: data.findings, analysis: data.analysis },
           'scanner'
         );
@@ -221,17 +221,17 @@ export default function Scanner() {
       <div style={styles.section}>
         <span style={styles.label}>Target URL</span>
         <div style={{ ...styles.inputRow, flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-start' : undefined }}>
-          <input
-            style={isMobile ? { ...styles.input, minWidth: 0, width: '100%', boxSizing: 'border-box' } : styles.input}
+          <Input
+            style={isMobile ? { width: '100%', minWidth: 0 } : { flex: 1, minWidth: '280px' }}
             placeholder="https://example.com"
             value={url}
             onChange={e => setUrl(e.target.value)}
             disabled={loading}
             onKeyDown={e => e.key === 'Enter' && canScan && handleScan()}
           />
-          <button style={styles.button(!canScan)} onClick={handleScan} disabled={!canScan}>
-            {loading ? 'Scanning...' : 'Scan'}
-          </button>
+          <Button loading={loading} onClick={handleScan} disabled={!canScan}>
+            {loading ? 'Scanning…' : 'Scan'}
+          </Button>
         </div>
       </div>
 
@@ -279,7 +279,7 @@ export default function Scanner() {
                 </span>
               )}
               <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>
-                {result.mode === 'active' ? 'Active scan' : 'Passive scan'} — {result.findings.length} finding{result.findings.length !== 1 ? 's' : ''}
+                {result.mode === 'active' ? 'Active scan' : 'Passive scan'}: {result.findings.length} finding{result.findings.length !== 1 ? 's' : ''}
               </span>
             </div>
             {result.analysis?.summary && (
@@ -311,7 +311,7 @@ export default function Scanner() {
 
           {/* Findings grouped by severity */}
           {result.findings.length === 0 ? (
-            <p style={styles.emptyState}>No issues found.</p>
+            <EmptyState icon={<ShieldCheck size={24} />} text="No issues found." />
           ) : (
             SEVERITY_ORDER.filter(s => findingsBySeverity[s]).map(sev => (
               <div key={sev}>

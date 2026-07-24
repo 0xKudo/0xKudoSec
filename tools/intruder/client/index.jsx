@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useWorkspace } from '../../../platform/shell/src/context/WorkspaceContext.jsx';
 import { useIsMobile } from '../../../platform/shell/src/hooks/useIsMobile.js';
+import { Button, Input, Table, AuthGate } from '../../../platform/shell/src/components/ui/index.js';
 
 const METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'];
 
@@ -42,6 +43,7 @@ const styles = {
     color: 'var(--severity-critical)',
     fontSize: '12px',
     marginBottom: '20px',
+    lineHeight: '1.6',
   },
   layout: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' },
   panel: {
@@ -164,6 +166,7 @@ export default function Intruder() {
   const [error, setError] = useState(null);
   const [result, setResult] = useState(null);
   const [expandedRow, setExpandedRow] = useState(null);
+  const [authorized, setAuthorized] = useState(false);
   const { push } = useWorkspace();
 
   useEffect(() => {
@@ -215,7 +218,7 @@ export default function Intruder() {
         if (data.summary.flaggedCount > 0) {
           push(
             'intruder',
-            `Intruder — ${data.summary.flaggedCount} anomalies on ${urlTemplate}`,
+            `Intruder: ${data.summary.flaggedCount} anomalies on ${urlTemplate}`,
             { results: data.results, summary: data.summary },
             'intruder'
           );
@@ -229,7 +232,7 @@ export default function Intruder() {
   }
 
   const payloadCount = payloadsText.split('\n').filter(p => p.trim()).length;
-  const canAttack = !loading && urlTemplate.trim().length > 0 && payloadCount > 0;
+  const canAttack = !loading && urlTemplate.trim().length > 0 && payloadCount > 0 && authorized;
   const showBody = !['GET', 'HEAD'].includes(method);
 
   return (
@@ -242,7 +245,7 @@ export default function Intruder() {
       </div>
 
       <div style={styles.warning}>
-        Only use against systems you own or have explicit written authorization to test.
+        ⚠ Only use against systems you own or have explicit written authorization to test.
       </div>
 
       <div style={{ ...styles.layout, gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr' }}>
@@ -253,14 +256,14 @@ export default function Intruder() {
           <div style={{ ...styles.row, flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-start' : 'flex-end' }}>
             <div>
               <span style={styles.label}>Method</span>
-              <select style={styles.select} value={method} onChange={e => setMethod(e.target.value)} disabled={loading}>
+              <select className="kudo-input kudo-select" value={method} onChange={e => setMethod(e.target.value)} disabled={loading}>
                 {METHODS.map(m => <option key={m} value={m}>{m}</option>)}
               </select>
             </div>
             <div style={{ flex: 1, width: isMobile ? '100%' : undefined }}>
               <span style={styles.label}>URL Template</span>
-              <input
-                style={isMobile ? { ...styles.input, width: '100%', boxSizing: 'border-box' } : styles.input}
+              <Input
+                style={{ flex: 1, width: '100%' }}
                 placeholder="https://example.com/login?user=§admin§"
                 value={urlTemplate}
                 onChange={e => setUrlTemplate(e.target.value)}
@@ -269,7 +272,7 @@ export default function Intruder() {
             </div>
           </div>
           <div style={styles.hint}>
-            Wrap injection points with §markers§ — e.g. <code>?id=§1§</code> or <code>user=§admin§&amp;pass=§password§</code>
+            Wrap injection points with §markers§: e.g. <code>?id=§1§</code> or <code>user=§admin§&amp;pass=§password§</code>
           </div>
 
           <span style={styles.label}>Headers (optional)</span>
@@ -318,9 +321,13 @@ export default function Intruder() {
           />
           <div style={styles.hint}>{payloadCount} payload{payloadCount !== 1 ? 's' : ''} loaded</div>
 
-          <button style={styles.button(!canAttack)} onClick={handleAttack} disabled={!canAttack}>
-            {loading ? `Attacking... (${payloadCount} payloads)` : 'Start Attack'}
-          </button>
+          <div style={{ margin: '4px 0 12px' }}>
+            <AuthGate checked={authorized} onChange={setAuthorized} disabled={loading} />
+          </div>
+
+          <Button loading={loading} onClick={handleAttack} disabled={!canAttack}>
+            {loading ? `Attacking… (${payloadCount} payloads)` : 'Start Attack'}
+          </Button>
         </div>
       </div>
 
@@ -342,21 +349,20 @@ export default function Intruder() {
 
           {result.summary.flaggedCount > 0 && (
             <div style={styles.flaggedBanner}>
-              {result.summary.flaggedCount} anomalous response{result.summary.flaggedCount !== 1 ? 's' : ''} detected — highlighted below.
+              {result.summary.flaggedCount} anomalous response{result.summary.flaggedCount !== 1 ? 's' : ''} detected. Highlighted below.
             </div>
           )}
 
           {/* Results table */}
-          <div style={styles.tableWrap}>
-            <table style={styles.table}>
+          <Table>
               <thead>
                 <tr>
-                  <th style={styles.th}>#</th>
-                  <th style={styles.th}>Payload</th>
-                  <th style={styles.th}>Status</th>
-                  <th style={styles.th}>Length</th>
-                  <th style={styles.th}>Duration</th>
-                  <th style={styles.th}>Error</th>
+                  <th>#</th>
+                  <th>Payload</th>
+                  <th>Status</th>
+                  <th>Length</th>
+                  <th>Duration</th>
+                  <th>Error</th>
                 </tr>
               </thead>
               <tbody>
@@ -367,15 +373,16 @@ export default function Intruder() {
                     <>
                       <tr
                         key={idx}
+                        className={isFlagged ? 'flagged' : undefined}
                         style={{ cursor: r.body ? 'pointer' : 'default' }}
                         onClick={() => r.body && setExpandedRow(isExpanded ? null : idx)}
                       >
-                        <td style={styles.td(isFlagged)}>{idx + 1}</td>
-                        <td style={styles.td(isFlagged)} title={r.payload}>{r.payload}</td>
-                        <td style={styles.statusCell(r.status)}>{r.status || '—'}</td>
-                        <td style={styles.td(isFlagged)}>{r.length}b</td>
-                        <td style={styles.td(isFlagged)}>{r.durationMs}ms</td>
-                        <td style={{ ...styles.td(false), color: r.error ? 'var(--severity-critical)' : 'var(--text-muted)' }}>{r.error || '—'}</td>
+                        <td>{idx + 1}</td>
+                        <td title={r.payload}>{r.payload}</td>
+                        <td style={{ color: styles.statusCell(r.status).color }}>{r.status || '-'}</td>
+                        <td>{r.length}b</td>
+                        <td>{r.durationMs}ms</td>
+                        <td style={{ color: r.error ? 'var(--severity-critical)' : 'var(--text-muted)' }}>{r.error || '-'}</td>
                       </tr>
                       {isExpanded && r.body && (
                         <tr key={`${idx}-body`}>
@@ -401,8 +408,7 @@ export default function Intruder() {
                   );
                 })}
               </tbody>
-            </table>
-          </div>
+          </Table>
         </div>
       )}
     </div>

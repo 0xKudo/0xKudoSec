@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { ProcessTreePanel, ContextMenu } from './ProcessTreePanel.jsx';
 import { useIsMobile } from '../hooks/useIsMobile.js';
+import { badgeStyle } from './ui/index.js';
 
 const SEV_COLOR = {
   critical: 'var(--severity-critical)',
@@ -74,10 +75,7 @@ const s = {
     fontSize: '12px', color: 'var(--text-muted)', verticalAlign: 'middle',
     overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 0,
   },
-  sevBadge: (color) => ({
-    fontSize: '10px', padding: '2px 7px', letterSpacing: '0.06em',
-    textTransform: 'uppercase', border: `1px solid ${color}`, color, whiteSpace: 'nowrap',
-  }),
+  sevBadge: (color) => badgeStyle(color),
   muted: { padding: '40px 20px', color: 'var(--text-muted)', fontSize: '12px', textAlign: 'center' },
   overlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 },
   modal: { background: 'var(--bg-primary)', border: '1px solid var(--border)', width: '680px', maxWidth: '95vw', height: '80vh', display: 'flex', flexDirection: 'column' },
@@ -253,12 +251,12 @@ export function LogSearch() {
               onClick={() => { setSelected(row); setShowRaw(false); }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                <span style={s.sevBadge(sevColor(row.severity))}>{row.severity || '—'}</span>
+                <span style={s.sevBadge(sevColor(row.severity))}>{row.severity || '-'}</span>
                 {row.event_id && <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>ID {row.event_id}</span>}
                 {row.event_category && <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{row.event_category}</span>}
               </div>
               <div style={{ fontSize: '12px', color: 'var(--text-primary)', marginBottom: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {row.message || '—'}
+                {row.message || '-'}
               </div>
               <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
                 {row.timestamp ? new Date(row.timestamp).toLocaleString() : ''}
@@ -306,16 +304,16 @@ export function LogSearch() {
                   onMouseEnter={e => Array.from(e.currentTarget.cells).forEach(c => c.style.background = 'var(--bg-surface)')}
                   onMouseLeave={e => Array.from(e.currentTarget.cells).forEach(c => c.style.background = '')}
                 >
-                  <td style={s.td}>{row.timestamp ? new Date(row.timestamp).toLocaleString() : '—'}</td>
-                  <td style={s.td}><span style={s.sevBadge(sevColor(row.severity))}>{row.severity || '—'}</span></td>
-                  <td style={s.td}>{row.event_id || '—'}</td>
-                  <td style={s.td}>{row.event_category || '—'}</td>
-                  <td style={s.td}>{row.host || '—'}</td>
-                  <td style={s.td}>{row.source_ip || '—'}</td>
-                  <td style={s.td}>{row.dest_ip || '—'}</td>
-                  <td style={s.td}>{row.username || '—'}</td>
-                  <td style={s.td}>{row.process_name || '—'}</td>
-                  <td style={s.td}>{row.message || '—'}</td>
+                  <td style={s.td}>{row.timestamp ? new Date(row.timestamp).toLocaleString() : '-'}</td>
+                  <td style={s.td}><span style={s.sevBadge(sevColor(row.severity))}>{row.severity || '-'}</span></td>
+                  <td style={s.td}>{row.event_id || '-'}</td>
+                  <td style={s.td}>{row.event_category || '-'}</td>
+                  <td style={s.td}>{row.host || '-'}</td>
+                  <td style={s.td}>{row.source_ip || '-'}</td>
+                  <td style={s.td}>{row.dest_ip || '-'}</td>
+                  <td style={s.td}>{row.username || '-'}</td>
+                  <td style={s.td}>{row.process_name || '-'}</td>
+                  <td style={s.td}>{row.message || '-'}</td>
                 </tr>
               ))}
             </tbody>
@@ -328,8 +326,8 @@ export function LogSearch() {
           <div style={s.modal} onClick={e => e.stopPropagation()}>
             <div style={s.modalHeader}>
               <span style={s.modalTitle}>
-                Event {selected.event_id || '—'} &nbsp;·&nbsp; {selected.host || '—'} &nbsp;·&nbsp;
-                <span style={{ color: sevColor(selected.severity) }}>{selected.severity || '—'}</span>
+                Event {selected.event_id || '-'} &nbsp;·&nbsp; {selected.host || '-'} &nbsp;·&nbsp;
+                <span style={{ color: sevColor(selected.severity) }}>{selected.severity || '-'}</span>
               </span>
               <button style={s.modalClose} onClick={() => setSelected(null)}>✕</button>
             </div>

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useWorkspace } from '../../../platform/shell/src/context/WorkspaceContext.jsx';
 import { useIsMobile } from '../../../platform/shell/src/hooks/useIsMobile.js';
+import { Button, TextArea, Skeleton } from '../../../platform/shell/src/components/ui/index.js';
 
 const SEVERITY_COLORS = {
   critical: 'var(--severity-critical)',
@@ -53,7 +54,7 @@ const styles = {
     padding: '20px',
   },
   severityBadge: (severity) => ({
-    display: 'inline-block',
+    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
     padding: '4px 12px',
     border: `1px solid ${SEVERITY_COLORS[severity] || 'var(--border)'}`,
     color: SEVERITY_COLORS[severity] || 'var(--text-muted)',
@@ -122,7 +123,7 @@ export default function AlertTriageTool() {
         setError(data.error || 'Analysis failed.');
       } else {
         setResult(data);
-        push('alert-triage', `${data.severity.toUpperCase()} — ${data.attackVector}`, data, 'alert-triage');
+        push('alert-triage', `${data.severity.toUpperCase()}: ${data.attackVector}`, data, 'alert-triage');
       }
     } catch {
       setError('Network error. Is the server running?');
@@ -140,28 +141,37 @@ export default function AlertTriageTool() {
         </p>
       </div>
 
-      <textarea
-        style={styles.textarea}
+      <TextArea
         placeholder="Paste alert text here..."
         value={alertText}
         onChange={e => setAlertText(e.target.value)}
         disabled={loading}
+        maxLength={20000}
+        showCount
+        style={{ marginBottom: '12px' }}
+        rows={7}
       />
 
-      <button
-        style={styles.button(loading)}
+      <Button
         onClick={handleAnalyze}
-        disabled={loading || !alertText.trim()}
+        loading={loading}
+        disabled={!alertText.trim()}
       >
-        {loading ? 'Analyzing...' : 'Analyze Alert'}
-      </button>
+        {loading ? 'Analyzing…' : 'Analyze Alert'}
+      </Button>
 
       {error && <p style={styles.error}>{error}</p>}
 
+      {loading && !result && (
+        <div className="kudo-card kudo-reveal" style={{ marginTop: '24px' }}>
+          <Skeleton lines={5} />
+        </div>
+      )}
+
       {result && (
-        <div style={styles.results}>
+        <div className="kudo-reveal kudo-card" style={{ marginTop: '24px' }}>
           <div style={styles.severityBadge(result.severity)}>
-            {result.severity} — Confidence: {result.confidence}
+            {result.severity}, Confidence: {result.confidence}
           </div>
 
           <div style={styles.label}>Summary</div>

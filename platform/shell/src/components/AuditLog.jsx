@@ -1,11 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useIsMobile } from '../hooks/useIsMobile';
+import { badgeStyle } from './ui/index.js';
 
 const ACTION_LABELS = {
   // Ingest key
   'ingest_key.create':    'API Key Created',
   'ingest_key.rotate':    'API Key Rotated',
+  'ingest_key.revoke':    'API Key Revoked',
   // Rules
   'rule.create':          'Rule Created',
   'rule.update':          'Rule Updated',
@@ -38,6 +40,7 @@ const ACTION_COLOR = {
   // Credential changes
   'ingest_key.create':    'var(--severity-medium)',
   'ingest_key.rotate':    'var(--severity-medium)',
+  'ingest_key.revoke':    'var(--severity-high)',
   // Data movement
   'export.logs':          'var(--severity-medium)',
   'ingest.file_upload':   'var(--severity-info)',
@@ -119,14 +122,7 @@ const styles = {
     color: 'var(--text-muted)',
     verticalAlign: 'top',
   },
-  actionBadge: (action) => ({
-    display: 'inline-block',
-    padding: '2px 7px',
-    fontSize: '10px',
-    color: ACTION_COLOR[action] || 'var(--text-muted)',
-    border: `1px solid ${ACTION_COLOR[action] || 'var(--border)'}`,
-    whiteSpace: 'nowrap',
-  }),
+  actionBadge: (action) => badgeStyle(ACTION_COLOR[action] || 'var(--border)'),
   meta: {
     color: 'var(--text-subtle)',
     fontSize: '10px',
@@ -142,12 +138,27 @@ const styles = {
 };
 
 function formatMeta(meta) {
-  if (!meta || !Object.keys(meta).length) return '—';
-  return Object.entries(meta).map(([k, v]) => `${k}: ${v}`).join('  ·  ');
+  if (!meta) return '-';
+  // audit_log.meta is stored as a JSON string (schema: text). Parse it before
+  // formatting, otherwise Object.entries iterates the string's character indices.
+  let obj = meta;
+  if (typeof meta === 'string') {
+    const raw = meta.trim();
+    if (!raw) return '-';
+    try {
+      obj = JSON.parse(raw);
+    } catch {
+      return raw;
+    }
+  }
+  if (!obj || typeof obj !== 'object') return String(obj);
+  const entries = Object.entries(obj);
+  if (!entries.length) return '-';
+  return entries.map(([k, v]) => `${k}: ${typeof v === 'object' ? JSON.stringify(v) : v}`).join('  ·  ');
 }
 
 function formatTime(ts) {
-  if (!ts) return '—';
+  if (!ts) return '-';
   const d = new Date(ts);
   return d.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' });
 }
@@ -298,7 +309,7 @@ export function AuditLog() {
                       {ACTION_LABELS[row.action] || row.action}
                     </span>
                   </td>
-                  <td style={styles.td}>{row.ip || '—'}</td>
+                  <td style={styles.td}>{row.ip || '-'}</td>
                   <td style={styles.td}>
                     <span style={styles.meta}>{formatMeta(row.meta)}</span>
                   </td>

@@ -1,6 +1,10 @@
 import { useNavigate } from 'react-router-dom';
+import { Clock, Layers, Wrench } from 'lucide-react';
 import { useTools } from '../context/ToolRegistry';
 import { useWorkspace } from '../context/WorkspaceContext';
+import { EmptyState, badgeStyle } from './ui/index.js';
+import { PHASES } from '../lib/phases';
+import { toolIcon, PHASE_ICONS } from '../lib/toolIcons';
 
 const RECENT_TOOLS_KEY = 'cybertools_recent_tools';
 const MAX_RECENT = 6;
@@ -55,20 +59,37 @@ const s = {
   },
   title: { fontSize: '13px', color: 'var(--text-primary)', letterSpacing: '0.02em' },
   titleSub: { color: 'var(--text-muted)', fontSize: '11px' },
-  body: { padding: '20px', display: 'flex', flexDirection: 'column', gap: '20px' },
-  row: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' },
+  body: { padding: 'var(--space-5)', display: 'flex', flexDirection: 'column', gap: 'var(--space-5)' },
+
+  // Metrics row
+  metricsRow: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+    gap: '1px',
+    background: 'var(--border-subtle)',
+    border: '1px solid var(--border)',
+  },
+  metricTile: {
+    background: 'var(--bg-surface)',
+    padding: '14px 18px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '14px',
+  },
+  metricIcon: { color: 'var(--text-subtle)', flexShrink: 0, display: 'flex' },
+  metricValue: (color) => ({ fontSize: '24px', lineHeight: 1, color: color || 'var(--text-primary)' }),
+  metricLabel: { fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: '5px' },
+
+  row: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)' },
   panel: {
     background: 'var(--bg-surface)',
     border: '1px solid var(--border)',
     display: 'flex',
     flexDirection: 'column',
-    height: '320px',
+    height: '300px',
     overflow: 'hidden',
   },
-  panelScroll: {
-    overflowY: 'auto',
-    flex: 1,
-  },
+  panelScroll: { overflowY: 'auto', flex: 1 },
   panelHeader: {
     padding: '8px 14px',
     borderBottom: '1px solid var(--border)',
@@ -89,12 +110,6 @@ const s = {
     cursor: 'pointer',
     letterSpacing: '0.04em',
     textTransform: 'uppercase',
-  },
-  emptyState: {
-    padding: '24px 14px',
-    fontSize: '12px',
-    color: 'var(--text-subtle)',
-    textAlign: 'center',
   },
   toolRow: {
     display: 'flex',
@@ -133,51 +148,52 @@ const s = {
       report: 'var(--severity-low)',
       raw: 'var(--text-muted)',
     };
-    return {
-      fontSize: '9px',
-      padding: '1px 6px',
-      border: `1px solid ${colors[type] || 'var(--border)'}`,
-      color: colors[type] || 'var(--text-muted)',
-      letterSpacing: '0.06em',
-      textTransform: 'uppercase',
-      whiteSpace: 'nowrap',
-      flexShrink: 0,
-    };
+    return badgeStyle(colors[type] || 'var(--border)', { fontSize: '9px', padding: '1px 6px' });
   },
   workspaceLabel: { fontSize: '12px', color: 'var(--text-primary)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 },
   workspaceMeta: { fontSize: '11px', color: 'var(--text-muted)', whiteSpace: 'nowrap' },
-  fullWidthPanel: {
-    background: 'var(--bg-surface)',
-    border: '1px solid var(--border)',
+
+  // Phase groups
+  phaseGroup: { background: 'var(--bg-surface)', border: '1px solid var(--border)' },
+  phaseHeader: {
+    padding: '8px 14px',
+    borderBottom: '1px solid var(--border)',
+    fontSize: '11px',
+    color: 'var(--text-muted)',
+    letterSpacing: '0.06em',
+    textTransform: 'uppercase',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
   },
-  quickLaunchGrid: {
+  phaseCount: { color: 'var(--text-subtle)', fontSize: '10px' },
+  cardGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(4, 1fr)',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))',
     gap: '1px',
     background: 'var(--border-subtle)',
   },
-  quickCard: {
+  toolCard: (disabled) => ({
     background: 'var(--bg-primary)',
     padding: '14px 16px',
-    cursor: 'pointer',
+    cursor: disabled ? 'default' : 'pointer',
     display: 'flex',
-    flexDirection: 'column',
-    gap: '4px',
+    alignItems: 'flex-start',
+    gap: '12px',
+    opacity: disabled ? 0.45 : 1,
+    minHeight: '64px',
+    transition: 'background var(--dur-fast, 150ms) ease',
+  }),
+  cardIcon: { color: 'var(--text-subtle)', flexShrink: 0, marginTop: '1px', display: 'flex' },
+  cardBody: { minWidth: 0, flex: 1 },
+  cardName: { fontSize: '12px', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' },
+  cardDesc: { fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px', lineHeight: 1.4, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' },
+  soonTag: {
+    fontSize: '8px', padding: '1px 5px', border: '1px solid var(--border)',
+    color: 'var(--text-subtle)', letterSpacing: '0.06em', textTransform: 'uppercase',
+    whiteSpace: 'nowrap', flexShrink: 0,
   },
-  quickCardName: { fontSize: '12px', color: 'var(--text-primary)' },
-  quickCardPhase: { fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' },
 };
-
-const QUICK_LAUNCH = [
-  { id: 'alert-triage', phase: 'Detect', route: '/alert-triage' },
-  { id: 'threat-intel', phase: 'Detect', route: '/threat-intel' },
-  { id: 'osint-recon', phase: 'Investigate', route: '/osint-recon' },
-  { id: 'decoder', phase: 'Investigate', route: '/decoder' },
-  { id: 'incident-report', phase: 'Report', route: '/incident-report' },
-  { id: 'intruder', phase: 'Simulate', route: '/intruder' },
-  { id: 'network-scanner', phase: 'Investigate', route: '/network-scanner' },
-  { id: 'subdomain-enumerator', phase: 'Investigate', route: '/subdomain-enumerator' },
-];
 
 export function Dashboard() {
   const tools = useTools();
@@ -191,9 +207,13 @@ export function Dashboard() {
 
   const workspaceItems = [...items].reverse().slice(0, 10);
 
-  const quickTools = QUICK_LAUNCH
-    .map(q => ({ ...q, tool: tools.find(t => t.id === q.id) }))
-    .filter(q => q.tool);
+  // Group active tools by phase for the tool-card catalog
+  const phaseGroups = PHASES.map(phase => ({
+    ...phase,
+    tools: phase.routes
+      .map(r => tools.find(t => t.route === r))
+      .filter(Boolean),
+  })).filter(p => p.tools.length || (p.comingSoon || []).length);
 
   return (
     <div style={s.container}>
@@ -205,38 +225,35 @@ export function Dashboard() {
 
       <div style={s.body}>
 
-        {/* Recent tools + Workspace items */}
+        {/* Recently Used + Workspace */}
         <div style={s.row}>
-
-          {/* Recently Used */}
           <div style={s.panel}>
             <div style={s.panelHeader}>Recently Used</div>
-            <div style={s.panelScroll}>
-            {recentTools.length === 0 ? (
-              <div style={s.emptyState}>No recent tools — launch one from the sidebar.</div>
-            ) : (
-              recentTools.map(tool => (
-                <div
-                  key={tool.id}
-                  style={s.toolRow}
-                  onClick={() => navigate(tool.route)}
-                  onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-panel)'; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = ''; }}
-                >
-                  <div>
-                    <div style={s.toolName}>{tool.name}</div>
-                    <div style={s.toolMeta}>{tool.description.slice(0, 60)}…</div>
+            <div className="kudo-scroll" style={s.panelScroll}>
+              {recentTools.length === 0 ? (
+                <EmptyState icon={<Clock size={24} />} text="No recent tools. Launch one below." />
+              ) : (
+                recentTools.map(tool => (
+                  <div
+                    key={tool.id}
+                    style={s.toolRow}
+                    onClick={() => navigate(tool.route)}
+                    onMouseEnter={e => { e.currentTarget.style.background = 'var(--hover-bg)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = ''; }}
+                  >
+                    <div>
+                      <div style={s.toolName}>{tool.name}</div>
+                      <div style={s.toolMeta}>{tool.description.slice(0, 60)}…</div>
+                    </div>
+                    <button style={s.launchBtn} onClick={e => { e.stopPropagation(); navigate(tool.route); }}>
+                      Launch
+                    </button>
                   </div>
-                  <button style={s.launchBtn} onClick={e => { e.stopPropagation(); navigate(tool.route); }}>
-                    Launch
-                  </button>
-                </div>
-              ))
-            )}
+                ))
+              )}
             </div>
           </div>
 
-          {/* Workspace Items */}
           <div style={s.panel}>
             <div style={s.panelHeader}>
               Workspace
@@ -244,54 +261,85 @@ export function Dashboard() {
                 <button style={s.clearBtn} onClick={clear}>Clear</button>
               )}
             </div>
-            <div style={s.panelScroll}>
-            {workspaceItems.length === 0 ? (
-              <div style={s.emptyState}>No workspace items — results from tools appear here.</div>
-            ) : (
-              workspaceItems.map(item => {
-                const tool = tools.find(t => t.id === item.source);
-                const clickable = !!tool;
-                return (
-                  <div
-                    key={item.id}
-                    style={{ ...s.workspaceRow, cursor: clickable ? 'pointer' : 'default' }}
-                    onClick={() => {
-                      if (!clickable) return;
-                      localStorage.setItem(`workspace-restore-${item.source}`, JSON.stringify(item.data));
-                      navigate(tool.route);
-                    }}
-                    onMouseEnter={e => { if (clickable) e.currentTarget.style.background = 'var(--bg-panel)'; }}
-                    onMouseLeave={e => { if (clickable) e.currentTarget.style.background = ''; }}
-                  >
-                    <span style={s.typeBadge(item.type)}>{TYPE_LABELS[item.type] || item.type}</span>
-                    <span style={s.workspaceLabel}>{item.label}</span>
-                    <span style={s.workspaceMeta}>{item.source} &nbsp;·&nbsp; {formatTime(item.timestamp)}</span>
-                  </div>
-                );
-              })
-            )}
+            <div className="kudo-scroll" style={s.panelScroll}>
+              {workspaceItems.length === 0 ? (
+                <EmptyState icon={<Layers size={24} />} text={<>No workspace items<br />Results from tools appear here.</>} />
+              ) : (
+                workspaceItems.map(item => {
+                  const tool = tools.find(t => t.id === item.source);
+                  const clickable = !!tool;
+                  return (
+                    <div
+                      key={item.id}
+                      style={{ ...s.workspaceRow, cursor: clickable ? 'pointer' : 'default' }}
+                      onClick={() => {
+                        if (!clickable) return;
+                        localStorage.setItem(`workspace-restore-${item.source}`, JSON.stringify(item.data));
+                        navigate(tool.route);
+                      }}
+                      onMouseEnter={e => { if (clickable) e.currentTarget.style.background = 'var(--hover-bg)'; }}
+                      onMouseLeave={e => { if (clickable) e.currentTarget.style.background = ''; }}
+                    >
+                      <span style={s.typeBadge(item.type)}>{TYPE_LABELS[item.type] || item.type}</span>
+                      <span style={s.workspaceLabel}>{item.label}</span>
+                      <span style={s.workspaceMeta}>{item.source} &nbsp;·&nbsp; {formatTime(item.timestamp)}</span>
+                    </div>
+                  );
+                })
+              )}
             </div>
           </div>
         </div>
 
-        {/* Quick Launch */}
-        <div style={s.fullWidthPanel}>
-          <div style={s.panelHeader}>Quick Launch</div>
-          <div style={s.quickLaunchGrid}>
-            {quickTools.map(q => (
-              <div
-                key={q.id}
-                style={s.quickCard}
-                onClick={() => navigate(q.route)}
-                onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-surface)'; }}
-                onMouseLeave={e => { e.currentTarget.style.background = 'var(--bg-primary)'; }}
-              >
-                <div style={s.quickCardName}>{q.tool.name}</div>
-                <div style={s.quickCardPhase}>{q.phase}</div>
+        {/* Tool catalog, grouped by phase */}
+        {phaseGroups.map(phase => {
+          const PhaseIcon = PHASE_ICONS[phase.id];
+          const total = phase.tools.length + (phase.comingSoon || []).length;
+          return (
+            <div key={phase.id} style={s.phaseGroup}>
+              <div style={s.phaseHeader}>
+                {PhaseIcon && <PhaseIcon size={14} strokeWidth={1.5} />}
+                <span>{phase.label}</span>
+                <span style={s.phaseCount}>· {total}</span>
               </div>
-            ))}
-          </div>
-        </div>
+              <div className="kudo-stagger" style={s.cardGrid}>
+                {phase.tools.map(tool => {
+                  const Icon = toolIcon(tool.route);
+                  const soon = tool.status === 'coming-soon';
+                  return (
+                    <div
+                      key={tool.id}
+                      style={s.toolCard(soon)}
+                      onClick={() => { if (!soon) navigate(tool.route); }}
+                      onMouseEnter={e => { if (!soon) e.currentTarget.style.background = 'var(--bg-surface)'; }}
+                      onMouseLeave={e => { if (!soon) e.currentTarget.style.background = 'var(--bg-primary)'; }}
+                    >
+                      <span style={s.cardIcon}><Icon size={18} strokeWidth={1.5} /></span>
+                      <div style={s.cardBody}>
+                        <div style={s.cardName}>
+                          {tool.name}
+                          {soon && <span style={s.soonTag}>Soon</span>}
+                        </div>
+                        <div style={s.cardDesc}>{tool.description}</div>
+                      </div>
+                    </div>
+                  );
+                })}
+                {(phase.comingSoon || []).map(name => (
+                  <div key={name} style={s.toolCard(true)}>
+                    <span style={s.cardIcon}><Wrench size={18} strokeWidth={1.5} /></span>
+                    <div style={s.cardBody}>
+                      <div style={s.cardName}>
+                        {name}
+                        <span style={s.soonTag}>Soon</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
 
       </div>
     </div>

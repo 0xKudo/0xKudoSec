@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useWorkspace } from '../../../platform/shell/src/context/WorkspaceContext.jsx';
 import { useIsMobile } from '../../../platform/shell/src/hooks/useIsMobile.js';
+import { Button, TextArea, Skeleton } from '../../../platform/shell/src/components/ui/index.js';
 
 const SEVERITY_COLORS = {
   critical: 'var(--severity-critical)',
@@ -102,14 +103,14 @@ const styles = {
   error: { color: 'var(--severity-critical)', fontSize: '13px', marginTop: '12px' },
   results: { marginTop: '24px' },
   summaryCard: {
-    background: 'var(--bg-primary)',
+    background: 'var(--surface)',
     border: '1px solid var(--border)',
     padding: '20px',
     marginBottom: '16px',
   },
   badgeRow: { display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' },
   badge: (level) => ({
-    display: 'inline-block',
+    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
     padding: '4px 12px',
     border: `1px solid ${SEVERITY_COLORS[level] || 'var(--border)'}`,
     color: SEVERITY_COLORS[level] || 'var(--text-muted)',
@@ -197,7 +198,7 @@ export default function LogAnomalyExplainer() {
         setError(data.error || 'Analysis failed.');
       } else {
         setResult(data);
-        push('log-anomaly-explainer', `Log Analysis — ${data.logSource}`, data, 'log-anomaly-explainer');
+        push('log-anomaly-explainer', `Log Analysis: ${data.logSource}`, data, 'log-anomaly-explainer');
       }
     } catch {
       setError('Network error. Is the server running?');
@@ -211,7 +212,7 @@ export default function LogAnomalyExplainer() {
   return (
     <div style={styles.container}>
       <div style={{ ...styles.header, margin: isMobile ? '-16px -16px 0 -16px' : '-24px -24px 0 -24px' }}>
-        <span style={styles.title}>Log Anomaly Explainer</span>
+        <span style={styles.title}>Log Anomaly Analyzer</span>
         <p style={styles.subtitle}>
           Paste or upload system, auth, web server, or application logs. Claude identifies anomalies and explains them in plain English.
         </p>
@@ -223,8 +224,8 @@ export default function LogAnomalyExplainer() {
       </div>
 
       {tab === 'paste' ? (
-        <textarea
-          style={styles.textarea}
+        <TextArea
+          rows={8}
           placeholder={`Paste log lines here...\n\nExamples:\n  Mar 29 10:01:32 server sshd[1234]: Failed password for root from 1.2.3.4 port 52411 ssh2\n  192.168.1.5 - - [29/Mar/2026:10:00:01 +0000] "GET /admin HTTP/1.1" 403 512\n  ERROR 2026-03-29 kernel: Out of memory: Kill process 1234`}
           value={logText}
           onChange={e => setLogText(e.target.value)}
@@ -233,7 +234,7 @@ export default function LogAnomalyExplainer() {
       ) : (
         <>
           <div style={styles.uploadBox} onClick={() => fileInputRef.current?.click()}>
-            Click to select a log file (.log, .txt, .csv, .json) — max 500kb
+            Click to select a log file (.log, .txt, .csv, .json): max 500kb
           </div>
           <input
             ref={fileInputRef}
@@ -247,15 +248,21 @@ export default function LogAnomalyExplainer() {
       )}
 
       <div style={{ ...styles.controlRow, marginTop: '8px' }}>
-        <select style={styles.select} value={logSource} onChange={e => setLogSource(e.target.value)} disabled={loading}>
+        <select className="kudo-input kudo-select" value={logSource} onChange={e => setLogSource(e.target.value)} disabled={loading}>
           {LOG_SOURCES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
         </select>
-        <button style={styles.button(loading)} onClick={handleAnalyze} disabled={!canAnalyze}>
-          {loading ? 'Analyzing...' : 'Analyze'}
-        </button>
+        <Button loading={loading} onClick={handleAnalyze} disabled={!canAnalyze}>
+          {loading ? 'Analyzing…' : 'Analyze'}
+        </Button>
       </div>
 
       {error && <p style={styles.error}>{error}</p>}
+
+      {loading && !result && (
+        <div className="kudo-card kudo-reveal" style={{ marginTop: '24px' }}>
+          <Skeleton lines={5} />
+        </div>
+      )}
 
       {result && (
         <div style={styles.results}>
@@ -268,7 +275,7 @@ export default function LogAnomalyExplainer() {
             <div style={styles.summaryText}>{result.summary}</div>
 
             {result.anomalies?.length === 0 && (
-              <div style={styles.cleanBanner}>No anomalies detected — logs appear normal.</div>
+              <div style={styles.cleanBanner}>No anomalies detected. Logs appear normal.</div>
             )}
 
             {result.anomalies?.length > 0 && (

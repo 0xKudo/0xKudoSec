@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useIsMobile } from '../../../platform/shell/src/hooks/useIsMobile.js';
+import { Button, TextArea, Skeleton } from '../../../platform/shell/src/components/ui/index.js';
 
 const VERDICT_COLORS = {
   phishing: 'var(--severity-critical)',
@@ -72,7 +73,7 @@ const styles = {
     borderBottom: '1px solid var(--border)',
   },
   verdictBadge: (verdict) => ({
-    display: 'inline-block',
+    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
     padding: '4px 14px',
     border: `1px solid ${VERDICT_COLORS[verdict] || 'var(--border)'}`,
     color: VERDICT_COLORS[verdict] || 'var(--text-muted)',
@@ -272,20 +273,20 @@ export default function PhishingAnalyzerTool() {
 
       {tab === 'paste' && (
         <>
-          <textarea
-            style={styles.textarea}
+          <TextArea
+            rows={8}
             placeholder="Paste email content here (headers, body, links)..."
             value={emailText}
             onChange={e => setEmailText(e.target.value)}
             disabled={loading}
           />
-          <button
-            style={styles.button(loading)}
+          <Button
+            loading={loading}
             onClick={handleAnalyze}
             disabled={loading || !emailText.trim()}
           >
-            {loading ? 'Analyzing...' : 'Analyze Email'}
-          </button>
+            {loading ? 'Analyzing…' : 'Analyze Email'}
+          </Button>
         </>
       )}
 
@@ -305,20 +306,26 @@ export default function PhishingAnalyzerTool() {
           {selectedFile && (
             <div style={styles.fileChosen}>Selected: {selectedFile.name}</div>
           )}
-          <button
-            style={styles.button(loading)}
+          <Button
+            loading={loading}
             onClick={handleUploadAnalyze}
             disabled={loading || !selectedFile}
           >
-            {loading ? 'Analyzing...' : 'Analyze File'}
-          </button>
+            {loading ? 'Analyzing…' : 'Analyze File'}
+          </Button>
         </>
       )}
 
       {error && <p style={styles.error}>{error}</p>}
 
+      {loading && !result && (
+        <div className="kudo-card kudo-reveal" style={{ marginTop: '24px' }}>
+          <Skeleton lines={5} />
+        </div>
+      )}
+
       {result && (
-        <div style={styles.results}>
+        <div className="kudo-card" style={{ marginTop: '24px' }}>
           <div style={styles.verdictRow}>
             <div style={styles.verdictBadge(result.verdict)}>{result.verdict}</div>
             <span style={styles.confidence}>Confidence: {result.confidence}</span>

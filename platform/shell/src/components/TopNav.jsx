@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { useLocation } from 'react-router-dom';
+import { Sun, Moon } from 'lucide-react';
+import { setThemeWithTransition } from '../lib/viewTransition';
 
 const isElectron = typeof window !== 'undefined' && window.electron?.isElectron === true;
 
@@ -142,7 +144,7 @@ function UpdateBanner() {
 
   if (state === 'available') return (
     <div style={bannerStyle}>
-      <span>Update available — v{version}</span>
+      <span>Update available: v{version}</span>
       <button style={actionBtn} onClick={() => window.electron.updater.download()}>Download</button>
       <button style={dismissBtn} onClick={() => { setDismissed(true); window.electron.updater.dismiss(); }}>✕</button>
     </div>
@@ -278,7 +280,7 @@ export function TopNav({ activeApp, onSwitchApp, onMenuToggle, menuOpen, theme, 
   const { isAuthenticated, user, loginWithRedirect, logout } = useAuth0();
   const isMobile = useIsMobile();
 
-  const toggleTheme = () => setTheme(t => t === 'dark' ? 'light' : 'dark');
+  const toggleTheme = () => setThemeWithTransition(theme === 'dark' ? 'light' : 'dark', setTheme);
 
   return (
     <>
@@ -308,7 +310,7 @@ export function TopNav({ activeApp, onSwitchApp, onMenuToggle, menuOpen, theme, 
             ) : (
               <button style={{ ...styles.authBtn, padding: '4px 8px', fontSize: '10px' }} onClick={() => loginWithRedirect()}>login</button>
             )}
-            <button style={{ ...styles.themeToggle, padding: '4px 8px' }} onClick={toggleTheme}>{theme === 'dark' ? '☀' : '☾'}</button>
+            <button style={{ ...styles.themeToggle, padding: '4px 8px', display: 'inline-flex', alignItems: 'center' }} onClick={toggleTheme} aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'} title={theme === 'dark' ? 'Light mode' : 'Dark mode'}>{theme === 'dark' ? <Sun size={14} strokeWidth={2} /> : <Moon size={14} strokeWidth={2} />}</button>
           </div>
         </>
       ) : (
@@ -351,7 +353,7 @@ export function TopNav({ activeApp, onSwitchApp, onMenuToggle, menuOpen, theme, 
             ) : (
               <button style={styles.authBtn} onClick={() => loginWithRedirect()}>[ login ]</button>
             )}
-            <button style={styles.themeToggle} onClick={toggleTheme}>{theme === 'dark' ? '☀' : '☾'}</button>
+            <button style={{ ...styles.themeToggle, display: 'inline-flex', alignItems: 'center' }} onClick={toggleTheme} aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'} title={theme === 'dark' ? 'Light mode' : 'Dark mode'}>{theme === 'dark' ? <Sun size={16} strokeWidth={2} /> : <Moon size={16} strokeWidth={2} />}</button>
           </div>
           {isElectron && (
             <div style={styles.winControls}>
@@ -435,7 +437,7 @@ const TOOL_CATEGORIES = [
   { id: 'config',    label: 'Config ↗' },
 ];
 
-// Row 2 — category / view tabs
+// Row 2: category / view tabs
 export function CategoryBar({ activeApp, activeCategory, siemView, onSelectCategory, onSiemNavigate }) {
   const tabs = activeApp === 'siem' ? SIEM_TABS : TOOL_CATEGORIES;
 
@@ -478,7 +480,7 @@ const PHASES = [
   { id: 'simulate',    routes: ['/reverse-shell-generator', '/intruder', '/scanner', '/wordlist-generator', '/http-repeater', '/payload-generator'], comingSoon: ['Proxy'] },
 ];
 
-// Row 3 — tool tabs for the active category
+// Row 3: tool tabs for the active category
 export function ToolBar({ activeCategory, tools, onNavigate }) {
   const location = useLocation();
   const phase = PHASES.find(p => p.id === activeCategory);

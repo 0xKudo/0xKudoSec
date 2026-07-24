@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { useIsMobile } from '../../../platform/shell/src/hooks/useIsMobile.js';
+import { Button, TextArea } from '../../../platform/shell/src/components/ui/index.js';
+import { ArrowUpDown } from 'lucide-react';
 
 const OPERATION_GROUPS = [
   {
@@ -220,12 +222,12 @@ export default function Decoder() {
   // Find current op label for display
   const currentGroup = OPERATION_GROUPS.find(g => g.ops.some(o => o.value === operation));
   const currentOp = currentGroup?.ops.find(o => o.value === operation);
-  const opLabel = currentGroup ? `${currentGroup.label} — ${currentOp?.label}` : operation;
+  const opLabel = currentGroup ? `${currentGroup.label} ${currentOp?.label}` : operation;
 
   return (
     <div style={styles.container}>
       <div style={{ ...styles.header, margin: isMobile ? '-16px -16px 20px -16px' : '-24px -24px 20px -24px' }}>
-        <span style={styles.title}>Decoder</span>
+        <span style={styles.title}>Encode / Decode</span>
         <p style={styles.subtitle}>Encode and decode across URL, HTML, Base64, Hex, Binary, ROT13, Unicode, and JWT formats.</p>
       </div>
 
@@ -264,7 +266,7 @@ export default function Decoder() {
                 ))}
               </div>
 
-              {/* Sub-tabs — only if group has more than one op */}
+              {/* Sub-tabs: only if group has more than one op */}
               {activeGroup.ops.length > 1 && (
                 <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(activeGroup.ops.length, 2)}, 1fr)`, borderBottom: '1px solid var(--border)', margin: '0 -16px', marginBottom: '16px' }}>
                   {activeGroup.ops.map(op => (
@@ -315,9 +317,9 @@ export default function Decoder() {
       <div>
         {/* Main panel */}
         <div style={styles.mainPanel}>
-          <span style={styles.label}>Input — {opLabel}</span>
-          <textarea
-            style={styles.textarea}
+          <TextArea
+            label={`Input: ${opLabel}`}
+            rows={8}
             placeholder="Paste input here..."
             value={input}
             onChange={e => setInput(e.target.value)}
@@ -325,12 +327,12 @@ export default function Decoder() {
           />
 
           <div style={styles.actionRow}>
-            <button style={styles.button(!canTransform)} onClick={handleTransform} disabled={!canTransform}>
-              {loading ? 'Processing...' : 'Transform'}
-            </button>
-            <button style={styles.secondaryBtn} onClick={() => { setInput(''); setOutput(''); setError(null); }}>
+            <Button loading={loading} onClick={handleTransform} disabled={!canTransform}>
+              {loading ? 'Processing…' : 'Transform'}
+            </Button>
+            <Button variant="ghost" onClick={() => { setInput(''); setOutput(''); setError(null); }}>
               Clear
-            </button>
+            </Button>
           </div>
 
           {error && <p style={styles.error}>{error}</p>}
@@ -340,12 +342,12 @@ export default function Decoder() {
               <div style={styles.outputLabel}>
                 <span>Output</span>
                 <div style={{ display: 'flex', gap: '8px' }}>
-                  <button style={styles.secondaryBtn} onClick={handleSwap} title="Use output as next input">
-                    ↕ Use as input
-                  </button>
-                  <button style={styles.secondaryBtn} onClick={handleCopy}>
+                  <Button variant="ghost" icon={<ArrowUpDown size={12} />} onClick={handleSwap} title="Use output as next input">
+                    Use as input
+                  </Button>
+                  <Button variant="ghost" onClick={handleCopy}>
                     Copy
-                  </button>
+                  </Button>
                 </div>
               </div>
               <div style={styles.outputBox}>{output}</div>

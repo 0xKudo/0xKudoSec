@@ -78,7 +78,7 @@ export function ProcessTreePanel({ event }) {
       {!loading && tree?.nodes?.length > 0 && (
         <div>
           {tree.mode === 'name_fallback' && (
-            <div style={s.fallbackNote}>No process GUIDs — showing events by process name on this host.</div>
+            <div style={s.fallbackNote}>No process GUIDs. Showing events by process name on this host.</div>
           )}
           {tree.nodes.map((node, i) => {
             const depth = node.depth || 0;

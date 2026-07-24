@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { useWorkspace } from '../../../platform/shell/src/context/WorkspaceContext.jsx';
 import { useNavigate } from 'react-router-dom';
 import { useIsMobile } from '../../../platform/shell/src/hooks/useIsMobile.js';
+import { ChevronUp, ChevronDown } from 'lucide-react';
+import { Button, Input, AuthGate } from '../../../platform/shell/src/components/ui/index.js';
 
 const SEND_TARGETS = [
   { id: 'intruder',     label: 'Send to Intruder',      route: '/intruder' },
@@ -124,11 +126,11 @@ const s = {
   error: { fontSize: '12px', color: 'var(--severity-critical)', padding: '8px 0' },
   warn: {
     padding: '10px 14px',
-    background: 'var(--bg-primary)',
-    border: '1px solid var(--severity-high)',
-    color: 'var(--severity-high)',
-    fontSize: '11px',
-    letterSpacing: '0.02em',
+    background: 'rgba(239,68,68,0.08)',
+    border: '1px solid var(--severity-critical)',
+    color: 'var(--severity-critical)',
+    fontSize: '12px',
+    lineHeight: '1.6',
   },
   catGrid: {
     display: 'grid',
@@ -159,8 +161,9 @@ const s = {
     background: 'none',
     border: '1px solid var(--accent-amber)',
     color: 'var(--accent-amber)',
-        fontSize: '10px',
-    padding: '2px 8px',
+    fontSize: '10px',
+    lineHeight: 1,
+    padding: '4px 8px 3px',
     cursor: 'pointer',
     fontFamily: 'var(--font)',
     letterSpacing: '0.04em',
@@ -191,11 +194,15 @@ const s = {
         letterSpacing: '0.02em',
   },
   copySmall: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
     background: 'none',
     border: '1px solid var(--border)',
     color: 'var(--text-muted)',
-        fontSize: '10px',
-    padding: '2px 8px',
+    fontSize: '10px',
+    lineHeight: 1,
+    padding: '4px 8px 3px',
     cursor: 'pointer',
     fontFamily: 'var(--font)',
     letterSpacing: '0.04em',
@@ -233,17 +240,15 @@ function SendMenu({ payload }) {
 
   return (
     <div style={{ position: 'relative', flexShrink: 0 }}>
-      <button style={s.sendBtn} onClick={() => setOpen(o => !o)}>
-        Send to {open ? '▲' : '▼'}
+      <button style={{ ...s.sendBtn, display: 'inline-flex', alignItems: 'center', gap: '4px' }} onClick={() => setOpen(o => !o)}>
+        Send to {open ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
       </button>
       {open && (
         <div style={s.sendMenu}>
           {targets.map(t => (
             <button
               key={t.id}
-              style={s.sendMenuItem}
-              onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-panel)'; }}
-              onMouseLeave={e => { e.currentTarget.style.background = ''; }}
+              className="kudo-menu-item"
               onClick={() => {
                 setOpen(false);
                 sendToTool(payload, t.id, navigate);
@@ -274,6 +279,7 @@ function MsfTab() {
   const [outputFile, setOutputFile] = useState('');
   const [result, setResult] = useState(null);
   const [error, setError] = useState('');
+  const [authorized, setAuthorized] = useState(false);
 
   useEffect(() => {
     fetch('/api/tools/payload-generator/msf-payloads')
@@ -313,15 +319,17 @@ function MsfTab() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       <div style={s.warn}>
-        Authorization required. Only use against systems you own or have explicit written permission to test.
+        ⚠ Authorization required. Only use against systems you own or have explicit written permission to test.
       </div>
+
+      <AuthGate checked={authorized} onChange={setAuthorized} />
 
       <div style={s.panel}>
         <div style={s.panelHeader}>Payload</div>
         <div style={{ ...s.panelBody, display: 'flex', flexDirection: 'column', gap: '14px' }}>
           <div style={s.field}>
             <span style={s.label}>Payload type</span>
-            <select style={s.select} value={selectedId} onChange={e => setSelectedId(e.target.value)}>
+            <select className="kudo-input kudo-select" value={selectedId} onChange={e => setSelectedId(e.target.value)}>
               {Object.entries(grouped).map(([os, list]) => (
                 <optgroup key={os} label={os}>
                   {list.map(p => (
@@ -335,39 +343,39 @@ function MsfTab() {
           <div style={s.row}>
             <div style={s.field}>
               <span style={s.label}>LHOST</span>
-              <input style={s.input} value={lhost} onChange={e => setLhost(e.target.value)} placeholder="10.0.0.1" />
+              <Input value={lhost} onChange={e => setLhost(e.target.value)} placeholder="10.0.0.1" />
             </div>
             <div style={s.field}>
               <span style={s.label}>LPORT</span>
-              <input style={s.input} value={lport} onChange={e => setLport(e.target.value)} placeholder="4444" />
+              <Input value={lport} onChange={e => setLport(e.target.value)} placeholder="4444" />
             </div>
             <div style={s.field}>
               <span style={s.label}>Output file</span>
-              <input style={s.input} value={outputFile} onChange={e => setOutputFile(e.target.value)} placeholder={`payload.${selected?.format || 'bin'}`} />
+              <Input value={outputFile} onChange={e => setOutputFile(e.target.value)} placeholder={`payload.${selected?.format || 'bin'}`} />
             </div>
           </div>
 
           <div style={s.row}>
             <div style={s.field}>
               <span style={s.label}>Encoder</span>
-              <select style={s.select} value={encoder} onChange={e => setEncoder(e.target.value)}>
+              <select className="kudo-input kudo-select" value={encoder} onChange={e => setEncoder(e.target.value)}>
                 {encoders.map(e => <option key={e.id} value={e.id}>{e.label}</option>)}
               </select>
             </div>
             {encoder !== 'none' && (
               <div style={{ ...s.field, maxWidth: '100px' }}>
                 <span style={s.label}>Iterations</span>
-                <input style={s.input} type="number" min={1} max={20} value={iterations} onChange={e => setIterations(parseInt(e.target.value) || 1)} />
+                <Input type="number" min={1} max={20} value={iterations} onChange={e => setIterations(parseInt(e.target.value) || 1)} />
               </div>
             )}
             <div style={s.field}>
               <span style={s.label}>Bad chars (e.g. \x00\x0a)</span>
-              <input style={s.input} value={badchars} onChange={e => setBadchars(e.target.value)} placeholder="\x00\x0a" />
+              <Input value={badchars} onChange={e => setBadchars(e.target.value)} placeholder="\x00\x0a" />
             </div>
           </div>
 
           {error && <div style={s.error}>{error}</div>}
-          <button style={s.generateBtn} onClick={generate}>Generate</button>
+          <Button onClick={generate} disabled={!authorized}>Generate</Button>
         </div>
       </div>
 
@@ -405,6 +413,7 @@ function WebTab() {
   const [categories, setCategories] = useState([]);
   const [activeCategory, setActiveCategory] = useState('');
   const [payloads, setPayloads] = useState([]);
+  const [authorized, setAuthorized] = useState(false);
 
   useEffect(() => {
     fetch('/api/tools/payload-generator/web-categories')
@@ -425,9 +434,13 @@ function WebTab() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       <div style={s.warn}>
-        For authorized testing, CTF challenges, and educational use only. Never use against systems you don't own.
+        ⚠ For authorized testing, CTF challenges, and educational use only. Never use against systems you don't own.
       </div>
 
+      <AuthGate checked={authorized} onChange={setAuthorized} />
+
+      {authorized && (
+      <>
       <div style={s.panel}>
         <div style={s.panelHeader}>Category</div>
         <div style={{ ...s.catGrid, gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)' }}>
@@ -459,6 +472,8 @@ function WebTab() {
             ))}
           </div>
         </div>
+      )}
+      </>
       )}
     </div>
   );

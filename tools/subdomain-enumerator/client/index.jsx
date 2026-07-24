@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useIsMobile } from '../../../platform/shell/src/hooks/useIsMobile.js';
+import { Button, TextArea, Input } from '../../../platform/shell/src/components/ui/index.js';
 import { useWorkspace } from '../../../platform/shell/src/context/WorkspaceContext.jsx';
 
 const SOURCE_OPTIONS = [
@@ -79,17 +80,16 @@ const styles = {
   error: { color: 'var(--severity-critical)', fontSize: '13px', marginTop: '8px' },
   results: { marginTop: '28px' },
   analysisCard: {
-    background: 'var(--bg-primary)',
+    background: 'var(--surface)',
     border: '1px solid var(--border)',
     padding: '16px',
     marginBottom: '20px',
   },
   riskBadge: (level) => ({
-    display: 'inline-block',
+    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
     background: RISK_COLORS[level] || RISK_COLORS.info,
     color: '#fff',
     fontSize: '10px',
-    
     padding: '2px 8px',
     textTransform: 'uppercase',
     letterSpacing: '0.06em',
@@ -182,7 +182,7 @@ export default function SubdomainEnumerator() {
         setResult(data);
         push(
           'subdomain-enumerator',
-          `Subdomains — ${data.domain} (${data.totalUnique} found)`,
+          `Subdomains: ${data.domain} (${data.totalUnique} found)`,
           { domain: data.domain, subdomains: data.allSubdomains },
           'subdomain-enumerator'
         );
@@ -212,7 +212,7 @@ export default function SubdomainEnumerator() {
       <div style={{ ...styles.header, margin: isMobile ? '-16px -16px 20px -16px' : '-24px -24px 20px -24px' }}>
         <span style={styles.title}>Subdomain Enumerator</span>
         <p style={styles.subtitle}>
-          Discover subdomains via Certificate Transparency logs, HackerTarget, SecurityTrails, and brute-force DNS resolution.
+          Discover subdomains via Certificate Transparency logs, HackerTarget, and brute-force DNS resolution.
         </p>
       </div>
 
@@ -220,31 +220,31 @@ export default function SubdomainEnumerator() {
         <span style={styles.label}>Target Domain</span>
         {isMobile ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
-            <input
-              style={{ ...styles.input, minWidth: 0, width: '100%', boxSizing: 'border-box' }}
+            <Input
+              style={{ width: '100%', minWidth: 0 }}
               placeholder="example.com"
               value={domain}
               onChange={e => setDomain(e.target.value)}
               disabled={loading}
               onKeyDown={e => e.key === 'Enter' && canEnumerate && handleEnumerate()}
             />
-            <button style={{ ...styles.button(!canEnumerate), alignSelf: 'flex-start' }} onClick={handleEnumerate} disabled={!canEnumerate}>
-              {loading ? 'Enumerating...' : 'Enumerate'}
-            </button>
+            <Button style={{ alignSelf: 'flex-start' }} loading={loading} onClick={handleEnumerate} disabled={!canEnumerate}>
+              {loading ? 'Enumerating…' : 'Enumerate'}
+            </Button>
           </div>
         ) : (
           <div style={styles.inputRow}>
-            <input
-              style={styles.input}
+            <Input
+              style={{ minWidth: '280px' }}
               placeholder="example.com"
               value={domain}
               onChange={e => setDomain(e.target.value)}
               disabled={loading}
               onKeyDown={e => e.key === 'Enter' && canEnumerate && handleEnumerate()}
             />
-            <button style={styles.button(!canEnumerate)} onClick={handleEnumerate} disabled={!canEnumerate}>
-              {loading ? 'Enumerating...' : 'Enumerate'}
-            </button>
+            <Button style={{ height: '34px' }} loading={loading} onClick={handleEnumerate} disabled={!canEnumerate}>
+              {loading ? 'Enumerating…' : 'Enumerate'}
+            </Button>
           </div>
         )}
       </div>
@@ -268,9 +268,9 @@ export default function SubdomainEnumerator() {
 
       {sources.includes('brute') && (
         <div style={styles.section}>
-          <span style={styles.label}>Custom Brute-force Wordlist (one per line — leave empty to use built-in ~70 prefixes)</span>
-          <textarea
-            style={styles.textarea}
+          <TextArea
+            label="Custom Brute-force Wordlist (one per line, leave empty to use built-in ~70 prefixes)"
+            rows={5}
             placeholder={'api\nwww\ndev\nstaging\nadmin'}
             value={bruteCustom}
             onChange={e => setBruteCustom(e.target.value)}
@@ -355,15 +355,15 @@ export default function SubdomainEnumerator() {
             : styles.resultHeader
           }>
             <span style={styles.sectionHeader}>
-              All Subdomains — {result.totalUnique} unique
+              All Subdomains: {result.totalUnique} unique
             </span>
             <div style={{ display: 'flex', gap: '8px' }}>
-              <button style={styles.secondaryBtn} onClick={() => navigator.clipboard.writeText(result.allSubdomains.join('\n'))}>
+              <Button variant="ghost" onClick={() => navigator.clipboard.writeText(result.allSubdomains.join('\n'))}>
                 Copy All
-              </button>
-              <button style={styles.secondaryBtn} onClick={handleDownload}>
+              </Button>
+              <Button variant="ghost" onClick={handleDownload}>
                 Download .txt
-              </button>
+              </Button>
             </div>
           </div>
           {result.allSubdomains.length === 0 ? (

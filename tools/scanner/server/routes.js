@@ -94,7 +94,7 @@ function checkCookies(headers) {
         type: 'cookie-missing-httponly',
         severity: 'medium',
         title: `Cookie missing HttpOnly: ${name}`,
-        detail: 'Cookie is accessible via JavaScript — risk of theft via XSS.',
+        detail: 'Cookie is accessible via JavaScript. Risk of theft via XSS.',
       });
     }
     if (!lower.includes('secure')) {
@@ -110,7 +110,7 @@ function checkCookies(headers) {
         type: 'cookie-missing-samesite',
         severity: 'low',
         title: `Cookie missing SameSite: ${name}`,
-        detail: 'Cookie may be sent in cross-site requests — CSRF risk.',
+        detail: 'Cookie may be sent in cross-site requests. CSRF risk.',
       });
     }
   }
@@ -129,7 +129,7 @@ function checkFormsAndInputs(html, baseUrl) {
         type: 'form-get-method',
         severity: 'info',
         title: 'Form uses GET method',
-        detail: `Form action "${action}" submits via GET — parameters visible in URL and browser history.`,
+        detail: `Form action "${action}" submits via GET. Parameters visible in URL and browser history.`,
       });
     }
     if (!formTag.toLowerCase().includes('csrf') && !formTag.toLowerCase().includes('token')) {
@@ -137,7 +137,7 @@ function checkFormsAndInputs(html, baseUrl) {
         type: 'form-no-csrf-token',
         severity: 'medium',
         title: 'Form may lack CSRF token',
-        detail: `Form action "${action}" — no visible CSRF token attribute detected.`,
+        detail: `Form action "": no visible CSRF token attribute detected.`,
       });
     }
   }
@@ -237,7 +237,7 @@ async function probeInputs(html, baseUrl, probeType) {
               title: probeType === 'xss'
                 ? `Reflected XSS in parameter: ${param}`
                 : `SQL error response for parameter: ${param}`,
-              detail: `URL: ${testUrl.toString().slice(0, 200)} — Status: ${status}`,
+              detail: `URL: ${testUrl.toString().slice(0, 200)}, Status: `,
               url: testUrl.toString(),
             });
           }

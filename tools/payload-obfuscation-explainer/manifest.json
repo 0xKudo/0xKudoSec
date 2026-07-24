@@ -1,7 +1,7 @@
 {
   "id": "payload-obfuscation-explainer",
-  "name": "Payload Obfuscation Explainer",
-  "description": "Paste an obfuscated or encoded payload. Claude decodes and explains what it does in plain English — base64, hex, URL encoding, PowerShell, JavaScript, and more.",
+  "name": "Payload Obfuscation Analyzer",
+  "description": "Paste an obfuscated or encoded payload. Claude decodes and explains what it does in plain English: base64, hex, URL encoding, PowerShell, JavaScript, and more.",
   "route": "/payload-obfuscation-explainer",
   "icon": "code",
   "tags": [

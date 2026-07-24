@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useIsMobile } from '../hooks/useIsMobile.js';
+import { setThemeWithTransition } from '../lib/viewTransition';
 
 // ── Custom DateTimePicker ─────────────────────────────────────────────────────
 const DAYS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
@@ -208,8 +209,12 @@ const s = {
   }),
 };
 
-const BASE_TABS = ['API Key', 'Connect a Source', 'Log Retention', 'Active Sources', 'Account', 'App Settings'];
+// The standalone 'API Key' tab was folded into 'Connect a Source', so
+// Connect a Source is now tab 0 (it used to be tab 1). Any tab-index check
+// below must use the new numbering.
+const BASE_TABS = ['Connect a Source', 'Log Retention', 'Active Sources', 'Account', 'App Settings'];
 const SHIPPER_TABS = ['Fluent Bit', 'Winlogbeat 7', 'Manual API', 'Wireshark', 'WordPress'];
+const SHIPPER_TAB_WORDPRESS = SHIPPER_TABS.indexOf('WordPress');
 
 const WP_RULE_TYPES = [
   { value: 'ip', label: 'Block IP address', placeholder: '203.0.113.7' },
@@ -302,11 +307,13 @@ export function SiemConfiguration({ navLayout, setNavLayout, theme, setTheme }) 
   const isMobile = useIsMobile();
   const { getAccessTokenSilently, user, isAuthenticated, logout } = useAuth0();
   const isElectronUnauth = typeof window !== 'undefined' && window.electron?.isElectron === true && !isAuthenticated;
-  const [tab, setTab] = useState(isElectronUnauth ? 6 : 0);
+  const [tab, setTab] = useState(isElectronUnauth ? 5 : 0);
 
-  // API Key state
-  const [keyMeta, setKeyMeta] = useState(undefined);
-  const [newKey, setNewKey] = useState(null);
+  // API Key state — multiple named keys per user
+  const [keys, setKeys] = useState([]);
+  const [keyName, setKeyName] = useState('');
+  const [newKey, setNewKey] = useState(null);       // plaintext of the just-created key (shown once)
+  const [revoking, setRevoking] = useState(null);   // id being revoked
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -368,7 +375,8 @@ export function SiemConfiguration({ navLayout, setNavLayout, theme, setTheme }) 
 
   // Load WordPress protection rules when the WordPress shipper tab opens
   useEffect(() => {
-    if (tab !== 1 || shipperTab !== 4 || !isAuthenticated) return;
+    // tab 0 is Connect a Source (was tab 1 before the API Key tab was folded in).
+    if (tab !== 0 || shipperTab !== SHIPPER_TAB_WORDPRESS || !isAuthenticated) return;
     (async () => {
       try {
         const token = await getAccessTokenSilently();
@@ -423,7 +431,8 @@ export function SiemConfiguration({ navLayout, setNavLayout, theme, setTheme }) 
 
   // When Edit Config tab opens: check if PIN is set, reset lock state
   useEffect(() => {
-    if (!isConfigEditor || tab !== 7) {
+    // Edit Config is tab 6 (it was 7 before the API Key tab was folded in).
+    if (!isConfigEditor || tab !== 6) {
       // Reset lock whenever user leaves the tab
       setPinState('locked');
       setPinInput('');
@@ -447,7 +456,7 @@ export function SiemConfiguration({ navLayout, setNavLayout, theme, setTheme }) 
 
   // Load config only when unlocked
   useEffect(() => {
-    if (!isConfigEditor || tab !== 7 || pinState !== 'unlocked') return;
+    if (!isConfigEditor || tab !== 6 || pinState !== 'unlocked') return;
     setConfigLoading(true);
     setConfigMsg(null);
     window.electron.fluentBit.readConfig().then(res => {
@@ -565,11 +574,13 @@ export function SiemConfiguration({ navLayout, setNavLayout, theme, setTheme }) 
     try {
       const token = await getAccessTokenSilently();
       const res = await fetch('/api/siem/ingest-key', { headers: { Authorization: `Bearer ${token}` } });
-      const meta = await res.json();
-      setKeyMeta(meta);
-      if (meta?.expiry_days) {
-        const preset = ['30','90','180','365'].includes(String(meta.expiry_days));
-        setExpiryDays(String(meta.expiry_days));
+      const data = await res.json();
+      const list = Array.isArray(data?.keys) ? data.keys : [];
+      setKeys(list);
+      const latest = list[0];
+      if (latest?.expiry_days) {
+        const preset = ['30','90','180','365'].includes(String(latest.expiry_days));
+        setExpiryDays(String(latest.expiry_days));
         setExpiryCustom(!preset);
       }
     } catch {}
@@ -604,7 +615,8 @@ export function SiemConfiguration({ navLayout, setNavLayout, theme, setTheme }) 
     loadSources();
   }, []);
 
-  // Refresh key metadata when user navigates to the API Key tab
+  // Refresh key metadata when user navigates to the Connect-a-Source tab
+  // (Connect-a-Source now shows key state + generation at the top of the flow).
   useEffect(() => {
     if (tab === 0 && !newKey) loadKey();
   }, [tab]);
@@ -616,14 +628,29 @@ export function SiemConfiguration({ navLayout, setNavLayout, theme, setTheme }) 
       const res = await fetch('/api/siem/ingest-key', {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ expiry_days: parseInt(expiryDays, 10) }),
+        body: JSON.stringify({ expiry_days: parseInt(expiryDays, 10), name: keyName.trim() }),
       });
       const data = await res.json();
+      if (!res.ok) { setGenerating(false); return; }
       setNewKey(data.api_key);
-      setKeyMeta({ exists: true, created_at: data.created_at, expires_at: data.expires_at, expiry_days: data.expiry_days });
+      setKeyName('');
       setCopied(false);
+      await loadKey();
     } catch {}
     setGenerating(false);
+  }
+
+  async function revokeKey(id) {
+    setRevoking(id);
+    try {
+      const token = await getAccessTokenSilently();
+      await fetch(`/api/siem/ingest-key/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      await loadKey();
+    } catch {}
+    setRevoking(null);
   }
 
   function copyKey() {
@@ -806,111 +833,18 @@ winlogbeat.event_logs:
         {(isElectronUnauth ? ['Tuning Center Models'] : [...BASE_TABS, ...(isElectron ? ['Tuning Center Models'] : []), ...(isConfigEditor ? ['Edit Config'] : [])]).map((t, i) => (
           <button
             key={t}
-            style={isMobile ? s.tabMobile(tab === (isElectronUnauth ? 6 : i)) : s.tab(tab === (isElectronUnauth ? 6 : i))}
-            onClick={() => setTab(isElectronUnauth ? 6 : i)}
-            onMouseEnter={e => { if (tab !== (isElectronUnauth ? 6 : i)) e.currentTarget.style.color = 'var(--text-primary)'; }}
-            onMouseLeave={e => { if (tab !== (isElectronUnauth ? 6 : i)) e.currentTarget.style.color = 'var(--text-muted)'; }}
+            style={isMobile ? s.tabMobile(tab === (isElectronUnauth ? 5 : i)) : s.tab(tab === (isElectronUnauth ? 5 : i))}
+            onClick={() => setTab(isElectronUnauth ? 5 : i)}
+            onMouseEnter={e => { if (tab !== (isElectronUnauth ? 5 : i)) e.currentTarget.style.color = 'var(--text-primary)'; }}
+            onMouseLeave={e => { if (tab !== (isElectronUnauth ? 5 : i)) e.currentTarget.style.color = 'var(--text-muted)'; }}
           >{t}</button>
         ))}
       </div>
 
       <div style={s.body}>
 
-        {/* ── Tab 0: API Key ── */}
-        {tab === 0 && (
-          <div style={s.section}>
-            <div style={s.sectionTitle}>Ingest API Key</div>
-            <div style={s.sectionDesc}>
-              Your API key authorizes log shippers to send events to this platform. It is only shown once at generation time. Store it securely.
-            </div>
-
-            {/* Expiry selector — always visible so user can change before generate/regenerate */}
-            <div style={{ marginBottom: '16px' }}>
-              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px' }}>Key expiry</div>
-              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
-                {['30','90','180','365'].map(d => (
-                  <button
-                    key={d}
-                    style={{ ...s.btn, background: expiryDays === d && !expiryCustom ? 'var(--btn-primary-bg)' : 'transparent', color: expiryDays === d && !expiryCustom ? 'var(--btn-primary-text)' : 'var(--text-muted)', marginRight: 0 }}
-                    onClick={() => { setExpiryDays(d); setExpiryCustom(false); }}
-                  >{d}d</button>
-                ))}
-                <button
-                  style={{ ...s.btn, background: expiryCustom ? 'var(--btn-primary-bg)' : 'transparent', color: expiryCustom ? 'var(--btn-primary-text)' : 'var(--text-muted)', marginRight: 0 }}
-                  onClick={() => setExpiryCustom(true)}
-                >Custom</button>
-                {expiryCustom && (
-                  <input
-                    style={{ ...s.input, width: '70px' }}
-                    type="number" min="1" max="3650"
-                    value={expiryDays}
-                    onChange={e => setExpiryDays(e.target.value)}
-                    placeholder="days"
-                    autoFocus
-                  />
-                )}
-              </div>
-            </div>
-
-            {loading ? (
-              <div style={s.keyMuted}>Loading...</div>
-            ) : newKey ? (
-              <>
-                <div style={s.warning}>
-                  This is the only time this key will be shown. Copy it now. If you leave this page without copying it, you will need to regenerate.
-                </div>
-                <div style={s.keyBox}>{newKey}</div>
-                <div style={{ display: 'flex', alignItems: 'center' }}>
-                  <button style={s.btnPrimary} onClick={copyKey}>Copy Key</button>
-                  <button style={s.btn} onClick={generateKey} disabled={generating}>Regenerate</button>
-                  {copied && <span style={s.copied}>Copied!</span>}
-                </div>
-                <div style={s.note}>
-                  Use this key as the Bearer token in your log shipper. Go to <strong>Connect a Source</strong> to get pre-filled configs.<br />
-                  Regenerating will invalidate the old key. Update any configured shippers after.
-                </div>
-              </>
-            ) : keyMeta?.exists ? (
-              <>
-                {/* Expiry status */}
-                {(() => {
-                  const expiresAt = keyMeta.expires_at ? new Date(keyMeta.expires_at) : null;
-                  const now = new Date();
-                  const daysLeft = expiresAt ? Math.ceil((expiresAt - now) / (1000 * 60 * 60 * 24)) : null;
-                  if (daysLeft !== null && daysLeft <= 0) {
-                    return <div style={{ ...s.warning, marginBottom: '12px' }}>Your ingest key has expired. Regenerate it to resume log ingestion.</div>;
-                  }
-                  if (daysLeft !== null && daysLeft <= 7) {
-                    return <div style={{ ...s.warning, marginBottom: '12px' }}>Your ingest key expires in {daysLeft} day{daysLeft !== 1 ? 's' : ''}. Regenerate soon to avoid ingestion interruption.</div>;
-                  }
-                  return null;
-                })()}
-                <div style={s.keyMuted}>
-                  Generated {new Date(keyMeta.created_at).toLocaleString()}
-                  {keyMeta.expires_at && <span> · expires {new Date(keyMeta.expires_at).toLocaleDateString()}</span>}
-                  {keyMeta.last_used_at && <span> · last used {new Date(keyMeta.last_used_at).toLocaleString()}</span>}
-                  {!keyMeta.last_used_at && <span> · never used</span>}
-                </div>
-                <button style={s.btn} onClick={generateKey} disabled={generating}>
-                  {generating ? 'Generating...' : 'Regenerate Key'}
-                </button>
-                <div style={s.note}>Regenerating will invalidate the current key. Update any configured shippers after.</div>
-              </>
-            ) : (
-              <>
-                <div style={s.keyMuted}>No ingest key yet.</div>
-                <button style={s.btnPrimary} onClick={generateKey} disabled={generating}>
-                  {generating ? 'Generating...' : 'Generate Key'}
-                </button>
-                <div style={s.note}>Generate a key, then use it in your log shipper or forwarder.</div>
-              </>
-            )}
-
-          </div>
-        )}
-
-        {/* ── Tab 4: Account ── */}
-        {tab === 4 && (
+        {/* ── Tab 3: Account ── */}
+        {tab === 3 && (
           <div style={s.section}>
             <div style={s.sectionTitle}>Account</div>
             <div style={s.sectionDesc}>
@@ -995,7 +929,7 @@ winlogbeat.event_logs:
         )}
 
         {/* ── Tab 5: App Settings ── */}
-        {tab === 5 && (
+        {tab === 4 && (
           <div style={s.section}>
             <div style={s.sectionTitle}>App Settings</div>
             <div style={s.sectionDesc}>Display and behavior settings. These are saved locally and do not affect other users.</div>
@@ -1007,7 +941,7 @@ winlogbeat.event_logs:
                   return (
                     <button
                       key={opt.value}
-                      onClick={() => setTheme && setTheme(opt.value)}
+                      onClick={() => setTheme && setThemeWithTransition(opt.value, setTheme)}
                       style={{
                         background: active ? 'var(--btn-primary-bg)' : 'none',
                         color: active ? 'var(--btn-primary-text)' : 'var(--text-muted)',
@@ -1063,12 +997,12 @@ winlogbeat.event_logs:
         )}
 
         {/* ── Tab 6: Tuning Center Models (Electron only) ── */}
-        {isElectron && tab === 6 && (
+        {isElectron && tab === 5 && (
           <TuningCenterModelsTab s={s} />
         )}
 
         {/* ── Tab 7: Edit Config (config-editor role + Electron only) ── */}
-        {isConfigEditor && tab === 7 && (
+        {isConfigEditor && tab === 6 && (
           <div style={s.section}>
             <div style={s.sectionTitle}>Edit Config</div>
             <div style={s.sectionDesc}>
@@ -1076,7 +1010,7 @@ winlogbeat.event_logs:
               Access restricted to users with the <strong>config-editor</strong> role.
             </div>
 
-            {/* PIN not set — prompt to create one */}
+            {/* PIN not set: prompt to create one */}
             {pinState === 'unset' && (
               <div style={{ marginTop: '24px', maxWidth: '320px' }}>
                 <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '16px' }}>
@@ -1107,7 +1041,7 @@ winlogbeat.event_logs:
               </div>
             )}
 
-            {/* PIN set but no recovery passphrase — prompt to add one */}
+            {/* PIN set but no recovery passphrase: prompt to add one */}
             {pinState === 'needs-recovery' && (
               <div style={{ marginTop: '24px', maxWidth: '320px' }}>
                 <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '16px' }}>
@@ -1135,7 +1069,7 @@ winlogbeat.event_logs:
               </div>
             )}
 
-            {/* PIN set — locked, prompt to unlock */}
+            {/* PIN set: locked, prompt to unlock */}
             {pinState === 'locked' && (
               <div style={{ marginTop: '24px', maxWidth: '320px' }}>
                 <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '16px' }}>
@@ -1160,7 +1094,7 @@ winlogbeat.event_logs:
               </div>
             )}
 
-            {/* Recovery — enter passphrase to reset PIN */}
+            {/* Recovery: enter passphrase to reset PIN */}
             {pinState === 'recovering' && (
               <div style={{ marginTop: '24px', maxWidth: '320px' }}>
                 <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '16px' }}>
@@ -1185,7 +1119,7 @@ winlogbeat.event_logs:
               </div>
             )}
 
-            {/* Unlocked — show editor */}
+            {/* Unlocked: show editor */}
             {pinState === 'unlocked' && (
               configLoading ? (
                 <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '16px' }}>Loading...</div>
@@ -1227,7 +1161,7 @@ winlogbeat.event_logs:
         )}
 
         {/* ── Tab 2: Log Retention ── */}
-        {tab === 2 && (
+        {tab === 1 && (
           <div style={s.section}>
             <div style={s.sectionTitle}>Log Retention</div>
             <div style={s.sectionDesc}>
@@ -1329,15 +1263,116 @@ winlogbeat.event_logs:
           </div>
         )}
 
-        {/* ── Tab 1: Connect a Source ── */}
-        {tab === 1 && (
+        {/* ── Tab 0: Connect a Source ── */}
+        {tab === 0 && (
           <div style={s.section}>
             <div style={s.sectionTitle}>Connect a Log Source</div>
-            {!keyMeta?.exists && !newKey && (
-              <div style={{ ...s.warning, marginBottom: '14px' }}>
-                Generate an API key on the <strong>API Key</strong> tab first. The configs below will be pre-filled with your key once generated.
+
+            {/* Full ingest-key management lives here at the top of the flow:
+                generating a key sets newKey, which the shipper configs below pre-fill. */}
+            <div style={{ marginBottom: '18px', padding: '14px 16px', border: '1px solid var(--border)', background: 'var(--bg-surface)' }}>
+              <div style={{ ...s.sectionTitle, marginBottom: '8px' }}>Ingest API Key</div>
+              <div style={{ ...s.sectionDesc, marginBottom: '14px' }}>
+                Each device or shipper gets its own named key. A key is shown once at generation and pre-fills the configs below. Store it securely.
               </div>
-            )}
+
+              {/* Expiry selector */}
+              <div style={{ marginBottom: '16px' }}>
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px' }}>Key expiry</div>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+                  {['30','90','180','365'].map(d => (
+                    <button
+                      key={d}
+                      style={{ ...s.btn, background: expiryDays === d && !expiryCustom ? 'var(--btn-primary-bg)' : 'transparent', color: expiryDays === d && !expiryCustom ? 'var(--btn-primary-text)' : 'var(--text-muted)', marginRight: 0 }}
+                      onClick={() => { setExpiryDays(d); setExpiryCustom(false); }}
+                    >{d}d</button>
+                  ))}
+                  <button
+                    style={{ ...s.btn, background: expiryCustom ? 'var(--btn-primary-bg)' : 'transparent', color: expiryCustom ? 'var(--btn-primary-text)' : 'var(--text-muted)', marginRight: 0 }}
+                    onClick={() => setExpiryCustom(true)}
+                  >Custom</button>
+                  {expiryCustom && (
+                    <input
+                      style={{ ...s.input, width: '70px' }}
+                      type="number" min="1" max="3650"
+                      value={expiryDays}
+                      onChange={e => setExpiryDays(e.target.value)}
+                      placeholder="days"
+                      autoFocus
+                    />
+                  )}
+                </div>
+              </div>
+
+              {loading ? (
+                <div style={s.keyMuted}>Loading...</div>
+              ) : (
+                <>
+                  {/* One-time reveal of the key that was just generated */}
+                  {newKey && (
+                    <div style={{ marginBottom: '18px' }}>
+                      <div style={s.warning}>
+                        This is the only time this key will be shown. Copy it now. It is pre-filled into the configs below.
+                      </div>
+                      <div style={s.keyBox}>{newKey}</div>
+                      <div style={{ display: 'flex', alignItems: 'center' }}>
+                        <button style={s.btnPrimary} onClick={copyKey}>Copy Key</button>
+                        {copied && <span style={s.copied}>Copied!</span>}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Create a new named key (one per device/shipper) */}
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap' }}>
+                    <input
+                      style={{ ...s.input, width: '240px' }}
+                      placeholder="Key name (e.g. Laptop, Web server)"
+                      value={keyName}
+                      maxLength={60}
+                      onChange={e => setKeyName(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter' && !generating) generateKey(); }}
+                    />
+                    <button style={s.btnPrimary} onClick={generateKey} disabled={generating}>
+                      {generating ? 'Generating...' : 'Generate Key'}
+                    </button>
+                  </div>
+
+                  {/* Existing keys */}
+                  {keys.length === 0 ? (
+                    <div style={s.keyMuted}>No ingest keys yet. Generate one to connect a log source.</div>
+                  ) : (
+                    <div>
+                      {keys.map(k => {
+                        const expiresAt = k.expires_at ? new Date(k.expires_at) : null;
+                        const daysLeft = expiresAt ? Math.ceil((expiresAt - new Date()) / (1000 * 60 * 60 * 24)) : null;
+                        const expired = daysLeft !== null && daysLeft <= 0;
+                        const expiringSoon = daysLeft !== null && daysLeft > 0 && daysLeft <= 7;
+                        return (
+                          <div key={k.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', padding: '10px 0', borderBottom: '1px solid var(--border-subtle)' }}>
+                            <div style={{ minWidth: 0 }}>
+                              <div style={{ fontSize: '12px', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                {k.name || 'Unnamed key'}
+                                {expired && <span style={{ fontSize: '10px', color: 'var(--severity-critical)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>expired</span>}
+                                {expiringSoon && <span style={{ fontSize: '10px', color: 'var(--severity-medium)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>expires in {daysLeft}d</span>}
+                              </div>
+                              <div style={s.keyMuted}>
+                                Generated {new Date(k.created_at).toLocaleString()}
+                                {k.expires_at && !expired && <span> · expires {expiresAt.toLocaleDateString()}</span>}
+                                {k.last_used_at ? <span> · last used {new Date(k.last_used_at).toLocaleString()}</span> : <span> · never used</span>}
+                              </div>
+                            </div>
+                            <button style={s.btn} onClick={() => revokeKey(k.id)} disabled={revoking === k.id}>
+                              {revoking === k.id ? 'Revoking...' : 'Revoke'}
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                  <div style={s.note}>Each device or shipper can have its own named key. Revoking a key immediately stops it from ingesting; other keys keep working.</div>
+                </>
+              )}
+            </div>
 
             <div style={{ display: 'flex', gap: 0, marginBottom: '14px', borderBottom: '1px solid var(--border)' }}>
               {SHIPPER_TABS.filter(t => !isMobile || t !== 'Wireshark').map((t, i) => {
@@ -1572,10 +1607,10 @@ winlogbeat.event_logs:
         )}
 
         {/* ── Tab 3: Active Sources ── */}
-        {tab === 3 && (
+        {tab === 2 && (
 
           <div style={{ padding: '0 0 8px 0' }}>
-            <div style={{ ...s.sectionTitle, padding: '20px 28px 0' }}>Active Sources</div>
+            <div style={{ ...s.sectionTitle, padding: '24px 28px 0' }}>Active Sources</div>
             <div style={{ padding: '0 28px 12px', fontSize: '11px', color: 'var(--text-muted)' }}>
               Machines actively shipping logs to this platform.
             </div>
@@ -1593,7 +1628,7 @@ winlogbeat.event_logs:
                     <div style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '2px' }}>Type</div>
                     <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '6px' }}>{src.type} · {Number(src.event_count).toLocaleString()} events</div>
                     <div style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '2px' }}>Last Seen</div>
-                    <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{src.last_seen ? new Date(src.last_seen).toLocaleString() : '—'}</div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{src.last_seen ? new Date(src.last_seen).toLocaleString() : '-'}</div>
                   </div>
                 ))}
               </div>
@@ -1616,7 +1651,7 @@ winlogbeat.event_logs:
                     <tr key={src.id}>
                       <td style={{ ...s.td, color: 'var(--text-primary)' }}>{src.name}</td>
                       <td style={s.td}>{src.type}</td>
-                      <td style={s.td}>{src.last_seen ? new Date(src.last_seen).toLocaleString() : '—'}</td>
+                      <td style={s.td}>{src.last_seen ? new Date(src.last_seen).toLocaleString() : '-'}</td>
                       <td style={s.td}>{Number(src.event_count).toLocaleString()}</td>
                     </tr>
                   ))}
@@ -1806,7 +1841,7 @@ function TuningCenterModelsTab({ s }) {
   };
 
   const fmtSize = (bytes) => {
-    if (!bytes) return '—';
+    if (!bytes) return '-';
     if (bytes >= 1e9) return `${(bytes / 1e9).toFixed(1)}GB`;
     return `${Math.round(bytes / 1e6)}MB`;
   };
@@ -1817,7 +1852,7 @@ function TuningCenterModelsTab({ s }) {
     if (m.status === 'missing') return 'file missing';
     if (m.status === 'incompatible') return 'incompatible';
     if (m.status === 'ready') return 'ready';
-    return m.status || '—';
+    return m.status || '-';
   };
 
   const statusColor = (m) => {
@@ -1871,7 +1906,7 @@ function TuningCenterModelsTab({ s }) {
                     <td style={s.td}>{m.type === 'managed' ? 'Managed' : 'Custom'}</td>
                     <td style={s.td}>{fmtSize(m.sizeBytes)}</td>
                     <td style={s.td}>{fmtSize(m.ramEstimateBytes)}</td>
-                    <td style={s.td}>{m.quantization || '—'}</td>
+                    <td style={s.td}>{m.quantization || '-'}</td>
                     <td style={s.td}>
                       <span style={{ color: statusColor(m), fontSize: '11px' }}>{statusLabel(m)}</span>
                       {isDownloading && pct !== undefined && (
@@ -1934,7 +1969,7 @@ function TuningCenterModelsTab({ s }) {
           </table>
         )}
 
-        {/* Add custom model — browse local file */}
+        {/* Add custom model: browse local file */}
         <div style={{ marginBottom: '16px' }}>
           <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Add Custom Model</div>
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', marginBottom: '8px' }}>
@@ -2012,12 +2047,12 @@ function TuningCenterModelsTab({ s }) {
                   <tr key={src.source}>
                     <td style={s.td}>{src.source.toUpperCase()}</td>
                     <td style={s.td}>{parseInt(src.count).toLocaleString()}</td>
-                    <td style={s.td}>{src.last_synced ? new Date(src.last_synced).toLocaleString() : '—'}</td>
+                    <td style={s.td}>{src.last_synced ? new Date(src.last_synced).toLocaleString() : '-'}</td>
                   </tr>
                 ))}
                 {kbStatus.sources.length === 0 && (
                   <tr>
-                    <td colSpan={3} style={{ ...s.td, color: 'var(--text-muted)', textAlign: 'center' }}>No entries yet — run a sync to populate the KB.</td>
+                    <td colSpan={3} style={{ ...s.td, color: 'var(--text-muted)', textAlign: 'center' }}>No entries yet. Run a sync to populate the KB.</td>
                   </tr>
                 )}
               </tbody>

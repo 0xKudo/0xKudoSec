@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 
 const NO_AUTH_TOOLS = [
-  { id: 'decoder',                  route: '/decoder',                  name: 'Decoder',                   desc: 'URL, HTML, Base64, Hex, Binary, ROT13, Unicode, JWT — swap output to input.' },
-  { id: 'reverse-shell-generator',  route: '/reverse-shell-generator',  name: 'Reverse Shell Generator',   desc: '20 shell types — Bash, Python, PowerShell, Netcat, and more. Static templates, instant copy.' },
+  { id: 'decoder',                  route: '/decoder',                  name: 'Encode / Decode',           desc: 'URL, HTML, Base64, Hex, Binary, ROT13, Unicode, JWT: swap output to input.' },
+  { id: 'reverse-shell-generator',  route: '/reverse-shell-generator',  name: 'Reverse Shell Generator',   desc: '20 shell types: Bash, Python, PowerShell, Netcat, and more. Static templates, instant copy.' },
   { id: 'wordlist-generator',       route: '/wordlist-generator',       name: 'Wordlist Generator',         desc: 'Charset + pattern tabs, leet/digits/years rules. Download as .txt.' },
   { id: 'payload-generator',        route: '/payload-generator',        name: 'Payload Generator',          desc: 'XSS, SQLi, CMDi, SSTI, path traversal, XXE, open redirect. Web payload templates.' },
 ];

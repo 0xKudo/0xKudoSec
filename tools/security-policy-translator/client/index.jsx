@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useWorkspace } from '../../../platform/shell/src/context/WorkspaceContext.jsx';
 import { useIsMobile } from '../../../platform/shell/src/hooks/useIsMobile.js';
+import { Button, TextArea } from '../../../platform/shell/src/components/ui/index.js';
 
 const FRAMEWORK_HINTS = [
   { value: 'auto',      label: 'Auto-detect' },
@@ -73,13 +74,13 @@ const styles = {
   error: { color: 'var(--severity-critical)', fontSize: '13px', marginTop: '12px' },
   results: { marginTop: '24px' },
   summaryCard: {
-    background: 'var(--bg-primary)',
+    background: 'var(--surface)',
     border: '1px solid var(--border)',
     padding: '20px',
     marginBottom: '16px',
   },
   frameworkBadge: {
-    display: 'inline-block',
+    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
     padding: '4px 12px',
     border: '1px solid var(--border)',
     color: 'var(--text-muted)',
@@ -100,7 +101,7 @@ const styles = {
   controlId: { color: 'var(--text-muted)', fontSize: '11px', marginBottom: '6px' },
   controlPlain: { color: 'var(--text-primary)', fontSize: '13px', lineHeight: '1.6', marginBottom: '8px' },
   reqBadge: (req) => ({
-    display: 'inline-block',
+    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
     padding: '2px 8px',
     border: `1px solid ${REQ_COLORS[req] || 'var(--border)'}`,
     color: REQ_COLORS[req] || 'var(--text-muted)',
@@ -159,7 +160,7 @@ export default function SecurityPolicyTranslator() {
         setError(data.error || 'Translation failed.');
       } else {
         setResult(data);
-        push('security-policy-translator', `Policy — ${data.framework}`, data, 'security-policy-translator');
+        push('security-policy-translator', `Policy: ${data.framework}`, data, 'security-policy-translator');
       }
     } catch {
       setError('Network error. Is the server running?');
@@ -177,8 +178,8 @@ export default function SecurityPolicyTranslator() {
         </p>
       </div>
 
-      <textarea
-        style={styles.textarea}
+      <TextArea
+        rows={8}
         placeholder={`Paste security policy text here...\n\nExamples:\n  NIST SP 800-53 AC-2: The organization manages information system accounts...\n  ISO 27001 A.9.1.1: An access control policy shall be established...\n  HIPAA §164.312(a)(1): Implement technical policies and procedures...`}
         value={policyText}
         onChange={e => setPolicyText(e.target.value)}
@@ -186,12 +187,12 @@ export default function SecurityPolicyTranslator() {
       />
 
       <div style={{ ...styles.controlRow, flexWrap: isMobile ? 'wrap' : 'nowrap' }}>
-        <select style={styles.select} value={frameworkHint} onChange={e => setFrameworkHint(e.target.value)} disabled={loading}>
+        <select className="kudo-input kudo-select" value={frameworkHint} onChange={e => setFrameworkHint(e.target.value)} disabled={loading}>
           {FRAMEWORK_HINTS.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
         </select>
-        <button style={styles.button(loading)} onClick={handleTranslate} disabled={loading || !policyText.trim()}>
-          {loading ? 'Translating...' : 'Translate'}
-        </button>
+        <Button loading={loading} onClick={handleTranslate} disabled={loading || !policyText.trim()}>
+          {loading ? 'Translating…' : 'Translate'}
+        </Button>
       </div>
 
       {error && <p style={styles.error}>{error}</p>}
