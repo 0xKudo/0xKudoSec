@@ -13,7 +13,42 @@ Unified cybersecurity tools platform at `0xkudo.com`. Monorepo — shared Expres
 
 **All 19 tools complete. Auth complete. SIEM complete. Electron wrapper complete. Noise Advisor Phase 1 + Phase 2 + Phase 3 complete. Multi-model support complete. Vulnerability KB built and confirmed working in v1.2.46-beta.2+.**
 
-### Recently Completed (2026-07-23, UI redesign Phase D — IA polish, uncommitted, branch `ui-redesign`)
+### MERGED TO MAIN (2026-07-24) — UI redesign Phase C.5 + D, commit `6bdcb04`
+
+`ui-redesign` fast-forwarded into `main`. Local only, **not pushed, not deployed**. Version still v1.2.49.
+
+**PENDING VPS DEPLOY — read before deploying:**
+
+1. **DB migration is REQUIRED.** The code expects `alerts.occurrence_times` and the new
+   multi-key `user_ingest_keys` shape. Without it the SIEM endpoints 500. Run via psql on the VPS:
+   ```sql
+   ALTER TABLE alerts
+     ADD COLUMN IF NOT EXISTS occurrence_times timestamptz[]
+     DEFAULT ARRAY[]::timestamptz[] NOT NULL;
+
+   CREATE SEQUENCE IF NOT EXISTS user_ingest_keys_id_seq;
+   ALTER TABLE user_ingest_keys
+     ADD COLUMN IF NOT EXISTS id bigint DEFAULT nextval('user_ingest_keys_id_seq') NOT NULL,
+     ADD COLUMN IF NOT EXISTS name text;
+   ALTER SEQUENCE user_ingest_keys_id_seq OWNED BY user_ingest_keys.id;
+   ALTER TABLE user_ingest_keys DROP CONSTRAINT IF EXISTS user_ingest_keys_pkey;
+   ALTER TABLE user_ingest_keys ADD CONSTRAINT user_ingest_keys_pkey PRIMARY KEY (id);
+   CREATE INDEX IF NOT EXISTS idx_user_ingest_keys_user ON user_ingest_keys (user_id);
+   ```
+2. **`npm install` is required** — `lucide-react` is a new dependency. A plain `git pull` + PM2 restart
+   will fail the shell build without it.
+3. Rebuild the shell (`npm run build --workspace platform/shell`), then restart PM2.
+   **Never `sudo pm2`** — it creates a root instance that holds port 4000 (EADDRINUSE).
+
+**No Electron rebuild needed.** `electron-builder.yml` bundles only `main.js`/`preload.js`/`llmWorker.js`/
+`llmProcess.js`/`tray.js`/`splash.html`/`assets`/`node_modules`; the app loads `https://0xkudo.com` at
+runtime and no Electron file changed in this release. The redesign ships with the VPS deploy.
+
+**Known pre-existing failure (not from this work):** `platform/server/tests/siem-routes.test.js` and
+`ingest.test.js` fail with `vi.mocked(...).mockResolvedValueOnce is not a function` on this commit
+**and on the previous main alike** — verified by stashing. Broken mock setup, worth fixing separately.
+
+### Recently Completed (2026-07-23, UI redesign Phase D — IA polish, now merged via `6bdcb04`)
 - New shared libs: `platform/shell/src/lib/phases.js` (SOC phase taxonomy + `ROUTE_TO_PHASE`/`PHASE_LABEL`) and `lib/toolIcons.js` (route → Lucide icon map + phase icons). Used by both sidebar and dashboard.
 - **Dashboard** (desktop + mobile): status/metrics row — live SIEM counts when authed (`/api/siem/stats`, `/alerts/counts`, `/sources`), local fallback otherwise; tool catalog grouped by phase with Lucide icons, active/coming-soon affordance, staggered entrance.
 - **Sidebar**: per-tool Lucide icons, hover/active token polish, active-phase auto-open, icon-rail collapse (persisted `cybertools_sidebar_collapsed`, desktop only). Removed `↗` glyphs.
