@@ -138,7 +138,7 @@ export function PrivacyPage() {
         <h2 style={s.h2}>Third-Party Services</h2>
         <ul style={s.ul}>
           <li style={s.li}><strong>Auth0:</strong> handles authentication and identity. Your login credentials and identity are governed by Auth0's privacy policy.</li>
-          <li style={s.li}><strong>Anthropic (Claude API):</strong> certain analysis tools (Alert Triage, Incident Report, Phishing Analyzer, Log Anomaly Explainer) send security event data to the Anthropic API to generate analysis. Data sent is limited to the specific event you submit and is not stored persistently by the platform after the response is returned. Anthropic's data handling is governed by their API terms.</li>
+          <li style={s.li}><strong>Anthropic (Claude API):</strong> certain analysis tools (Alert Triage, Incident Report, Phishing Analyzer, Log Anomaly Analyzer) send security event data to the Anthropic API to generate analysis. Data sent is limited to the specific event you submit and is not stored persistently by the platform after the response is returned. Anthropic's data handling is governed by their API terms.</li>
           <li style={s.li}><strong>Threat intelligence providers:</strong> tools such as Threat Intelligence Aggregator, OSINT Recon, and CVE Exploit Mapper send IP addresses, domain names, or file hashes to third-party APIs (VirusTotal, Shodan, AbuseIPDB, IPInfo, Hunter.io) when you actively use those tools. Only data you explicitly submit is sent.</li>
         </ul>
         <p style={s.p}>No data is shared with any third party outside of these service integrations.</p>

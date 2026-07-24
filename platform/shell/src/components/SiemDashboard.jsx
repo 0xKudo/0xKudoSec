@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { ProcessTreePanel, ContextMenu } from './ProcessTreePanel.jsx';
+import { TimeFieldValue, badgeStyle } from './ui/index.js';
 
 const SEV_COLOR = {
   critical: 'var(--severity-critical)',
@@ -111,7 +112,7 @@ const s = {
     color: 'var(--text-muted)', verticalAlign: 'middle', overflow: 'hidden',
     textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 0,
   },
-  sevBadge: (color) => ({ fontSize: '10px', width: '64px', textAlign: 'center', padding: '2px 0', letterSpacing: '0.06em', textTransform: 'uppercase', border: `1px solid ${color}`, color, whiteSpace: 'nowrap', display: 'inline-block', boxSizing: 'border-box', flexShrink: 0 }),
+  sevBadge: (color) => badgeStyle(color),
   error: { padding: '20px', color: 'var(--severity-high)', fontSize: '12px' },
   muted: { padding: '20px', color: 'var(--text-muted)', fontSize: '12px' },
   overlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 },
@@ -140,7 +141,7 @@ const s = {
     borderBottom: '1px solid var(--border-subtle)',
   },
   alertsPanelTitle: { fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'flex', alignItems: 'center', gap: '10px' },
-  alertCountChip: (color) => ({ fontSize: '10px', padding: '1px 8px', border: `1px solid ${color}`, color, letterSpacing: '0.04em' }),
+  alertCountChip: (color) => badgeStyle(color),
   alertRow: {
     display: 'grid', gridTemplateColumns: '80px 1fr 90px 160px',
     alignItems: 'center', gap: '12px',
@@ -920,7 +921,7 @@ export function SiemDashboard({ onNavigate }) {
                   <span style={s.sevBadge(sevColor(a.severity))}>{a.severity}</span>
                   <span style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden', minWidth: 0 }}>
                     <span style={{ color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.title}</span>
-                    {a.count > 1 && <span style={{ fontSize: '10px', padding: '1px 5px', border: '1px solid var(--text-muted)', color: 'var(--text-muted)', whiteSpace: 'nowrap', flexShrink: 0 }}>{a.count}×</span>}
+                    {a.count > 1 && <span style={badgeStyle('var(--text-muted)')}>{a.count}×</span>}
                   </span>
                   <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.host || '-'}</span>
                   <span style={{ fontSize: '11px', color: 'var(--text-muted)', whiteSpace: 'nowrap', textAlign: 'right' }}>{new Date(a.created_at).toLocaleString()}</span>
@@ -946,7 +947,7 @@ export function SiemDashboard({ onNavigate }) {
                       onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-primary)'}
                       onMouseLeave={e => e.currentTarget.style.background = ''}
                     >
-                      <span style={{ fontSize: '10px', padding: '2px 5px', border: `1px solid ${sigColor}`, color: sigColor, whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>{sigLabel}</span>
+                      <span style={badgeStyle(sigColor)}>{sigLabel}</span>
                       <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--text-primary)', fontSize: '11px' }}>
                         {r.explanation || `${r.event_id || ''}${r.host ? ` · ${r.host}` : ''}`}
                       </span>
@@ -1331,7 +1332,13 @@ export function SiemDashboard({ onNavigate }) {
             </div>
             <div style={s.modalBody}>
               {[
-                ['Time', selectedEvent.timestamp ? new Date(selectedEvent.timestamp).toLocaleString() : null],
+                ['Time', (
+                  <TimeFieldValue
+                    times={selectedEvent.occurrence_times}
+                    count={selectedEvent.count}
+                    fallback={selectedEvent.timestamp ? new Date(selectedEvent.timestamp).toLocaleString() : null}
+                  />
+                )],
                 ['Severity', selectedEvent.severity],
                 ['Event ID', selectedEvent.event_id],
                 ['Category', selectedEvent.event_category],
@@ -1353,7 +1360,7 @@ export function SiemDashboard({ onNavigate }) {
               ].filter(([, v]) => v != null && v !== '').map(([label, value]) => (
                 <div key={label} style={s.fieldRow}>
                   <div style={s.fieldLabel}>{label}</div>
-                  <div style={s.fieldValue}>{String(value)}</div>
+                  <div style={s.fieldValue}>{typeof value === 'object' ? value : String(value)}</div>
                 </div>
               ))}
               <ProcessTreePanel event={selectedEvent} />
@@ -1466,11 +1473,17 @@ export function SiemDashboard({ onNavigate }) {
                 ['Dest IP', selectedAlert.dest_ip],
                 ['Event ID', selectedAlert.event_id],
                 ['Message', selectedAlert.message],
-                ['Time', selectedAlert.created_at ? new Date(selectedAlert.created_at).toLocaleString() : null],
+                ['Time', (
+                  <TimeFieldValue
+                    times={selectedAlert.occurrence_times}
+                    count={selectedAlert.count}
+                    fallback={selectedAlert.created_at ? new Date(selectedAlert.created_at).toLocaleString() : null}
+                  />
+                )],
               ].filter(([, v]) => v != null && v !== '').map(([label, value]) => (
                 <div key={label} style={s.fieldRow}>
                   <div style={s.fieldLabel}>{label}</div>
-                  <div style={s.fieldValue}>{String(value)}</div>
+                  <div style={s.fieldValue}>{typeof value === 'object' ? value : String(value)}</div>
                 </div>
               ))}
               <div style={{ marginTop: '16px', display: 'flex', gap: '8px' }}>

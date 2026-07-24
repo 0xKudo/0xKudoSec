@@ -81,17 +81,15 @@ const styles = {
   results: { marginTop: '28px' },
   analysisCard: {
     background: 'var(--surface)',
-    borderRadius: 'var(--radius-md)',
     border: '1px solid var(--border)',
     padding: '16px',
     marginBottom: '20px',
   },
   riskBadge: (level) => ({
-    display: 'inline-block',
+    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
     background: RISK_COLORS[level] || RISK_COLORS.info,
     color: '#fff',
     fontSize: '10px',
-    
     padding: '2px 8px',
     textTransform: 'uppercase',
     letterSpacing: '0.06em',
@@ -214,7 +212,7 @@ export default function SubdomainEnumerator() {
       <div style={{ ...styles.header, margin: isMobile ? '-16px -16px 20px -16px' : '-24px -24px 20px -24px' }}>
         <span style={styles.title}>Subdomain Enumerator</span>
         <p style={styles.subtitle}>
-          Discover subdomains via Certificate Transparency logs, HackerTarget, SecurityTrails, and brute-force DNS resolution.
+          Discover subdomains via Certificate Transparency logs, HackerTarget, and brute-force DNS resolution.
         </p>
       </div>
 
@@ -244,7 +242,7 @@ export default function SubdomainEnumerator() {
               disabled={loading}
               onKeyDown={e => e.key === 'Enter' && canEnumerate && handleEnumerate()}
             />
-            <Button loading={loading} onClick={handleEnumerate} disabled={!canEnumerate}>
+            <Button style={{ height: '34px' }} loading={loading} onClick={handleEnumerate} disabled={!canEnumerate}>
               {loading ? 'Enumerating…' : 'Enumerate'}
             </Button>
           </div>

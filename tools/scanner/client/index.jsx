@@ -84,7 +84,6 @@ const styles = {
   results: { marginTop: '24px' },
   analysisCard: {
     background: 'var(--surface)',
-    borderRadius: 'var(--radius-md)',
     border: '1px solid var(--border)',
     padding: '16px',
     marginBottom: '20px',
@@ -92,11 +91,10 @@ const styles = {
   analysisHeader: { display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' },
   analysisTitle: { color: 'var(--text-primary)', fontSize: '14px',  },
   riskBadge: (level) => ({
-    display: 'inline-block',
+    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
     background: SEVERITY_COLOR[level] || SEVERITY_COLOR.info,
     color: '#fff',
     fontSize: '10px',
-    
     padding: '2px 8px',
     textTransform: 'uppercase',
   }),
@@ -105,10 +103,10 @@ const styles = {
   listItem: { color: 'var(--text-primary)', fontSize: '12px', lineHeight: '1.7', marginLeft: '12px' },
   statsRow: { display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '16px' },
   statBadge: (sev) => ({
+    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
     background: SEVERITY_COLOR[sev],
     color: '#fff',
     fontSize: '12px',
-    
     padding: '3px 10px',
   }),
   findingCard: (sev) => ({
@@ -124,7 +122,6 @@ const styles = {
     background: SEVERITY_COLOR[sev],
     color: '#fff',
     fontSize: '10px',
-    
     padding: '1px 6px',
     textTransform: 'uppercase',
     marginRight: '8px',

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
+import { badgeStyle } from './ui/index.js';
 
 const HOURS_OPTIONS = [1, 6, 24, 48, 168];
 const HOURS_LABELS = { 1: '1h', 6: '6h', 24: '24h', 48: '48h', 168: '7d' };
@@ -57,9 +58,7 @@ const s = {
     padding: '8px 0', borderBottom: '1px solid var(--border-subtle)',
   },
   eventTop: { display: 'flex', alignItems: 'center', gap: '8px' },
-  sevBadge: (color) => ({
-    fontSize: '9px', padding: '2px 6px', border: `1px solid ${color}`, color, letterSpacing: '0.06em', textTransform: 'uppercase', flexShrink: 0,
-  }),
+  sevBadge: (color) => badgeStyle(color, { fontSize: '9px', padding: '1px 6px' }),
   eventMsg: { fontSize: '11px', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
   eventMeta: { fontSize: '10px', color: 'var(--text-muted)' },
   muted: { fontSize: '12px', color: 'var(--text-muted)', padding: '8px 0' },

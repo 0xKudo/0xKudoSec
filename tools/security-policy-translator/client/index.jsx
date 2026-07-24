@@ -75,13 +75,12 @@ const styles = {
   results: { marginTop: '24px' },
   summaryCard: {
     background: 'var(--surface)',
-    borderRadius: 'var(--radius-md)',
     border: '1px solid var(--border)',
     padding: '20px',
     marginBottom: '16px',
   },
   frameworkBadge: {
-    display: 'inline-block',
+    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
     padding: '4px 12px',
     border: '1px solid var(--border)',
     color: 'var(--text-muted)',
@@ -102,7 +101,7 @@ const styles = {
   controlId: { color: 'var(--text-muted)', fontSize: '11px', marginBottom: '6px' },
   controlPlain: { color: 'var(--text-primary)', fontSize: '13px', lineHeight: '1.6', marginBottom: '8px' },
   reqBadge: (req) => ({
-    display: 'inline-block',
+    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
     padding: '2px 8px',
     border: `1px solid ${REQ_COLORS[req] || 'var(--border)'}`,
     color: REQ_COLORS[req] || 'var(--text-muted)',

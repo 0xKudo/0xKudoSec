@@ -13,6 +13,21 @@ Unified cybersecurity tools platform at `0xkudo.com`. Monorepo — shared Expres
 
 **All 19 tools complete. Auth complete. SIEM complete. Electron wrapper complete. Noise Advisor Phase 1 + Phase 2 + Phase 3 complete. Multi-model support complete. Vulnerability KB built and confirmed working in v1.2.46-beta.2+.**
 
+### Recently Completed (2026-07-23, UI redesign Phase D — IA polish, uncommitted, branch `ui-redesign`)
+- New shared libs: `platform/shell/src/lib/phases.js` (SOC phase taxonomy + `ROUTE_TO_PHASE`/`PHASE_LABEL`) and `lib/toolIcons.js` (route → Lucide icon map + phase icons). Used by both sidebar and dashboard.
+- **Dashboard** (desktop + mobile): status/metrics row — live SIEM counts when authed (`/api/siem/stats`, `/alerts/counts`, `/sources`), local fallback otherwise; tool catalog grouped by phase with Lucide icons, active/coming-soon affordance, staggered entrance.
+- **Sidebar**: per-tool Lucide icons, hover/active token polish, active-phase auto-open, icon-rail collapse (persisted `cybertools_sidebar_collapsed`, desktop only). Removed `↗` glyphs.
+- **Navigation**: `Breadcrumb.jsx` (Dashboard › Phase › Tool) above every tool on desktop; back-to-dashboard in one click.
+- Build passes (`npm run build --workspace platform/shell`). Full detail: `docs/plans/ui-redesign-master-plan.md` (Phase D).
+
+### Phase D review-refinements (2026-07-23, uncommitted)
+- Removed the tool breadcrumb bar (deleted `Breadcrumb.jsx`).
+- Tools primary button now matches SIEM filled button (subtle `--border`, `6px 14px`).
+- Shared `AuthGate` restyled to exactly match the vuln-scanner box; network-scanner switched from modal to inline gate.
+- Badge vertical centering: `lineHeight:1` + `+1px` top padding across all severity/status/type badges (Fira caps measured 1px high at 10px).
+- API-key management merged into Connect-a-Source; standalone **API Key tab removed** and tab indices renumbered.
+- Verified live (logged-out): button, auth gate, decoder/payload-generator/reverse-shell, zero console errors. SIEM badges + Connect-a-Source merge + authed dashboard/sidebar still need a logged-in visual pass.
+
 ### Recently Completed (2026-04-11, v1.2.46-beta.2 through beta.5)
 
 - **KB injection confirmed working** — `llmProcess.js` correctly injects KB context into LLM prompts. Confirmed via llm.log: `CVE-2019-11708 (critical CVSS 10.0) [ACTIVELY EXPLOITED - CISA KEV]` injected for Firefox-related candidates.

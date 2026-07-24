@@ -2,17 +2,9 @@ import { useNavigate } from 'react-router-dom';
 import { useTools } from '../context/ToolRegistry';
 import { useWorkspace } from '../context/WorkspaceContext';
 import { loadRecentTools, trackToolVisit } from './Dashboard';
-
-const QUICK_LAUNCH = [
-  { id: 'alert-triage', phase: 'Detect' },
-  { id: 'threat-intel', phase: 'Detect' },
-  { id: 'osint-recon', phase: 'Investigate' },
-  { id: 'decoder', phase: 'Investigate' },
-  { id: 'incident-report', phase: 'Report' },
-  { id: 'intruder', phase: 'Simulate' },
-  { id: 'network-scanner', phase: 'Investigate' },
-  { id: 'subdomain-enumerator', phase: 'Investigate' },
-];
+import { badgeStyle } from './ui/index.js';
+import { PHASES } from '../lib/phases';
+import { toolIcon, PHASE_ICONS } from '../lib/toolIcons';
 
 const TYPE_COLORS = {
   alert: 'var(--severity-critical)',
@@ -31,7 +23,7 @@ const s = {
     borderBottom: '1px solid var(--border)',
     fontSize: '10px', color: 'var(--text-muted)',
     letterSpacing: '0.08em', textTransform: 'uppercase',
-    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+    display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'space-between',
   },
   clearBtn: {
     background: 'none', border: 'none', color: 'var(--text-subtle)',
@@ -39,6 +31,14 @@ const s = {
     letterSpacing: '0.04em', textTransform: 'uppercase',
   },
   emptyState: { padding: '16px 14px', fontSize: '12px', color: 'var(--text-subtle)', textAlign: 'center' },
+
+  // Metrics row
+  metricsRow: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1px', background: 'var(--border-subtle)', border: '1px solid var(--border)' },
+  metricTile: { background: 'var(--bg-surface)', padding: '12px 14px', display: 'flex', alignItems: 'center', gap: '10px' },
+  metricIcon: { color: 'var(--text-subtle)', flexShrink: 0, display: 'flex' },
+  metricValue: (color) => ({ fontSize: '20px', lineHeight: 1, color: color || 'var(--text-primary)' }),
+  metricLabel: { fontSize: '9px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: '4px' },
+
   toolRow: {
     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
     padding: '10px 14px', borderBottom: '1px solid var(--border-subtle)', cursor: 'pointer',
@@ -54,20 +54,16 @@ const s = {
     display: 'flex', alignItems: 'center', gap: '8px',
     padding: '9px 14px', borderBottom: '1px solid var(--border-subtle)',
   },
-  typeBadge: (type) => ({
-    fontSize: '9px', padding: '1px 5px',
-    border: `1px solid ${TYPE_COLORS[type] || 'var(--border)'}`,
-    color: TYPE_COLORS[type] || 'var(--text-muted)',
-    letterSpacing: '0.06em', textTransform: 'uppercase', whiteSpace: 'nowrap', flexShrink: 0,
-  }),
+  typeBadge: (type) => badgeStyle(TYPE_COLORS[type] || 'var(--border)', { fontSize: '9px', padding: '1px 5px' }),
   workspaceLabel: { fontSize: '12px', color: 'var(--text-primary)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
-  quickGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1px', background: 'var(--border-subtle)' },
-  quickCard: {
-    background: 'var(--bg-primary)', padding: '12px 14px',
-    cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: '2px',
+
+  // Phase tool cards
+  cardRow: {
+    display: 'flex', alignItems: 'center', gap: '10px',
+    padding: '11px 14px', borderBottom: '1px solid var(--border-subtle)', cursor: 'pointer',
   },
-  quickCardName: { fontSize: '12px', color: 'var(--text-primary)' },
-  quickCardPhase: { fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' },
+  cardIcon: { color: 'var(--text-subtle)', flexShrink: 0, display: 'flex' },
+  cardName: { fontSize: '12px', color: 'var(--text-primary)' },
 };
 
 export function DashboardMobile() {
@@ -78,7 +74,11 @@ export function DashboardMobile() {
   const recentToolIds = loadRecentTools();
   const recentTools = recentToolIds.map(id => tools.find(t => t.id === id)).filter(Boolean);
   const workspaceItems = [...items].reverse().slice(0, 8);
-  const quickTools = QUICK_LAUNCH.map(q => ({ ...q, tool: tools.find(t => t.id === q.id) })).filter(q => q.tool);
+
+  const phaseGroups = PHASES.map(phase => ({
+    ...phase,
+    tools: phase.routes.map(r => tools.find(t => t.route === r)).filter(Boolean),
+  })).filter(p => p.tools.length);
 
   return (
     <div style={s.container}>
@@ -87,7 +87,7 @@ export function DashboardMobile() {
       <div style={s.panel}>
         <div style={s.panelHeader}>Recently Used</div>
         {recentTools.length === 0 ? (
-          <div style={s.emptyState}>No recent tools. Launch one from the menu.</div>
+          <div style={s.emptyState}>No recent tools. Launch one below.</div>
         ) : (
           recentTools.map(tool => (
             <div key={tool.id} style={s.toolRow} onClick={() => navigate(tool.route)}>
@@ -130,22 +130,32 @@ export function DashboardMobile() {
         )}
       </div>
 
-      {/* Quick Launch */}
-      <div style={s.panel}>
-        <div style={s.panelHeader}>Quick Launch</div>
-        <div style={s.quickGrid}>
-          {quickTools.map(q => (
-            <div
-              key={q.id}
-              style={s.quickCard}
-              onClick={() => { trackToolVisit(q.id); navigate(q.tool.route); }}
-            >
-              <div style={s.quickCardName}>{q.tool.name}</div>
-              <div style={s.quickCardPhase}>{q.phase}</div>
+      {/* Tool catalog, grouped by phase */}
+      {phaseGroups.map(phase => {
+        const PhaseIcon = PHASE_ICONS[phase.id];
+        return (
+          <div key={phase.id} style={s.panel}>
+            <div style={s.panelHeader}>
+              {PhaseIcon && <PhaseIcon size={13} strokeWidth={1.5} />}
+              <span style={{ marginRight: 'auto' }}>{phase.label}</span>
             </div>
-          ))}
-        </div>
-      </div>
+            {phase.tools.map(tool => {
+              const Icon = toolIcon(tool.route);
+              const soon = tool.status === 'coming-soon';
+              return (
+                <div
+                  key={tool.id}
+                  style={{ ...s.cardRow, opacity: soon ? 0.45 : 1, cursor: soon ? 'default' : 'pointer' }}
+                  onClick={() => { if (!soon) { trackToolVisit(tool.id); navigate(tool.route); } }}
+                >
+                  <span style={s.cardIcon}><Icon size={16} strokeWidth={1.5} /></span>
+                  <span style={s.cardName}>{tool.name}</span>
+                </div>
+              );
+            })}
+          </div>
+        );
+      })}
 
     </div>
   );

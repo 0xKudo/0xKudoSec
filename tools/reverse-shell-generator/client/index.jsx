@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useWorkspace } from '../../../platform/shell/src/context/WorkspaceContext.jsx';
 import { useIsMobile } from '../../../platform/shell/src/hooks/useIsMobile.js';
-import { Button, Input } from '../../../platform/shell/src/components/ui/index.js';
+import { Button, Input, AuthGate } from '../../../platform/shell/src/components/ui/index.js';
 
 const SHELL_TYPE_LABELS = {
   'bash':             'Bash (/dev/tcp)',
@@ -56,6 +56,7 @@ const styles = {
     marginBottom: '20px',
     color: 'var(--severity-critical)',
     fontSize: '12px',
+    lineHeight: '1.6',
   },
   formRow: { display: 'flex', gap: '8px', marginBottom: '12px', alignItems: 'flex-end', flexWrap: 'wrap' },
   fieldGroup: { display: 'flex', flexDirection: 'column', gap: '4px' },
@@ -176,6 +177,7 @@ export default function ReverseShellGenerator() {
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [authorized, setAuthorized] = useState(false);
   const { push } = useWorkspace();
 
   async function handleGenerate() {
@@ -204,7 +206,7 @@ export default function ReverseShellGenerator() {
     }
   }
 
-  const canGenerate = lhost.trim() && lport && shellType && !loading;
+  const canGenerate = lhost.trim() && lport && shellType && authorized && !loading;
 
   return (
     <div style={styles.container}>
@@ -216,7 +218,11 @@ export default function ReverseShellGenerator() {
       </div>
 
       <div style={styles.warning}>
-        AUTHORIZED USE ONLY: Only use against systems you own or have explicit written permission to test. Unauthorized access is illegal.
+        ⚠ AUTHORIZED USE ONLY: Only use against systems you own or have explicit written permission to test. Attempting to or gaining unauthorized access is illegal.
+      </div>
+
+      <div style={{ marginBottom: '20px' }}>
+        <AuthGate checked={authorized} onChange={setAuthorized} disabled={loading} />
       </div>
 
       <div style={{ ...styles.formRow, flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-start' : 'flex-end' }}>
@@ -255,7 +261,7 @@ export default function ReverseShellGenerator() {
           </select>
         </div>
 
-        <Button style={{ alignSelf: isMobile ? 'flex-start' : 'flex-end' }} onClick={handleGenerate} disabled={!canGenerate}>
+        <Button style={{ alignSelf: isMobile ? 'flex-start' : 'flex-end', height: '34px' }} onClick={handleGenerate} disabled={!canGenerate}>
           Generate
         </Button>
       </div>

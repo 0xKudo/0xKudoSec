@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useWorkspace } from '../../../platform/shell/src/context/WorkspaceContext.jsx';
 import { useIsMobile } from '../../../platform/shell/src/hooks/useIsMobile.js';
-import { Button, Input, Table } from '../../../platform/shell/src/components/ui/index.js';
+import { Button, Input, Table, AuthGate } from '../../../platform/shell/src/components/ui/index.js';
 
 const METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'];
 
@@ -43,6 +43,7 @@ const styles = {
     color: 'var(--severity-critical)',
     fontSize: '12px',
     marginBottom: '20px',
+    lineHeight: '1.6',
   },
   layout: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' },
   panel: {
@@ -165,6 +166,7 @@ export default function Intruder() {
   const [error, setError] = useState(null);
   const [result, setResult] = useState(null);
   const [expandedRow, setExpandedRow] = useState(null);
+  const [authorized, setAuthorized] = useState(false);
   const { push } = useWorkspace();
 
   useEffect(() => {
@@ -230,7 +232,7 @@ export default function Intruder() {
   }
 
   const payloadCount = payloadsText.split('\n').filter(p => p.trim()).length;
-  const canAttack = !loading && urlTemplate.trim().length > 0 && payloadCount > 0;
+  const canAttack = !loading && urlTemplate.trim().length > 0 && payloadCount > 0 && authorized;
   const showBody = !['GET', 'HEAD'].includes(method);
 
   return (
@@ -243,7 +245,7 @@ export default function Intruder() {
       </div>
 
       <div style={styles.warning}>
-        Only use against systems you own or have explicit written authorization to test.
+        ⚠ Only use against systems you own or have explicit written authorization to test.
       </div>
 
       <div style={{ ...styles.layout, gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr' }}>
@@ -318,6 +320,10 @@ export default function Intruder() {
             disabled={loading}
           />
           <div style={styles.hint}>{payloadCount} payload{payloadCount !== 1 ? 's' : ''} loaded</div>
+
+          <div style={{ margin: '4px 0 12px' }}>
+            <AuthGate checked={authorized} onChange={setAuthorized} disabled={loading} />
+          </div>
 
           <Button loading={loading} onClick={handleAttack} disabled={!canAttack}>
             {loading ? `Attacking… (${payloadCount} payloads)` : 'Start Attack'}

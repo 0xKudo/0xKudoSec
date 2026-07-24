@@ -144,10 +144,22 @@ async function main() {
         'External RDP attempt blocked',
         'Suspicious LSASS access',
       ]);
+      // Deduplicated alerts carry one timestamp per occurrence, oldest first,
+      // ending at last_seen. The UI lists these in the alert's Time section.
+      const count = randInt(1, 12);
+      const lastSeen = hoursAgo(randInt(0, 72));
+      // Walk backwards from last_seen with a cumulative random gap so the
+      // stored array is strictly chronological (oldest first).
+      const occurrenceTimes = [];
+      let cursor = new Date(lastSeen).getTime();
+      for (let k = 0; k < count; k++) {
+        occurrenceTimes.unshift(new Date(cursor));
+        cursor -= randInt(2, 45) * 60 * 1000;
+      }
       const { rows } = await c.query(
-        `INSERT INTO alerts (user_id, rule_id, log_id, title, severity, host, source_ip, username, event_id, message, count, last_seen)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING id`,
-        [userId, ruleId, lg.id, title, severity, lg.host, lg.src, lg.username, lg.event_id, lg.message, randInt(1, 12), hoursAgo(randInt(0, 72))]
+        `INSERT INTO alerts (user_id, rule_id, log_id, title, severity, host, source_ip, username, event_id, message, count, last_seen, occurrence_times)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING id`,
+        [userId, ruleId, lg.id, title, severity, lg.host, lg.src, lg.username, lg.event_id, lg.message, count, lastSeen, occurrenceTimes]
       );
       alertIds.push(rows[0].id);
     }

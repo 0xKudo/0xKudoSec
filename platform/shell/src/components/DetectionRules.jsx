@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useIsMobile } from '../hooks/useIsMobile.js';
+import { badgeStyle } from './ui/index.js';
 
 const SEV_COLOR = {
   critical: 'var(--severity-critical)',
@@ -59,10 +60,7 @@ const s = {
     padding: '10px 14px', borderBottom: '1px solid var(--border-subtle)',
     fontSize: '12px', color: 'var(--text-muted)', verticalAlign: 'middle',
   },
-  sevBadge: (color) => ({
-    fontSize: '10px', padding: '2px 7px', letterSpacing: '0.06em',
-    textTransform: 'uppercase', border: `1px solid ${color}`, color,
-  }),
+  sevBadge: (color) => badgeStyle(color),
   muted: { padding: '40px 20px', color: 'var(--text-muted)', fontSize: '12px', textAlign: 'center' },
   overlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 },
   modal: { background: 'var(--bg-primary)', border: '1px solid var(--border)', width: '580px', maxWidth: '95vw', maxHeight: '85vh', display: 'flex', flexDirection: 'column' },

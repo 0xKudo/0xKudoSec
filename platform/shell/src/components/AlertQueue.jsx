@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { ProcessTreePanel } from './ProcessTreePanel.jsx';
+import { TimeFieldValue, badgeStyle } from './ui/index.js';
 import { useIsMobile } from '../hooks/useIsMobile.js';
 
 const SEV_COLOR = {
@@ -12,6 +13,13 @@ const SEV_COLOR = {
 };
 
 const STATUS_OPTIONS = ['new', 'acknowledged', 'resolved'];
+
+// Distinct border/text color per alert status (parallels severity badge coloring).
+const STATUS_COLOR = {
+  new: 'var(--severity-info)',
+  acknowledged: 'var(--severity-medium)',
+  resolved: 'var(--severity-low)',
+};
 
 const s = {
   container: { padding: 0, flex: 1, minHeight: 0, overflow: 'auto' },
@@ -72,16 +80,8 @@ const s = {
   checkbox: {
     width: '14px', height: '14px', cursor: 'pointer', accentColor: 'var(--text-primary)',
   },
-  sevBadge: (color) => ({
-    fontSize: '10px', padding: '2px 7px', letterSpacing: '0.06em',
-    textTransform: 'uppercase', border: `1px solid ${color}`, color, whiteSpace: 'nowrap',
-  }),
-  statusBadge: (status) => ({
-    fontSize: '10px', padding: '2px 7px', letterSpacing: '0.06em', textTransform: 'uppercase',
-    border: '1px solid var(--border)', color: status === 'new' ? 'var(--text-primary)' : 'var(--text-muted)',
-    background: status === 'new' ? 'var(--bg-surface)' : 'none',
-    whiteSpace: 'nowrap',
-  }),
+  sevBadge: (color) => badgeStyle(color),
+  statusBadge: (status) => badgeStyle(STATUS_COLOR[status] || 'var(--border)'),
   muted: { padding: '40px 20px', color: 'var(--text-muted)', fontSize: '12px', textAlign: 'center' },
   toast: {
     position: 'fixed', bottom: '24px', right: '24px', zIndex: 2000,
@@ -426,8 +426,8 @@ export function AlertQueue({ onNavigate }) {
           })}
         </div>
       ) : (
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ ...s.table, tableLayout: 'fixed' }}>
+        <div style={{ maxWidth: '100%', overflowX: 'hidden' }}>
+          <table style={{ ...s.table, tableLayout: 'fixed', width: '100%', maxWidth: '100%' }}>
             <colgroup>
               <col style={{ width: '40px' }} />
               {COL_KEYS.map(k => <col key={k} style={{ width: `${colWidths[k]}px` }} />)}
@@ -483,7 +483,7 @@ export function AlertQueue({ onNavigate }) {
                     <td style={s.td}><span style={s.statusBadge(a.status)}>{a.status}</span></td>
                     <td style={s.td} onClick={e => e.stopPropagation()}>
                       <select
-                        style={{ ...s.btn, padding: '2px 6px', cursor: 'pointer' }}
+                        style={{ ...s.btn, padding: '2px 6px', cursor: 'pointer', width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}
                         value={a.status}
                         onChange={e => setStatus(a, e.target.value)}
                       >
@@ -510,7 +510,13 @@ export function AlertQueue({ onNavigate }) {
             </div>
             <div style={s.modalBody}>
               {[
-                ['Time', new Date(selected.created_at).toLocaleString()],
+                ['Time', (
+                  <TimeFieldValue
+                    times={selected.occurrence_times}
+                    count={selected.count}
+                    fallback={selected.created_at ? new Date(selected.created_at).toLocaleString() : null}
+                  />
+                )],
                 ['Status', selected.status],
                 ['Severity', selected.severity],
                 ['Rule', selected.rule_name],
@@ -522,7 +528,7 @@ export function AlertQueue({ onNavigate }) {
               ].filter(([, v]) => v != null && v !== '').map(([label, value]) => (
                 <div key={label} style={s.fieldRow}>
                   <div style={s.fieldLabel}>{label}</div>
-                  <div style={s.fieldValue}>{String(value)}</div>
+                  <div style={s.fieldValue}>{typeof value === 'object' ? value : String(value)}</div>
                 </div>
               ))}
 

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useIsMobile } from '../hooks/useIsMobile.js';
+import { badgeStyle } from './ui/index.js';
 
 const SEV_COLOR = {
   critical: 'var(--severity-critical)',
@@ -46,13 +47,10 @@ const s = {
     padding: '10px 14px', borderBottom: '1px solid var(--border-subtle)',
     fontSize: '12px', color: 'var(--text-muted)', verticalAlign: 'top',
   },
-  sevBadge: (color) => ({
-    fontSize: '10px', padding: '2px 7px', letterSpacing: '0.06em',
-    textTransform: 'uppercase', border: `1px solid ${color}`, color, whiteSpace: 'nowrap',
-  }),
+  sevBadge: (color) => badgeStyle(color),
   statusBadge: (status) => {
     const colors = { open: 'var(--severity-info)', investigating: 'var(--severity-medium)', resolved: 'var(--severity-low)', closed: 'var(--text-muted)' };
-    return { fontSize: '10px', padding: '2px 7px', letterSpacing: '0.06em', textTransform: 'uppercase', border: `1px solid ${colors[status] || 'var(--border)'}`, color: colors[status] || 'var(--text-muted)', whiteSpace: 'nowrap' };
+    return badgeStyle(colors[status] || 'var(--border)');
   },
   muted: { padding: '40px 20px', color: 'var(--text-muted)', fontSize: '12px', textAlign: 'center' },
   overlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 },

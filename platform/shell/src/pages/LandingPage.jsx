@@ -73,15 +73,15 @@ const PHASES = [
     key: 'detect',
     label: 'Detect',
     color: 'var(--severity-critical)',
-    tools: ['Alert Triage Assistant', 'Threat Intelligence Aggregator', 'Log Anomaly Explainer', 'Network Threat Analyzer', 'Phishing Email Analyzer'],
+    tools: ['Alert Triage Assistant', 'Threat Intelligence Aggregator', 'Log Anomaly Analyzer', 'Network Threat Analyzer', 'Phishing Email Analyzer'],
   },
   {
     key: 'investigate',
     label: 'Investigate',
     color: 'var(--severity-high)',
     tools: [
-      'OSINT Recon Dashboard', 'CVE Exploit Mapper', 'Payload Obfuscation Explainer',
-      { name: 'Decoder', route: '/decoder' },
+      'OSINT Recon Dashboard', 'CVE Exploit Mapper', 'Payload Obfuscation Analyzer',
+      { name: 'Encode / Decode', route: '/decoder' },
       'Subdomain Enumerator', 'Network Scanner',
     ],
   },

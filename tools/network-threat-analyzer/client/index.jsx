@@ -91,14 +91,13 @@ const styles = {
   results: { marginTop: '24px' },
   summaryCard: {
     background: 'var(--surface)',
-    borderRadius: 'var(--radius-md)',
     border: '1px solid var(--border)',
     padding: '20px',
     marginBottom: '16px',
   },
   threatRow: { display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' },
   badge: (level) => ({
-    display: 'inline-block',
+    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
     padding: '4px 12px',
     border: `1px solid ${SEVERITY_COLORS[level] || 'var(--border)'}`,
     color: SEVERITY_COLORS[level] || 'var(--text-muted)',

@@ -54,7 +54,7 @@ const styles = {
     padding: '20px',
   },
   severityBadge: (severity) => ({
-    display: 'inline-block',
+    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
     padding: '4px 12px',
     border: `1px solid ${SEVERITY_COLORS[severity] || 'var(--border)'}`,
     color: SEVERITY_COLORS[severity] || 'var(--text-muted)',

@@ -42,7 +42,8 @@ CREATE TABLE public.alerts (
     count integer DEFAULT 1 NOT NULL,
     last_seen timestamp with time zone DEFAULT now(),
     created_at timestamp with time zone DEFAULT now(),
-    updated_at timestamp with time zone DEFAULT now()
+    updated_at timestamp with time zone DEFAULT now(),
+    occurrence_times timestamp with time zone[] DEFAULT ARRAY[]::timestamp with time zone[] NOT NULL
 );
 
 ALTER TABLE ONLY public.alerts FORCE ROW LEVEL SECURITY;
@@ -359,14 +360,20 @@ ALTER SEQUENCE public.realtime_analysis_id_seq OWNED BY public.realtime_analysis
 -- Name: user_ingest_keys; Type: TABLE; Schema: public; Owner: -
 --
 
+CREATE SEQUENCE IF NOT EXISTS public.user_ingest_keys_id_seq;
+
 CREATE TABLE public.user_ingest_keys (
+    id bigint DEFAULT nextval('public.user_ingest_keys_id_seq'::regclass) NOT NULL,
     user_id text NOT NULL,
     api_key text NOT NULL,
+    name text,
     expiry_days integer,
     expires_at timestamp with time zone,
     created_at timestamp with time zone DEFAULT now(),
     last_used_at timestamp with time zone
 );
+
+ALTER SEQUENCE public.user_ingest_keys_id_seq OWNED BY public.user_ingest_keys.id;
 
 ALTER TABLE ONLY public.user_ingest_keys FORCE ROW LEVEL SECURITY;
 
@@ -619,7 +626,7 @@ ALTER TABLE ONLY public.user_ingest_keys
 --
 
 ALTER TABLE ONLY public.user_ingest_keys
-    ADD CONSTRAINT user_ingest_keys_pkey PRIMARY KEY (user_id);
+    ADD CONSTRAINT user_ingest_keys_pkey PRIMARY KEY (id);
 
 
 --
@@ -651,6 +658,13 @@ ALTER TABLE ONLY public.wp_protection_rules
 --
 
 CREATE INDEX idx_alerts_user_last_seen ON public.alerts USING btree (user_id, last_seen DESC);
+
+
+--
+-- Name: idx_user_ingest_keys_user; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_user_ingest_keys_user ON public.user_ingest_keys USING btree (user_id);
 
 
 --

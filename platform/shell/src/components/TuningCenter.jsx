@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useIsMobile } from '../hooks/useIsMobile';
+import { badgeStyle } from './ui/index.js';
 
 const API = '/api/siem/noise';
 const isElectron = typeof window !== 'undefined' && !!window.electron;
@@ -48,7 +49,7 @@ const s = {
   td: { padding: '10px 12px', borderBottom: '1px solid var(--border)', color: 'var(--text-primary)', verticalAlign: 'top' },
   modalOverlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 },
   modal: { background: 'var(--bg-surface)', border: '1px solid var(--border)', padding: '24px', width: '420px', maxWidth: '90vw', display: 'flex', flexDirection: 'column', gap: '12px' },
-  badge: (color) => ({ display: 'inline-block', padding: '2px 8px', fontSize: '10px', border: `1px solid ${color}`, color, letterSpacing: '0.06em' }),
+  badge: (color) => badgeStyle(color, { padding: '1px 8px' }),
   progress: { width: '100%', height: '4px', background: 'var(--border)', marginTop: '6px' },
   progressFill: (pct) => ({ height: '100%', width: `${Math.min(pct, 100)}%`, background: 'var(--accent-amber)', transition: 'width 0.3s' }),
   empty: { padding: '40px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '12px' },

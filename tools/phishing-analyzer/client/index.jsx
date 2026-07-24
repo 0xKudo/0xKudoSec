@@ -73,7 +73,7 @@ const styles = {
     borderBottom: '1px solid var(--border)',
   },
   verdictBadge: (verdict) => ({
-    display: 'inline-block',
+    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
     padding: '4px 14px',
     border: `1px solid ${VERDICT_COLORS[verdict] || 'var(--border)'}`,
     color: VERDICT_COLORS[verdict] || 'var(--text-muted)',

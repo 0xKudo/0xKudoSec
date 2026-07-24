@@ -104,14 +104,13 @@ const styles = {
   results: { marginTop: '24px' },
   summaryCard: {
     background: 'var(--surface)',
-    borderRadius: 'var(--radius-md)',
     border: '1px solid var(--border)',
     padding: '20px',
     marginBottom: '16px',
   },
   badgeRow: { display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' },
   badge: (level) => ({
-    display: 'inline-block',
+    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
     padding: '4px 12px',
     border: `1px solid ${SEVERITY_COLORS[level] || 'var(--border)'}`,
     color: SEVERITY_COLORS[level] || 'var(--text-muted)',
@@ -213,7 +212,7 @@ export default function LogAnomalyExplainer() {
   return (
     <div style={styles.container}>
       <div style={{ ...styles.header, margin: isMobile ? '-16px -16px 0 -16px' : '-24px -24px 0 -24px' }}>
-        <span style={styles.title}>Log Anomaly Explainer</span>
+        <span style={styles.title}>Log Anomaly Analyzer</span>
         <p style={styles.subtitle}>
           Paste or upload system, auth, web server, or application logs. Claude identifies anomalies and explains them in plain English.
         </p>

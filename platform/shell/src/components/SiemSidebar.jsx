@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
+import { badgeStyle } from './ui/index.js';
 
 const isElectron = typeof window !== 'undefined' && window.electron?.isElectron === true;
 
@@ -34,14 +35,10 @@ const styles = {
     borderBottom: '1px solid var(--border-subtle)',
     background: active ? 'var(--bg-panel)' : 'transparent',
   }),
-  badge: (variant) => ({
-    fontSize: '10px',
-    padding: '1px 6px',
-    borderRadius: '2px',
-    background: variant === 'critical' ? 'var(--severity-critical)' : variant === 'med' ? 'var(--severity-medium)' : 'var(--severity-info)',
-    color: '#fff',
-    marginLeft: 'auto',
-  }),
+  badge: (variant) => badgeStyle(
+    variant === 'critical' ? 'var(--severity-critical)' : variant === 'med' ? 'var(--severity-medium)' : 'var(--severity-info)',
+    { filled: true, borderRadius: '2px', padding: '1px 6px', marginLeft: 'auto', justifySelf: 'end' }
+  ),
   toolsLink: {
     display: 'flex',
     alignItems: 'center',

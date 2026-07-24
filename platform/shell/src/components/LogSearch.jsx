@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { ProcessTreePanel, ContextMenu } from './ProcessTreePanel.jsx';
 import { useIsMobile } from '../hooks/useIsMobile.js';
+import { badgeStyle } from './ui/index.js';
 
 const SEV_COLOR = {
   critical: 'var(--severity-critical)',
@@ -74,10 +75,7 @@ const s = {
     fontSize: '12px', color: 'var(--text-muted)', verticalAlign: 'middle',
     overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 0,
   },
-  sevBadge: (color) => ({
-    fontSize: '10px', padding: '2px 7px', letterSpacing: '0.06em',
-    textTransform: 'uppercase', border: `1px solid ${color}`, color, whiteSpace: 'nowrap',
-  }),
+  sevBadge: (color) => badgeStyle(color),
   muted: { padding: '40px 20px', color: 'var(--text-muted)', fontSize: '12px', textAlign: 'center' },
   overlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 },
   modal: { background: 'var(--bg-primary)', border: '1px solid var(--border)', width: '680px', maxWidth: '95vw', height: '80vh', display: 'flex', flexDirection: 'column' },

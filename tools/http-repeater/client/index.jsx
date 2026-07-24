@@ -133,11 +133,10 @@ const styles = {
   error: { color: 'var(--severity-critical)', fontSize: '13px', marginBottom: '12px' },
   responsePanelHeader: { display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '10px' },
   statusBadge: (status) => ({
-    display: 'inline-block',
+    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
     background: STATUS_COLOR(status),
     color: '#fff',
     fontSize: '12px',
-    
     padding: '2px 10px',
   }),
   durationBadge: {

@@ -227,7 +227,7 @@ export default function Decoder() {
   return (
     <div style={styles.container}>
       <div style={{ ...styles.header, margin: isMobile ? '-16px -16px 20px -16px' : '-24px -24px 20px -24px' }}>
-        <span style={styles.title}>Decoder</span>
+        <span style={styles.title}>Encode / Decode</span>
         <p style={styles.subtitle}>Encode and decode across URL, HTML, Base64, Hex, Binary, ROT13, Unicode, and JWT formats.</p>
       </div>
 

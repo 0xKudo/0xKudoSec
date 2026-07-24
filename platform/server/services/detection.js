@@ -59,10 +59,14 @@ export async function runDetectionRules(userId, logIds = null) {
     );
     for (const log of matches) {
       const result = await pool.query(
-        `INSERT INTO alerts (user_id, rule_id, log_id, title, severity, host, source_ip, username, event_id, message, count, last_seen)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 1, NOW())
+        `INSERT INTO alerts (user_id, rule_id, log_id, title, severity, host, source_ip, username, event_id, message, count, last_seen, occurrence_times)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 1, NOW(), ARRAY[NOW()])
          ON CONFLICT ON CONSTRAINT alerts_dedup
-         DO UPDATE SET count = alerts.count + 1, last_seen = NOW(), log_id = EXCLUDED.log_id
+         DO UPDATE SET count = alerts.count + 1, last_seen = NOW(), log_id = EXCLUDED.log_id,
+           -- keep the most recent 100 occurrence timestamps
+           occurrence_times = (
+             array_append(alerts.occurrence_times, NOW())
+           )[greatest(1, coalesce(array_length(alerts.occurrence_times, 1), 0) + 2 - 100):]
          RETURNING (xmax = 0) AS inserted`,
         [userId, rule.id, log.id, rule.name, rule.severity,
          log.host, log.source_ip, log.username, log.event_id,

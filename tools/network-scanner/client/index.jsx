@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useWorkspace } from '../../../platform/shell/src/context/WorkspaceContext.jsx';
 import { useIsMobile } from '../../../platform/shell/src/hooks/useIsMobile.js';
-import { Button, Input } from '../../../platform/shell/src/components/ui/index.js';
+import { Button, Input, AuthGate } from '../../../platform/shell/src/components/ui/index.js';
 
 const RISK_COLORS = {
   critical: 'var(--severity-critical)',
@@ -36,10 +36,10 @@ const styles = {
   title: { fontSize: '13px', color: 'var(--text-primary)', letterSpacing: '0.02em', margin: 0, fontWeight: 'normal' },
   subtitle: { color: 'var(--text-muted)', fontSize: '11px', margin: 0 },
   warning: {
-    background: 'var(--bg-primary)',
-    border: '1px solid var(--severity-high)',
-    padding: '6px 10px',
-    color: 'var(--severity-high)',
+    background: 'rgba(239,68,68,0.08)',
+    border: '1px solid var(--severity-critical)',
+    padding: '10px 14px',
+    color: 'var(--severity-critical)',
     fontSize: '12px',
     marginBottom: '16px',
     lineHeight: '1.6',
@@ -126,14 +126,13 @@ const styles = {
   results: { marginTop: '24px' },
   summaryCard: {
     background: 'var(--surface)',
-    borderRadius: 'var(--radius-md)',
     border: '1px solid var(--border)',
     padding: '20px',
     marginBottom: '16px',
   },
   riskRow: { display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' },
   badge: (level) => ({
-    display: 'inline-block',
+    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
     padding: '4px 12px',
     border: `1px solid ${RISK_COLORS[level] || 'var(--border)'}`,
     color: RISK_COLORS[level] || 'var(--text-muted)',
@@ -188,6 +187,7 @@ export default function NetworkScanner() {
   const [liveLines, setLiveLines] = useState([]);
   const [error, setError] = useState(null);
   const [showRaw, setShowRaw] = useState(false);
+  const [authorized, setAuthorized] = useState(false);
   const scanIdRef = useRef(null);
   const esRef = useRef(null);
   const outputRef = useRef(null);
@@ -212,7 +212,8 @@ export default function NetworkScanner() {
   }, [liveLines]);
 
   async function handleScan() {
-    if (!target.trim()) return;
+    // Require the authorization agreement before any scan fires.
+    if (!target.trim() || !authorized) return;
 
     setLoading(true);
     setAnalyzing(false);
@@ -318,7 +319,11 @@ export default function NetworkScanner() {
       </div>
 
       <div style={styles.warning}>
-        ⚠ Only scan targets you own or have explicit written authorization to test. Unauthorized scanning is illegal in most jurisdictions.
+        ⚠ Only scan targets you own or have explicit written authorization to test. Unauthorized scanning may be illegal in your jurisdiction.
+      </div>
+
+      <div style={{ marginBottom: '14px' }}>
+        <AuthGate checked={authorized} onChange={setAuthorized} disabled={loading} />
       </div>
 
       {isMobile ? (
@@ -328,7 +333,7 @@ export default function NetworkScanner() {
             placeholder="192.168.1.1, 192.168.1.0/24, or hostname"
             value={target}
             onChange={e => setTarget(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && !loading && target.trim() && handleScan()}
+            onKeyDown={e => e.key === "Enter" && !loading && target.trim() && authorized && handleScan()}
             disabled={loading}
           />
           <select
@@ -344,7 +349,7 @@ export default function NetworkScanner() {
           {loading ? (
             <Button variant="danger" style={{ alignSelf: 'flex-start' }} onClick={handleStop}>Stop</Button>
           ) : (
-            <Button style={{ alignSelf: 'flex-start' }} onClick={handleScan} disabled={!target.trim()}>Scan</Button>
+            <Button style={{ alignSelf: 'flex-start' }} onClick={handleScan} disabled={!target.trim() || !authorized}>Scan</Button>
           )}
         </div>
       ) : (
@@ -354,7 +359,7 @@ export default function NetworkScanner() {
             placeholder="192.168.1.1, 192.168.1.0/24, or hostname"
             value={target}
             onChange={e => setTarget(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && !loading && target.trim() && handleScan()}
+            onKeyDown={e => e.key === "Enter" && !loading && target.trim() && authorized && handleScan()}
             disabled={loading}
           />
           <select
@@ -370,7 +375,7 @@ export default function NetworkScanner() {
           {loading ? (
             <Button variant="danger" onClick={handleStop}>Stop</Button>
           ) : (
-            <Button onClick={handleScan} disabled={!target.trim()}>Scan</Button>
+            <Button onClick={handleScan} disabled={!target.trim() || !authorized}>Scan</Button>
           )}
         </div>
       )}
@@ -432,6 +437,7 @@ export default function NetworkScanner() {
           )}
         </div>
       )}
+
     </div>
   );
 }

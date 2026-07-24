@@ -1,6 +1,6 @@
 {
   "id": "decoder",
-  "name": "Decoder",
+  "name": "Encode / Decode",
   "description": "Encode and decode data across multiple formats: URL, HTML, Base64, hex, binary, ROT13, Unicode, and JWT inspection.",
   "route": "/decoder",
   "icon": "🔄",

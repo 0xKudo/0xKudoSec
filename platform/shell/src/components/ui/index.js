@@ -1,7 +1,10 @@
 export { Button } from './Button.jsx';
 export { TextField, TextArea, Input, Select } from './Field.jsx';
 export { Card } from './Card.jsx';
+export { Badge, badgeStyle } from './Badge.jsx';
 export { Table } from './Table.jsx';
 export { EmptyState } from './EmptyState.jsx';
+export { AuthGate, AuthConfirmModal, AUTH_CONFIRM_TEXT } from './AuthConfirm.jsx';
+export { OccurrenceTimes, TimeFieldValue, sortedOccurrences } from './OccurrenceTimes.jsx';
 export { Spinner } from '../Spinner.jsx';
 export { Skeleton } from '../Skeleton.jsx';

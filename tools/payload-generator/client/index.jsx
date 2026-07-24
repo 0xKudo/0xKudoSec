@@ -3,7 +3,7 @@ import { useWorkspace } from '../../../platform/shell/src/context/WorkspaceConte
 import { useNavigate } from 'react-router-dom';
 import { useIsMobile } from '../../../platform/shell/src/hooks/useIsMobile.js';
 import { ChevronUp, ChevronDown } from 'lucide-react';
-import { Button, Input } from '../../../platform/shell/src/components/ui/index.js';
+import { Button, Input, AuthGate } from '../../../platform/shell/src/components/ui/index.js';
 
 const SEND_TARGETS = [
   { id: 'intruder',     label: 'Send to Intruder',      route: '/intruder' },
@@ -126,11 +126,11 @@ const s = {
   error: { fontSize: '12px', color: 'var(--severity-critical)', padding: '8px 0' },
   warn: {
     padding: '10px 14px',
-    background: 'var(--bg-primary)',
-    border: '1px solid var(--severity-high)',
-    color: 'var(--severity-high)',
-    fontSize: '11px',
-    letterSpacing: '0.02em',
+    background: 'rgba(239,68,68,0.08)',
+    border: '1px solid var(--severity-critical)',
+    color: 'var(--severity-critical)',
+    fontSize: '12px',
+    lineHeight: '1.6',
   },
   catGrid: {
     display: 'grid',
@@ -161,8 +161,9 @@ const s = {
     background: 'none',
     border: '1px solid var(--accent-amber)',
     color: 'var(--accent-amber)',
-        fontSize: '10px',
-    padding: '2px 8px',
+    fontSize: '10px',
+    lineHeight: 1,
+    padding: '4px 8px 3px',
     cursor: 'pointer',
     fontFamily: 'var(--font)',
     letterSpacing: '0.04em',
@@ -193,11 +194,15 @@ const s = {
         letterSpacing: '0.02em',
   },
   copySmall: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
     background: 'none',
     border: '1px solid var(--border)',
     color: 'var(--text-muted)',
-        fontSize: '10px',
-    padding: '2px 8px',
+    fontSize: '10px',
+    lineHeight: 1,
+    padding: '4px 8px 3px',
     cursor: 'pointer',
     fontFamily: 'var(--font)',
     letterSpacing: '0.04em',
@@ -243,9 +248,7 @@ function SendMenu({ payload }) {
           {targets.map(t => (
             <button
               key={t.id}
-              style={s.sendMenuItem}
-              onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-panel)'; }}
-              onMouseLeave={e => { e.currentTarget.style.background = ''; }}
+              className="kudo-menu-item"
               onClick={() => {
                 setOpen(false);
                 sendToTool(payload, t.id, navigate);
@@ -276,6 +279,7 @@ function MsfTab() {
   const [outputFile, setOutputFile] = useState('');
   const [result, setResult] = useState(null);
   const [error, setError] = useState('');
+  const [authorized, setAuthorized] = useState(false);
 
   useEffect(() => {
     fetch('/api/tools/payload-generator/msf-payloads')
@@ -315,8 +319,10 @@ function MsfTab() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       <div style={s.warn}>
-        Authorization required. Only use against systems you own or have explicit written permission to test.
+        ⚠ Authorization required. Only use against systems you own or have explicit written permission to test.
       </div>
+
+      <AuthGate checked={authorized} onChange={setAuthorized} />
 
       <div style={s.panel}>
         <div style={s.panelHeader}>Payload</div>
@@ -369,7 +375,7 @@ function MsfTab() {
           </div>
 
           {error && <div style={s.error}>{error}</div>}
-          <Button onClick={generate}>Generate</Button>
+          <Button onClick={generate} disabled={!authorized}>Generate</Button>
         </div>
       </div>
 
@@ -407,6 +413,7 @@ function WebTab() {
   const [categories, setCategories] = useState([]);
   const [activeCategory, setActiveCategory] = useState('');
   const [payloads, setPayloads] = useState([]);
+  const [authorized, setAuthorized] = useState(false);
 
   useEffect(() => {
     fetch('/api/tools/payload-generator/web-categories')
@@ -427,9 +434,13 @@ function WebTab() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       <div style={s.warn}>
-        For authorized testing, CTF challenges, and educational use only. Never use against systems you don't own.
+        ⚠ For authorized testing, CTF challenges, and educational use only. Never use against systems you don't own.
       </div>
 
+      <AuthGate checked={authorized} onChange={setAuthorized} />
+
+      {authorized && (
+      <>
       <div style={s.panel}>
         <div style={s.panelHeader}>Category</div>
         <div style={{ ...s.catGrid, gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)' }}>
@@ -461,6 +472,8 @@ function WebTab() {
             ))}
           </div>
         </div>
+      )}
+      </>
       )}
     </div>
   );
