@@ -11,7 +11,7 @@ import { broadcast } from '../services/wsBroadcast.js';
 import { requireAuth } from '../middleware/requireAuth.js';
 import { runDetectionRules } from '../services/detection.js';
 import { audit } from '../services/audit.js';
-import { ingestBeatsLimiter } from '../middleware/rateLimiter.js';
+import { ingestBeatsLimiter, ingestReadLimiter } from '../middleware/rateLimiter.js';
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -132,6 +132,56 @@ async function insertEvents(events, userId) {
 
   return accepted;
 }
+
+// --- Read API for the WordPress plugin (key-authenticated, read-only) ---
+
+router.get('/ping', ingestReadLimiter, requireIngestKey, (req, res) => {
+  res.json({ ok: true });
+});
+
+// Protection rules authored in the platform, pulled down by kudosec-siem.
+// Scoped to the key's user via explicit user_id filter on the BYPASSRLS pool
+// (no JWT on this path, so RLS session context is unavailable).
+router.get('/rules', ingestReadLimiter, requireIngestKey, async (req, res) => {
+  if (!req.ingestUserId) {
+    return res.status(401).json({ error: 'Ingest key is not associated with a user account.' });
+  }
+  try {
+    const { rows } = await getIngestAuthPool().query(
+      `SELECT id, rule_type, pattern, action FROM wp_protection_rules
+       WHERE user_id = $1 AND enabled = true ORDER BY id ASC LIMIT 500`,
+      [req.ingestUserId]
+    );
+    res.json({ rules: rows });
+  } catch (err) {
+    console.error('Failed to read wp_protection_rules:', err.message);
+    res.status(500).json({ error: 'Failed to load rules' });
+  }
+});
+
+// Recent alerts, surfaced back inside wp-admin by the kudosec-siem plugin.
+router.get('/alerts', ingestReadLimiter, requireIngestKey, async (req, res) => {
+  if (!req.ingestUserId) {
+    return res.status(401).json({ error: 'Ingest key is not associated with a user account.' });
+  }
+  let limit = parseInt(req.query.limit, 10);
+  if (isNaN(limit) || limit < 1) limit = 50;
+  if (limit > 100) limit = 100;
+  try {
+    const { rows } = await getIngestAuthPool().query(
+      `SELECT id, title, severity, status, host, source_ip, username,
+              event_id, message, count, last_seen, created_at
+       FROM alerts
+       WHERE user_id = $1
+       ORDER BY created_at DESC LIMIT $2`,
+      [req.ingestUserId, limit]
+    );
+    res.json({ alerts: rows });
+  } catch (err) {
+    console.error('Failed to read alerts:', err.message);
+    res.status(500).json({ error: 'Failed to load alerts' });
+  }
+});
 
 router.post('/upload', requireAuth, upload.single('file'), async (req, res, next) => {
   try {

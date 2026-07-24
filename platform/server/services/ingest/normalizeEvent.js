@@ -451,10 +451,87 @@ function normalizeWinlogbeat(raw) {
   };
 }
 
+// --- WordPress plugin normalizer (kudosec-siem) ---
+
+// Server-side severity by wp_event_id — never trust client-supplied severity.
+const WP_SEVERITY = {
+  9000: 'info', 9001: 'medium', 9002: 'high', 9003: 'info', 9010: 'medium',
+  9050: 'medium', 9051: 'high', 9052: 'high', 9053: 'medium',
+  9100: 'high', 9101: 'medium', 9102: 'medium', 9103: 'high', 9104: 'medium', 9105: 'medium',
+  9150: 'info', 9151: 'high',
+  9180: 'critical', 9181: 'high', 9182: 'high', 9183: 'high', 9184: 'high', 9190: 'high',
+  9300: 'info', 9302: 'info', 9303: 'medium', 9304: 'medium', 9310: 'medium', 9311: 'medium', 9320: 'high',
+  9330: 'medium', 9331: 'high', 9332: 'high', 9333: 'info',
+  9400: 'medium', 9401: 'high',
+  9500: 'critical', 9501: 'high', 9502: 'critical',
+  9900: 'info', 9901: 'info', 9902: 'medium',
+};
+
+const WP_CATEGORIES = new Set([
+  'wp-auth', 'wp-user', 'wp-plugin', 'wp-core', 'wp-settings',
+  'web-access', 'web-error', 'file-integrity', 'wp-agent',
+]);
+
+const WP_MAX_MESSAGE = 4000;
+
+function wpStr(v, max = 512) {
+  if (typeof v !== 'string') return null;
+  const s = v.trim();
+  return s ? s.slice(0, max) : null;
+}
+
+function normalizeWordPress(raw) {
+  let eventId = Number(raw.wp_event_id);
+  if (!Number.isInteger(eventId) || eventId < 9000 || eventId > 9999) eventId = null;
+
+  const severity = (eventId && WP_SEVERITY[eventId])
+    || (SEVERITY_MAP[String(raw.level || '').toLowerCase()] || 'info');
+  const category = WP_CATEGORIES.has(raw.category) ? raw.category : 'wp-agent';
+
+  const http = raw.http && typeof raw.http === 'object' ? raw.http : {};
+  const file = raw.file && typeof raw.file === 'object' ? raw.file : {};
+
+  let message = wpStr(raw.message, WP_MAX_MESSAGE) || '';
+  const httpDetail = [http.method, http.uri, http.status].filter(Boolean).join(' ');
+  if (httpDetail && !message.includes(httpDetail)) {
+    message = message ? `${message} [${httpDetail}]` : httpDetail;
+  }
+
+  return {
+    source: 'wordpress',
+    host: wpStr(raw.site, 253),
+    source_ip: wpStr(raw.source_ip, 45),
+    dest_ip: null,
+    dest_port: null,
+    protocol: null,
+    timestamp: wpStr(raw.ts, 64),
+    level: wpStr(raw.level, 32) || null,
+    severity,
+    event_id: eventId || null,
+    event_category: category,
+    message: message.slice(0, WP_MAX_MESSAGE) || null,
+    username: wpStr(raw.username, 255),
+    domain: null,
+    logon_type: null,
+    process_name: null,
+    process_id: null,
+    process_guid: null,
+    parent_process_name: null,
+    parent_process_id: null,
+    parent_process_guid: null,
+    file_path: wpStr(file.path, 1024),
+    registry_key: null,
+    raw,
+  };
+}
+
 // Detect format by presence of Fluent Bit-specific top-level fields.
 // Fluent Bit winlog input uses PascalCase top-level keys (EventID, ComputerName, etc.).
 // Winlogbeat uses ECS nesting (winlog.event_id, host.name, etc.).
 export function normalizeEvent(raw) {
+  if (raw['0xkudosec_wp'] === 1 || raw['0xkudosec_wp'] === '1') {
+    return normalizeWordPress(raw);
+  }
   if (raw.EventID !== undefined || raw.ComputerName !== undefined) {
     return normalizeFluentBit(raw);
   }

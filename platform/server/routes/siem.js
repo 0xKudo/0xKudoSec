@@ -37,6 +37,34 @@ function uid(req) {
   return req.auth.sub;
 }
 
+// Surface useful sub-objects from the stored raw JSON as flat fields so the UI can
+// render them (HTTP request detail, file-integrity hashes, WordPress context)
+// without shipping the whole raw blob in list responses.
+function enrichFromRaw(row) {
+  if (!row || !row.raw) { if (row) delete row.raw; return row; }
+  let parsed;
+  try { parsed = typeof row.raw === 'string' ? JSON.parse(row.raw) : row.raw; } catch { parsed = null; }
+  if (parsed && typeof parsed === 'object') {
+    if (parsed.http && typeof parsed.http === 'object') {
+      row.http_method = parsed.http.method ?? null;
+      row.http_url = parsed.http.uri ?? null;
+      row.http_status = parsed.http.status ?? null;
+      row.http_ua = parsed.http.ua ?? null;
+      row.http_referer = parsed.http.referer ?? null;
+    }
+    if (parsed.file && typeof parsed.file === 'object') {
+      row.fim_hash_expected = parsed.file.hash_expected ?? null;
+      row.fim_hash_actual = parsed.file.hash_actual ?? null;
+    }
+    if (parsed.context && typeof parsed.context === 'object') {
+      row.wp_site = parsed.site ?? null;
+      row.wp_version = parsed.context.wp_version ?? null;
+    }
+  }
+  delete row.raw;
+  return row;
+}
+
 // Fetch active suppress rules and return inline NOT(...) conditions + params to append to any query.
 // Pass params array (already containing [$1=userId, ...]) and conditions array to mutate in place.
 async function applySuppressFilters(userId, params, conditions) {
@@ -200,12 +228,12 @@ router.get('/events/recent', wrap(async (req, res) => {
             host, source_ip, dest_ip, dest_port, protocol,
             username, domain, logon_type,
             process_name, process_id, parent_process_name,
-            file_path, registry_key, source
+            file_path, registry_key, source, raw
      FROM logs WHERE ${conditions.join(' AND ')}
      ORDER BY timestamp DESC LIMIT 200`,
     params
   );
-  res.json(rows);
+  res.json(rows.map(enrichFromRaw));
 }));
 
 router.get('/events/by-severity', wrap(async (req, res) => {
@@ -602,6 +630,100 @@ router.post('/ingest-key', ingestKeyLimiter, async (req, res) => {
   if (isRotate) broadcast('ingest_key_rotated', { userId: uid(req) });
   res.json({ api_key: key, created_at: rows[0].created_at, expires_at: rows[0].expires_at, expiry_days: rows[0].expiry_days });
 });
+
+// --- WordPress protection rules (pushed down to the kudosec-siem plugin) ---
+
+const WP_RULE_TYPES = ['ip', 'cidr', 'ua', 'uri', 'rate', 'action', 'allow'];
+const WP_RULE_ACTIONS = ['block', 'log'];
+const WP_ACTION_PATTERNS = ['disable_xmlrpc', 'disable_file_editor', 'disable_registration', 'disable_app_passwords', 'block_admin_promotion'];
+
+function validateWpRulePattern(type, pattern) {
+  if (typeof pattern !== 'string') return null;
+  const p = pattern.trim();
+  if (!p || p.length > 512) return null;
+  const ipRe = /^(\d{1,3}\.){3}\d{1,3}$|^[0-9a-fA-F:]+:[0-9a-fA-F:]*$/;
+  switch (type) {
+    case 'ip':
+    case 'allow':
+      return ipRe.test(p) ? p : null;
+    case 'cidr': {
+      const m = p.match(/^([0-9a-fA-F:.]+)\/(\d{1,3})$/);
+      if (!m || !ipRe.test(m[1])) return null;
+      const max = m[1].includes(':') ? 128 : 32;
+      return Number(m[2]) <= max ? p : null;
+    }
+    case 'ua':
+    case 'uri':
+      try { new RegExp(p); return p; } catch { return null; }
+    case 'rate':
+      return /^[a-z0-9._-]+:\d{1,4}:\d{1,5}$/i.test(p) ? p : null;
+    case 'action':
+      return WP_ACTION_PATTERNS.includes(p) ? p : null;
+    default:
+      return null;
+  }
+}
+
+router.get('/wp-rules', wrap(async (req, res) => {
+  const { rows } = await pool.query(
+    'SELECT id, rule_type, pattern, action, enabled, created_at FROM wp_protection_rules WHERE user_id = $1 ORDER BY id DESC',
+    [uid(req)]
+  );
+  res.json(rows);
+}));
+
+router.post('/wp-rules', wrap(async (req, res) => {
+  const { rule_type, pattern, action } = req.body || {};
+  if (!WP_RULE_TYPES.includes(rule_type)) {
+    return res.status(400).json({ error: 'Invalid rule_type' });
+  }
+  const act = action === undefined ? 'block' : action;
+  if (!WP_RULE_ACTIONS.includes(act)) {
+    return res.status(400).json({ error: 'Invalid action' });
+  }
+  const clean = validateWpRulePattern(rule_type, pattern);
+  if (clean === null) {
+    return res.status(400).json({ error: 'Invalid pattern for rule type' });
+  }
+  const { rows: countRows } = await pool.query(
+    'SELECT COUNT(*)::int AS n FROM wp_protection_rules WHERE user_id = $1', [uid(req)]
+  );
+  if (countRows[0].n >= 200) {
+    return res.status(400).json({ error: 'Rule limit reached (200)' });
+  }
+  const { rows } = await pool.query(
+    `INSERT INTO wp_protection_rules (user_id, rule_type, pattern, action, enabled)
+     VALUES ($1, $2, $3, $4, true)
+     RETURNING id, rule_type, pattern, action, enabled, created_at`,
+    [uid(req), rule_type, clean, act]
+  );
+  audit(uid(req), 'wp_rule.create', { rule_type, pattern: clean }, req.ip);
+  res.json(rows[0]);
+}));
+
+router.patch('/wp-rules/:id', wrap(async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id) || typeof req.body?.enabled !== 'boolean') {
+    return res.status(400).json({ error: 'Expected { enabled: boolean }' });
+  }
+  const { rows } = await pool.query(
+    'UPDATE wp_protection_rules SET enabled = $1 WHERE id = $2 AND user_id = $3 RETURNING id, enabled',
+    [req.body.enabled, id, uid(req)]
+  );
+  if (!rows[0]) return res.status(404).json({ error: 'Rule not found' });
+  res.json(rows[0]);
+}));
+
+router.delete('/wp-rules/:id', wrap(async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) return res.status(400).json({ error: 'Invalid id' });
+  const { rowCount } = await pool.query(
+    'DELETE FROM wp_protection_rules WHERE id = $1 AND user_id = $2', [id, uid(req)]
+  );
+  if (!rowCount) return res.status(404).json({ error: 'Rule not found' });
+  audit(uid(req), 'wp_rule.delete', { rule_id: id }, req.ip);
+  res.json({ deleted: true });
+}));
 
 router.get('/shipper-download', wrap(async (req, res) => {
   const { rows } = await pool.query(

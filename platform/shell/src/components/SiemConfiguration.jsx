@@ -209,7 +209,17 @@ const s = {
 };
 
 const BASE_TABS = ['API Key', 'Connect a Source', 'Log Retention', 'Active Sources', 'Account', 'App Settings'];
-const SHIPPER_TABS = ['Fluent Bit', 'Winlogbeat 7', 'Manual API', 'Wireshark'];
+const SHIPPER_TABS = ['Fluent Bit', 'Winlogbeat 7', 'Manual API', 'Wireshark', 'WordPress'];
+
+const WP_RULE_TYPES = [
+  { value: 'ip', label: 'Block IP address', placeholder: '203.0.113.7' },
+  { value: 'cidr', label: 'Block IP range (CIDR)', placeholder: '203.0.113.0/24' },
+  { value: 'ua', label: 'Block user-agent pattern', placeholder: 'sqlmap|nikto' },
+  { value: 'uri', label: 'Block URI pattern', placeholder: '/wp-json/wp/v2/users' },
+  { value: 'rate', label: 'Rate limit (endpoint:count:seconds)', placeholder: 'wp-login.php:10:60' },
+  { value: 'action', label: 'Action rule', placeholder: 'disable_xmlrpc' },
+  { value: 'allow', label: 'Always allow IP', placeholder: '198.51.100.10' },
+];
 
 const FLUENT_BIT_CONFIG = (apiKey) => `[SERVICE]
     Flush        2
@@ -314,6 +324,14 @@ export function SiemConfiguration({ navLayout, setNavLayout, theme, setTheme }) 
   const [fbInstalling, setFbInstalling] = useState(false);
   const [fbInstallMsg, setFbInstallMsg] = useState(null);
 
+  // WordPress protection rules state
+  const [wpRules, setWpRules] = useState([]);
+  const [wpRuleType, setWpRuleType] = useState('ip');
+  const [wpRulePattern, setWpRulePattern] = useState('');
+  const [wpRuleAction, setWpRuleAction] = useState('block');
+  const [wpRuleMsg, setWpRuleMsg] = useState(null);
+  const [wpRuleSaving, setWpRuleSaving] = useState(false);
+
   // Role-based access
   const ROLES_CLAIM = 'https://0xkudo.com/roles';
   const userRoles = user?.[ROLES_CLAIM] ?? [];
@@ -347,6 +365,61 @@ export function SiemConfiguration({ navLayout, setNavLayout, theme, setTheme }) 
     const t = setInterval(pollAgent, 10000);
     return () => clearInterval(t);
   }, [isElectron]);
+
+  // Load WordPress protection rules when the WordPress shipper tab opens
+  useEffect(() => {
+    if (tab !== 1 || shipperTab !== 4 || !isAuthenticated) return;
+    (async () => {
+      try {
+        const token = await getAccessTokenSilently();
+        const res = await fetch('/api/siem/wp-rules', { headers: { Authorization: `Bearer ${token}` } });
+        if (res.ok) setWpRules(await res.json());
+      } catch { /* panel shows empty state */ }
+    })();
+  }, [tab, shipperTab, isAuthenticated]);
+
+  async function addWpRule() {
+    setWpRuleSaving(true);
+    setWpRuleMsg(null);
+    try {
+      const token = await getAccessTokenSilently();
+      const res = await fetch('/api/siem/wp-rules', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rule_type: wpRuleType, pattern: wpRulePattern.trim(), action: wpRuleAction }),
+      });
+      const body = await res.json();
+      if (!res.ok) {
+        setWpRuleMsg({ ok: false, text: body.error || 'Failed to add rule' });
+      } else {
+        setWpRules(prev => [body, ...prev]);
+        setWpRulePattern('');
+        setWpRuleMsg({ ok: true, text: 'Rule added. Connected sites pick it up within 5 minutes.' });
+      }
+    } catch {
+      setWpRuleMsg({ ok: false, text: 'Network error' });
+    }
+    setWpRuleSaving(false);
+  }
+
+  async function toggleWpRule(rule) {
+    const token = await getAccessTokenSilently();
+    const res = await fetch(`/api/siem/wp-rules/${rule.id}`, {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ enabled: !rule.enabled }),
+    });
+    if (res.ok) setWpRules(prev => prev.map(r => r.id === rule.id ? { ...r, enabled: !rule.enabled } : r));
+  }
+
+  async function deleteWpRule(id) {
+    const token = await getAccessTokenSilently();
+    const res = await fetch(`/api/siem/wp-rules/${id}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (res.ok) setWpRules(prev => prev.filter(r => r.id !== id));
+  }
 
   // When Edit Config tab opens: check if PIN is set, reset lock state
   useEffect(() => {
@@ -1424,6 +1497,75 @@ winlogbeat.event_logs:
                   Optional: <code>host.name</code>, <code>winlog.event_data.*</code>, <code>network.*</code>, <code>process.*</code>, <code>log.level</code><br />
                   Max payload: 10 MB per request.
                 </div>
+              </div>
+            )}
+
+            {shipperTab === 4 && (
+              <div>
+                <div style={s.note}>
+                  <strong style={{ color: 'var(--text-primary)' }}>WordPress</strong>: install the <strong>0xKudoSec SIEM</strong> plugin on your WordPress site to monitor logins, user activity, plugin changes, and server requests, and to enforce protection rules.<br /><br />
+                  1. Install the plugin (kudosec-siem) on your site<br />
+                  2. Generate an API key on the <strong>API Key</strong> tab<br />
+                  3. Paste it in wp-admin under <strong>0xKudoSec → Settings</strong><br /><br />
+                  Events appear in the Explorer with source <code>wordpress</code> (event IDs 9000–9999). Rules added below sync to every connected site within 5 minutes.
+                </div>
+
+                <div style={{ ...s.sectionTitle, marginTop: '18px' }}>Protection Rules</div>
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '10px' }}>
+                  Block lists and action rules enforced by the plugin. Action rules: disable_xmlrpc, disable_file_editor, disable_registration, disable_app_passwords, block_admin_promotion.
+                </div>
+
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center', marginBottom: '10px' }}>
+                  <select value={wpRuleType} onChange={e => setWpRuleType(e.target.value)} style={{ ...s.input, width: 'auto', fontFamily: 'var(--font)' }}>
+                    {WP_RULE_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                  </select>
+                  <input
+                    style={{ ...s.input, flex: 1, minWidth: '180px', fontFamily: 'var(--font)' }}
+                    placeholder={WP_RULE_TYPES.find(t => t.value === wpRuleType)?.placeholder}
+                    value={wpRulePattern}
+                    onChange={e => setWpRulePattern(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter' && wpRulePattern.trim()) addWpRule(); }}
+                  />
+                  <select value={wpRuleAction} onChange={e => setWpRuleAction(e.target.value)} style={{ ...s.input, width: 'auto', fontFamily: 'var(--font)' }}>
+                    <option value="block">Block</option>
+                    <option value="log">Log only</option>
+                  </select>
+                  <button style={s.btnPrimary} disabled={wpRuleSaving || !wpRulePattern.trim()} onClick={addWpRule}>
+                    {wpRuleSaving ? 'Adding...' : 'Add Rule'}
+                  </button>
+                </div>
+                {wpRuleMsg && (
+                  <div style={{ fontSize: '11px', color: wpRuleMsg.ok ? '#16a34a' : '#ef4444', marginBottom: '10px' }}>{wpRuleMsg.text}</div>
+                )}
+
+                {wpRules.length === 0 ? (
+                  <div style={{ fontSize: '12px', color: 'var(--text-muted)', padding: '12px 0' }}>No rules yet.</div>
+                ) : (
+                  <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+                    <thead>
+                      <tr>
+                        {['Type', 'Pattern', 'Action', 'Status', ''].map((h, i) => (
+                          <th key={i} style={{ textAlign: 'left', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', padding: '6px 8px', borderBottom: '1px solid var(--border)', width: i === 1 ? '40%' : undefined }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {wpRules.map(r => (
+                        <tr key={r.id}>
+                          <td style={{ fontSize: '11px', padding: '6px 8px', borderBottom: '1px solid var(--border-subtle)', color: 'var(--text-primary)' }}>{r.rule_type}</td>
+                          <td style={{ fontSize: '11px', padding: '6px 8px', borderBottom: '1px solid var(--border-subtle)', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={r.pattern}><code>{r.pattern}</code></td>
+                          <td style={{ fontSize: '11px', padding: '6px 8px', borderBottom: '1px solid var(--border-subtle)', color: r.action === 'block' ? '#ef4444' : 'var(--text-muted)' }}>{r.action}</td>
+                          <td style={{ fontSize: '11px', padding: '6px 8px', borderBottom: '1px solid var(--border-subtle)', color: r.enabled ? '#16a34a' : 'var(--text-muted)' }}>{r.enabled ? 'Enabled' : 'Disabled'}</td>
+                          <td style={{ fontSize: '11px', padding: '6px 8px', borderBottom: '1px solid var(--border-subtle)', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                            <button style={{ ...s.btn, fontFamily: 'var(--font)', padding: '2px 8px', fontSize: '10px' }} onClick={() => toggleWpRule(r)}>{r.enabled ? 'Disable' : 'Enable'}</button>
+                            {' '}
+                            <button style={{ ...s.btn, fontFamily: 'var(--font)', padding: '2px 8px', fontSize: '10px' }} onClick={() => deleteWpRule(r.id)}>Delete</button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
               </div>
             )}
           </div>

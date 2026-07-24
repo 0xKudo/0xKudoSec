@@ -35,6 +35,15 @@ export const ingestKeyLimiter = rateLimit({
   },
 });
 
+// Ingest read API (WordPress plugin rule/alert sync) — polled every 5 min per site
+export const ingestReadLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Ingest read rate limit exceeded.' },
+});
+
 // Rule import — bulk write operation, tighter than general API
 export const ruleImportLimiter = rateLimit({
   windowMs: 60 * 1000,
