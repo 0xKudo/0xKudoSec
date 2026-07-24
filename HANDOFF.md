@@ -15,12 +15,27 @@ Unified cybersecurity tools platform at `0xkudo.com`. Monorepo — shared Expres
 
 ### MERGED TO MAIN (2026-07-24) — UI redesign Phase C.5 + D, commit `6bdcb04`
 
-`ui-redesign` fast-forwarded into `main`. Local only, **not pushed, not deployed**. Version still v1.2.49.
+`ui-redesign` fast-forwarded into `main`, then reconciled with the VPS-only WordPress feature.
+**DEPLOYED to the VPS 2026-07-24 at commit `606d31a`.** Version still v1.2.49.
 
-**PENDING VPS DEPLOY — read before deploying:**
+### VPS deploy — DONE (2026-07-24)
 
-1. **DB migration is REQUIRED.** The code expects `alerts.occurrence_times` and the new
-   multi-key `user_ingest_keys` shape. Without it the SIEM endpoints 500. Run via psql on the VPS:
+Pushed to GitHub, VPS pulled to `606d31a`, migration applied, `npm install`, shell rebuilt,
+`pm2 restart cybertools-server` (that process only — 7 other unrelated apps share root's PM2).
+Verified: site 200, `/api/siem/alerts` + `/api/siem/ingest-key` 401 (not 500), `/api/ingest/ping`
+401, 19 tools registered, 2201 WordPress/web events intact, no schema errors in logs.
+
+**Backups left on the VPS in `/var/www/cybertools/`** (safe to delete once satisfied):
+`vps-local-mods-20260724.patch` (the pre-deploy uncommitted WordPress work) and
+`db-backup-predeploy-20260724.sql` (alerts, user_ingest_keys, wp_protection_rules).
+
+Gotcha hit during migration: `ALTER SEQUENCE ... OWNED BY` fails with "sequence must have same
+owner as table it is linked to" — the sequence must be `ALTER SEQUENCE ... OWNER TO cybertools_app`
+first. The first attempt rolled back cleanly; no partial state.
+
+The existing ingest key survived as `id=1` with `name = NULL`, so it displays as "Unnamed key".
+
+Migration that was applied (kept for reference / other environments):
    ```sql
    ALTER TABLE alerts
      ADD COLUMN IF NOT EXISTS occurrence_times timestamptz[]
@@ -35,10 +50,17 @@ Unified cybersecurity tools platform at `0xkudo.com`. Monorepo — shared Expres
    ALTER TABLE user_ingest_keys ADD CONSTRAINT user_ingest_keys_pkey PRIMARY KEY (id);
    CREATE INDEX IF NOT EXISTS idx_user_ingest_keys_user ON user_ingest_keys (user_id);
    ```
-2. **`npm install` is required** — `lucide-react` is a new dependency. A plain `git pull` + PM2 restart
-   will fail the shell build without it.
-3. Rebuild the shell (`npm run build --workspace platform/shell`), then restart PM2.
-   **Never `sudo pm2`** — it creates a root instance that holds port 4000 (EADDRINUSE).
+Also required (done): `npm install` for the new `lucide-react` dependency, then
+`npm run build --workspace platform/shell`, then `pm2 restart cybertools-server`.
+**Never `sudo pm2`**, and never `pm2 restart all` — root's PM2 also runs 7 unrelated apps.
+
+**WordPress feature recovered into git.** It had been running in production as *uncommitted*
+working-tree changes on the VPS (WP plugin read API, event normalizer for IDs 9000-9902,
+`wp-rules` CRUD, WordPress shipper tab, HTTP/FIM/WP fields in event cards). Now committed as
+`6f683dc` off the pre-redesign commit and merged in `606d31a`. Two silent-breakage bugs were
+fixed during reconciliation: the WP rules loader gated on `tab !== 1` (Connect a Source is now
+tab 0, so it would have loaded nothing), and two config-editor PIN hooks still checked `tab !== 7`
+when Edit Config had been renumbered to 6.
 
 **No Electron rebuild needed.** `electron-builder.yml` bundles only `main.js`/`preload.js`/`llmWorker.js`/
 `llmProcess.js`/`tray.js`/`splash.html`/`assets`/`node_modules`; the app loads `https://0xkudo.com` at
