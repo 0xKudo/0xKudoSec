@@ -217,66 +217,6 @@ function startServer() {
   });
 }
 
-function forkServer(resolve, reject) {
-    const serverEntry = isDev
-      ? path.join(__dirname, '../server/index.js')
-      : path.join(process.resourcesPath, 'server/index.js');
-
-    // Allowlist — only pass vars the server actually needs, never forward all of process.env
-    const ALLOWED_ENV_VARS = [
-      'ANTHROPIC_API_KEY',
-      'ALLOWED_ORIGIN',
-      'PORT',
-      'AUTH0_DOMAIN',
-      'AUTH0_CLIENT_ID',
-      'AUTH0_AUDIENCE',
-      'AUTH0_MGMT_CLIENT_ID',
-      'AUTH0_MGMT_CLIENT_SECRET',
-      'AUTH0_TENANT_DOMAIN',
-      'DB_ENCRYPTION_KEY',
-      'DATABASE_URL',
-      'INGEST_AUTH_DB_URL',
-      'OPS_DB_URL',
-      'DATABASE_CA_CERT',
-      'INGEST_API_KEY',
-      'AUDIT_LOG_RETENTION_DAYS',
-      'SHODAN_API_KEY',
-      'VIRUSTOTAL_API_KEY',
-      'HUNTER_API_KEY',
-      'IPINFO_TOKEN',
-      'ABUSEIPDB_API_KEY',
-      'ABUSECH_API_KEY',
-    ];
-    const env = Object.fromEntries(
-      ALLOWED_ENV_VARS
-        .filter(k => process.env[k] !== undefined)
-        .map(k => [k, process.env[k]])
-    );
-    env.NODE_ENV = isDev ? 'development' : 'production';
-
-    serverProcess = fork(serverEntry, [], {
-      env,
-      stdio: 'inherit',
-      execArgv: [],
-    });
-
-    serverProcess.on('error', reject);
-
-    // Poll until health endpoint responds
-    const deadline = Date.now() + 15000;
-    function poll() {
-      http.get(`http://localhost:${SERVER_PORT}/health`, (res) => {
-        if (res.statusCode === 200) resolve();
-        else retry();
-      }).on('error', retry);
-    }
-    function retry() {
-      if (Date.now() > deadline) { reject(new Error('Server failed to start')); return; }
-      setTimeout(poll, 300);
-    }
-    setTimeout(poll, 500);
-}
-
 // ── Fluent Bit IPC ────────────────────────────────────────────────────────
 function runSc(args) {
   return new Promise((resolve) => {
