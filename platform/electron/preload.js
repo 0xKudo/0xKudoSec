@@ -20,6 +20,18 @@ document.addEventListener('DOMContentLoaded', () => {
 contextBridge.exposeInMainWorld('electron', {
   isElectron: true,
 
+  networkScanner: {
+    start: (target, scanType) => ipcRenderer.invoke('network-scanner:start', target, scanType),
+    cancel: (runId) => ipcRenderer.invoke('network-scanner:cancel', runId),
+    onLine: (cb) => ipcRenderer.on('network-scanner:line', (_e, d) => cb(d)),
+    onDone: (cb) => ipcRenderer.on('network-scanner:done', (_e, d) => cb(d)),
+    onError: (cb) => ipcRenderer.on('network-scanner:error', (_e, d) => cb(d)),
+  },
+  nmap: {
+    status: () => ipcRenderer.invoke('nmap:status'),
+    install: () => ipcRenderer.invoke('nmap:install'),
+  },
+
   fluentBit: {
     getStatus: () => ipcRenderer.invoke('fluent-bit:status'),
     start: () => ipcRenderer.invoke('fluent-bit:start'),
