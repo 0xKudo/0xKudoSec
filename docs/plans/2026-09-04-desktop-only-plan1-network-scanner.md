@@ -28,7 +28,7 @@ Spec: `docs/specs/2026-09-04-desktop-only-local-execution.md`
 Independent quick win. Oversized JSON currently surfaces as 500; the test expects 413.
 
 **Files:**
-- Modify: `tools/network-threat-analyzer/server/routes.js`
+- Modify: `platform/server/index.js` (the global error handler — the oversized error is thrown by the GLOBAL 50kb `express.json` at index.js:59, before the tool router, so it must be caught in the global handler, not the tool's routes.js)
 - Test: `platform/server/tests/network-threat-analyzer.test.js` (existing, already asserts 413)
 
 **Interfaces:**
@@ -39,18 +39,15 @@ Independent quick win. Oversized JSON currently surfaces as 500; the test expect
 Run: `cd platform/server && npx vitest run tests/network-threat-analyzer.test.js`
 Expected: FAIL — "returns 413 when logData exceeds payload limit" expects 413, receives 500.
 
-- [ ] **Step 2: Inspect the route's JSON parser and add a payload-error handler**
+- [ ] **Step 2: Add a payload-size branch to the global error handler**
 
-In `tools/network-threat-analyzer/server/routes.js`, the `express.json({ limit: ... })` middleware throws `PayloadTooLargeError` (which carries `err.type === 'entity.too.large'` and `err.status === 413`). Add an error-handling middleware immediately after the route that maps it to 413. Insert this just before `export default router;`:
+The oversized body is rejected by the global `express.json({ limit: '50kb' })` at `index.js:59`, before the tool router runs, so it surfaces in the global error handler (`index.js:64-75`) which returns 500 for everything. Add a 413 branch right after the `UnauthorizedError` check:
 
 ```js
-// Map body-parser payload-size errors to 413 instead of the default 500
-router.use((err, _req, res, _next) => {
+  // Map body-parser payload-size errors to 413 instead of the generic 500
   if (err && (err.type === 'entity.too.large' || err.status === 413 || err.statusCode === 413)) {
-    return res.status(413).json({ error: 'Payload too large.' });
+    return res.status(413).json({ error: 'Payload too large', requestId: req.id || 'unknown' });
   }
-  return res.status(500).json({ error: 'Internal error.' });
-});
 ```
 
 - [ ] **Step 3: Run the test to verify it passes**

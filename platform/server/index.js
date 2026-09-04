@@ -65,6 +65,10 @@ app.use((err, req, res, next) => {
   if (err.name === 'UnauthorizedError') {
     return res.status(401).json({ error: 'Unauthorized' });
   }
+  // Map body-parser payload-size errors to 413 instead of the generic 500
+  if (err && (err.type === 'entity.too.large' || err.status === 413 || err.statusCode === 413)) {
+    return res.status(413).json({ error: 'Payload too large', requestId: req.id || 'unknown' });
+  }
   const requestId = req.id || 'unknown';
   console.error(`[server error] requestId=${requestId}`, err.message, err.stack);
   if (process.env.NODE_ENV === 'production') {
