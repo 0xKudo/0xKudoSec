@@ -654,6 +654,9 @@ app.whenReady().then(async () => {
   setupLlmIpc(mainWindow);
   scheduleStartupUpdateCheck(mainWindow);
 
+  const registerNetworkScanner = require('./tools/network-scanner');
+  registerNetworkScanner(ipcMain, { getMainWindow: () => mainWindow, isValidSender });
+
   setupAutoUpdater();
 });
 
