@@ -82,6 +82,12 @@ const s = {
   },
   sevBadge: (color) => badgeStyle(color),
   statusBadge: (status) => badgeStyle(STATUS_COLOR[status] || 'var(--border)'),
+  // Neutral (no accent) badge marking an alert sourced from a Sigma catalog rule.
+  sigmaBadge: {
+    flexShrink: 0, fontSize: '10px', padding: '1px 6px', letterSpacing: '0.03em',
+    border: '1px solid var(--text-muted)', color: 'var(--text-muted)',
+    textTransform: 'uppercase', borderRadius: '2px', fontFamily: 'var(--font)',
+  },
   muted: { padding: '40px 20px', color: 'var(--text-muted)', fontSize: '12px', textAlign: 'center' },
   toast: {
     position: 'fixed', bottom: '24px', right: '24px', zIndex: 2000,
@@ -416,10 +422,13 @@ export function AlertQueue({ onNavigate }) {
                   {a.count > 1 && <span style={{ fontSize: '10px', padding: '1px 5px', border: '1px solid var(--text-muted)', color: 'var(--text-muted)' }}>{a.count}×</span>}
                 </div>
                 <div style={{ fontSize: '12px', color: 'var(--text-primary)', marginBottom: '4px' }}>{a.title}</div>
-                <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                  {new Date(a.created_at).toLocaleString()}
-                  {a.host ? ` · ${a.host}` : ''}
-                  {a.rule_name ? ` · ${a.rule_name}` : ''}
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                  <span>
+                    {new Date(a.created_at).toLocaleString()}
+                    {a.host ? ` · ${a.host}` : ''}
+                    {a.rule_name ? ` · ${a.rule_name}` : ''}
+                  </span>
+                  {a.sigma_identity && <span style={s.sigmaBadge}>Sigma</span>}
                 </div>
               </div>
             );
@@ -477,7 +486,10 @@ export function AlertQueue({ onNavigate }) {
                       </div>
                     </td>
                     <td style={s.td}>
-                      <div>{a.rule_name || '-'}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                        <span>{a.rule_name || '-'}</span>
+                        {a.sigma_identity && <span style={s.sigmaBadge}>Sigma</span>}
+                      </div>
                       {a.attack_techniques?.length > 0 && (
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '4px' }}>
                           {a.attack_techniques.map(id => (

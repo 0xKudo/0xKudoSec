@@ -9,7 +9,7 @@ let _ingestAuthPool;
 import { normalizeEvent } from '../services/ingest/normalizeEvent.js';
 import { broadcast } from '../services/wsBroadcast.js';
 import { requireAuth } from '../middleware/requireAuth.js';
-import { runDetectionRules } from '../services/detection.js';
+import { runCorrelation } from '../services/correlation/run.js';
 import { audit } from '../services/audit.js';
 import { ingestBeatsLimiter, ingestReadLimiter } from '../middleware/rateLimiter.js';
 
@@ -125,9 +125,11 @@ async function insertEvents(events, userId) {
     }
   }
 
-  // Run detection rules against only the newly inserted log IDs — fire and forget
+  // Run detection + correlation rules against only the newly inserted log IDs —
+  // fire and forget. runCorrelation delegates detection_rules to the existing
+  // engine and additionally evaluates correlation_rules (Phase 1).
   if (insertedIds.length && userId) {
-    runDetectionRules(userId, insertedIds).then(({ created, deduped }) => {
+    runCorrelation(userId, insertedIds).then(({ created, deduped }) => {
       if (created > 0 || deduped > 0) broadcast('new_alerts', { count: created + deduped });
     }).catch(err => console.error('Detection error:', err.message));
   }

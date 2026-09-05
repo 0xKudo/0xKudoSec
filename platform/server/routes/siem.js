@@ -14,6 +14,10 @@ import { requireAuth } from '../middleware/requireAuth.js';
 import { dbContext } from '../middleware/dbContext.js';
 import { runDetectionRules } from '../services/detection.js';
 import { validateTechniqueIds } from '../../shared/attack.js';
+import { validateCorrelationRule } from '../../shared/correlationRule.js';
+import { sigmaToRule, SigmaUnsupportedError } from '../services/correlation/sigma.js';
+import { syncSigmaCatalog, getSigmaSyncStatus, isSigmaSyncRunning, SIGMA_REF, SIGMA_CATEGORIES } from '../services/sigmaCron.js';
+import multer from 'multer';
 import { audit } from '../services/audit.js';
 import { broadcast } from '../services/wsBroadcast.js';
 import { ingestKeyLimiter, ruleImportLimiter } from '../middleware/rateLimiter.js';
@@ -964,6 +968,249 @@ router.post('/rules/import', ruleImportLimiter, wrap(async (req, res) => {
   res.json({ imported, skipped });
 }));
 
+// ── CORRELATION RULES (XDR Phase 1) ──────────────────────────────────────────
+
+// multer for Sigma .yml/.yaml uploads — memory storage, extension + MIME checked,
+// size capped (mirrors the Phishing Analyzer file pattern per CLAUDE.md).
+const yamlUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 100 * 1024 },
+  fileFilter(req, file, cb) {
+    const okExt = /\.(yml|yaml)$/i.test(file.originalname);
+    const okMime = ['text/yaml', 'application/x-yaml', 'application/yaml', 'text/plain', 'application/octet-stream']
+      .includes(file.mimetype);
+    cb(okExt && okMime ? null : new Error('Only .yml/.yaml files are accepted'), okExt && okMime);
+  },
+});
+
+// Validate + persist one correlation rule document. Returns { row } or { status, error }.
+async function insertCorrelationRule(req, ruleDoc) {
+  const { valid, errors } = validateCorrelationRule(ruleDoc);
+  if (!valid) return { status: 400, error: errors.join('; ') };
+  const name = ruleDoc.name.trim().slice(0, 255);
+  const techniques = validateTechniqueIds((ruleDoc.attack_techniques || []).map(String)).valid.slice(0, 50);
+  const { rows: existing } = await req.db.query(
+    'SELECT id FROM correlation_rules WHERE user_id = $1 AND name = $2', [uid(req), name]
+  );
+  if (existing.length) return { status: 409, error: 'A correlation rule with that name already exists.' };
+  const { rows } = await req.db.query(
+    `INSERT INTO correlation_rules (user_id, name, description, severity, enabled, rule, attack_techniques)
+     VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7)
+     RETURNING id, name, description, severity, enabled, rule, attack_techniques, created_at`,
+    [uid(req), name,
+     ruleDoc.description ? String(ruleDoc.description).slice(0, 1000) : null,
+     ['critical', 'high', 'medium', 'low', 'info'].includes(ruleDoc.severity) ? ruleDoc.severity : 'high',
+     ruleDoc.enabled !== false,
+     JSON.stringify(ruleDoc), techniques]
+  );
+  return { row: rows[0] };
+}
+
+router.get('/rules/correlation', wrap(async (req, res) => {
+  const { rows } = await req.db.query(
+    `SELECT id, name, description, severity, enabled, rule, attack_techniques, created_at, updated_at
+     FROM correlation_rules WHERE user_id = $1 ORDER BY id DESC`, [uid(req)]
+  );
+  res.json(rows);
+}));
+
+router.post('/rules/correlation', wrap(async (req, res) => {
+  const doc = req.body && req.body.rule ? req.body.rule : req.body;
+  const r = await insertCorrelationRule(req, doc);
+  if (r.error) return res.status(r.status).json({ error: r.error });
+  audit(uid(req), 'rules.correlation.create', { id: r.row.id, type: r.row.rule?.type }, req.ip);
+  res.status(201).json(r.row);
+}));
+
+// Import a single Sigma rule from pasted YAML.
+router.post('/rules/sigma', ruleImportLimiter, wrap(async (req, res) => {
+  const yamlText = req.body && req.body.yaml;
+  if (!yamlText || typeof yamlText !== 'string') return res.status(400).json({ error: 'yaml (string) required' });
+  let converted;
+  try {
+    converted = sigmaToRule(yamlText);
+  } catch (e) {
+    if (e instanceof SigmaUnsupportedError) return res.status(400).json({ error: e.message, unsupported: true });
+    throw e;
+  }
+  const r = await insertCorrelationRule(req, converted.rule);
+  if (r.error) return res.status(r.status).json({ error: r.error });
+  audit(uid(req), 'rules.sigma.import', { id: r.row.id }, req.ip);
+  res.status(201).json({ ...r.row, warnings: converted.warnings });
+}));
+
+// Import a single Sigma rule from an uploaded .yml/.yaml file.
+router.post('/rules/sigma-file', ruleImportLimiter, yamlUpload.single('file'), wrap(async (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'file required' });
+  let converted;
+  try {
+    converted = sigmaToRule(req.file.buffer.toString('utf8'));
+  } catch (e) {
+    if (e instanceof SigmaUnsupportedError) return res.status(400).json({ error: e.message, unsupported: true });
+    throw e;
+  }
+  const r = await insertCorrelationRule(req, converted.rule);
+  if (r.error) return res.status(r.status).json({ error: r.error });
+  audit(uid(req), 'rules.sigma.import', { id: r.row.id, file: req.file.originalname }, req.ip);
+  res.status(201).json({ ...r.row, warnings: converted.warnings });
+}));
+
+// ── SIGMA RULE LIBRARY (global catalog) ───────────────────────────────────────
+
+// Latest sync summary + current catalog counts (Rule Library status panel).
+router.get('/rules/sigma/status', wrap(async (req, res) => {
+  const status = await getSigmaSyncStatus();
+  res.json({ ...status, ref: SIGMA_REF, running: isSigmaSyncRunning() });
+}));
+
+// Manually trigger a catalog sync. Global job (~1-2 min); guarded against overlap.
+router.post('/rules/sigma/sync', ruleImportLimiter, wrap(async (req, res) => {
+  if (isSigmaSyncRunning()) return res.status(409).json({ error: 'A Sigma catalog sync is already running.' });
+  audit(uid(req), 'rules.sigma.sync', { ref: SIGMA_REF }, req.ip);
+  // Fire-and-forget: the sync writes its own progress/summary to sigma_sync_state,
+  // which the status endpoint reports. Return immediately so the request doesn't
+  // hold a connection for the whole download+convert.
+  syncSigmaCatalog().catch(e => console.error('[siem] sigma sync error:', e.message));
+  res.status(202).json({ started: true, ref: SIGMA_REF });
+}));
+
+// Per-user Sigma enablement (category toggles + auto-update).
+router.get('/rules/sigma/settings', wrap(async (req, res) => {
+  const { rows } = await req.db.query(
+    'SELECT sigma_enabled_categories, sigma_auto_update FROM user_settings WHERE user_id = $1', [uid(req)]
+  );
+  res.json({
+    sigma_enabled_categories: rows[0]?.sigma_enabled_categories || [],
+    sigma_auto_update: rows[0]?.sigma_auto_update ?? true,
+    categories: SIGMA_CATEGORIES,
+  });
+}));
+
+router.put('/rules/sigma/settings', wrap(async (req, res) => {
+  const cats = Array.isArray(req.body.sigma_enabled_categories) ? req.body.sigma_enabled_categories : null;
+  if (!cats) return res.status(400).json({ error: 'sigma_enabled_categories (array) required' });
+  const invalid = cats.filter(c => !SIGMA_CATEGORIES.includes(c));
+  if (invalid.length) return res.status(400).json({ error: `unknown categories: ${invalid.join(', ')}` });
+  const uniqueCats = [...new Set(cats)];
+  const autoUpdate = req.body.sigma_auto_update === undefined ? null
+    : (req.body.sigma_auto_update === true || req.body.sigma_auto_update === 'true');
+  const { rows } = await req.db.query(
+    `INSERT INTO user_settings (user_id, sigma_enabled_categories, sigma_auto_update)
+     VALUES ($1, $2::text[], COALESCE($3, true))
+     ON CONFLICT (user_id) DO UPDATE SET
+       sigma_enabled_categories = $2::text[],
+       sigma_auto_update = COALESCE($3, user_settings.sigma_auto_update),
+       updated_at = NOW()
+     RETURNING sigma_enabled_categories, sigma_auto_update`,
+    [uid(req), uniqueCats, autoUpdate]
+  );
+  audit(uid(req), 'rules.sigma.settings', { categories: uniqueCats, auto_update: rows[0].sigma_auto_update }, req.ip);
+  res.json(rows[0]);
+}));
+
+// Browse the global catalog with the caller's overrides + effective-enabled flag.
+// Filters: category, status (converted|rejected), technique (Txxxx), q (title). Paged.
+router.get('/rules/sigma/catalog', wrap(async (req, res) => {
+  const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 50, 1), 200);
+  const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+  const offset = (page - 1) * limit;
+
+  const { rows: st } = await req.db.query(
+    'SELECT sigma_enabled_categories FROM user_settings WHERE user_id = $1', [uid(req)]
+  );
+  const enabledCats = st[0]?.sigma_enabled_categories || [];
+
+  // Build the shared filter WHERE clauses starting at parameter index `start`.
+  // Returns { conds, params } so the same filters drive both the count and the page.
+  const buildFilters = (start) => {
+    const conds = ['NOT s.retired'];
+    const params = [];
+    const add = (v) => { params.push(v); return `$${start + params.length - 1}`; };
+    if (SIGMA_CATEGORIES.includes(req.query.category)) conds.push(`s.category = ${add(req.query.category)}`);
+    if (['converted', 'rejected'].includes(req.query.status)) conds.push(`s.convert_status = ${add(req.query.status)}`);
+    if (['exact', 'approximate'].includes(req.query.fidelity)) conds.push(`s.fidelity = ${add(req.query.fidelity)}`);
+    if (req.query.technique) conds.push(`${add(String(req.query.technique).toUpperCase())} = ANY(s.attack_techniques)`);
+    if (req.query.q) conds.push(`s.title ILIKE ${add(`%${String(req.query.q).slice(0, 100)}%`)}`);
+    return { conds, params };
+  };
+
+  // Total matching rows (filters only, no join needed) → drives numbered paging.
+  const cnt = buildFilters(1);
+  const { rows: cRows } = await req.db.query(
+    `SELECT count(*)::int AS total FROM sigma_rules s WHERE ${cnt.conds.join(' AND ')}`, cnt.params
+  );
+  const total = cRows[0].total;
+  const totalPages = Math.max(1, Math.ceil(total / limit));
+
+  // Page of rows with the caller's override + effective-enabled flag.
+  const flt = buildFilters(3); // $1 user_id (join), $2 enabled categories, filters from $3
+  const params = [uid(req), enabledCats, ...flt.params, limit, offset];
+  const limP = `$${params.length - 1}`;
+  const offP = `$${params.length}`;
+  const { rows } = await req.db.query(
+    `SELECT s.identity, s.sigma_id, s.title, s.category, s.path, s.severity, s.attack_techniques,
+            s.convert_status, s.reject_reason, s.fidelity,
+            o.enabled AS override_enabled, o.severity AS override_severity,
+            ( (s.category = ANY($2::text[]) AND COALESCE(o.enabled, true) = true) OR o.enabled = true ) AS effective_enabled
+     FROM sigma_rules s
+     LEFT JOIN sigma_rule_overrides o ON o.user_id = $1 AND o.sigma_identity = s.identity
+     WHERE ${flt.conds.join(' AND ')}
+     ORDER BY s.convert_status, s.category, s.title
+     LIMIT ${limP} OFFSET ${offP}`,
+    params
+  );
+  res.json({
+    page, limit, total, total_pages: totalPages, has_more: page < totalPages,
+    categories: SIGMA_CATEGORIES, enabled_categories: enabledCats,
+    rules: rows,
+  });
+}));
+
+// Set a per-rule override (disable / severity). Absent fields are preserved.
+router.put('/rules/sigma/overrides/:identity', wrap(async (req, res) => {
+  const identity = String(req.params.identity).slice(0, 200);
+  const { rows: cat } = await req.db.query('SELECT 1 FROM sigma_rules WHERE identity = $1', [identity]);
+  if (!cat.length) return res.status(404).json({ error: 'unknown catalog rule' });
+
+  let enabled = null;
+  if (req.body.enabled !== undefined) {
+    if (req.body.enabled === true || req.body.enabled === 'true') enabled = true;
+    else if (req.body.enabled === false || req.body.enabled === 'false') enabled = false;
+    else return res.status(400).json({ error: 'enabled must be a boolean' });
+  }
+  let severity = null;
+  if (req.body.severity !== undefined && req.body.severity !== null) {
+    if (!['critical', 'high', 'medium', 'low', 'info'].includes(req.body.severity)) {
+      return res.status(400).json({ error: 'invalid severity' });
+    }
+    severity = req.body.severity;
+  }
+  if (enabled === null && severity === null) {
+    return res.status(400).json({ error: 'provide enabled and/or severity' });
+  }
+
+  const { rows } = await req.db.query(
+    `INSERT INTO sigma_rule_overrides (user_id, sigma_identity, enabled, severity)
+     VALUES ($1, $2, $3, $4)
+     ON CONFLICT (user_id, sigma_identity) DO UPDATE SET
+       enabled  = COALESCE($3, sigma_rule_overrides.enabled),
+       severity = COALESCE($4, sigma_rule_overrides.severity),
+       updated_at = NOW()
+     RETURNING sigma_identity, enabled, severity`,
+    [uid(req), identity, enabled, severity]
+  );
+  audit(uid(req), 'rules.sigma.override', { identity, enabled, severity }, req.ip);
+  res.json(rows[0]);
+}));
+
+// Clear a per-rule override (reverts the rule to its category default).
+router.delete('/rules/sigma/overrides/:identity', wrap(async (req, res) => {
+  const identity = String(req.params.identity).slice(0, 200);
+  await req.db.query('DELETE FROM sigma_rule_overrides WHERE user_id = $1 AND sigma_identity = $2', [uid(req), identity]);
+  audit(uid(req), 'rules.sigma.override.delete', { identity }, req.ip);
+  res.json({ deleted: true });
+}));
+
 // Run all enabled rules against last 24 hours of logs (manual trigger)
 router.post('/rules/run', wrap(async (req, res) => {
   const { created, deduped } = await runDetectionRules(uid(req), null);
@@ -979,9 +1226,12 @@ router.get('/alerts', wrap(async (req, res) => {
   const conds = ['a.user_id = $1'];
   if (status) { params.push(status); conds.push(`a.status = $${params.length}`); }
   const { rows } = await req.db.query(
-    `SELECT a.*, r.name AS rule_name, r.attack_techniques
+    `SELECT a.*,
+            COALESCE(r.name, sr.title) AS rule_name,
+            COALESCE(r.attack_techniques, sr.attack_techniques) AS attack_techniques
      FROM alerts a
      LEFT JOIN detection_rules r ON r.id = a.rule_id
+     LEFT JOIN sigma_rules sr ON sr.identity = a.sigma_identity
      WHERE ${conds.join(' AND ')}
      ORDER BY a.created_at DESC LIMIT 200`,
     params

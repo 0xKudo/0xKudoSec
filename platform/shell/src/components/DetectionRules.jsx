@@ -3,6 +3,7 @@ import { useAuth0 } from '@auth0/auth0-react';
 import { useIsMobile } from '../hooks/useIsMobile.js';
 import { badgeStyle } from './ui/index.js';
 import { ATTACK_TECHNIQUES, ATTACK_TACTIC_BY_ID, techniqueLabel } from '../../../shared/attack.js';
+import { RuleLibrary } from './RuleLibrary';
 
 const SEV_COLOR = {
   critical: 'var(--severity-critical)',
@@ -324,9 +325,15 @@ export function DetectionRules({ onNavigate }) {
         <button style={s.tab(tab === 'suppress')} onClick={() => setTab('suppress')}>
           Suppression {suppressCount > 0 && `(${suppressCount})`}
         </button>
+        <button style={s.tab(tab === 'library')} onClick={() => setTab('library')}>
+          Rule Library
+        </button>
       </div>
 
+      {tab === 'library' && <RuleLibrary embedded />}
+
       {/* Search + filter bar */}
+      {tab !== 'library' && (
       <div style={{ padding: '8px 20px', borderBottom: '1px solid var(--border)', background: 'var(--bg-surface)', display: 'flex', flexDirection: 'column', gap: '6px' }}>
         <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
           <input
@@ -377,8 +384,9 @@ export function DetectionRules({ onNavigate }) {
           {filteredRules.length} of {visibleRules.length} {tab} rules
         </div>
       </div>
+      )}
 
-      {isMobile ? (
+      {tab !== 'library' && (isMobile ? (
         <div>
           {!loading && !filteredRules.length && (
             <div style={s.muted}>{visibleRules.length === 0 ? `No ${tab} rules yet. Tap "+ New Rule" to create one.` : 'No rules match your search.'}</div>
@@ -463,7 +471,7 @@ export function DetectionRules({ onNavigate }) {
             </tbody>
           </table>
         </div>
-      )}
+      ))}
 
       {formOpen && (
         <div style={s.overlay} onClick={() => setFormOpen(false)}>

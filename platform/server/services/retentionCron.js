@@ -8,6 +8,7 @@
 import { createHash } from 'crypto';
 import cron from 'node-cron';
 import db from './db.js';
+import { pruneCorrelationState } from './correlation/state.js';
 
 let _opsPool;
 function getOpsPool() {
@@ -132,6 +133,16 @@ async function runRetention() {
           AND NOT EXISTS (SELECT 1 FROM logs l WHERE l.id = ra.log_id)`
     );
     if (raOrphans > 0) console.log(`[retention] cleaned ${raOrphans} orphaned realtime_analysis rows`);
+
+    // Correlation state expiry (XDR Phase 1): drop sliding-window state untouched
+    // for longer than the window ceiling — no live window can reference it.
+    try {
+      const staleState = await pruneCorrelationState();
+      if (staleState > 0) console.log(`[retention] pruned ${staleState} expired correlation_state rows`);
+    } catch (err) {
+      // correlation_state may not exist yet on DBs predating Phase 1 — non-fatal.
+      console.warn('[retention] correlation_state prune skipped:', err.message);
+    }
 
     // ── Audit log retention ───────────────────────────────────────────────────
     // Per-user: only purge if audit_log_retention_enabled = true (or no setting on file).

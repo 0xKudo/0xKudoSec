@@ -43,7 +43,9 @@ CREATE TABLE public.alerts (
     last_seen timestamp with time zone DEFAULT now(),
     created_at timestamp with time zone DEFAULT now(),
     updated_at timestamp with time zone DEFAULT now(),
-    occurrence_times timestamp with time zone[] DEFAULT ARRAY[]::timestamp with time zone[] NOT NULL
+    occurrence_times timestamp with time zone[] DEFAULT ARRAY[]::timestamp with time zone[] NOT NULL,
+    correlation_rule_id bigint,
+    group_key text
 );
 
 ALTER TABLE ONLY public.alerts FORCE ROW LEVEL SECURITY;
@@ -267,7 +269,14 @@ CREATE TABLE public.logs (
     parent_process_guid text,
     file_path text,
     registry_key text,
-    raw text
+    raw text,
+    -- Sigma Full Coverage Phase 4: queryable views of `raw` for unmapped Sigma
+    -- fields and keyword search. Generated, so ingest writes only `raw`/`message`.
+    raw_json jsonb GENERATED ALWAYS AS (
+      CASE WHEN raw IS NOT NULL AND left(btrim(raw), 1) IN ('{', '[')
+           THEN raw::jsonb ELSE NULL END
+    ) STORED,
+    search_text text GENERATED ALWAYS AS (coalesce(message, '') || ' ' || coalesce(raw, '')) STORED
 )
 PARTITION BY RANGE ("timestamp");
 
@@ -738,6 +747,17 @@ CREATE INDEX idx_logs_user_timestamp ON public.logs USING btree (user_id, "times
 
 
 --
+-- Name: idx_logs_raw_json / idx_logs_search_text_trgm; Type: INDEX; Schema: public; Owner: -
+-- Sigma Full Coverage Phase 4: raw-field containment + trigram keyword search.
+-- Requires the pg_trgm extension.
+--
+
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+CREATE INDEX idx_logs_raw_json ON public.logs USING gin (raw_json);
+CREATE INDEX idx_logs_search_text_trgm ON public.logs USING gin (search_text gin_trgm_ops);
+
+
+--
 -- Name: logs_ts_brin; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1001,3 +1021,183 @@ END$$;
 
 CREATE TABLE IF NOT EXISTS public.logs_default PARTITION OF public.logs DEFAULT;
 
+
+--
+-- Name: correlation_rules; Type: TABLE; Schema: public; Owner: -
+-- XDR Phase 1: versioned JSON correlation rule documents. detection_rules stays
+-- in place (read via a single_event compatibility shim); this table is additive.
+--
+
+CREATE SEQUENCE IF NOT EXISTS public.correlation_rules_id_seq
+  START WITH 1 INCREMENT BY 1 NO MINVALUE NO MAXVALUE CACHE 1;
+
+CREATE TABLE IF NOT EXISTS public.correlation_rules (
+  id                bigint NOT NULL DEFAULT nextval('public.correlation_rules_id_seq'::regclass),
+  user_id           text NOT NULL,
+  name              text NOT NULL,
+  description       text,
+  rule              jsonb NOT NULL,
+  severity          text DEFAULT 'high'::text,
+  enabled           boolean DEFAULT true,
+  version           integer DEFAULT 1 NOT NULL,
+  attack_techniques text[] DEFAULT '{}'::text[] NOT NULL,
+  created_at        timestamp with time zone DEFAULT now(),
+  updated_at        timestamp with time zone DEFAULT now()
+);
+
+ALTER SEQUENCE public.correlation_rules_id_seq OWNED BY public.correlation_rules.id;
+
+ALTER TABLE ONLY public.correlation_rules
+  ADD CONSTRAINT correlation_rules_pkey PRIMARY KEY (id);
+
+CREATE INDEX IF NOT EXISTS idx_correlation_rules_user ON public.correlation_rules USING btree (user_id);
+
+ALTER TABLE public.correlation_rules ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ONLY public.correlation_rules FORCE ROW LEVEL SECURITY;
+
+CREATE POLICY user_isolation ON public.correlation_rules USING ((user_id = current_setting('app.user_id'::text, true))) WITH CHECK ((user_id = current_setting('app.user_id'::text, true)));
+
+
+--
+-- Name: correlation_state; Type: TABLE; Schema: public; Owner: -
+-- XDR Phase 1: sliding-window state for stateful correlation rule types.
+--
+
+CREATE TABLE IF NOT EXISTS public.correlation_state (
+  user_id      text NOT NULL,
+  rule_id      bigint NOT NULL,
+  state_key    text NOT NULL,
+  window_start timestamp with time zone,
+  counter      integer DEFAULT 0 NOT NULL,
+  payload      jsonb DEFAULT '{}'::jsonb NOT NULL,
+  updated_at   timestamp with time zone DEFAULT now()
+);
+
+ALTER TABLE ONLY public.correlation_state
+  ADD CONSTRAINT correlation_state_pkey PRIMARY KEY (user_id, rule_id, state_key);
+
+CREATE INDEX IF NOT EXISTS idx_correlation_state_updated ON public.correlation_state USING btree (updated_at);
+
+ALTER TABLE ONLY public.correlation_state
+  ADD CONSTRAINT correlation_state_rule_id_fkey FOREIGN KEY (rule_id) REFERENCES public.correlation_rules(id) ON DELETE CASCADE;
+
+ALTER TABLE public.correlation_state ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ONLY public.correlation_state FORCE ROW LEVEL SECURITY;
+
+CREATE POLICY user_isolation ON public.correlation_state USING ((user_id = current_setting('app.user_id'::text, true))) WITH CHECK ((user_id = current_setting('app.user_id'::text, true)));
+
+
+--
+-- alerts correlation columns wiring (XDR Phase 1): FK + dedup index. Placed here
+-- because it references correlation_rules, created above. The columns themselves
+-- are declared inline in the alerts table near the top of this file.
+--
+
+ALTER TABLE ONLY public.alerts
+  ADD CONSTRAINT alerts_correlation_rule_id_fkey FOREIGN KEY (correlation_rule_id) REFERENCES public.correlation_rules(id) ON DELETE SET NULL;
+
+CREATE UNIQUE INDEX IF NOT EXISTS alerts_corr_dedup ON public.alerts (user_id, correlation_rule_id, group_key) WHERE correlation_rule_id IS NOT NULL;
+
+
+
+--
+-- Name: sigma_rules; Type: TABLE; Schema: public; Owner: -
+-- Sigma Rule Library (Phase 1): GLOBAL catalog of converted SigmaHQ community
+-- rules, shared across all users and refreshed by services/sigmaCron.js. Public
+-- reference data, EXCLUDED from RLS like vuln_kb (no ENABLE ROW LEVEL SECURITY).
+--
+
+CREATE SEQUENCE IF NOT EXISTS public.sigma_rules_id_seq
+  START WITH 1 INCREMENT BY 1 NO MINVALUE NO MAXVALUE CACHE 1;
+
+CREATE TABLE IF NOT EXISTS public.sigma_rules (
+  id                bigint PRIMARY KEY DEFAULT nextval('public.sigma_rules_id_seq'::regclass),
+  sigma_id          text,
+  identity          text NOT NULL UNIQUE,
+  title             text,
+  category          text NOT NULL,
+  path              text NOT NULL,
+  rule              jsonb,
+  severity          text,
+  attack_techniques text[] DEFAULT '{}'::text[] NOT NULL,
+  convert_status    text NOT NULL,
+  reject_reason     text,
+  retired           boolean DEFAULT false NOT NULL,
+  source_sha        text,
+  sig_event_ids     integer[] DEFAULT '{}'::integer[] NOT NULL,
+  sig_categories    text[] DEFAULT '{}'::text[] NOT NULL,
+  sig_sources       text[] DEFAULT '{}'::text[] NOT NULL,
+  -- Sigma Full Coverage Phase 6: exact | approximate (rejected rows are null).
+  fidelity          text,
+  updated_at        timestamp with time zone DEFAULT now()
+);
+
+ALTER SEQUENCE public.sigma_rules_id_seq OWNED BY public.sigma_rules.id;
+
+CREATE INDEX IF NOT EXISTS idx_sigma_rules_category ON public.sigma_rules USING btree (category);
+CREATE INDEX IF NOT EXISTS idx_sigma_rules_status   ON public.sigma_rules USING btree (convert_status);
+CREATE INDEX IF NOT EXISTS idx_sigma_rules_retired  ON public.sigma_rules USING btree (retired);
+CREATE INDEX IF NOT EXISTS idx_sigma_rules_sig_event_ids  ON public.sigma_rules USING gin (sig_event_ids);
+CREATE INDEX IF NOT EXISTS idx_sigma_rules_sig_categories ON public.sigma_rules USING gin (sig_categories);
+CREATE INDEX IF NOT EXISTS idx_sigma_rules_sig_sources    ON public.sigma_rules USING gin (sig_sources);
+CREATE INDEX IF NOT EXISTS idx_sigma_rules_fidelity        ON public.sigma_rules USING btree (fidelity);
+
+
+--
+-- Name: sigma_sync_state; Type: TABLE; Schema: public; Owner: -
+-- Sigma Rule Library (Phase 1): one row per catalog sync (status/history).
+-- Global, excluded from RLS like sigma_rules.
+--
+
+CREATE SEQUENCE IF NOT EXISTS public.sigma_sync_state_id_seq
+  START WITH 1 INCREMENT BY 1 NO MINVALUE NO MAXVALUE CACHE 1;
+
+CREATE TABLE IF NOT EXISTS public.sigma_sync_state (
+  id              bigint PRIMARY KEY DEFAULT nextval('public.sigma_sync_state_id_seq'::regclass),
+  ref             text,
+  source_sha      text,
+  started_at      timestamp with time zone DEFAULT now(),
+  finished_at     timestamp with time zone,
+  total           integer DEFAULT 0 NOT NULL,
+  converted       integer DEFAULT 0 NOT NULL,
+  rejected        integer DEFAULT 0 NOT NULL,
+  retired         integer DEFAULT 0 NOT NULL,
+  category_counts jsonb,
+  reject_reasons  jsonb,
+  duration_ms     integer,
+  error           text
+);
+
+ALTER SEQUENCE public.sigma_sync_state_id_seq OWNED BY public.sigma_sync_state.id;
+
+CREATE INDEX IF NOT EXISTS idx_sigma_sync_state_started ON public.sigma_sync_state USING btree (started_at DESC);
+
+
+--
+-- Sigma Rule Library Phase 2: per-user enablement.
+-- user_settings gains coarse toggles; sigma_rule_overrides is per-user (strict RLS);
+-- alerts gains sigma_identity so a catalog rule can fire a deduped alert.
+--
+
+ALTER TABLE public.user_settings
+  ADD COLUMN IF NOT EXISTS sigma_enabled_categories text[] DEFAULT '{}'::text[] NOT NULL;
+ALTER TABLE public.user_settings
+  ADD COLUMN IF NOT EXISTS sigma_auto_update boolean DEFAULT true NOT NULL;
+
+CREATE TABLE IF NOT EXISTS public.sigma_rule_overrides (
+  user_id        text NOT NULL,
+  sigma_identity text NOT NULL,
+  enabled        boolean,
+  severity       text,
+  updated_at     timestamp with time zone DEFAULT now(),
+  PRIMARY KEY (user_id, sigma_identity)
+);
+
+ALTER TABLE public.sigma_rule_overrides ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ONLY public.sigma_rule_overrides FORCE ROW LEVEL SECURITY;
+
+CREATE POLICY user_isolation ON public.sigma_rule_overrides USING ((user_id = current_setting('app.user_id'::text, true))) WITH CHECK ((user_id = current_setting('app.user_id'::text, true)));
+
+ALTER TABLE public.alerts ADD COLUMN IF NOT EXISTS sigma_identity text;
+
+CREATE UNIQUE INDEX IF NOT EXISTS alerts_sigma_dedup ON public.alerts (user_id, sigma_identity, group_key) WHERE sigma_identity IS NOT NULL;

@@ -85,6 +85,10 @@ const s = {
   muted: {
     color: 'var(--text-muted)',
   },
+  link: {
+    color: 'var(--accent-amber)',
+    textDecoration: 'none',
+  },
 };
 
 export function SecurityPage() {
@@ -99,7 +103,7 @@ export function SecurityPage() {
 
       <div style={s.scrollArea}><div style={s.container}>
         <h1 style={s.h1}>Security Practices</h1>
-        <div style={s.updated}>Last updated: April 8, 2026</div>
+        <div style={s.updated}>Last updated: September 5, 2026</div>
 
         <p style={s.p}>
           This page describes the technical and organizational security controls in place for the 0xKudo platform.
@@ -145,6 +149,24 @@ export function SecurityPage() {
           <li style={s.li}>Audit log entries are retained for 365 days by default and can be configured for longer retention to meet compliance pipeline requirements.</li>
           <li style={s.li}>When an account is deleted, audit log entries are anonymized rather than deleted, preserving the security record without retaining personal identity data.</li>
         </ul>
+
+        <h2 style={s.h2}>Detection Content and Open Source</h2>
+        <p style={s.p}>
+          The platform's Rule Library includes community detection rules from the{' '}
+          <a href="https://github.com/SigmaHQ/sigma" target="_blank" rel="noreferrer" style={s.link}>SigmaHQ</a>{' '}
+          project, an open, vendor-neutral catalog of detection rules maintained by the security community.
+        </p>
+        <ul style={s.ul}>
+          <li style={s.li}>SigmaHQ rules are licensed under the Detection Rule License 1.1 (DRL 1.1), which permits use, modification, and redistribution, including in commercial products, provided attribution and license notices are retained.</li>
+          <li style={s.li}>These rules are converted into the platform's own detection format and provided as a feature within the product. They are not sold or redistributed as a standalone rule feed.</li>
+          <li style={s.li}>Each synchronized rule set records the exact SigmaHQ release and commit it was drawn from, so the detection content in use is transparent and reproducible.</li>
+          <li style={s.li}>Rules that reference constructs the platform cannot yet represent are shown as unsupported with the reason, rather than silently dropped, so detection coverage is reported honestly.</li>
+        </ul>
+        <p style={s.p}>
+          Source and license:{' '}
+          <a href="https://github.com/SigmaHQ/sigma" target="_blank" rel="noreferrer" style={s.link}>github.com/SigmaHQ/sigma</a>{' '}
+          <span style={s.muted}>(Detection Rule License 1.1).</span>
+        </p>
 
         <h2 style={s.h2}>Contact</h2>
         <p style={s.p}>
