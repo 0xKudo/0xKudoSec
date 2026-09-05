@@ -19,6 +19,15 @@ describe('network-scanner-core', () => {
     expect(args[args.length - 1]).toBe('10.0.0.1');
     expect(args).toContain('-F');
   });
+  it('includes verbose + periodic-stats flags so output streams live to the pipe', () => {
+    const args = core.buildNmapArgs('10.0.0.1', 'quick');
+    expect(args).toContain('-v');
+    const i = args.indexOf('--stats-every');
+    expect(i).toBeGreaterThan(-1);
+    expect(args[i + 1]).toBe('1s');
+    // streaming flags must precede the -- target separator
+    expect(i).toBeLessThan(args.indexOf('--'));
+  });
   it('throws on unknown scanType and bad target', () => {
     expect(() => core.buildNmapArgs('10.0.0.1', 'bogus')).toThrow();
     expect(() => core.buildNmapArgs('a; ls', 'quick')).toThrow();

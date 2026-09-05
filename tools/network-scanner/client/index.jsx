@@ -186,7 +186,6 @@ export default function NetworkScanner() {
   const [loading, setLoading] = useState(false);
   const [liveLines, setLiveLines] = useState([]);
   const [error, setError] = useState(null);
-  const [showRaw, setShowRaw] = useState(false);
   const [authorized, setAuthorized] = useState(false);
   const [nmapMissing, setNmapMissing] = useState(false);
   const runIdRef = useRef(null);
@@ -241,7 +240,6 @@ export default function NetworkScanner() {
     setError(null);
     setResult(null);
     setLiveLines([]);
-    setShowRaw(false);
     runIdRef.current = null;
 
     // nmap must be present on this machine
@@ -357,34 +355,23 @@ export default function NetworkScanner() {
 
       {error && <p style={styles.error}>{error}</p>}
 
-      {/* Live output panel: visible while scanning */}
-      {(loading || liveLines.length > 0) && !result && (
-        <div style={styles.livePanel}>
-          <div style={styles.livePanelHeader}>
-            <div style={styles.pulse} />Live output
-          </div>
-          <div style={styles.liveOutput} ref={outputRef}>
-            {liveLines.join('\n')}
+      {result && (
+        <div style={styles.summaryCard}>
+          <div style={styles.riskRow}>
+            <span style={styles.targetLabel}>{result.scanLabel}: {result.target}</span>
           </div>
         </div>
       )}
 
-      {result && (
-        <div style={styles.results}>
-          <div style={styles.summaryCard}>
-            <div style={styles.riskRow}>
-              <span style={styles.targetLabel}>{result.scanLabel}: {result.target}</span>
-            </div>
+      {/* Output panel: streams live as nmap runs, and stays visible after completion */}
+      {(loading || liveLines.length > 0 || result?.rawOutput) && (
+        <div style={styles.livePanel}>
+          <div style={styles.livePanelHeader}>
+            {loading ? <><div style={styles.pulse} />Live output</> : 'Output'}
           </div>
-
-          {result.rawOutput && (
-            <div>
-              <Button variant="ghost" onClick={() => setShowRaw(v => !v)}>
-                {showRaw ? 'Hide' : 'Show'} Raw nmap Output
-              </Button>
-              {showRaw && <div style={styles.rawOutput}>{result.rawOutput}</div>}
-            </div>
-          )}
+          <div style={styles.liveOutput} ref={outputRef}>
+            {result?.rawOutput || liveLines.join('\n')}
+          </div>
         </div>
       )}
 

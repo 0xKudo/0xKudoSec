@@ -24,7 +24,9 @@ function buildNmapArgs(target, scanType) {
   if (!validateTarget(t)) throw new Error('Invalid target.');
   const profile = SCAN_PROFILES[scanType];
   if (!profile) throw new Error('Invalid scanType.');
-  return ['-oN', '-', ...profile.args, '--', t];
+  // -v + --stats-every make nmap report discoveries and periodic progress incrementally to the
+  // (non-TTY) pipe, so the UI can stream results live instead of only at completion.
+  return ['-oN', '-', '-v', '--stats-every', '1s', ...profile.args, '--', t];
 }
 
 function resolveNmapPath() {
