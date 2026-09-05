@@ -36,6 +36,14 @@ contextBridge.exposeInMainWorld('electron', {
     send: (req) => ipcRenderer.invoke('http-repeater:send', req),
   },
 
+  intruder: {
+    start: (config) => ipcRenderer.invoke('intruder:start', config),
+    cancel: (runId) => ipcRenderer.invoke('intruder:cancel', runId),
+    onResult: (cb) => ipcRenderer.on('intruder:result', (_e, d) => cb(d)),
+    onDone: (cb) => ipcRenderer.on('intruder:done', (_e, d) => cb(d)),
+    onError: (cb) => ipcRenderer.on('intruder:error', (_e, d) => cb(d)),
+  },
+
   fluentBit: {
     getStatus: () => ipcRenderer.invoke('fluent-bit:status'),
     start: () => ipcRenderer.invoke('fluent-bit:start'),

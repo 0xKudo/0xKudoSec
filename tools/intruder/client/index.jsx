@@ -1,8 +1,10 @@
-import { useState, useEffect } from 'react';
-import { useAuth0 } from '@auth0/auth0-react';
+import { useState, useEffect, useRef } from 'react';
 import { useWorkspace } from '../../../platform/shell/src/context/WorkspaceContext.jsx';
 import { useIsMobile } from '../../../platform/shell/src/hooks/useIsMobile.js';
 import { Button, Input, Table, AuthGate } from '../../../platform/shell/src/components/ui/index.js';
+import DesktopOnly from '../../../platform/shell/src/components/DesktopOnly.jsx';
+
+const isElectron = typeof window !== 'undefined' && window.electron?.isElectron === true;
 
 const METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'];
 
@@ -156,7 +158,6 @@ const styles = {
 
 export default function Intruder() {
   const isMobile = useIsMobile();
-  const { getAccessTokenSilently } = useAuth0();
   const [method, setMethod] = useState('GET');
   const [urlTemplate, setUrlTemplate] = useState('');
   const [headersText, setHeadersText] = useState('');
@@ -164,9 +165,11 @@ export default function Intruder() {
   const [payloadsText, setPayloadsText] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [result, setResult] = useState(null);
+  const [rows, setRows] = useState([]);       // streamed per-request results
+  const [summary, setSummary] = useState(null); // set on done
   const [expandedRow, setExpandedRow] = useState(null);
   const [authorized, setAuthorized] = useState(false);
+  const runIdRef = useRef(null);
   const { push } = useWorkspace();
 
   useEffect(() => {
@@ -179,6 +182,31 @@ export default function Intruder() {
     } catch {}
   }, []);
 
+  // Subscribe to local intruder IPC events (desktop app only). Dispatch by runId.
+  useEffect(() => {
+    if (!isElectron) return;
+    window.electron.intruder.onResult((d) => {
+      if (d.runId !== runIdRef.current) return;
+      setRows(prev => [...prev, d]);
+    });
+    window.electron.intruder.onDone((d) => {
+      if (d.runId !== runIdRef.current) return;
+      setSummary(d.summary);
+      setLoading(false);
+      runIdRef.current = null;
+      if (d.summary?.flaggedCount > 0) {
+        push('intruder', `Intruder: ${d.summary.flaggedCount} anomalies on ${urlTemplate}`,
+          { results: d.results, summary: d.summary }, 'intruder');
+      }
+    });
+    window.electron.intruder.onError((d) => {
+      if (d.runId !== runIdRef.current) return;
+      setError(d.error);
+      setLoading(false);
+      runIdRef.current = null;
+    });
+  }, []);
+
   function loadBuiltIn(key) {
     setPayloadsText(BUILT_IN_LISTS[key]);
   }
@@ -186,8 +214,10 @@ export default function Intruder() {
   async function handleAttack() {
     setLoading(true);
     setError(null);
-    setResult(null);
+    setRows([]);
+    setSummary(null);
     setExpandedRow(null);
+    runIdRef.current = null;
 
     const payloads = payloadsText.split('\n').map(p => p.trim()).filter(Boolean);
     if (payloads.length === 0) {
@@ -196,44 +226,31 @@ export default function Intruder() {
       return;
     }
 
-    try {
-      const token = await getAccessTokenSilently();
-      const res = await fetch('/api/tools/intruder/attack', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({
-          method,
-          urlTemplate: urlTemplate.trim(),
-          headers: headersText,
-          body: bodyText || undefined,
-          payloads,
-        }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.error || 'Attack failed.');
-      } else {
-        setResult(data);
-        if (data.summary.flaggedCount > 0) {
-          push(
-            'intruder',
-            `Intruder: ${data.summary.flaggedCount} anomalies on ${urlTemplate}`,
-            { results: data.results, summary: data.summary },
-            'intruder'
-          );
-        }
-      }
-    } catch {
-      setError('Network error. Is the server running?');
-    } finally {
+    // Runs locally in the desktop app via IPC; results stream in as each request returns.
+    const out = await window.electron.intruder.start({
+      method,
+      urlTemplate: urlTemplate.trim(),
+      headers: headersText,
+      body: bodyText || undefined,
+      payloads,
+    });
+    if (out.error) {
+      setError(out.error);
       setLoading(false);
+      return;
     }
+    runIdRef.current = out.runId;
+  }
+
+  async function handleStop() {
+    if (runIdRef.current) await window.electron.intruder.cancel(runIdRef.current);
   }
 
   const payloadCount = payloadsText.split('\n').filter(p => p.trim()).length;
   const canAttack = !loading && urlTemplate.trim().length > 0 && payloadCount > 0 && authorized;
   const showBody = !['GET', 'HEAD'].includes(method);
+
+  if (!isElectron) return <DesktopOnly toolName="Intruder" downloadUrl="https://0xkudo.com/download" />;
 
   return (
     <div style={styles.container}>
@@ -325,35 +342,44 @@ export default function Intruder() {
             <AuthGate checked={authorized} onChange={setAuthorized} disabled={loading} />
           </div>
 
-          <Button loading={loading} onClick={handleAttack} disabled={!canAttack}>
-            {loading ? `Attacking… (${payloadCount} payloads)` : 'Start Attack'}
-          </Button>
+          {loading ? (
+            <Button variant="danger" onClick={handleStop}>Stop ({rows.length}/{payloadCount})</Button>
+          ) : (
+            <Button onClick={handleAttack} disabled={!canAttack}>Start Attack</Button>
+          )}
         </div>
       </div>
 
       {error && <p style={styles.error}>{error}</p>}
 
-      {result && (
+      {(rows.length > 0 || loading) && (
         <div style={styles.results}>
-          {/* Summary bar */}
-          <div style={styles.summaryBar}>
-            <span style={styles.summaryItem}>Total: <span style={styles.summaryVal}>{result.total}</span></span>
-            {Object.entries(result.summary.statusCounts).sort().map(([s, c]) => (
-              <span key={s} style={{ ...styles.summaryItem, color: STATUS_COLOR(parseInt(s)) }}>
-                {s}: <span style={styles.summaryVal}>{c}</span>
-              </span>
-            ))}
-            <span style={styles.summaryItem}>Baseline length: <span style={styles.summaryVal}>{result.summary.baselineLength}b</span></span>
-            <span style={styles.summaryItem}>Flagged: <span style={{ ...styles.summaryVal, color: result.summary.flaggedCount > 0 ? 'var(--severity-high)' : 'var(--severity-low)' }}>{result.summary.flaggedCount}</span></span>
-          </div>
-
-          {result.summary.flaggedCount > 0 && (
-            <div style={styles.flaggedBanner}>
-              {result.summary.flaggedCount} anomalous response{result.summary.flaggedCount !== 1 ? 's' : ''} detected. Highlighted below.
+          {/* Summary bar (populated once the run completes) */}
+          {summary && (
+            <div style={styles.summaryBar}>
+              <span style={styles.summaryItem}>Total: <span style={styles.summaryVal}>{rows.length}</span></span>
+              {Object.entries(summary.statusCounts).sort().map(([s, c]) => (
+                <span key={s} style={{ ...styles.summaryItem, color: STATUS_COLOR(parseInt(s)) }}>
+                  {s}: <span style={styles.summaryVal}>{c}</span>
+                </span>
+              ))}
+              <span style={styles.summaryItem}>Baseline length: <span style={styles.summaryVal}>{summary.baselineLength}b</span></span>
+              <span style={styles.summaryItem}>Flagged: <span style={{ ...styles.summaryVal, color: summary.flaggedCount > 0 ? 'var(--severity-high)' : 'var(--severity-low)' }}>{summary.flaggedCount}</span></span>
+            </div>
+          )}
+          {loading && (
+            <div style={{ ...styles.summaryBar }}>
+              <span style={styles.summaryItem}>Running… <span style={styles.summaryVal}>{rows.length}/{payloadCount}</span></span>
             </div>
           )}
 
-          {/* Results table */}
+          {summary && summary.flaggedCount > 0 && (
+            <div style={styles.flaggedBanner}>
+              {summary.flaggedCount} anomalous response{summary.flaggedCount !== 1 ? 's' : ''} detected. Highlighted below.
+            </div>
+          )}
+
+          {/* Results table — rows stream in live as each request returns */}
           <Table>
               <thead>
                 <tr>
@@ -366,8 +392,8 @@ export default function Intruder() {
                 </tr>
               </thead>
               <tbody>
-                {result.results.map((r, idx) => {
-                  const isFlagged = result.summary.flagged.includes(r.payload);
+                {rows.map((r, idx) => {
+                  const isFlagged = summary ? summary.flagged.includes(r.payload) : false;
                   const isExpanded = expandedRow === idx;
                   return (
                     <>

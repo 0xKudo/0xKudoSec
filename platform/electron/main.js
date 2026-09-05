@@ -682,6 +682,9 @@ app.whenReady().then(async () => {
   const registerHttpRepeater = require('./tools/http-repeater');
   registerHttpRepeater(ipcMain, { getMainWindow: () => mainWindow, isValidSender });
 
+  const registerIntruder = require('./tools/intruder');
+  registerIntruder(ipcMain, { getMainWindow: () => mainWindow, isValidSender });
+
   setupAutoUpdater();
 });
 
