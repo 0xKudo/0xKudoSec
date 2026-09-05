@@ -43,6 +43,7 @@ files:
   - "llmProcess.js"
   - "tray.js"
   - "splash.html"
+  - "tools/**/*"          # desktop-only tool IPC modules (network-scanner, http-repeater, intruder, scanner, subdomain-enum) required by main.js
   - "assets/**"
   - "node_modules/**"
   - "package.json"

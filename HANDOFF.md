@@ -155,6 +155,28 @@ v1.2.50 exe published on 0xKudoSec-releases. **All 5 tools now run locally in th
 DesktopOnly on the web.** (SSH from this machine works with `~/.ssh/vps_cybertools` once the repo is
 public or an https credential exists; the repo was made public to allow the VPS https `git pull`.)
 
+### POST-RELEASE ISSUES with v1.2.50 (2026-09-05) — fix in v1.2.51
+
+1. **Packaged app crashes on launch:** `Cannot find module './tools/network-scanner-core.js'`.
+   Root cause: `electron-builder.yml` `files:` never included the new `platform/electron/tools/`
+   directory, so the 10 tool IPC modules were not packed into `app.asar`. **FIXED in repo** — added
+   `- "tools/**/*"` to `files:`. Needs a rebuild + release (v1.2.51). Verify post-build with
+   `npx asar list …/app.asar | grep tools/`.
+2. **Update banner "Update check failed" (RESOLVED):** the v1.2.50 release had no valid `latest.yml`
+   — the `electron-builder --publish` step 401'd (expired `GH_TOKEN`), so `latest.yml` was never
+   uploaded. A `builder-debug.yml` got renamed to `latest.yml` by mistake (wrong format, 8.42 KB).
+   Fixed by hand-building the correct `latest.yml` (version 1.2.50, real base64 sha512 + size,
+   referencing the dots-named asset) and replacing it on the release. Banner then worked. **Root fix:
+   rotate `GH_TOKEN` so publish uploads `latest.yml` automatically.**
+3. **Owner redirect (not a bug):** the app's `app-update.yml` has `owner: 0xKudoX` but the release is
+   under `0xKudo`. `0xKudoX` 301-redirects to `0xKudo` and electron-updater follows it, so updates
+   resolve fine. Don't "fix" the owner.
+4. **nmap (not a bug):** bundled via `extraResources`; the install prompt is IN-APP (Network Scanner
+   checks `nmap:status`, shows Install only when missing) — not part of the NSIS installer. Test the
+   prompt on a machine without nmap.
+
+**Easy fix spec for a different account:** `docs/specs/2026-09-05-desktop-only-packaging-fix.md`.
+
 Historical steps (now done):
 1. Merge `feat/desktop-only-network-scanner` → `main`, push to GitHub.
 2. VPS deploy (sequencing is now safe — the v1.2.50 exe is published so desktop users can update to
