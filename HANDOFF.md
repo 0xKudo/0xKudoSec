@@ -132,6 +132,34 @@ and Subdomain Enumerator (crt.sh + HackerTarget + brute) both work in the app ex
 findings/subdomains stream in live, no Claude panel. **All 5 tools are now built and dev-verified.**
 Remaining: confirm web `<DesktopOnly>` fallback (minor), then the shared release below.
 
+### Release v1.2.50 — Electron build DONE + PUBLISHED (2026-09-05)
+
+- Version bumped to **1.2.50** in `platform/electron/package.json` + `platform/shell/package.json`;
+  download URLs in `LandingPage.jsx` + `TopNav.jsx` updated to the v1.2.50 installer.
+- Installer built: `C:\Users\lsgra\Desktop\claude projects\dist-electron\0xKudo Security Toolkit Setup 1.2.50.exe`
+  (~361 MB). **Published** to `0xKudoX/0xKudoSec-releases` as `v1.2.50` (uploaded manually — the
+  `electron-builder --publish` step 401'd because the `GH_TOKEN` in `.env` is expired; rotate it).
+- Build notes: the skill's `better-sqlite3` ABI-rebuild step is **moot on this branch** (forkServer
+  deleted; better-sqlite3 is not a dependency or referenced anywhere) — skipped it. winCodeSign was
+  cached so no admin elevation was needed. A benign rcedit "Unable to commit changes" warning retried
+  and the exe built fine.
+- **Commit trailers:** all `Co-Authored-By: Claude` trailers stripped from the branch commits via
+  `git filter-branch` (per user request — no AI attribution in commits/code). SHAs were rewritten;
+  branch is unpushed so this is safe. Do NOT re-add them.
+
+**STILL TODO (user does these — this shell has no VPS SSH key and no GitHub push key):**
+1. Merge `feat/desktop-only-network-scanner` → `main`, push to GitHub.
+2. VPS deploy (sequencing is now safe — the v1.2.50 exe is published so desktop users can update to
+   the build that carries the `window.electron.*` IPC bridge):
+   ```
+   ssh root@92.112.181.219
+   cd /var/www/cybertools && git pull
+   npm install   # only if deps changed (none this release)
+   npm run build --workspace platform/shell
+   pm2 restart cybertools-server    # that process ONLY — never pm2 restart all / sudo pm2
+   ```
+   This deploys the new client (isElectron → IPC branch) + the five 410 routes + the 413 fix.
+
 ### Release — the remaining shared step for all 3 plans
 
 One Electron rebuild + release (`electron-release` skill; `main.js`/`preload.js` changed) and one VPS
