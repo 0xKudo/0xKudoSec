@@ -18,6 +18,64 @@ function getOpsPool() {
 const DEFAULT_RETENTION_DAYS = 90;
 const DEFAULT_AUDIT_RETENTION_DAYS = 365;
 
+// ── logs partition maintenance (0.2) ────────────────────────────────────────
+// `logs` is RANGE-partitioned by month. Partition DDL (CREATE/DROP PARTITION)
+// requires ownership of the parent table, so it runs as cybertools_app (the
+// owner, granted CREATE on schema public) via the main pool — NOT the ops pool.
+const PARTITION_LEAD_MONTHS = 2; // keep this many future months pre-created
+
+function partitionName(d) {
+  return `logs_y${d.getUTCFullYear()}m${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
+}
+
+// Pre-create the current month + next PARTITION_LEAD_MONTHS so ingest never
+// falls into logs_default. Idempotent (CREATE ... IF NOT EXISTS). Names/dates
+// are code-generated, not user input.
+async function ensureLogPartitions() {
+  const owner = db.getPool();
+  const now = new Date();
+  for (let i = 0; i <= PARTITION_LEAD_MONTHS; i++) {
+    const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + i, 1));
+    const end = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + i + 1, 1));
+    const name = partitionName(start);
+    try {
+      await owner.query(
+        `CREATE TABLE IF NOT EXISTS public.${name} PARTITION OF public.logs ` +
+        `FOR VALUES FROM ('${start.toISOString().slice(0, 10)}') TO ('${end.toISOString().slice(0, 10)}')`
+      );
+    } catch (err) {
+      console.error(`[retention] ensureLogPartitions ${name}:`, err.message);
+    }
+  }
+}
+
+// Drop monthly partitions whose entire range is older than the LONGEST per-user
+// retention — those months no user can still need. Per-user trimming inside
+// still-live months is handled by the row-DELETE loop. DROP PARTITION is the big
+// space/perf win; it's instant vs a mass DELETE + VACUUM.
+async function dropOldLogPartitions(maxRetentionDays) {
+  const owner = db.getPool();
+  const cutoff = new Date(Date.now() - maxRetentionDays * 86400 * 1000);
+  const { rows } = await owner.query(`
+    SELECT c.relname, pg_get_expr(c.relpartbound, c.oid) AS bound
+    FROM pg_inherits i JOIN pg_class c ON c.oid = i.inhrelid
+    WHERE i.inhparent = 'public.logs'::regclass AND c.relname <> 'logs_default'
+  `);
+  for (const { relname, bound } of rows) {
+    // bound: FOR VALUES FROM ('...') TO ('2026-07-01 00:00:00+00')
+    const m = bound && bound.match(/TO \('([^']+)'\)/);
+    if (!m) continue;
+    if (new Date(m[1]) <= cutoff) {
+      try {
+        await owner.query(`DROP TABLE IF EXISTS public.${relname}`);
+        console.log(`[retention] dropped logs partition ${relname} (older than ${maxRetentionDays}d)`);
+      } catch (err) {
+        console.error(`[retention] drop ${relname}:`, err.message);
+      }
+    }
+  }
+}
+
 async function runRetention() {
   try {
     // Load all user settings. Cross-user maintenance runs on the BYPASSRLS ops
@@ -31,6 +89,17 @@ async function runRetention() {
     for (const row of settings) {
       userMap[row.user_id] = row;
     }
+
+    // ── Partition maintenance (0.2) ───────────────────────────────────────────
+    // Ensure upcoming month partitions exist, then drop months older than the
+    // longest retention any user has configured (global DROP PARTITION is safe
+    // only past the max; per-user trimming below handles the live months).
+    await ensureLogPartitions();
+    const maxRetentionDays = Math.max(
+      DEFAULT_RETENTION_DAYS,
+      ...settings.map(s => s.log_retention_days || DEFAULT_RETENTION_DAYS)
+    );
+    await dropOldLogPartitions(maxRetentionDays);
 
     // ── Event log retention ───────────────────────────────────────────────────
     const { rows: logUsers } = await getOpsPool().query(
@@ -53,6 +122,16 @@ async function runRetention() {
     if (totalDeleted === 0) {
       console.log('[retention] No logs expired.');
     }
+
+    // realtime_analysis lost its ON DELETE CASCADE FK when logs was partitioned
+    // (0.2). Clean rows whose referenced log no longer exists (e.g. after a
+    // partition drop or per-user delete). Runs on the ops pool (BYPASSRLS).
+    const { rowCount: raOrphans } = await getOpsPool().query(
+      `DELETE FROM realtime_analysis ra
+        WHERE ra.log_id IS NOT NULL
+          AND NOT EXISTS (SELECT 1 FROM logs l WHERE l.id = ra.log_id)`
+    );
+    if (raOrphans > 0) console.log(`[retention] cleaned ${raOrphans} orphaned realtime_analysis rows`);
 
     // ── Audit log retention ───────────────────────────────────────────────────
     // Per-user: only purge if audit_log_retention_enabled = true (or no setting on file).
@@ -128,6 +207,9 @@ async function runIntegrityCheck() {
     console.error('[integrity] Check failed:', err.message);
   }
 }
+
+// Exported for tests / manual rehearsal (0.2 partition maintenance).
+export { runRetention, ensureLogPartitions, dropOldLogPartitions };
 
 export function startRetentionCron() {
   // Run daily at 02:00

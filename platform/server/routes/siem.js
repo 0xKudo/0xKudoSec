@@ -1294,6 +1294,9 @@ router.delete('/account', wrap(async (req, res) => {
     await client.query('DELETE FROM alerts WHERE user_id = $1', [userId]);
     await client.query('DELETE FROM cases WHERE user_id = $1', [userId]);
     await client.query('DELETE FROM detection_rules WHERE user_id = $1', [userId]);
+    // realtime_analysis used to cascade from logs via FK; that FK was removed when
+    // logs became partitioned (0.2), so delete it explicitly before logs.
+    await client.query('DELETE FROM realtime_analysis WHERE user_id = $1', [userId]);
     await client.query('DELETE FROM logs WHERE user_id = $1', [userId]);
     await client.query('DELETE FROM ingest_sources WHERE user_id = $1', [userId]);
     await client.query('DELETE FROM user_ingest_keys WHERE user_id = $1', [userId]);

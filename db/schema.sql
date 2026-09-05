@@ -249,7 +249,7 @@ CREATE TABLE public.logs (
     dest_ip text,
     dest_port integer,
     protocol text,
-    "timestamp" timestamp with time zone,
+    "timestamp" timestamp with time zone NOT NULL,
     ingested_at timestamp with time zone DEFAULT now(),
     level text,
     severity text,
@@ -268,7 +268,8 @@ CREATE TABLE public.logs (
     file_path text,
     registry_key text,
     raw text
-);
+)
+PARTITION BY RANGE ("timestamp");
 
 ALTER TABLE ONLY public.logs FORCE ROW LEVEL SECURITY;
 
@@ -588,8 +589,10 @@ ALTER TABLE ONLY public.ingest_sources
 -- Name: logs logs_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.logs
-    ADD CONSTRAINT logs_pkey PRIMARY KEY (id);
+-- Partitioned tables require the partition key in every unique/primary key, and
+-- the constraint must propagate to partitions (no ONLY).
+ALTER TABLE public.logs
+    ADD CONSTRAINT logs_pkey PRIMARY KEY (id, "timestamp");
 
 
 --
@@ -735,6 +738,29 @@ CREATE INDEX idx_logs_user_timestamp ON public.logs USING btree (user_id, "times
 
 
 --
+-- Name: logs_ts_brin; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX logs_ts_brin ON public.logs USING brin ("timestamp");
+
+
+--
+-- Name: idx_alerts_log_id; Type: INDEX; Schema: public; Owner: -
+-- Replaces the dropped alerts.log_id FK's implicit lookup path.
+--
+
+CREATE INDEX idx_alerts_log_id ON public.alerts USING btree (log_id);
+
+
+--
+-- Name: idx_realtime_analysis_log_id; Type: INDEX; Schema: public; Owner: -
+-- Replaces the dropped realtime_analysis.log_id FK's implicit lookup path.
+--
+
+CREATE INDEX idx_realtime_analysis_log_id ON public.realtime_analysis USING btree (log_id);
+
+
+--
 -- Name: idx_noise_candidates_user_status; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -755,13 +781,10 @@ CREATE INDEX idx_realtime_analysis_user ON public.realtime_analysis USING btree 
 CREATE INDEX wp_protection_rules_user_enabled ON public.wp_protection_rules USING btree (user_id, enabled);
 
 
---
--- Name: alerts alerts_log_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.alerts
-    ADD CONSTRAINT alerts_log_id_fkey FOREIGN KEY (log_id) REFERENCES public.logs(id) ON DELETE SET NULL;
-
+-- NOTE: alerts.log_id -> logs(id) FK removed. logs is RANGE-partitioned, so its
+-- primary key is (id, "timestamp") and id alone is not a UNIQUE target a FK can
+-- reference. log_id stays a plain indexed column; integrity is enforced in-app.
+-- See db/migrations/2026-09-05-logs-partitioning.sql.
 
 --
 -- Name: alerts alerts_rule_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
@@ -795,12 +818,11 @@ ALTER TABLE ONLY public.noise_candidates
     ADD CONSTRAINT noise_candidates_suppression_rule_id_fkey FOREIGN KEY (suppression_rule_id) REFERENCES public.detection_rules(id) ON DELETE SET NULL;
 
 
---
--- Name: realtime_analysis realtime_analysis_log_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.realtime_analysis
-    ADD CONSTRAINT realtime_analysis_log_id_fkey FOREIGN KEY (log_id) REFERENCES public.logs(id) ON DELETE CASCADE;
+-- NOTE: realtime_analysis.log_id -> logs(id) FK removed (logs is partitioned;
+-- see the alerts note above). The former ON DELETE CASCADE is replaced by
+-- explicit cleanup: account deletion deletes realtime_analysis before logs, and
+-- retention drops orphaned realtime_analysis rows. See routes/siem.js and
+-- services/retentionCron.js.
 
 
 --
@@ -951,4 +973,31 @@ ALTER TABLE public.wp_protection_rules ENABLE ROW LEVEL SECURITY;
 --
 
 \unrestrict WibXmHwGdvMiaTZsihhmkKZXF1x45h6xz7ft0MC6IRnf7haeiI3sQrzWPTeVtMs
+
+
+--
+-- Bootstrap partitions for the RANGE-partitioned `logs` table (XDR Phase 0,
+-- Task 0.2). Created after the table, PK, defaults, indexes and RLS above so
+-- each PARTITION OF inherits them. Covers the current month plus the next two
+-- so ingest works on day one; services/retentionCron.js (ensureLogPartitions)
+-- keeps future months provisioned thereafter. logs_default catches any row
+-- whose timestamp falls outside the created ranges.
+--
+
+DO $$
+DECLARE
+  m     date := date_trunc('month', now())::date;
+  m_end date := (date_trunc('month', now()) + interval '3 month')::date;
+  pname text;
+BEGIN
+  WHILE m < m_end LOOP
+    pname := 'logs_y' || to_char(m, 'YYYY') || 'm' || to_char(m, 'MM');
+    EXECUTE format(
+      'CREATE TABLE IF NOT EXISTS public.%I PARTITION OF public.logs FOR VALUES FROM (%L) TO (%L)',
+      pname, m, (m + interval '1 month')::date);
+    m := (m + interval '1 month')::date;
+  END LOOP;
+END$$;
+
+CREATE TABLE IF NOT EXISTS public.logs_default PARTITION OF public.logs DEFAULT;
 
