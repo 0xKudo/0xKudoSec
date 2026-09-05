@@ -127,8 +127,10 @@ now tracked in git** (commit `<plans>`) so a fresh clone / different account has
 **All 5 desktop-only tools now local:** Network Scanner, HTTP Repeater, Intruder, Vulnerability
 Scanner, Subdomain Enumerator. 45 tests green across 13 files (all mounted-router 410 tests pass).
 
-**Plan 3 still TODO:** dev-verify Vuln Scanner (passive against an external site; active needs the
-auth checkbox) and Subdomain Enum (enumerate a domain you own) in the app; confirm web `<DesktopOnly>`.
+**Plan 3 dev-verified (2026-09-05):** Vulnerability Scanner (passive + active with the auth checkbox)
+and Subdomain Enumerator (crt.sh + HackerTarget + brute) both work in the app exactly as intended —
+findings/subdomains stream in live, no Claude panel. **All 5 tools are now built and dev-verified.**
+Remaining: confirm web `<DesktopOnly>` fallback (minor), then the shared release below.
 
 ### Release — the remaining shared step for all 3 plans
 
