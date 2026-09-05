@@ -1,6 +1,6 @@
 // Intruder — local execution in the desktop app. Ported from tools/intruder/server/routes.js.
 // Streams per-request results by runId; computes the anomaly summary at completion.
-// No Claude. SSRF/loopback block intentionally dropped (see intruder-core.js).
+// No LLM analysis. SSRF/loopback block intentionally dropped (see intruder-core.js).
 
 const core = require('./intruder-core.js');
 

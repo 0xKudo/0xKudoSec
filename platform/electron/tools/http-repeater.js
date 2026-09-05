@@ -1,6 +1,6 @@
 // HTTP Repeater — local execution in the desktop app.
 // Ported from tools/http-repeater/server/routes.js. Runs the outbound request from
-// the user's machine (not the VPS). No Claude. SSRF/loopback block intentionally dropped.
+// the user's machine (not the VPS). No LLM analysis. SSRF/loopback block intentionally dropped.
 
 const core = require('./http-repeater-core.js');
 

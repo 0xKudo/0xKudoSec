@@ -1,6 +1,6 @@
 // Pure, testable helpers for the Subdomain Enumerator. No Electron dependency.
 // SecurityTrails is intentionally omitted (enterprise-only pricing; already dropped from the UI).
-// No Claude — the tool returns the discovered subdomain list with resolved IPs.
+// No LLM analysis — the tool returns the discovered subdomain list with resolved IPs.
 
 const DOMAIN_REGEX = /^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$/;
 

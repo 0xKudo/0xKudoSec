@@ -1,6 +1,6 @@
 // Subdomain Enumerator — local execution in the desktop app. Ported from
 // tools/subdomain-enumerator/server/routes.js. crt.sh + HackerTarget + local DNS brute-force,
-// streamed by runId. No Claude, no SecurityTrails. Sources run locally for a consistent origin.
+// streamed by runId. No LLM, no SecurityTrails. Sources run locally for a consistent origin.
 
 const dns = require('dns/promises');
 const core = require('./subdomain-enum-core.js');

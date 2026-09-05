@@ -1,7 +1,7 @@
 // Pure, testable logic for the Vulnerability Scanner. No Electron dependency.
 // LOCAL tool: the SSRF/loopback/RFC-1918 block is dropped (scanning 127.0.0.1 / LAN hosts is a
 // legitimate local pentest). The authorized:true checkbox is the safety control, not an origin block.
-// No Claude — computeRisk() replaces the old askClaude analysis with a rule-based summary.
+// No LLM — computeRisk() replaces the old AI analysis with a rule-based summary.
 
 const ALLOWED_PROTOCOLS = ['http:', 'https:'];
 
@@ -106,7 +106,7 @@ function checkInfoLeakage(html, headers) {
   return findings;
 }
 
-// Rule-based replacement for the old Claude analysis.
+// Rule-based replacement for the old AI analysis.
 function computeRisk(findings) {
   const order = ['critical', 'high', 'medium', 'low', 'info'];
   const has = (s) => findings.some(f => f.severity === s);

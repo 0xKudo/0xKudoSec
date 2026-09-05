@@ -1,5 +1,5 @@
 // Vulnerability Scanner — local execution in the desktop app. Ported from tools/scanner/server/routes.js.
-// Streams findings by runId; computes a rule-based risk summary at completion (no Claude).
+// Streams findings by runId; computes a rule-based risk summary at completion (no LLM analysis).
 // Keeps the authorized:true gate for active probes. SSRF/loopback block dropped (see scanner-core.js).
 
 const core = require('./scanner-core.js');
