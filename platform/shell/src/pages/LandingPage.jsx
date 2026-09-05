@@ -5,7 +5,7 @@ import { Sun, Moon } from 'lucide-react';
 import { setThemeWithTransition } from '../lib/viewTransition';
 
 // ── Update this URL with each Electron release ────────────────────────────────
-const DESKTOP_DOWNLOAD_URL = 'https://github.com/0xKudoX/0xKudoSec-releases/releases/download/v1.2.50/0xKudo-Security-Toolkit-Setup-1.2.50.exe';
+const DESKTOP_DOWNLOAD_URL = 'https://github.com/0xKudoX/0xKudoSec-releases/releases/download/v1.2.51/0xKudo-Security-Toolkit-Setup-1.2.51.exe';
 
 // Donut chart: same algorithm as SiemDashboard.jsx DonutChart
 function DonutChart({ size = 80 }) {
