@@ -52,10 +52,34 @@ origin-sensitive tools must run locally in the desktop app and show "Desktop onl
 account/machine, download the same Nmap Windows setup and drop it there before `electron:build`.
 Confirm Nmap redistribution licensing (NPSL) before shipping.
 
-**Still TODO on Plan 1 (manual, needs the app running — not doable headlessly):**
-- Dev-run (`npm run electron:dev`): scan `scanme.nmap.org`, confirm live lines + raw output render
-  with no Claude panel; test Stop; test the nmap-missing install prompt; confirm the web fallback
-  shows `<DesktopOnly>` and the server returns 410.
+**Plan 1 manual verification — DONE (2026-09-05, dev run):** launched via dev (see dev-env fixes
+below), logged in, ran Network Scanner. Scans against `127.0.0.1` and `192.168.1.0/24` both work and
+return raw nmap output with no Claude panel. nmap auto-detected at `D:\Program Files\Nmap\nmap.exe`
+(the core resolver checks C/D/E `Program Files\Nmap`), so no install prompt fired.
+
+**Known follow-up from that run — real-time streaming (spec'd, not yet built):** output only appears
+after the scan finishes (behind "Show Raw nmap Output"), not live as nmap runs. Two fixes captured in
+the spec's new "Enhancement: real-time streaming output" section: (1) the client hides the live panel
+on completion (`!result` guard) — keep streamed lines visible during and after; (2) nmap block-buffers
+stdout to a pipe — add `-v` + `--stats-every 1s` to the profile args so it reports incrementally.
+
+**Dev-env fixes to run this branch locally (were broken, now fixed — not code, environment):**
+- `.env` `DATABASE_URL` had drifted to `localhost:5432` (native Postgres, wrong password → SIEM
+  "Stats 500"). Corrected to the documented Docker value `postgresql://postgres:postgres@localhost:5433/cybertools`.
+- Docker `kudo-pg` container was stopped — `docker start kudo-pg` (schema present, 13 tables).
+- `platform/shell/.env` was missing (dev Auth0 login broken). Recreated with the public SPA values
+  from the live bundle: `VITE_AUTH0_DOMAIN=auth.0xkudo.com`,
+  `VITE_AUTH0_CLIENT_ID=TzIyCNnyNhhlKpm0W7uAhPKgcEnv1Cda`, `VITE_AUTH0_AUDIENCE=https://tools.laynekudo.com/api`.
+- `electron:dev` npm script is Unix-only (`NODE_ENV=development ... & sleep`) and fails on Windows.
+  Run the pieces instead: `npm run dev:server`, `npm run dev:shell`, then `./node_modules/.bin/electron
+  platform/electron/main.js` (isDev is true whenever not packaged, so no NODE_ENV needed).
+- Symptom that started this: tools vanished from the dashboard because the backend on 4000 wasn't up,
+  so the shell's one-shot `/api/tools` fetch failed and `ToolRegistry` fell back to `[]`.
+
+**Still TODO on Plan 1:**
+- Build the real-time streaming enhancement above.
+- Test Stop mid-scan and the nmap-missing install prompt (nmap is installed here, so the prompt path
+  is unverified); confirm the web fallback shows `<DesktopOnly>` and the server returns 410.
 - Then Electron rebuild + release (this changes `main.js`/`preload.js`, so a rebuild IS required),
   and a VPS deploy of the 410 route + 413 fix. Use the `electron-release` skill.
 

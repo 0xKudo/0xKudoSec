@@ -159,6 +159,36 @@ Web browser at 0xkudo.com: client sees no `window.electron` → renders `<Deskto
 
 ---
 
+## Enhancement: real-time streaming output (Network Scanner) — requested 2026-09-05
+
+**Current behavior (confirmed working but not live):** during a scan the UI shows nothing; the
+results appear only once the scan completes and the user clicks "Show Raw nmap Output." The user
+wants the output to **update in real time as nmap produces it**, the same way nmap prints to a
+terminal.
+
+Two root causes, both to fix:
+
+1. **Client hides streamed lines on completion.** The live-output panel renders only while
+   `!result` (`{(loading || liveLines.length > 0) && !result && ...}` in
+   `tools/network-scanner/client/index.jsx`). The instant `onDone` fires, `setResult(data)` unmounts
+   the live panel and replaces it with the summary card + collapsed "Show Raw nmap Output" toggle, so
+   any lines that did stream disappear into the post-scan raw view. **Fix:** keep the streamed output
+   visible and appended live during the run, and carry it straight into the completed result view
+   (the raw panel should show the same text, expanded by default or continuous with the live panel) —
+   no separate hidden toggle for what the user just watched scroll by.
+2. **nmap block-buffers stdout to a pipe.** With `-oN -` to a non-TTY, nmap does not flush host
+   results line-by-line, so lines arrive in a burst near the end (especially for fast single-host
+   scans; a `/24` sweep shows it less). **Fix:** add `-v` (verbose — emits "Discovered open port…"
+   and "Nmap scan report for…" as they happen) and `--stats-every 1s` to the profile args so nmap
+   reports progress incrementally to the pipe. Verify each stream chunk is emitted per-line
+   (`network-scanner:line`) as it is received (the main handler already splits on `\n` per chunk).
+
+**Acceptance:** starting a scan against a `/24` (e.g. `192.168.1.0/24`, Ping Scan) shows host lines
+appearing progressively while the scan runs, and the same output remains visible after completion
+without an extra click.
+
+---
+
 ## Security considerations
 
 - All offensive execution moves off the VPS entirely (410 on the old routes). The VPS can no longer be used as an attack origin through these tools.
