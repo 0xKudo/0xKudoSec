@@ -13,6 +13,61 @@ Unified cybersecurity tools platform at `0xkudo.com`. Monorepo — shared Expres
 
 **All 19 tools complete. Auth complete. SIEM complete. Electron wrapper complete. Noise Advisor Phase 1 + Phase 2 + Phase 3 complete. Multi-model support complete. Vulnerability KB built and confirmed working in v1.2.46-beta.2+.**
 
+---
+
+### IN PROGRESS (2026-09-04) — Desktop-only local tool execution — branch `feat/desktop-only-network-scanner`
+
+**Why:** The packaged app loads the live VPS (`0xkudo.com`) and routes ALL `/api/*` calls there
+(regression from commit `a204408`, which made the old local-server fork dead code). So Network
+Scanner was running `nmap` on the VPS instead of the user's machine — it appeared broken. Five
+origin-sensitive tools must run locally in the desktop app and show "Desktop only" on the web.
+
+- **Spec:** `docs/specs/2026-09-04-desktop-only-local-execution.md`
+- **Plan 1 (this branch):** `docs/plans/2026-09-04-desktop-only-plan1-network-scanner.md`
+- **Decisions:** 5 tools are desktop-only (Network Scanner, HTTP Repeater, Intruder, Vulnerability
+  Scanner, Subdomain Enumerator), all with **full local IPC execution, no Claude**. The three that
+  used `askClaude` (Network Scanner, Vuln Scanner, Subdomain Enum) drop the AI analysis and return
+  raw / rule-based output only. nmap is bundled as an installer mirroring Fluent Bit.
+
+**Plan 1 — Network Scanner — DONE (9 commits on the branch, all tests green, NOT merged, NOT built):**
+1. `599238d` fix: global error handler now returns **413** on oversized payload (was 500). Root
+   cause was the GLOBAL `express.json({limit:'50kb'})` at `index.js:59`, not the tool route.
+2. `5af9426` chore: deleted dead `forkServer` from `main.js` (unreachable since `a204408`).
+3. `93b5076` feat: shared `platform/shell/src/components/DesktopOnly.jsx` (no render test — server
+   vitest env has no jsdom).
+4. `4467663` feat: `platform/electron/tools/network-scanner-core.js` (SCAN_PROFILES, validateTarget,
+   buildNmapArgs, resolveNmapPath) + pure-validator tests.
+5. `a20e4b2` feat: `platform/electron/tools/network-scanner.js` — IPC handler, streams nmap output by
+   `runId`, cancel + 5-min timeout; registered in `main.js` whenReady.
+6. `ef85164` feat: `tools/network-scanner/server/routes.js` now returns **410** on all paths
+   (nmap + Claude removed). Old `network-scanner.test.js` deleted.
+7. `90688c0` feat: preload `window.electron.networkScanner` + `window.electron.nmap`.
+8. `1ff5681` feat: client branches on `window.electron?.isElectron` — IPC in app, `<DesktopOnly>` on
+   web; Claude analysis panel removed; nmap-missing install prompt added.
+9. `7703e93` feat: `nmap:status` / `nmap:install` IPC + `extraResources` bundling of
+   `assets/nmap-7.991-setup.exe`.
+
+**Local binary NOT in git** (gitignored like `fluent-bit-installer.exe`): the 36 MB
+`platform/electron/assets/nmap-7.991-setup.exe` must exist locally for the build. On a second
+account/machine, download the same Nmap Windows setup and drop it there before `electron:build`.
+Confirm Nmap redistribution licensing (NPSL) before shipping.
+
+**Still TODO on Plan 1 (manual, needs the app running — not doable headlessly):**
+- Dev-run (`npm run electron:dev`): scan `scanme.nmap.org`, confirm live lines + raw output render
+  with no Claude panel; test Stop; test the nmap-missing install prompt; confirm the web fallback
+  shows `<DesktopOnly>` and the server returns 410.
+- Then Electron rebuild + release (this changes `main.js`/`preload.js`, so a rebuild IS required),
+  and a VPS deploy of the 410 route + 413 fix. Use the `electron-release` skill.
+
+**Plans 2 and 3 — NOT YET WRITTEN:**
+- Plan 2 = HTTP Repeater + Intruder (pure local HTTP, no Claude).
+- Plan 3 = Vulnerability Scanner + Subdomain Enumerator.
+- Both reuse this branch's pattern: `platform/electron/tools/<id>.js` main module, narrow preload
+  API, `isElectron` client branch, 410 server route, shared `<DesktopOnly>`.
+- **Important for Plan 2:** the current Repeater/Intruder server routes BLOCK internal/loopback/
+  RFC-1918 targets (SSRF protection, HANDOFF Finding 33). The ported LOCAL versions must DROP that
+  block, since local pentest use needs to reach private/localhost targets.
+
 ### MERGED TO MAIN (2026-07-24) — UI redesign Phase C.5 + D, commit `6bdcb04`
 
 `ui-redesign` fast-forwarded into `main`, then reconciled with the VPS-only WordPress feature.
