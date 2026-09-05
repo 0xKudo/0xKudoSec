@@ -463,9 +463,10 @@ export function RuleLibrary({ embedded = false }) {
                       )}
                     </td>
                     <td style={s.td}>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
                         {(r.attack_techniques || []).map(id => (
-                          <span key={id} style={{ ...badgeStyle('info'), fontSize: '10px' }}>{id}</span>
+                          <a key={id} href={`https://attack.mitre.org/techniques/${id.replace('.', '/')}/`} target="_blank" rel="noreferrer"
+                             onClick={e => e.stopPropagation()} style={{ ...s.mitreLink, fontSize: '10px' }}>{id}</a>
                         ))}
                       </div>
                     </td>

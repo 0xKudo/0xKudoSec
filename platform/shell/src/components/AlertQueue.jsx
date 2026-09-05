@@ -491,9 +491,11 @@ export function AlertQueue({ onNavigate }) {
                         {a.sigma_identity && <span style={s.sigmaBadge}>Sigma</span>}
                       </div>
                       {a.attack_techniques?.length > 0 && (
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '4px' }}>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginTop: '4px' }}>
                           {a.attack_techniques.map(id => (
-                            <span key={id} style={{ ...badgeStyle('info'), fontSize: '10px' }}>{id}</span>
+                            <a key={id} href={`https://attack.mitre.org/techniques/${id.replace('.', '/')}/`} target="_blank" rel="noreferrer"
+                               onClick={e => e.stopPropagation()}
+                               style={{ color: 'var(--accent-amber)', textDecoration: 'none', borderBottom: '1px dotted var(--accent-amber)', fontSize: '10px' }}>{id}</a>
                           ))}
                         </div>
                       )}

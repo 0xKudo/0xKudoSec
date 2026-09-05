@@ -409,9 +409,11 @@ export function DetectionRules({ onNavigate }) {
                 {conditionSummary(rule)}
               </div>
               {rule.attack_techniques?.length > 0 && (
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '6px' }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginTop: '6px' }}>
                   {rule.attack_techniques.map(id => (
-                    <span key={id} style={{ ...badgeStyle('info'), fontSize: '10px' }}>{id}</span>
+                    <a key={id} href={`https://attack.mitre.org/techniques/${id.replace('.', '/')}/`} target="_blank" rel="noreferrer"
+                       onClick={e => e.stopPropagation()} title={techniqueLabel(id)}
+                       style={{ color: 'var(--accent-amber)', textDecoration: 'none', borderBottom: '1px dotted var(--accent-amber)', fontSize: '10px' }}>{id}</a>
                   ))}
                 </div>
               )}
@@ -451,9 +453,11 @@ export function DetectionRules({ onNavigate }) {
                   <td style={{ ...s.td, fontFamily: 'var(--font)', fontSize: '11px', maxWidth: '400px' }}>
                     <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{conditionSummary(rule)}</div>
                     {rule.attack_techniques?.length > 0 && (
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '4px' }}>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginTop: '4px' }}>
                         {rule.attack_techniques.map(id => (
-                          <span key={id} style={{ ...badgeStyle('info'), fontSize: '10px' }} title={techniqueLabel(id)}>{id}</span>
+                          <a key={id} href={`https://attack.mitre.org/techniques/${id.replace('.', '/')}/`} target="_blank" rel="noreferrer"
+                             onClick={e => e.stopPropagation()} title={techniqueLabel(id)}
+                             style={{ color: 'var(--accent-amber)', textDecoration: 'none', borderBottom: '1px dotted var(--accent-amber)', fontSize: '10px' }}>{id}</a>
                         ))}
                       </div>
                     )}
