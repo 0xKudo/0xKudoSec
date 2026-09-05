@@ -341,7 +341,7 @@ export function SiemDashboardMobile({ onNavigate }) {
           <span>
             Recent Events
             {sevFilters.size > 0 ? ` (${[...sevFilters].join(', ')})` : ''}
-            {debouncedSearch.trim() ? ` · "${debouncedSearch.trim()}"` : ''}
+            {debouncedSearch.trim() ? `, "${debouncedSearch.trim()}"` : ''}
           </span>
           {(sevFilters.size > 0 || debouncedSearch.trim()) && (
             <span
@@ -363,7 +363,7 @@ export function SiemDashboardMobile({ onNavigate }) {
               <span style={s.eventMsg}>{e.message || e.event_category || '-'}</span>
             </div>
             <div style={s.eventMeta}>
-              {e.host || '-'} · {e.event_id ? `EID ${e.event_id}` : ''} · {e.timestamp ? new Date(e.timestamp).toLocaleTimeString() : ''}
+              {e.host || '-'}{e.event_id ? `, EID ${e.event_id}` : ''}{e.timestamp ? `, ${new Date(e.timestamp).toLocaleTimeString()}` : ''}
             </div>
           </div>
         ))}
@@ -375,7 +375,7 @@ export function SiemDashboardMobile({ onNavigate }) {
           <div style={s.modal} onClick={ev => ev.stopPropagation()}>
             <div style={s.modalHeader}>
               <span style={s.modalTitle}>
-                Event {selectedEvent.event_id || '-'} &nbsp;·&nbsp;{' '}
+                Event {selectedEvent.event_id || '-'} &nbsp;&nbsp;&nbsp;{' '}
                 <span style={{ color: sevColor(selectedEvent.severity) }}>{selectedEvent.severity || '-'}</span>
               </span>
               <button style={s.modalClose} onClick={() => setSelectedEvent(null)}>✕</button>

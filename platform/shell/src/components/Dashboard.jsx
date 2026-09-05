@@ -282,7 +282,7 @@ export function Dashboard() {
                     >
                       <span style={s.typeBadge(item.type)}>{TYPE_LABELS[item.type] || item.type}</span>
                       <span style={s.workspaceLabel}>{item.label}</span>
-                      <span style={s.workspaceMeta}>{item.source} &nbsp;·&nbsp; {formatTime(item.timestamp)}</span>
+                      <span style={s.workspaceMeta}>{item.source} &nbsp;&nbsp;&nbsp; {formatTime(item.timestamp)}</span>
                     </div>
                   );
                 })
@@ -300,7 +300,7 @@ export function Dashboard() {
               <div style={s.phaseHeader}>
                 {PhaseIcon && <PhaseIcon size={14} strokeWidth={1.5} />}
                 <span>{phase.label}</span>
-                <span style={s.phaseCount}>· {total}</span>
+                <span style={s.phaseCount}>{total}</span>
               </div>
               <div className="kudo-stagger" style={s.cardGrid}>
                 {phase.tools.map(tool => {
