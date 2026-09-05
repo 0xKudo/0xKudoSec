@@ -543,11 +543,13 @@ function AppInner() {
       </div>
       {navLayout === 'topnav' && !isMobile && (
         <footer style={{ flexShrink: 0, borderTop: '1px solid var(--border)', padding: '8px 0', textAlign: 'center', fontSize: '10px', color: 'var(--text-subtle)', letterSpacing: '0.04em' }}>
-          v{__APP_VERSION__}&nbsp;·&nbsp;{__BUILD_DATE__}&nbsp;·&nbsp;
-          <a href="/privacy" style={{ color: 'var(--text-subtle)', textDecoration: 'none' }}
+          <span style={{ marginRight: '20px' }}>v{__APP_VERSION__}</span>
+          <span style={{ marginRight: '20px' }}>{__BUILD_DATE__}</span>
+          <a href="/privacy" style={{ color: 'var(--text-subtle)', textDecoration: 'none', marginRight: '20px' }}
             onMouseEnter={e => e.currentTarget.style.color = 'var(--text-muted)'}
             onMouseLeave={e => e.currentTarget.style.color = 'var(--text-subtle)'}
-          >Privacy Policy</a>&nbsp;·&nbsp;<a href="/security" style={{ color: 'var(--text-subtle)', textDecoration: 'none' }}
+          >Privacy Policy</a>
+          <a href="/security" style={{ color: 'var(--text-subtle)', textDecoration: 'none' }}
             onMouseEnter={e => e.currentTarget.style.color = 'var(--text-muted)'}
             onMouseLeave={e => e.currentTarget.style.color = 'var(--text-subtle)'}
           >Security Practices</a>

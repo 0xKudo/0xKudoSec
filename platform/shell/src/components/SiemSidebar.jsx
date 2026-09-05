@@ -144,7 +144,7 @@ export function SiemSidebar({ activeView, onNavigate, onSwitchToTools, isAuthent
         <div><span style={{ ...styles.footerLink, cursor: 'pointer' }} onClick={() => navigate('/privacy')}>Privacy Policy</span></div>
         <div style={{ marginTop: '4px' }}><span style={{ ...styles.footerLink, cursor: 'pointer' }} onClick={() => navigate('/security')}>Security Practices</span></div>
         <div style={{ marginTop: '8px', fontSize: '10px', color: 'var(--text-muted)', letterSpacing: '0.04em', opacity: 0.6 }}>
-          v{__APP_VERSION__} &nbsp;·&nbsp; {__BUILD_DATE__}
+          v{__APP_VERSION__} &nbsp;&nbsp;&nbsp; {__BUILD_DATE__}
         </div>
       </div>
     </aside>

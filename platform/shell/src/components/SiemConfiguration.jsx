@@ -1357,8 +1357,8 @@ winlogbeat.event_logs:
                               </div>
                               <div style={s.keyMuted}>
                                 Generated {new Date(k.created_at).toLocaleString()}
-                                {k.expires_at && !expired && <span> · expires {expiresAt.toLocaleDateString()}</span>}
-                                {k.last_used_at ? <span> · last used {new Date(k.last_used_at).toLocaleString()}</span> : <span> · never used</span>}
+                                {k.expires_at && !expired && <span>, expires {expiresAt.toLocaleDateString()}</span>}
+                                {k.last_used_at ? <span>, last used {new Date(k.last_used_at).toLocaleString()}</span> : <span>, never used</span>}
                               </div>
                             </div>
                             <button style={s.btn} onClick={() => revokeKey(k.id)} disabled={revoking === k.id}>
@@ -1542,7 +1542,7 @@ winlogbeat.event_logs:
                   1. Install the plugin (kudosec-siem) on your site<br />
                   2. Generate an API key on the <strong>API Key</strong> tab<br />
                   3. Paste it in wp-admin under <strong>0xKudoSec → Settings</strong><br /><br />
-                  Events appear in the Explorer with source <code>wordpress</code> (event IDs 9000–9999). Rules added below sync to every connected site within 5 minutes.
+                  Events appear in the Explorer with source <code>wordpress</code> (event IDs 9000-9999). Rules added below sync to every connected site within 5 minutes.
                 </div>
 
                 <div style={{ ...s.sectionTitle, marginTop: '18px' }}>Protection Rules</div>
@@ -1626,7 +1626,7 @@ winlogbeat.event_logs:
                     <div style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '2px' }}>Host</div>
                     <div style={{ fontSize: '12px', color: 'var(--text-primary)', marginBottom: '6px' }}>{src.name}</div>
                     <div style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '2px' }}>Type</div>
-                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '6px' }}>{src.type} · {Number(src.event_count).toLocaleString()} events</div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '6px' }}>{src.type}, {Number(src.event_count).toLocaleString()} events</div>
                     <div style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '2px' }}>Last Seen</div>
                     <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{src.last_seen ? new Date(src.last_seen).toLocaleString() : '-'}</div>
                   </div>

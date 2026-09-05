@@ -237,7 +237,7 @@ export function LogSearch() {
 
       <div style={s.sectionBar}>
         <span>{searched ? `Results${submittedQuery ? ` for "${submittedQuery}"` : ''}` : 'Enter a search above'}</span>
-        {searched && <span style={{ fontSize: '10px' }}>{results.length} events · last {hours < 24 ? `${hours}h` : hours === 24 ? '24h' : hours === 48 ? '48h' : '7d'}</span>}
+        {searched && <span style={{ fontSize: '10px' }}>{results.length} events, last {hours < 24 ? `${hours}h` : hours === 24 ? '24h' : hours === 48 ? '48h' : '7d'}</span>}
       </div>
 
       {isMobile ? (
@@ -260,8 +260,8 @@ export function LogSearch() {
               </div>
               <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
                 {row.timestamp ? new Date(row.timestamp).toLocaleString() : ''}
-                {row.host ? ` · ${row.host}` : ''}
-                {row.username ? ` · ${row.username}` : ''}
+                {row.host ? `, ${row.host}` : ''}
+                {row.username ? `, ${row.username}` : ''}
               </div>
             </div>
           ))}
@@ -326,7 +326,7 @@ export function LogSearch() {
           <div style={s.modal} onClick={e => e.stopPropagation()}>
             <div style={s.modalHeader}>
               <span style={s.modalTitle}>
-                Event {selected.event_id || '-'} &nbsp;·&nbsp; {selected.host || '-'} &nbsp;·&nbsp;
+                Event {selected.event_id || '-'} &nbsp;&nbsp;&nbsp; {selected.host || '-'} &nbsp;&nbsp;&nbsp;
                 <span style={{ color: sevColor(selected.severity) }}>{selected.severity || '-'}</span>
               </span>
               <button style={s.modalClose} onClick={() => setSelected(null)}>✕</button>

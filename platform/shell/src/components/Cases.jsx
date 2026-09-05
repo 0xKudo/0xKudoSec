@@ -266,9 +266,9 @@ export function Cases({ onNavigate }) {
           <div style={s.modal} onClick={e => e.stopPropagation()}>
             <div style={s.modalHeader}>
               <span style={s.modalTitle}>
-                Case #{selected.id} &nbsp;·&nbsp;
+                Case #{selected.id} &nbsp;&nbsp;&nbsp;
                 <span style={{ color: sevColor(selected.severity) }}>{selected.severity}</span>
-                &nbsp;·&nbsp;
+                &nbsp;&nbsp;&nbsp;
                 <span style={{ color: 'var(--text-muted)' }}>{selected.status}</span>
               </span>
               <button style={s.modalClose} onClick={() => setSelected(null)}>✕</button>

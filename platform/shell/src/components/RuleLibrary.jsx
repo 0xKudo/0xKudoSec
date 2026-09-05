@@ -24,6 +24,13 @@ const SEV_COLOR = {
 };
 const sevColor = (s0) => SEV_COLOR[s0] || 'var(--text-muted)';
 
+// SigmaHQ titles/descriptions occasionally carry em/en dashes; strip them from
+// displayed copy (em dash reads as a comma, en dash as a hyphen) without
+// modifying the underlying rule.
+const cleanCopy = (str) => typeof str === 'string'
+  ? str.replace(/\s*—\s*/g, ', ').replace(/\s*–\s*/g, '-').replace(/\s{2,}/g, ' ').trim()
+  : str;
+
 // How each condition operator reads in plain English inside the detection tree.
 const OP_LABEL = {
   eq: 'equals', ne: 'does not equal', contains: 'contains',
@@ -40,7 +47,7 @@ function collectFields(node, out = new Set()) {
   if (Array.isArray(node.all)) node.all.forEach(c => collectFields(c, out));
   else if (Array.isArray(node.any)) node.any.forEach(c => collectFields(c, out));
   else if (node.not) collectFields(node.not, out);
-  else if (Array.isArray(node.keyword)) out.add('message / raw');
+  else if (Array.isArray(node.keyword)) out.add('message or raw');
   else if (node.field) out.add(node.field);
   else if (node.raw) out.add(`raw:${node.raw}`);
   else Object.keys(node).forEach(k => out.add(k)); // flat selection object
@@ -92,6 +99,7 @@ const s = {
   meta: { fontSize: '11px', color: 'var(--text-muted)', marginTop: '10px', lineHeight: 1.6 },
   attribution: { fontSize: '10px', color: 'var(--text-muted)', marginTop: '10px' },
   link: { color: 'var(--accent-amber)', textDecoration: 'none' },
+  mitreLink: { color: 'var(--accent-amber)', textDecoration: 'none', borderBottom: '1px dotted var(--accent-amber)', fontSize: '12px' },
   filterBar: { display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center', marginBottom: '12px' },
   // Match the app's shared input/select styling (DetectionRules): bg-surface + text-primary.
   input: {
@@ -163,7 +171,7 @@ function WhereTree({ node, depth = 0, k = 'r' }) {
   if (Array.isArray(node.keyword)) {
     return (
       <div style={s.leaf}>
-        <span style={s.code}>message / raw</span> contains any of{' '}
+        <span style={s.code}>message or raw</span> contains any of{' '}
         {node.keyword.map((v, i) => <span key={i}><span style={s.val}>{String(v)}</span>{i < node.keyword.length - 1 ? ', ' : ''}</span>)}
       </div>
     );
@@ -175,7 +183,7 @@ function WhereTree({ node, depth = 0, k = 'r' }) {
       <div style={s.leaf} key={`${k}-${field}`}>
         <span style={s.code}>{field}</span>{isRaw && <span style={s.sub}> (raw field)</span>} {opTxt}
         {vals.length > 0 && ' '}
-        {vals.map((v, i) => <span key={i}><span style={s.val}>{String(v)}</span>{i < vals.length - 1 ? (op === 'in' ? ', ' : ' / ') : ''}</span>)}
+        {vals.map((v, i) => <span key={i}><span style={s.val}>{String(v)}</span>{i < vals.length - 1 ? ', ' : ''}</span>)}
       </div>
     );
   };
@@ -434,7 +442,7 @@ export function RuleLibrary({ embedded = false }) {
                     onMouseLeave={e => Array.from(e.currentTarget.cells).forEach(c => c.style.background = '')}>
                     <td style={{ ...s.td, color: 'var(--text-primary)' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                        <span>{r.title || r.identity}</span>
+                        <span>{cleanCopy(r.title) || r.identity}</span>
                         {!rejected && r.fidelity === 'approximate' && (
                           <span style={{ ...badgeStyle('var(--severity-medium)'), fontSize: '9px' }} title="Converted with a raw-field accessor, a lossy mapping, or a best-effort decode; may over- or under-match.">approx</span>
                         )}
@@ -511,9 +519,9 @@ export function RuleLibrary({ embedded = false }) {
           <div style={s.modal} onClick={e => e.stopPropagation()}>
             <div style={s.modalHeader}>
               <span style={s.modalTitle}>
-                {detail.title || detail.identity}
-                {detail.category && <>&nbsp;·&nbsp;<span style={s.sub}>{CATEGORY_LABEL[detail.category] || detail.category}</span></>}
-                {detail.rule && <>&nbsp;·&nbsp;<span style={{ color: sevColor(detail.override_severity || detail.severity) }}>{detail.override_severity || detail.severity}</span></>}
+                {cleanCopy(detail.title) || detail.identity}
+                {detail.category && <span style={{ ...s.sub, marginLeft: '14px' }}>{CATEGORY_LABEL[detail.category] || detail.category}</span>}
+                {detail.rule && <span style={{ color: sevColor(detail.override_severity || detail.severity), marginLeft: '14px' }}>{detail.override_severity || detail.severity}</span>}
               </span>
               <button style={s.modalClose} onClick={() => setDetail(null)}>✕</button>
             </div>
@@ -538,7 +546,7 @@ export function RuleLibrary({ embedded = false }) {
                 return (
                   <>
                     {[
-                      ['Description', doc.description],
+                      ['Description', cleanCopy(doc.description)],
                       ['Detection type', rejected ? 'unsupported' : (doc.type || 'single_event')],
                       ['Fidelity', detail.fidelity],
                       ['Enabled for you', detail.effective_enabled ? 'Yes' : 'No'],
@@ -552,10 +560,10 @@ export function RuleLibrary({ embedded = false }) {
                     {(detail.attack_techniques || []).length > 0 && (
                       <div style={s.fieldRow}>
                         <div style={s.fieldLabel}>ATT&CK</div>
-                        <div style={{ ...s.fieldValue, display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                        <div style={{ ...s.fieldValue, display: 'flex', flexWrap: 'wrap', gap: '14px' }}>
                           {detail.attack_techniques.map(id => (
                             <a key={id} href={`https://attack.mitre.org/techniques/${id.replace('.', '/')}/`} target="_blank" rel="noreferrer"
-                               style={{ ...badgeStyle('info'), fontSize: '10px', textDecoration: 'none' }}>{id}</a>
+                               style={s.mitreLink}>{id}</a>
                           ))}
                         </div>
                       </div>
@@ -577,11 +585,11 @@ export function RuleLibrary({ embedded = false }) {
                             {fields.length > 0 && <>Log fields evaluated: {fields.map((f, i) => <span key={f}><span style={s.code}>{f}</span>{i < fields.length - 1 ? ', ' : ''}</span>)}.<br /></>}
                             {pf.length > 0
                               ? <>For speed, this rule is only evaluated when the incoming batch contains {pf.join('; ')}. Batches without any of those are skipped.</>
-                              : <>No coarse prefilter — this rule is evaluated against every ingested batch.</>}
+                              : <>No coarse prefilter, so this rule is evaluated against every ingested batch.</>}
                             <br />
                             {detail.effective_enabled
                               ? 'It is currently enabled for your account, so a matching event will raise a Sigma-badged alert in the Alerts queue.'
-                              : 'It is currently disabled for you — enable its category or toggle it On below to have matching events raise alerts.'}
+                              : 'It is currently disabled for you. Enable its category or toggle it On below to have matching events raise alerts.'}
                           </div>
                         </div>
                       </div>
@@ -589,7 +597,7 @@ export function RuleLibrary({ embedded = false }) {
 
                     <div style={s.attribution}>
                       From <a href={`${SIGMA_REPO}/blob/master/${detail.path || ''}`} target="_blank" rel="noreferrer" style={s.link}>SigmaHQ</a>
-                      {detail.sigma_id ? ` · rule id ${detail.sigma_id}` : ''} · DRL 1.1
+                      {detail.sigma_id ? `, rule id ${detail.sigma_id}` : ''}, licensed under DRL 1.1
                     </div>
                   </>
                 );

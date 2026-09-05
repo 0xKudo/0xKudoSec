@@ -154,7 +154,7 @@ function formatMeta(meta) {
   if (!obj || typeof obj !== 'object') return String(obj);
   const entries = Object.entries(obj);
   if (!entries.length) return '-';
-  return entries.map(([k, v]) => `${k}: ${typeof v === 'object' ? JSON.stringify(v) : v}`).join('  ·  ');
+  return entries.map(([k, v]) => `${k}: ${typeof v === 'object' ? JSON.stringify(v) : v}`).join(',  ');
 }
 
 function formatTime(ts) {
@@ -221,8 +221,8 @@ export function AuditLog() {
               {retentionPolicy && (
                 <span style={{ marginLeft: '12px', color: retentionPolicy.enabled && retentionPolicy.days < 365 ? 'var(--severity-high)' : 'var(--text-subtle)' }}>
                   {retentionPolicy.enabled
-                    ? `· retained ${retentionPolicy.days} days${retentionPolicy.days < 365 ? ' (below PCI DSS minimum)' : ''}`
-                    : '· auto-purge disabled, retained indefinitely'}
+                    ? `retained ${retentionPolicy.days} days${retentionPolicy.days < 365 ? ' (below PCI DSS minimum)' : ''}`
+                    : 'auto-purge disabled, retained indefinitely'}
                 </span>
               )}
             </div>

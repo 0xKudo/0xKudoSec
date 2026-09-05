@@ -393,7 +393,7 @@ export function AlertQueue({ onNavigate }) {
 
       <div style={s.sectionBar}>
         <span>Alerts</span>
-        <span style={{ fontSize: '10px' }}>{alerts.length} shown{statusFilter ? ` · ${statusFilter}` : ''}</span>
+        <span style={{ fontSize: '10px' }}>{alerts.length} shown{statusFilter ? `, ${statusFilter}` : ''}</span>
       </div>
 
       {isMobile ? (
@@ -425,8 +425,8 @@ export function AlertQueue({ onNavigate }) {
                 <div style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                   <span>
                     {new Date(a.created_at).toLocaleString()}
-                    {a.host ? ` · ${a.host}` : ''}
-                    {a.rule_name ? ` · ${a.rule_name}` : ''}
+                    {a.host ? `, ${a.host}` : ''}
+                    {a.rule_name ? `, ${a.rule_name}` : ''}
                   </span>
                   {a.sigma_identity && <span style={s.sigmaBadge}>Sigma</span>}
                 </div>
@@ -524,7 +524,7 @@ export function AlertQueue({ onNavigate }) {
           <div style={s.modal} onClick={e => e.stopPropagation()}>
             <div style={s.modalHeader}>
               <span style={s.modalTitle}>
-                {selected.title} &nbsp;·&nbsp;
+                {selected.title} &nbsp;&nbsp;&nbsp;
                 <span style={{ color: sevColor(selected.severity) }}>{selected.severity}</span>
               </span>
               <button style={s.modalClose} onClick={() => setSelected(null)}>✕</button>

@@ -949,7 +949,7 @@ export function SiemDashboard({ onNavigate }) {
                     >
                       <span style={badgeStyle(sigColor)}>{sigLabel}</span>
                       <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--text-primary)', fontSize: '11px' }}>
-                        {r.explanation || `${r.event_id || ''}${r.host ? ` · ${r.host}` : ''}`}
+                        {r.explanation || `${r.event_id || ''}${r.host ? `, ${r.host}` : ''}`}
                       </span>
                       <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '11px' }}>{r.host || '-'}</span>
                       <span style={{ fontSize: '11px', color: 'var(--text-muted)', whiteSpace: 'nowrap', textAlign: 'right' }}>{new Date(r.analyzed_at).toLocaleString()}</span>
@@ -1199,10 +1199,10 @@ export function SiemDashboard({ onNavigate }) {
         <span style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '10px' }}>
           <span>
             {filteredRecent.length} shown
-            {sevFilters.size > 0 ? ` · ${[...sevFilters].join(',')}` : ''}
-            {catFilter ? ` · ${catFilter}` : ''}
-            {srcFilter ? ` · ${srcFilter}` : ''}
-            {debouncedSearch.trim() ? ` · "${debouncedSearch.trim()}"` : ''}
+            {sevFilters.size > 0 ? `, ${[...sevFilters].join(',')}` : ''}
+            {catFilter ? `, ${catFilter}` : ''}
+            {srcFilter ? `, ${srcFilter}` : ''}
+            {debouncedSearch.trim() ? `, "${debouncedSearch.trim()}"` : ''}
           </span>
           {(sevFilters.size > 0 || catFilter || srcFilter) && (
             <button
@@ -1275,7 +1275,7 @@ export function SiemDashboard({ onNavigate }) {
           <div style={{ ...s.modal, width: '720px' }} onClick={e => e.stopPropagation()}>
             <div style={s.modalHeader}>
               <span style={s.modalTitle}>
-                Alert Trend &nbsp;·&nbsp; {new Date(sparklineBucket.slotMs).toLocaleString()} &nbsp;·&nbsp; {sparklineBucket.alerts.length} alert{sparklineBucket.alerts.length !== 1 ? 's' : ''}
+                Alert Trend &nbsp;&nbsp;&nbsp; {new Date(sparklineBucket.slotMs).toLocaleString()} &nbsp;&nbsp;&nbsp; {sparklineBucket.alerts.length} alert{sparklineBucket.alerts.length !== 1 ? 's' : ''}
               </span>
               <button style={s.modalClose} onClick={() => setSparklineBucket(null)}>✕</button>
             </div>
@@ -1325,7 +1325,7 @@ export function SiemDashboard({ onNavigate }) {
             <div style={s.modalHeader}>
               <span style={s.modalTitle}>
                 {sparklineBucket && <span style={{ color: 'var(--text-muted)', cursor: 'pointer', marginRight: '8px' }} onClick={() => { setSelectedEvent(null); setCaseTitle(''); setCases([]); }}>← Back</span>}
-                Event {selectedEvent.event_id || '-'} &nbsp;·&nbsp; {selectedEvent.host || '-'} &nbsp;·&nbsp;
+                Event {selectedEvent.event_id || '-'} &nbsp;&nbsp;&nbsp; {selectedEvent.host || '-'} &nbsp;&nbsp;&nbsp;
                 <span style={{ color: sevColor(selectedEvent.severity) }}>{selectedEvent.severity || '-'}</span>
               </span>
               <button style={s.modalClose} onClick={() => { setSelectedEvent(null); setCaseTitle(''); setCases([]); }}>✕</button>
@@ -1466,7 +1466,7 @@ export function SiemDashboard({ onNavigate }) {
           <div style={s.modal} onClick={e => e.stopPropagation()}>
             <div style={s.modalHeader}>
               <span style={s.modalTitle}>
-                Alert &nbsp;·&nbsp; <span style={{ color: sevColor(selectedAlert.severity) }}>{selectedAlert.severity}</span>
+                Alert &nbsp;&nbsp;&nbsp; <span style={{ color: sevColor(selectedAlert.severity) }}>{selectedAlert.severity}</span>
               </span>
               <button style={s.modalClose} onClick={() => setSelectedAlert(null)}>✕</button>
             </div>
