@@ -19,6 +19,7 @@ import { startRetentionCron } from './services/retentionCron.js';
 import { scheduleNoiseCron } from './services/noiseCron.js';
 import { scheduleKbCron } from './services/kbCron.js';
 import { scheduleSigmaCron } from './services/sigmaCron.js';
+import { scheduleCatalogCron } from './services/correlation/catalogCron.js';
 
 const app = express();
 
@@ -102,5 +103,6 @@ if (!process.env.VITEST) {
     scheduleNoiseCron();
     scheduleKbCron();
     scheduleSigmaCron();
+    scheduleCatalogCron();
   });
 }

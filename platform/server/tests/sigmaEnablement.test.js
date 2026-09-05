@@ -11,7 +11,7 @@ const USER = 'test|sigma-enable';
 let reachable = false;
 let superPool;
 let db;
-let runCorrelation;
+let evaluateCatalog;
 
 const SINGLE_EVENT = { type: 'single_event', selection: [{ field: 'event_id', op: 'eq', value: 4104 }], severity: 'high' };
 
@@ -78,7 +78,7 @@ beforeAll(async () => {
   process.env.DATABASE_URL = APP_URL;
   process.env.NODE_ENV = 'test';
   db = (await vi.importActual('../services/db.js')).default;
-  ({ runCorrelation } = await vi.importActual('../services/correlation/run.js'));
+  ({ evaluateCatalog } = await vi.importActual('../services/correlation/run.js'));
 });
 
 beforeEach(async () => {
@@ -105,8 +105,8 @@ describe('Sigma catalog engine (Phase 2 enablement)', () => {
     await seedCatalogRule({ identity: 'test-a' });
     // no setCategories → enabled set empty
     const ids = await insertLogs([{ event_id: 4104 }]);
-    const r = await runCorrelation(USER, ids, db);
-    expect(r.catalog.created).toBe(0);
+    const r = await evaluateCatalog(USER, { logIds: ids }, db);
+    expect(r.created).toBe(0);
     expect(await sigmaAlerts('test-a')).toHaveLength(0);
   });
 
@@ -114,8 +114,8 @@ describe('Sigma catalog engine (Phase 2 enablement)', () => {
     await seedCatalogRule({ identity: 'test-a' });
     await setCategories(['generic']);
     const ids = await insertLogs([{ event_id: 4104, message: 'x' }, { event_id: 4104, message: 'y' }]);
-    const r = await runCorrelation(USER, ids, db);
-    expect(r.catalog.created).toBe(1);
+    const r = await evaluateCatalog(USER, { logIds: ids }, db);
+    expect(r.created).toBe(1);
     const alerts = await sigmaAlerts('test-a');
     expect(alerts).toHaveLength(1);
     expect(alerts[0].sigma_identity).toBe('test-a');
@@ -128,8 +128,8 @@ describe('Sigma catalog engine (Phase 2 enablement)', () => {
     await setCategories(['generic']);
     await setOverride('test-a', false);
     const ids = await insertLogs([{ event_id: 4104 }]);
-    const r = await runCorrelation(USER, ids, db);
-    expect(r.catalog.created).toBe(0);
+    const r = await evaluateCatalog(USER, { logIds: ids }, db);
+    expect(r.created).toBe(0);
     expect(await sigmaAlerts('test-a')).toHaveLength(0);
   });
 
@@ -138,8 +138,8 @@ describe('Sigma catalog engine (Phase 2 enablement)', () => {
     await setCategories(['generic']); // emerging not enabled
     await setOverride('test-b', true);
     const ids = await insertLogs([{ event_id: 4104 }]);
-    const r = await runCorrelation(USER, ids, db);
-    expect(r.catalog.created).toBe(1);
+    const r = await evaluateCatalog(USER, { logIds: ids }, db);
+    expect(r.created).toBe(1);
     expect(await sigmaAlerts('test-b')).toHaveLength(1);
   });
 
@@ -148,7 +148,7 @@ describe('Sigma catalog engine (Phase 2 enablement)', () => {
     await setCategories(['generic']);
     await setOverride('test-a', null, 'critical');
     const ids = await insertLogs([{ event_id: 4104 }]);
-    await runCorrelation(USER, ids, db);
+    await evaluateCatalog(USER, { logIds: ids }, db);
     const alerts = await sigmaAlerts('test-a');
     expect(alerts[0].severity).toBe('critical');
   });
@@ -159,16 +159,16 @@ describe('Sigma catalog engine (Phase 2 enablement)', () => {
     await superPool.query("UPDATE sigma_rules SET retired = true WHERE identity = 'test-ret'");
     await setCategories(['generic']);
     const ids = await insertLogs([{ event_id: 4104 }]);
-    const r = await runCorrelation(USER, ids, db);
-    expect(r.catalog.created).toBe(0);
+    const r = await evaluateCatalog(USER, { logIds: ids }, db);
+    expect(r.created).toBe(0);
   });
 
   it.runIf(() => reachable)('prefilter skips a rule whose pinned event_id is absent from the batch', async () => {
     await seedCatalogRule({ identity: 'test-a', sigEventIds: [4104] });
     await setCategories(['generic']);
     const ids = await insertLogs([{ event_id: 5000 }]); // batch has no 4104
-    const r = await runCorrelation(USER, ids, db);
-    expect(r.catalog.created).toBe(0);
+    const r = await evaluateCatalog(USER, { logIds: ids }, db);
+    expect(r.created).toBe(0);
     expect(await sigmaAlerts('test-a')).toHaveLength(0);
   });
 
@@ -176,16 +176,16 @@ describe('Sigma catalog engine (Phase 2 enablement)', () => {
     await seedCatalogRule({ identity: 'test-a', sigEventIds: [4104] });
     await setCategories(['generic']);
     const ids = await insertLogs([{ event_id: 4104 }]);
-    const r = await runCorrelation(USER, ids, db);
-    expect(r.catalog.created).toBe(1);
+    const r = await evaluateCatalog(USER, { logIds: ids }, db);
+    expect(r.created).toBe(1);
   });
 
   it.runIf(() => reachable)('an unpinned rule (empty signature) always runs regardless of batch', async () => {
     await seedCatalogRule({ identity: 'test-a' }); // no signature set → '{}'
     await setCategories(['generic']);
     const ids = await insertLogs([{ event_id: 4104 }]);
-    const r = await runCorrelation(USER, ids, db);
-    expect(r.catalog.created).toBe(1);
+    const r = await evaluateCatalog(USER, { logIds: ids }, db);
+    expect(r.created).toBe(1);
   });
 
   it.runIf(() => reachable)('a threshold catalog rule fires at N over the window', async () => {
@@ -200,8 +200,8 @@ describe('Sigma catalog engine (Phase 2 enablement)', () => {
       { event_id: 4625, source_ip: '7.7.7.7', timestamp: new Date(base + 1000) },
       { event_id: 4625, source_ip: '7.7.7.7', timestamp: new Date(base + 2000) },
     ]);
-    const r = await runCorrelation(USER, ids, db);
-    expect(r.catalog.created).toBe(1);
+    const r = await evaluateCatalog(USER, { logIds: ids }, db);
+    expect(r.created).toBe(1);
     expect((await sigmaAlerts('test-thr'))[0].group_key).toBe('7.7.7.7');
   });
 });

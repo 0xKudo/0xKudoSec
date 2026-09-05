@@ -172,7 +172,13 @@ async function runOneCorrelationRule(client, userId, rule, logIds) {
 // SCALING (Phase 3): this runs one query per enabled rule against the batch. With
 // large categories that is many queries; Phase 3 adds a prefilter that selects only
 // rules whose signature intersects the batch. Correct now, optimized later.
-async function runCatalogRules(client, userId, logIds) {
+// Evaluate the user's enabled community-catalog (Sigma) rules.
+//  - logIds set  → ingest-batch scope (fast, real-time). NOTE: no longer called
+//    from the ingest path; kept for completeness/tests.
+//  - logIds null → time-window scope via opts.lookbackSeconds, used by the
+//    scheduled evaluator (catalogCron) so the ~3.6k catalog rules never run on
+//    the ingest hot path. See how enterprise SIEMs schedule analytics rules.
+async function runCatalogRules(client, userId, logIds, opts = {}) {
   let created = 0;
   let deduped = 0;
 
@@ -223,7 +229,7 @@ async function runCatalogRules(client, userId, logIds) {
       const bump = (isNew) => { if (isNew) created++; else deduped++; };
 
       if (doc.type === 'single_event') {
-        const { sql, params } = compileMatch(doc.where ?? doc.selection, userId, { logIds, limit: 500 });
+        const { sql, params } = compileMatch(doc.where ?? doc.selection, userId, { logIds, lookbackSeconds: opts.lookbackSeconds, limit: 500 });
         const { rows } = await client.query(sql, params);
         for (const row of rows) {
           bump(await upsertSigmaAlert(client, userId, r.identity, r.title, sev, row.event_id ?? row.id, repFrom(row)));
@@ -284,14 +290,11 @@ export async function runCorrelation(userId, logIds = null, deps = db) {
         }
       }
 
-      // Catalog (community Sigma) rules the user has enabled.
-      try {
-        const c = await runCatalogRules(client, userId, logIds);
-        catCreated += c.created;
-        catDeduped += c.deduped;
-      } catch (err) {
-        console.error('[correlation] catalog run failed:', err.message);
-      }
+      // NOTE: community-catalog (Sigma) rules are intentionally NOT evaluated here.
+      // With ~3.6k enabled rules, running them per ingest batch pegged the CPU
+      // (thousands of queries per flush). They are now evaluated by the scheduled
+      // catalogCron over a recent time window. The user's own detection_rules and
+      // correlation_rules above stay real-time on ingest.
     });
   } catch (err) {
     console.error('[correlation] run failed:', err.message);
@@ -304,4 +307,25 @@ export async function runCorrelation(userId, logIds = null, deps = db) {
     correlation: { created: corrCreated, deduped: corrDeduped },
     catalog: { created: catCreated, deduped: catDeduped },
   };
+}
+
+// Scheduled evaluation of one user's enabled community-catalog rules over the
+// last `lookbackSeconds` of logs. Called by catalogCron off the ingest hot path.
+// Idempotent: re-matching the same events dedupes via alerts_sigma_dedup, so an
+// overlapping lookback window is safe.
+export async function evaluateCatalog(userId, { logIds = null, lookbackSeconds } = {}, deps = db) {
+  let created = 0;
+  let deduped = 0;
+  await deps.withUser(userId, async (client) => {
+    // Wider timeout than ingest — this is a background pass, not the hot path.
+    await client.query("SET LOCAL statement_timeout = '20000ms'");
+    const c = await runCatalogRules(client, userId, logIds, { lookbackSeconds });
+    created += c.created;
+    deduped += c.deduped;
+  });
+  return { created, deduped };
+}
+
+export function runCatalogForUser(userId, lookbackSeconds, deps = db) {
+  return evaluateCatalog(userId, { lookbackSeconds }, deps);
 }
