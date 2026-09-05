@@ -1,5 +1,14 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
+// Subscribe to an IPC channel and return a disposer that removes the listener.
+// Returning the disposer lets React effects clean up, so re-mounts (and dev
+// StrictMode's double-invoke) don't stack duplicate listeners.
+function on(channel, cb) {
+  const handler = (_e, d) => cb(d);
+  ipcRenderer.on(channel, handler);
+  return () => ipcRenderer.removeListener(channel, handler);
+}
+
 // Inject CSS to remove outer scrollbars and style inner ones
 document.addEventListener('DOMContentLoaded', () => {
   const style = document.createElement('style');
@@ -23,9 +32,9 @@ contextBridge.exposeInMainWorld('electron', {
   networkScanner: {
     start: (target, scanType) => ipcRenderer.invoke('network-scanner:start', target, scanType),
     cancel: (runId) => ipcRenderer.invoke('network-scanner:cancel', runId),
-    onLine: (cb) => ipcRenderer.on('network-scanner:line', (_e, d) => cb(d)),
-    onDone: (cb) => ipcRenderer.on('network-scanner:done', (_e, d) => cb(d)),
-    onError: (cb) => ipcRenderer.on('network-scanner:error', (_e, d) => cb(d)),
+    onLine: (cb) => on('network-scanner:line', cb),
+    onDone: (cb) => on('network-scanner:done', cb),
+    onError: (cb) => on('network-scanner:error', cb),
   },
   nmap: {
     status: () => ipcRenderer.invoke('nmap:status'),
@@ -39,9 +48,9 @@ contextBridge.exposeInMainWorld('electron', {
   intruder: {
     start: (config) => ipcRenderer.invoke('intruder:start', config),
     cancel: (runId) => ipcRenderer.invoke('intruder:cancel', runId),
-    onResult: (cb) => ipcRenderer.on('intruder:result', (_e, d) => cb(d)),
-    onDone: (cb) => ipcRenderer.on('intruder:done', (_e, d) => cb(d)),
-    onError: (cb) => ipcRenderer.on('intruder:error', (_e, d) => cb(d)),
+    onResult: (cb) => on('intruder:result', cb),
+    onDone: (cb) => on('intruder:done', cb),
+    onError: (cb) => on('intruder:error', cb),
   },
 
   fluentBit: {

@@ -185,11 +185,11 @@ export default function Intruder() {
   // Subscribe to local intruder IPC events (desktop app only). Dispatch by runId.
   useEffect(() => {
     if (!isElectron) return;
-    window.electron.intruder.onResult((d) => {
+    const offResult = window.electron.intruder.onResult((d) => {
       if (d.runId !== runIdRef.current) return;
       setRows(prev => [...prev, d]);
     });
-    window.electron.intruder.onDone((d) => {
+    const offDone = window.electron.intruder.onDone((d) => {
       if (d.runId !== runIdRef.current) return;
       setSummary(d.summary);
       setLoading(false);
@@ -199,12 +199,13 @@ export default function Intruder() {
           { results: d.results, summary: d.summary }, 'intruder');
       }
     });
-    window.electron.intruder.onError((d) => {
+    const offError = window.electron.intruder.onError((d) => {
       if (d.runId !== runIdRef.current) return;
       setError(d.error);
       setLoading(false);
       runIdRef.current = null;
     });
+    return () => { offResult?.(); offDone?.(); offError?.(); };
   }, []);
 
   function loadBuiltIn(key) {

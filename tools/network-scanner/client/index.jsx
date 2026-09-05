@@ -213,23 +213,24 @@ export default function NetworkScanner() {
   // Subscribe to local nmap IPC events (desktop app only)
   useEffect(() => {
     if (!isElectron) return;
-    window.electron.networkScanner.onLine(({ runId, line }) => {
+    const offLine = window.electron.networkScanner.onLine(({ runId, line }) => {
       if (runId !== runIdRef.current) return;
       setLiveLines(prev => [...prev, line]);
     });
-    window.electron.networkScanner.onDone((data) => {
+    const offDone = window.electron.networkScanner.onDone((data) => {
       if (data.runId !== runIdRef.current) return;
       setResult(data);
       setLoading(false);
       push('network-scanner', `${data.scanType}: ${data.target}`, data, 'network-scanner');
       runIdRef.current = null;
     });
-    window.electron.networkScanner.onError(({ runId, error: err }) => {
+    const offError = window.electron.networkScanner.onError(({ runId, error: err }) => {
       if (runId !== runIdRef.current) return;
       setError(err);
       setLoading(false);
       runIdRef.current = null;
     });
+    return () => { offLine?.(); offDone?.(); offError?.(); };
   }, []);
 
   async function handleScan() {
