@@ -32,6 +32,8 @@ nsis:
 extraResources:
   - from: "assets/fluent-bit-installer.exe"
     to: "assets/fluent-bit-installer.exe"
+  - from: "assets/nmap-7.991-setup.exe"
+    to: "assets/nmap-7.991-setup.exe"
 
 # Files to include in the package
 files:

@@ -711,7 +711,7 @@ git commit -m "feat(network-scanner): client uses local IPC in app, DesktopOnly 
 **Files:**
 - Modify: `platform/electron/main.js` (add `nmap:status` and `nmap:install` handlers near the Fluent Bit handlers around line 293-338)
 - Modify: `platform/electron/electron-builder.yml` (add the installer to `extraResources`)
-- Add binary: `platform/electron/assets/nmap-installer.exe` (see Step 1)
+- Local binary (NOT committed, gitignored like `fluent-bit-installer.exe`): `platform/electron/assets/nmap-7.991-setup.exe` — must exist locally at build time.
 
 **Interfaces:**
 - Consumes: `resolveNmapPath` from `network-scanner-core.js`.
