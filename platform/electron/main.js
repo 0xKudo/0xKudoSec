@@ -688,6 +688,9 @@ app.whenReady().then(async () => {
   const registerVulnScanner = require('./tools/scanner');
   registerVulnScanner(ipcMain, { getMainWindow: () => mainWindow, isValidSender });
 
+  const registerSubdomainEnum = require('./tools/subdomain-enum');
+  registerSubdomainEnum(ipcMain, { getMainWindow: () => mainWindow, isValidSender });
+
   setupAutoUpdater();
 });
 

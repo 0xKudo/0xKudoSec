@@ -1,8 +1,10 @@
-import { useState, useEffect } from 'react';
-import { useAuth0 } from '@auth0/auth0-react';
+import { useState, useEffect, useRef } from 'react';
 import { useIsMobile } from '../../../platform/shell/src/hooks/useIsMobile.js';
 import { Button, TextArea, Input } from '../../../platform/shell/src/components/ui/index.js';
 import { useWorkspace } from '../../../platform/shell/src/context/WorkspaceContext.jsx';
+import DesktopOnly from '../../../platform/shell/src/components/DesktopOnly.jsx';
+
+const isElectron = typeof window !== 'undefined' && window.electron?.isElectron === true;
 
 const SOURCE_OPTIONS = [
   { value: 'crtsh', label: 'crt.sh (Certificate Transparency)' },
@@ -126,32 +128,40 @@ const styles = {
 };
 
 export default function SubdomainEnumerator() {
-  const { getAccessTokenSilently } = useAuth0();
   const isMobile = useIsMobile();
   const [domain, setDomain] = useState('');
   const [sources, setSources] = useState(['crtsh', 'hackertarget']);
   const [bruteCustom, setBruteCustom] = useState('');
-  const [result, setResult] = useState(null);
+  const [liveSubs, setLiveSubs] = useState([]); // streamed in live
+  const [result, setResult] = useState(null);    // full result set on done
+  const [started, setStarted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const runIdRef = useRef(null);
   const { push } = useWorkspace();
 
+  // Subscribe to local subdomain-enum IPC events (desktop app only). Dispatch by runId.
   useEffect(() => {
-    try {
-      const restore = JSON.parse(localStorage.getItem('workspace-restore-subdomain-enumerator') || 'null');
-      if (restore) {
-        setDomain(restore.domain || '');
-        // Normalize workspace-restored data to full result shape
-        setResult({
-          domain: restore.domain || '',
-          allSubdomains: restore.allSubdomains || restore.subdomains || [],
-          totalUnique: restore.totalUnique ?? (restore.allSubdomains || restore.subdomains || []).length,
-          sources: restore.sources || {},
-          analysis: restore.analysis || null,
-        });
-        localStorage.removeItem('workspace-restore-subdomain-enumerator');
-      }
-    } catch {}
+    if (!isElectron) return;
+    const offFound = window.electron.subdomainEnum.onFound((d) => {
+      if (d.runId !== runIdRef.current) return;
+      setLiveSubs(prev => prev.includes(d.subdomain) ? prev : [...prev, d.subdomain]);
+    });
+    const offDone = window.electron.subdomainEnum.onDone((d) => {
+      if (d.runId !== runIdRef.current) return;
+      setResult(d);
+      setLoading(false);
+      runIdRef.current = null;
+      push('subdomain-enumerator', `Subdomains: ${d.domain} (${d.totalUnique} found)`,
+        { domain: d.domain, subdomains: d.allSubdomains }, 'subdomain-enumerator');
+    });
+    const offError = window.electron.subdomainEnum.onError((d) => {
+      if (d.runId !== runIdRef.current) return;
+      setError(d.error);
+      setLoading(false);
+      runIdRef.current = null;
+    });
+    return () => { offFound?.(); offDone?.(); offError?.(); };
   }, []);
 
   function toggleSource(val) {
@@ -162,50 +172,44 @@ export default function SubdomainEnumerator() {
     setLoading(true);
     setError(null);
     setResult(null);
+    setLiveSubs([]);
+    setStarted(true);
+    runIdRef.current = null;
 
-    try {
-      const bruteWordlist = bruteCustom.trim()
-        ? bruteCustom.split('\n').map(w => w.trim()).filter(Boolean)
-        : [];
+    const bruteWordlist = bruteCustom.trim()
+      ? bruteCustom.split('\n').map(w => w.trim()).filter(Boolean)
+      : [];
 
-      const token = await getAccessTokenSilently();
-      const res = await fetch('/api/tools/subdomain-enumerator/enumerate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ domain: domain.trim(), sources, bruteWordlist }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.error || 'Enumeration failed.');
-      } else {
-        setResult(data);
-        push(
-          'subdomain-enumerator',
-          `Subdomains: ${data.domain} (${data.totalUnique} found)`,
-          { domain: data.domain, subdomains: data.allSubdomains },
-          'subdomain-enumerator'
-        );
-      }
-    } catch {
-      setError('Network error. Is the server running?');
-    } finally {
+    const out = await window.electron.subdomainEnum.start({ domain: domain.trim(), sources, bruteWordlist });
+    if (out.error) {
+      setError(out.error);
       setLoading(false);
+      return;
     }
+    runIdRef.current = out.runId;
   }
 
+  async function handleStop() {
+    if (runIdRef.current) await window.electron.subdomainEnum.cancel(runIdRef.current);
+  }
+
+  // Subdomains to display: full sorted set once done, else the live-streamed set.
+  const displaySubs = result ? result.allSubdomains : [...liveSubs].sort();
+
   function handleDownload() {
-    if (!result) return;
-    const blob = new Blob([result.allSubdomains.join('\n')], { type: 'text/plain' });
+    if (!displaySubs.length) return;
+    const blob = new Blob([displaySubs.join('\n')], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `subdomains-${result.domain}.txt`;
+    a.download = `subdomains-${(result?.domain || domain).trim()}.txt`;
     a.click();
     URL.revokeObjectURL(url);
   }
 
   const canEnumerate = !loading && domain.trim().length > 0 && sources.length > 0;
+
+  if (!isElectron) return <DesktopOnly toolName="Subdomain Enumerator" downloadUrl="https://0xkudo.com/download" />;
 
   return (
     <div style={styles.container}>
@@ -228,9 +232,11 @@ export default function SubdomainEnumerator() {
               disabled={loading}
               onKeyDown={e => e.key === 'Enter' && canEnumerate && handleEnumerate()}
             />
-            <Button style={{ alignSelf: 'flex-start' }} loading={loading} onClick={handleEnumerate} disabled={!canEnumerate}>
-              {loading ? 'Enumerating…' : 'Enumerate'}
-            </Button>
+            {loading ? (
+              <Button variant="danger" style={{ alignSelf: 'flex-start' }} onClick={handleStop}>Stop</Button>
+            ) : (
+              <Button style={{ alignSelf: 'flex-start' }} onClick={handleEnumerate} disabled={!canEnumerate}>Enumerate</Button>
+            )}
           </div>
         ) : (
           <div style={styles.inputRow}>
@@ -242,9 +248,11 @@ export default function SubdomainEnumerator() {
               disabled={loading}
               onKeyDown={e => e.key === 'Enter' && canEnumerate && handleEnumerate()}
             />
-            <Button style={{ height: '34px' }} loading={loading} onClick={handleEnumerate} disabled={!canEnumerate}>
-              {loading ? 'Enumerating…' : 'Enumerate'}
-            </Button>
+            {loading ? (
+              <Button variant="danger" style={{ height: '34px' }} onClick={handleStop}>Stop</Button>
+            ) : (
+              <Button style={{ height: '34px' }} onClick={handleEnumerate} disabled={!canEnumerate}>Enumerate</Button>
+            )}
           </div>
         )}
       </div>
@@ -281,84 +289,45 @@ export default function SubdomainEnumerator() {
 
       {error && <p style={styles.error}>{error}</p>}
 
-      {result && (
+      {started && (
         <div style={styles.results}>
-          {/* AI Analysis */}
-          <div style={styles.analysisCard}>
-            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '12px' }}>
-              <span style={styles.cardTitle}>AI Analysis</span>
-              {result.analysis?.riskLevel && (
-                <span style={styles.riskBadge(result.analysis.riskLevel)}>
-                  {result.analysis.riskLevel}
-                </span>
-              )}
-            </div>
-            {result.analysis?.summary && (
-              <p style={styles.summary}>{result.analysis.summary}</p>
-            )}
-            {result.analysis?.flags?.length > 0 && (
-              <>
-                <div style={styles.listLabel}>Flags</div>
-                {result.analysis.flags.map((f, i) => (
-                  <div key={i} style={styles.listItem}>• {f}</div>
-                ))}
-              </>
-            )}
-            {result.analysis?.interestingSubdomains?.length > 0 && (
-              <>
-                <div style={styles.listLabel}>Notable Subdomains</div>
-                {result.analysis.interestingSubdomains.map((s, i) => (
-                  <div key={i} style={styles.listItem}>• {s}</div>
-                ))}
-              </>
-            )}
-            {result.analysis?.recommendations?.length > 0 && (
-              <>
-                <div style={styles.listLabel}>Recommendations</div>
-                {result.analysis.recommendations.map((r, i) => (
-                  <div key={i} style={styles.listItem}>• {r}</div>
-                ))}
-              </>
-            )}
-          </div>
+          {/* Source cards (populated on completion) */}
+          {result && (
+            <>
+              <div style={styles.sectionHeader}>Sources</div>
+              <div style={styles.sourcesGrid}>
+                {[
+                  { key: 'crtsh', label: 'crt.sh' },
+                  { key: 'hackertarget', label: 'HackerTarget' },
+                  { key: 'brute', label: 'Brute-force DNS' },
+                ].map(({ key, label }) => {
+                  const src = result.sources?.[key];
+                  if (!src) return null;
+                  const skipped = !!src.skipped;
+                  const hasError = !!src.error;
+                  return (
+                    <div key={key} style={styles.sourceCard(hasError, skipped)}>
+                      <div style={styles.sourceTitle}>{label}</div>
+                      <div style={styles.sourceMeta}>
+                        {skipped ? src.skipped : hasError ? `Error: ${src.error}` : `${src.count} found`}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          )}
 
-          {/* Source cards */}
-          <div style={styles.sectionHeader}>Sources</div>
-          <div style={styles.sourcesGrid}>
-            {[
-              { key: 'crtsh', label: 'crt.sh' },
-              { key: 'hackertarget', label: 'HackerTarget' },
-              { key: 'brute', label: 'Brute-force DNS' },
-            ].map(({ key, label }) => {
-              const src = result.sources?.[key];
-              if (!src) return null;
-              const skipped = !!src.skipped;
-              const hasError = !!src.error;
-              return (
-                <div key={key} style={styles.sourceCard(hasError, skipped)}>
-                  <div style={styles.sourceTitle}>{label}</div>
-                  <div style={styles.sourceMeta}>
-                    {skipped
-                      ? src.skipped
-                      : hasError
-                        ? `Error: ${src.error}`
-                        : `${src.count} found`}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Full subdomain list */}
+          {/* Subdomain list — streams in live as sources resolve */}
           <div style={isMobile
             ? { display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '10px' }
             : styles.resultHeader
           }>
             <span style={styles.sectionHeader}>
-              All Subdomains: {result.totalUnique} unique
+              Subdomains: {displaySubs.length} unique{loading ? ' (enumerating…)' : ''}
             </span>
             <div style={{ display: 'flex', gap: '8px' }}>
-              <Button variant="ghost" onClick={() => navigator.clipboard.writeText(result.allSubdomains.join('\n'))}>
+              <Button variant="ghost" onClick={() => navigator.clipboard.writeText(displaySubs.join('\n'))}>
                 Copy All
               </Button>
               <Button variant="ghost" onClick={handleDownload}>
@@ -366,11 +335,11 @@ export default function SubdomainEnumerator() {
               </Button>
             </div>
           </div>
-          {result.allSubdomains.length === 0 ? (
-            <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>No subdomains found.</p>
+          {displaySubs.length === 0 ? (
+            <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>{loading ? 'Enumerating…' : 'No subdomains found.'}</p>
           ) : (
             <div style={styles.subdomainBox}>
-              {result.allSubdomains.join('\n')}
+              {displaySubs.join('\n')}
             </div>
           )}
         </div>

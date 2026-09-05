@@ -61,6 +61,14 @@ contextBridge.exposeInMainWorld('electron', {
     onError: (cb) => on('vuln-scanner:error', cb),
   },
 
+  subdomainEnum: {
+    start: (config) => ipcRenderer.invoke('subdomain-enum:start', config),
+    cancel: (runId) => ipcRenderer.invoke('subdomain-enum:cancel', runId),
+    onFound: (cb) => on('subdomain-enum:found', cb),
+    onDone: (cb) => on('subdomain-enum:done', cb),
+    onError: (cb) => on('subdomain-enum:error', cb),
+  },
+
   fluentBit: {
     getStatus: () => ipcRenderer.invoke('fluent-bit:status'),
     start: () => ipcRenderer.invoke('fluent-bit:start'),
