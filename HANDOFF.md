@@ -76,21 +76,46 @@ stdout to a pipe — add `-v` + `--stats-every 1s` to the profile args so it rep
 - Symptom that started this: tools vanished from the dashboard because the backend on 4000 wasn't up,
   so the shell's one-shot `/api/tools` fetch failed and `ToolRegistry` fell back to `[]`.
 
+**Plan 1 streaming enhancement — DONE + verified (2026-09-05, commit `5e67ebd`):** nmap args now
+`-oN - -v --stats-every 1s …` (verbose = per-port lines stream; stats fill silent phases). Client keeps
+the output panel visible during and after the scan (dropped the `!result` guard + post-scan raw toggle).
+Confirmed live-streaming against a `/24`. Spec + HANDOFF updated in `b12c903`.
+
 **Still TODO on Plan 1:**
-- Build the real-time streaming enhancement above.
 - Test Stop mid-scan and the nmap-missing install prompt (nmap is installed here, so the prompt path
   is unverified); confirm the web fallback shows `<DesktopOnly>` and the server returns 410.
 - Then Electron rebuild + release (this changes `main.js`/`preload.js`, so a rebuild IS required),
   and a VPS deploy of the 410 route + 413 fix. Use the `electron-release` skill.
 
-**Plans 2 and 3 — NOT YET WRITTEN:**
-- Plan 2 = HTTP Repeater + Intruder (pure local HTTP, no Claude).
-- Plan 3 = Vulnerability Scanner + Subdomain Enumerator.
-- Both reuse this branch's pattern: `platform/electron/tools/<id>.js` main module, narrow preload
-  API, `isElectron` client branch, 410 server route, shared `<DesktopOnly>`.
-- **Important for Plan 2:** the current Repeater/Intruder server routes BLOCK internal/loopback/
-  RFC-1918 targets (SSRF protection, HANDOFF Finding 33). The ported LOCAL versions must DROP that
-  block, since local pentest use needs to reach private/localhost targets.
+### Plan 2 — HTTP Repeater + Intruder — DONE + dev-verified (2026-09-05)
+
+Plans written at `docs/plans/2026-09-04-desktop-only-plan2-repeater-intruder.md` (and plan3). Commits:
+- `b79cf1b` feat(http-repeater): local IPC `http-repeater:send` (core `http-repeater-core.js`
+  `validateRequest`), client `isElectron` branch → IPC / `<DesktopOnly>`, server route → 410.
+- `d67f688` feat(intruder): local IPC `intruder:start`/`:cancel` **streaming** per-request results
+  (`intruder-core.js`: `parsePlaceholders`/`validateAttackConfig`/`computeSummary`); client renders
+  rows live + Stop; server route → 410.
+- `e23c444` fix: preload `on*` helpers return a disposer; network-scanner + intruder client effects
+  clean up. Without it, StrictMode's double-invoke stacked listeners → every streamed row rendered
+  twice (Intruder showed 6 rows for 3 payloads). Now correct.
+
+**SSRF block DROPPED** in both (deliberate reversal of Finding 33): local pentest must reach
+private/loopback targets; core tests assert `127.0.0.1`/`192.168.x`/`10.x` are accepted. **410 tests**
+for both mount the tool router directly (no auth) so they pass — unlike the pre-existing
+`network-scanner-410.test.js` which goes through `createApp` and gets 401 (see task chip).
+
+**Verified in dev:** HTTP Repeater `GET http://127.0.0.1:4000/api/health` → 200 JSON (loopback works).
+Intruder against `http://127.0.0.1:4000/api/tools/§x§` with 3 payloads → 3 rows streaming, all 404,
+Stop works. All new tests green (repeater 10, intruder 11), shell builds clean.
+
+**Still TODO on Plan 2:** confirm the web fallback shows `<DesktopOnly>` for both; folded into the
+single Electron rebuild + VPS deploy at the end of Plan 3.
+
+**Plan 3 — Vulnerability Scanner (`scanner`) + Subdomain Enumerator — NOT YET BUILT:**
+- Plan written at `docs/plans/2026-09-04-desktop-only-plan3-vulnscanner-subdomain.md`.
+- Same pattern. **Both drop Claude** (`askClaude` removed). Vuln Scanner keeps the `authorized:true`
+  gate. Subdomain Enum keeps crt.sh + HackerTarget + local DNS brute, run locally.
+- Reuses the streaming + listener-cleanup pattern established in Plan 2.
 
 ### MERGED TO MAIN (2026-07-24) — UI redesign Phase C.5 + D, commit `6bdcb04`
 
