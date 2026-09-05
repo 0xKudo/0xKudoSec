@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
-import { useAuth0 } from '@auth0/auth0-react';
 import { useWorkspace } from '../../../platform/shell/src/context/WorkspaceContext.jsx';
 import { useIsMobile } from '../../../platform/shell/src/hooks/useIsMobile.js';
 import { Button, Input, AuthGate } from '../../../platform/shell/src/components/ui/index.js';
+import DesktopOnly from '../../../platform/shell/src/components/DesktopOnly.jsx';
+
+const isElectron = typeof window !== 'undefined' && window.electron?.isElectron === true;
 
 const RISK_COLORS = {
   critical: 'var(--severity-critical)',
@@ -177,19 +179,17 @@ const styles = {
 };
 
 export default function NetworkScanner() {
-  const { getAccessTokenSilently } = useAuth0();
   const isMobile = useIsMobile();
   const [target, setTarget] = useState('');
   const [scanType, setScanType] = useState('quick');
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [analyzing, setAnalyzing] = useState(false);
   const [liveLines, setLiveLines] = useState([]);
   const [error, setError] = useState(null);
   const [showRaw, setShowRaw] = useState(false);
   const [authorized, setAuthorized] = useState(false);
-  const scanIdRef = useRef(null);
-  const esRef = useRef(null);
+  const [nmapMissing, setNmapMissing] = useState(false);
+  const runIdRef = useRef(null);
   const outputRef = useRef(null);
   const { push } = useWorkspace();
 
@@ -211,103 +211,67 @@ export default function NetworkScanner() {
     }
   }, [liveLines]);
 
+  // Subscribe to local nmap IPC events (desktop app only)
+  useEffect(() => {
+    if (!isElectron) return;
+    window.electron.networkScanner.onLine(({ runId, line }) => {
+      if (runId !== runIdRef.current) return;
+      setLiveLines(prev => [...prev, line]);
+    });
+    window.electron.networkScanner.onDone((data) => {
+      if (data.runId !== runIdRef.current) return;
+      setResult(data);
+      setLoading(false);
+      push('network-scanner', `${data.scanType}: ${data.target}`, data, 'network-scanner');
+      runIdRef.current = null;
+    });
+    window.electron.networkScanner.onError(({ runId, error: err }) => {
+      if (runId !== runIdRef.current) return;
+      setError(err);
+      setLoading(false);
+      runIdRef.current = null;
+    });
+  }, []);
+
   async function handleScan() {
     // Require the authorization agreement before any scan fires.
     if (!target.trim() || !authorized) return;
 
     setLoading(true);
-    setAnalyzing(false);
     setError(null);
     setResult(null);
     setLiveLines([]);
     setShowRaw(false);
-    scanIdRef.current = null;
+    runIdRef.current = null;
 
-    // Step 1: initiate scan, get scanId
-    let scanId;
-    try {
-      const token = await getAccessTokenSilently();
-      const res = await fetch('/api/tools/network-scanner/scan', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ target: target.trim(), scanType }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.error || 'Failed to start scan.');
-        setLoading(false);
-        return;
-      }
-      scanId = data.scanId;
-      scanIdRef.current = scanId;
-    } catch {
-      setError('Network error. Is the server running?');
+    // nmap must be present on this machine
+    const nmapState = await window.electron.nmap.status();
+    if (!nmapState.installed) {
+      setNmapMissing(true);
       setLoading(false);
       return;
     }
+    setNmapMissing(false);
 
-    // Step 2: open SSE stream (EventSource can't send headers, token goes in query param)
-    const streamToken = await getAccessTokenSilently();
-    const es = new EventSource(`/api/tools/network-scanner/scan-stream/${scanId}?token=${encodeURIComponent(streamToken)}`);
-    esRef.current = es;
-
-    es.addEventListener('line', e => {
-      const { line } = JSON.parse(e.data);
-      setLiveLines(prev => [...prev, line]);
-    });
-
-    es.addEventListener('analyzing', () => {
-      setAnalyzing(true);
-    });
-
-    es.addEventListener('done', e => {
-      const data = JSON.parse(e.data);
-      setResult(data);
+    const out = await window.electron.networkScanner.start(target.trim(), scanType);
+    if (out.error) {
+      setError(out.error);
       setLoading(false);
-      setAnalyzing(false);
-      push('network-scanner', `${data.scanType}: ${data.target}`, data, 'network-scanner');
-      es.close();
-      esRef.current = null;
-    });
-
-    es.addEventListener('cancelled', () => {
-      setLoading(false);
-      setAnalyzing(false);
-      setError('Scan stopped.');
-      es.close();
-      esRef.current = null;
-    });
-
-    es.addEventListener('error', e => {
-      try {
-        const data = JSON.parse(e.data);
-        setError(data.error || 'Scan error.');
-      } catch {
-        // SSE connection error (e.g. server closed): only show if still loading
-        setError(prev => prev || null);
-      }
-      setLoading(false);
-      setAnalyzing(false);
-      es.close();
-      esRef.current = null;
-    });
+      return;
+    }
+    runIdRef.current = out.runId;
   }
 
   async function handleStop() {
-    // Close the SSE connection (server will detect close and kill nmap)
-    if (esRef.current) { esRef.current.close(); esRef.current = null; }
-    // Belt-and-suspenders: also hit cancel endpoint
-    if (scanIdRef.current) {
-      try {
-        const token = await getAccessTokenSilently().catch(() => '');
-      await fetch(`/api/tools/network-scanner/cancel/${scanIdRef.current}`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
-      } catch {}
-      scanIdRef.current = null;
+    if (runIdRef.current) {
+      await window.electron.networkScanner.cancel(runIdRef.current);
+      runIdRef.current = null;
     }
     setLoading(false);
-    setAnalyzing(false);
     setError('Scan stopped.');
   }
+
+  if (!isElectron) return <DesktopOnly toolName="Network Scanner" downloadUrl="https://0xkudo.com/download" />;
 
   return (
     <div style={styles.container}>
@@ -325,6 +289,17 @@ export default function NetworkScanner() {
       <div style={{ marginBottom: '14px' }}>
         <AuthGate checked={authorized} onChange={setAuthorized} disabled={loading} />
       </div>
+
+      {nmapMissing && (
+        <div style={styles.warning}>
+          nmap is required for Network Scanner and was not found on this machine.
+          <div style={{ marginTop: 8 }}>
+            <Button onClick={async () => { const r = await window.electron.nmap.install(); if (r.ok) setNmapMissing(false); }}>
+              Install nmap
+            </Button>
+          </div>
+        </div>
+      )}
 
       {isMobile ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>
@@ -386,11 +361,7 @@ export default function NetworkScanner() {
       {(loading || liveLines.length > 0) && !result && (
         <div style={styles.livePanel}>
           <div style={styles.livePanelHeader}>
-            {analyzing ? (
-              <><div style={styles.analyzing} />Analyzing with Claude...</>
-            ) : (
-              <><div style={styles.pulse} />Live output</>
-            )}
+            <div style={styles.pulse} />Live output
           </div>
           <div style={styles.liveOutput} ref={outputRef}>
             {liveLines.join('\n')}
@@ -402,29 +373,8 @@ export default function NetworkScanner() {
         <div style={styles.results}>
           <div style={styles.summaryCard}>
             <div style={styles.riskRow}>
-              <div style={styles.badge(result.riskLevel)}>{result.riskLevel} risk</div>
               <span style={styles.targetLabel}>{result.scanLabel}: {result.target}</span>
             </div>
-
-            <div style={styles.summaryText}>{result.summary}</div>
-
-            {result.findings?.length > 0 && (
-              <div style={styles.sectionBlock}>
-                <div style={styles.label}>Findings</div>
-                {result.findings.map((f, i) => (
-                  <div key={i} style={styles.findingItem}>• {f}</div>
-                ))}
-              </div>
-            )}
-
-            {result.recommendations?.length > 0 && (
-              <div style={styles.sectionBlock}>
-                <div style={styles.label}>Recommendations</div>
-                {result.recommendations.map((r, i) => (
-                  <div key={i} style={styles.listItem}>{i + 1}. {r}</div>
-                ))}
-              </div>
-            )}
           </div>
 
           {result.rawOutput && (
