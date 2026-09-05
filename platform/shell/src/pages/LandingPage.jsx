@@ -44,26 +44,26 @@ const SIEM_CAPABILITIES = [
   { name: 'Log Ingestion',      desc: 'Fluent Bit pipeline, per-user API keys, Windows Event Log and Sysmon. Source cards show status, events per hour, and uptime.' },
   { name: 'Detection Rules',    desc: 'Pattern-based rules with severity tiers. Alerts auto-deduplicate and aggregate. No alert storms. Critical, high, medium, low, and info levels.' },
   { name: 'Alert Queue',        desc: 'Filterable queue with severity badges, status pills, and case linking. Triage from a single view.' },
-  { name: 'Case Management',    desc: 'Link alerts to cases. Timeline builder, evidence attachment, playbook checklists, and status tracking.' },
+  { name: 'Case Management',    desc: 'Link alerts to cases. Timeline builder, evidence attachment, and status tracking.' },
   { name: 'Live Dashboard',     desc: 'KPI cards, event volume chart, severity donut, top sources. WebSocket live updates with 30-second polling fallback.' },
   { name: 'Log Search',         desc: 'Search across all ingested events. Filter by time range, source, severity, and category. Full field extraction on any event.' },
 ];
 
 const SIEM_DEEP = [
   {
-    num: '01',
+    num: '1',
     title: 'Real-time ingestion via Fluent Bit',
     body: 'Windows Event Logs and Sysmon data are shipped continuously and normalized on arrival. Events are tagged to your account so your data stays scoped and private. The live dashboard and alert queue update in real time via WebSocket as events come in.',
   },
   {
-    num: '02',
+    num: '2',
     title: 'Detection rules with automatic deduplication',
     body: 'Rules match on any combination of event ID, username, host, source IP, destination IP, process name, message content, category, or severity. When a rule fires repeatedly, alerts are automatically deduplicated and aggregated with a count rather than flooding the queue.',
   },
   {
-    num: '03',
+    num: '3',
     title: 'Case management from alert to resolution',
-    body: 'Alerts link directly to cases. Each case has a timeline of linked alerts, an evidence panel for attaching artifacts, a playbook checklist to track response steps, and a status that moves from open to resolved.',
+    body: 'Alerts link directly to cases. Each case has a timeline of linked alerts, an evidence panel for attaching artifacts, response steps to track, and a status that moves from open to resolved.',
   },
 ];
 
@@ -432,7 +432,9 @@ function SiemPreview() {
 
 function DesktopLanding({ onLogin }) {
   const toolsRef = useRef(null);
+  const siemRef = useRef(null);
   const scrollToTools = () => toolsRef.current?.scrollIntoView({ behavior: 'smooth' });
+  const scrollToSiem = () => siemRef.current?.scrollIntoView({ behavior: 'smooth' });
   return (
     <div style={s.page}>
       <LandingNav onLogin={onLogin} onScrollToTools={scrollToTools} isMobile={false} />
@@ -478,7 +480,6 @@ function DesktopLanding({ onLogin }) {
         {[
           ['SIEM', 'Real-Time Ingestion', true],
           ['19',   'Security Tools',      false],
-          ['4',    'SOC Phases',          false],
           ['Windows', 'Event Log + Sysmon', false],
           ['Auth0', 'Secure Login',       false],
         ].map(([num, label, amber], i, arr) => (
@@ -490,7 +491,7 @@ function DesktopLanding({ onLogin }) {
       </div>
 
       {/* SIEM capabilities */}
-      <div style={s.editorial}>
+      <div ref={siemRef} style={s.editorial}>
         <div style={s.editorialLabelCol}>
           <div style={s.editorialTag}>SIEM</div>
           <div style={s.editorialTitle}>SIEM &amp; Log Management</div>
@@ -539,7 +540,7 @@ function DesktopLanding({ onLogin }) {
         </div>
         <div style={s.editorialContent}>
           <p style={s.editorialIntro}>
-            19 isolated tool modules across four SOC phases. From alert triage and threat intelligence to red team simulation and payload generation.
+            19 isolated tool modules grouped by workflow stage. From alert triage and threat intelligence to red team simulation and payload generation.
           </p>
           {PHASES.map(phase => (
             <div key={phase.key} style={s.phaseEntry}>
@@ -576,7 +577,7 @@ function DesktopLanding({ onLogin }) {
       <footer style={s.footer}>
         <span style={s.footerBrand}>[ 0xKudo ]</span>
         <div style={s.footerLinks}>
-          {[['Tools', e => { e.preventDefault(); scrollToTools(); }], ['SIEM', null], ['Sign In', e => { e.preventDefault(); onLogin(); }], ['Privacy', e => { e.preventDefault(); window.location.href = '/privacy'; }], ['Security', e => { e.preventDefault(); window.location.href = '/security'; }]].map(([label, handler]) => (
+          {[['Tools', e => { e.preventDefault(); scrollToTools(); }], ['SIEM', e => { e.preventDefault(); scrollToSiem(); }], ['Sign In', e => { e.preventDefault(); onLogin(); }], ['Privacy', e => { e.preventDefault(); window.location.href = '/privacy'; }], ['Security', e => { e.preventDefault(); window.location.href = '/security'; }]].map(([label, handler]) => (
             <a
               key={label}
               href="#"
@@ -594,7 +595,9 @@ function DesktopLanding({ onLogin }) {
 
 function MobileLanding({ onLogin }) {
   const toolsRef = useRef(null);
+  const siemRef = useRef(null);
   const scrollToTools = () => toolsRef.current?.scrollIntoView({ behavior: 'smooth' });
+  const scrollToSiem = () => siemRef.current?.scrollIntoView({ behavior: 'smooth' });
   return (
     <div style={s.page}>
       <LandingNav onLogin={onLogin} onScrollToTools={scrollToTools} isMobile={true} />
@@ -624,7 +627,6 @@ function MobileLanding({ onLogin }) {
         {[
           ['SIEM', 'Real-Time Ingestion', true],
           ['19',   'Security Tools',      false],
-          ['4',    'SOC Phases',          false],
           ['Auth0', 'Secure Login',       false],
         ].map(([num, label, amber]) => (
           <div key={label} style={s.statItemMobile}>
@@ -635,7 +637,7 @@ function MobileLanding({ onLogin }) {
       </div>
 
       {/* SIEM capabilities: no dashboard preview on mobile, flat list */}
-      <div style={s.editorialMobile}>
+      <div ref={siemRef} style={s.editorialMobile}>
         <div style={s.editorialMobileHeader}>
           <span style={{ fontSize: '10px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--accent-amber)' }}>SIEM</span>
           <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>Log Management &amp; Alerting</span>
@@ -681,7 +683,7 @@ function MobileLanding({ onLogin }) {
         </div>
         <div style={s.editorialMobileContent}>
           <p style={s.editorialMobileIntro}>
-            19 tool modules across four SOC phases. Alert triage, threat intelligence, red team simulation, and more.
+            19 tool modules grouped by workflow stage. Alert triage, threat intelligence, red team simulation, and more.
           </p>
           {PHASES.map(phase => (
             <div key={phase.key} style={s.phaseEntry}>
@@ -718,7 +720,7 @@ function MobileLanding({ onLogin }) {
       <footer style={s.footerMobile}>
         <span style={s.footerBrand}>[ 0xKudo ]</span>
         <div style={s.footerLinks}>
-          {[['Tools', e => { e.preventDefault(); scrollToTools(); }], ['SIEM', null], ['Sign In', e => { e.preventDefault(); onLogin(); }], ['Privacy', e => { e.preventDefault(); window.location.href = '/privacy'; }], ['Security', e => { e.preventDefault(); window.location.href = '/security'; }]].map(([label, handler]) => (
+          {[['Tools', e => { e.preventDefault(); scrollToTools(); }], ['SIEM', e => { e.preventDefault(); scrollToSiem(); }], ['Sign In', e => { e.preventDefault(); onLogin(); }], ['Privacy', e => { e.preventDefault(); window.location.href = '/privacy'; }], ['Security', e => { e.preventDefault(); window.location.href = '/security'; }]].map(([label, handler]) => (
             <a
               key={label}
               href="#"
