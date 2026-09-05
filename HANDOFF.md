@@ -111,11 +111,32 @@ Stop works. All new tests green (repeater 10, intruder 11), shell builds clean.
 **Still TODO on Plan 2:** confirm the web fallback shows `<DesktopOnly>` for both; folded into the
 single Electron rebuild + VPS deploy at the end of Plan 3.
 
-**Plan 3 — Vulnerability Scanner (`scanner`) + Subdomain Enumerator — NOT YET BUILT:**
-- Plan written at `docs/plans/2026-09-04-desktop-only-plan3-vulnscanner-subdomain.md`.
-- Same pattern. **Both drop Claude** (`askClaude` removed). Vuln Scanner keeps the `authorized:true`
-  gate. Subdomain Enum keeps crt.sh + HackerTarget + local DNS brute, run locally.
-- Reuses the streaming + listener-cleanup pattern established in Plan 2.
+### Plan 3 — Vulnerability Scanner (`scanner`) + Subdomain Enumerator — CODE-COMPLETE (2026-09-05)
+
+Plan doc: `docs/plans/2026-09-04-desktop-only-plan3-vulnscanner-subdomain.md`. **All three plan docs are
+now tracked in git** (commit `<plans>`) so a fresh clone / different account has them. Commits:
+- `2beae24` feat(scanner): local IPC `vuln-scanner:start`/`:cancel` streaming findings
+  (`scanner-core.js`: `validateScanConfig` + passive checks + `computeRisk`); **Claude removed**
+  (rule-based Risk Summary replaces the AI card); **`authorized:true` gate kept** for active mode;
+  server route → 410.
+- `968d9d9` feat(subdomain-enum): local IPC `subdomain-enum:start`/`:cancel` streaming found
+  subdomains (`subdomain-enum-core.js`: `validateDomain`, `parseCrtShJson`, `parseHackerTargetText`,
+  `DEFAULT_WORDLIST`); crt.sh + HackerTarget + local DNS brute; **Claude + SecurityTrails removed**;
+  server route → 410.
+
+**All 5 desktop-only tools now local:** Network Scanner, HTTP Repeater, Intruder, Vulnerability
+Scanner, Subdomain Enumerator. 45 tests green across 13 files (all mounted-router 410 tests pass).
+
+**Plan 3 still TODO:** dev-verify Vuln Scanner (passive against an external site; active needs the
+auth checkbox) and Subdomain Enum (enumerate a domain you own) in the app; confirm web `<DesktopOnly>`.
+
+### Release — the remaining shared step for all 3 plans
+
+One Electron rebuild + release (`electron-release` skill; `main.js`/`preload.js` changed) and one VPS
+deploy of all five 410 routes + the 413 fix. Ship together so web users get `<DesktopOnly>` and desktop
+users get local execution at once. Confirm nmap installer licensing before the build (Plan 1 open item).
+Pre-existing failing tests unrelated to this work: `network-scanner-410.test.js` (401-vs-410 auth, task
+chip filed), `siem-routes.test.js` + `ingest.test.js` (broken `vi.mocked` setup, noted 2026-07-24).
 
 ### MERGED TO MAIN (2026-07-24) — UI redesign Phase C.5 + D, commit `6bdcb04`
 
