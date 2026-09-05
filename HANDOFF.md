@@ -15,6 +15,108 @@ Unified cybersecurity tools platform at `0xkudo.com`. Monorepo — shared Expres
 
 ---
 
+### DONE (2026-09-05) — XDR/SOAR roadmap: design spec + Phase 0/1/2 plans (docs only, no code)
+
+Planning work to take 0xKudoSec from detect-and-log into detect, correlate, contain, eradicate. Targets capability parity with Sentinel / Falcon NG-SIEM / ConnectWise / Splunk ES / Cortex XSIAM **for a small-to-mid environment**, not feature parity.
+
+**Design spec:** `docs/specs/2026-09-04-xdr-soar-design.md` — 10 ranked structural gaps, 6 new subsystems (entity resolver, correlation engine, incident builder, playbook engine, connector bus, response fabric), 7 phases, commercial tier shape, compliance notes, 5 open questions.
+
+**Plans written:**
+- `docs/plans/2026-09-05-xdr-phase0-foundations.md` — RLS close-out, `logs` partitioning, ATT&CK field, tier-gating *design only*, code signing deferred
+- `docs/plans/2026-09-05-xdr-phase1-correlation.md` — rule document schema, SQL compiler, correlation state, engine runner, Sigma import, rule tester + ATT&CK coverage UI
+- `docs/plans/2026-09-05-xdr-phase2-entities-incidents.md` — entity graph, risk scoring, auto-incident clustering, entity/incident API + UI
+
+**Key decisions:**
+- **Correlation before response.** `detection.js` is a single-event flat ILIKE matcher — no windows, thresholds, sequences, or joins. Automating remediation on top of that automates false positives. That gap blocks everything else.
+- **Adopt Sigma, do not invent a query language.** Converts "40 hand-written rules" into the SigmaHQ library.
+- **Entity graph is what makes it XDR.** `logs.process_guid` / `parent_process_guid` are already collected and currently used only by `ProcessTreePanel.jsx`.
+- **Electron response service is Phase 3, not the headline feature.** Privileged Windows service (not per-action UAC), signed typed-whitelist actions, TTL + rollback on every containment.
+- **Tier gating is fully designed but deliberately NOT implemented.** Design lives in `docs/specs/tier-roadmap.md` (full per-module tier map, Free/Pro/Enterprise) and `docs/specs/billing-spine.md` (Stripe + Auth0 loop). Enforcement model **decided: `requireCapability(name)`**, not binary `requirePaid` — a shared `platform/shared/capabilities.js` maps capability name → min tier (free < pro < enterprise); routes reference capability names so re-tiering is a one-line table edit. Tier resolved from the existing `https://0xkudo.com/roles` claim (highest tier role wins); Auth0 assigns `pro`/`enterprise` roles. `requirePaid` kept only as a thin alias for the orphaned test. Phases 1-2 ship ungated for dogfooding; gate at Phase 3a. Standing rules: safety features (rollback, guardrails, break-glass, audit) and data export are never paid upsells, and no capability ever moves Free → paid.
+- **Billing spine never built** (verified 2026-09-05): `requirePaid.js`, `db/index.js`, `services/auth0Mgmt.js`, `services/stripe.js`, `routes/billing.js` all missing; `billing.test.js` / `requirePaid.test.js` / `db.test.js` fail. `requireRole('paid')` at `index.js:28` is the existing primitive. Stripe↔Auth0 join = customer `metadata.auth0_sub` (no billing table). Webhook must use `express.raw` before global `express.json()`. Sketch only, not planned into tasks yet.
+- **Code signing deferred on cost.** EV cert (~$300-600/yr + token) not affordable now. Zero impact on Phases 0-2 (all server-side). Consequence: **Phase 3 split into 3a (no-agent response: cloud connectors, VPS firewall, WP plugin — needs no signing, unblocked today) and 3b (Electron service — gated on signing).** Cheapest revisit option is Azure Trusted Signing (~$120/yr, verify eligibility). Fallback is shipping 3a only.
+- Explicitly not competing on: kernel prevention, global threat telemetry, petabyte search, XSOAR's 900+ connector catalogue.
+
+**Blocker (must clear before Phase 3a):**
+- Conditional-RLS `withUser()` migration (`docs/plans/2026-07-20-rls-deployment.md`) — a cross-tenant leak on `response_actions` means one tenant isolating another tenant's machines. `db.withUser()` exists at `services/db.js:68` but zero routes use it.
+
+No code changed. No deploy.
+
+---
+
+### IN PROGRESS (2026-09-05) — XDR Phase 0: Foundations
+
+Branch `feat/xdr-phase0-foundations` (off `main`). Plan: `docs/plans/2026-09-05-xdr-phase0-foundations.md`.
+
+Task order (code signing removed from phase, deferred on cost):
+
+**DONE 0.4.3** — skipped the 3 orphaned billing/db tests (`billing.test.js`, `requirePaid.test.js`, `db.test.js`) with `describe.skip` + comment pointers to billing-spine.md. Suite no longer fails on them. No gating built.
+
+**DONE 0.3 — ATT&CK technique field (full stack):**
+- `db/schema.sql`: `detection_rules.attack_techniques text[] DEFAULT '{}' NOT NULL`
+- `db/migrations/2026-09-05-attack-techniques.sql`: idempotent ALTER for the live VPS (run manually)
+- `platform/shared/attack.js`: 14 tactics + ~55 curated techniques, `validateTechniqueIds`, `techniqueLabel`. Tested in `platform/server/tests/attack.test.js` (9 tests pass).
+- `platform/server/routes/siem.js`: POST/PATCH `/rules` validate + store techniques (unknown IDs dropped, cap 50); GET `/alerts` now returns `r.attack_techniques` via the existing rule join.
+- `platform/shell/src/components/DetectionRules.jsx`: tactic-grouped technique picker in rule form + removable chips + technique badges on rule rows (table + mobile card).
+- `platform/shell/src/components/AlertQueue.jsx`: technique badges in the Rule column.
+- `platform/shell/vite.config.js`: added `server.fs.allow: ['..']` so the shell can import `platform/shared/*` (first cross-package shell import; needed by attack.js).
+- `detection-rules.json`: 51 alert rules tagged, 27 distinct techniques, all validated; suppress rules left empty.
+- Shell builds clean; affected server tests green.
+
+**DONE 0.1 — close RLS migration (code-complete + locally verified 2026-09-05).** Full detail in `docs/plans/2026-07-20-rls-deployment.md` (STATUS section). Summary:
+- KEY DISCOVERY: RLS policies already existed but were **conditional** (`app.user_id IS NULL OR user_id = ...`) → a no-op because no route set the context. Fix: set context everywhere, then flip policies to strict.
+- DONE (request path): `services/db.js` (added `withUserPool`; fixed latent `SET LOCAL $1` bug → `set_config`); NEW `middleware/dbContext.js` (`req.db`); converted `routes/siem.js` (63 queries + account-del txn→ops pool), `routes/ingest.js` (insertEvents→withUserPool), `services/detection.js`, `routes/noise.js` (14 routes, 25 queries); `tests/setup.js` mock extended.
+- DONE (background/services): `services/audit.js` → `withUser` INSERT; `services/noiseCron.js` 3 per-user fns → `withUserPool`, cron enumerator → `getOpsPool`; `services/retentionCron.js` all cross-user maintenance → `getOpsPool` (removed dead `const pool = db`); `kbCron.js` unchanged (`vuln_kb` excluded from RLS). Straggler grep clean.
+- DONE (strict flip): NEW `db/migrations/2026-09-05-rls-strict.sql` (11 `ALTER POLICY`, one txn, rollback in header) + `db/schema.sql` policy defs updated to strict. Applied to local Docker DB and verified fail-closed (no-context `count(*) FROM logs` → 0). `tests/rls.integration.test.js` **5/5** incl. new fail-closed assertion, as the `cybertools_app` NOBYPASSRLS role.
+- Local DB prepped: `attack_techniques` applied; roles `cybertools_app`/`app` (NOBYPASSRLS), `ingest_auth`/`ingest` (BYPASSRLS) on Docker pg (port 5433, container `kudo-pg`). **No local `ops` BYPASSRLS role yet** — retention/account-delete smoke locally needs one (`OPS_DB_URL`); on VPS confirm `OPS_DB_URL` points at a BYPASSRLS role.
+- REMAINING (deploy, user runs): optional local authed SIEM clickthrough as `cybertools_app`; then 2-step VPS deploy — app conversion first (verify under still-conditional policies), THEN apply `2026-09-05-rls-strict.sql`. Never `sudo pm2`.
+
+**TODO 0.2** partition `logs` by month (rehearse on Docker DB port 5433 first), retention → DROP PARTITION. Needs Docker DB.
+
+**Test-run caveat:** `npx vitest run` with NO path is misleading — it globs test copies under `.claude/worktrees/cybertools-ui-c5-fixes-499600/` (a stale worktree with its own old `setup.js`) and reports ~100 failures that are NOT this work. Always run targeted paths. Pre-existing failures on the base commit (confirmed via `git stash`): `siem-routes.test.js` (vitest mock-version mismatch) and 3 in `ingest.test.js` (env-key/mock) — not caused by Phase 0.
+
+Branch `feat/xdr-phase0-foundations` has uncommitted changes (not committed per workflow — user commits/pushes). Docker `kudo-pg` is running.
+
+---
+
+### DONE (2026-09-04) — Landing page copy/UX cleanup (VPS-deployed)
+
+Edits to `platform/shell/src/pages/LandingPage.jsx` (desktop + mobile), no app/Electron change:
+- "How it works" numbering `01/02/03` → `1/2/3` (no leading zeros).
+- Footer **SIEM** link now scrolls to the SIEM & Log Management section (added `siemRef`; was a dead `null` handler).
+- Removed the **"4 SOC Phases"** stat from both stat bars.
+- Removed all **playbook/checklist** mentions (Case Management capability blurb + "Case management from alert to resolution" card) — those features don't exist yet.
+- Tools intro "across four SOC phases" → "grouped by workflow stage" (the 5 groups aren't all SOC phases).
+
+**Deploy:** user manually uploaded the file to GitHub `main` (`acdf043 → 5791b68`). VPS pulled, `npm run build --workspace platform/shell`, `pm2 restart cybertools-server` (id 6 only). Live on 0xkudo.com. No Electron rebuild.
+
+---
+
+### DONE (2026-09-05) — v1.2.51 packaging fix (desktop-only crash)
+
+**Problem:** v1.2.50 crashed on launch — `Cannot find module './tools/network-scanner-core.js'`.
+The 10 modules in `platform/electron/tools/*.js` were never packed into `app.asar` because
+`electron-builder.yml` `files:` listed files individually and omitted the `tools/` dir.
+
+**Fix + release (all complete):**
+- `92911c4` added `- "tools/**/*"` to `files:` in `platform/electron/electron-builder.yml`.
+- `acdf043` bumped both `package.json`s to **1.2.51** and updated `DESKTOP_DOWNLOAD_URL` in
+  `LandingPage.jsx` + `TopNav.jsx` to the 1.2.51 (hyphenated) installer URL.
+- Built with `electron-builder --win --x64 --publish never`. **Verified** all 10 `\tools\*.js`
+  modules are inside `app.asar` (`asar list`). Benign `rcedit` "Unable to commit changes" warning
+  retried, then NSIS installer built fine.
+- Hand-built `latest.yml` (SHA512 + size of the real exe). **Asset name uses hyphens**
+  (`0xKudo-Security-Toolkit-Setup-1.2.51.exe`) to match the shell download URLs and the historical
+  manual-upload naming — NOT the dotted electron-builder auto-publish name.
+- VPS deployed (pull `acdf043` → shell built as 1.2.51 → `pm2 restart cybertools-server` only).
+
+**GitHub release published (user):** v1.2.51 release live on `0xKudoSec-releases` with all 3 assets
+(hyphenated installer, `.blockmap`, `latest.yml`). Fix fully shipped — download button and
+auto-updater both resolve to 1.2.51.
+
+**Spec:** `docs/specs/2026-09-05-desktop-only-packaging-fix.md`
+
+---
+
 ### IN PROGRESS (2026-09-04) — Desktop-only local tool execution — branch `feat/desktop-only-network-scanner`
 
 **Why:** The packaged app loads the live VPS (`0xkudo.com`) and routes ALL `/api/*` calls there

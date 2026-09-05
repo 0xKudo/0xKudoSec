@@ -69,7 +69,8 @@ async function withUser(userId, fn) {
   const client = await getPool().connect();
   try {
     await client.query('BEGIN');
-    await client.query('SET LOCAL app.user_id = $1', [userId]);
+    // SET LOCAL cannot take a bind parameter; set_config(..., is_local => true) can.
+    await client.query("SELECT set_config('app.user_id', $1, true)", [userId]);
     const result = await fn(client);
     await client.query('COMMIT');
     return result;
@@ -81,9 +82,20 @@ async function withUser(userId, fn) {
   }
 }
 
+// Return a pool-like handle whose .query() runs each statement inside an RLS
+// transaction with app.user_id set. Lets route handlers keep calling `.query(...)`
+// while every query is scoped to the caller. No long-held client, so no pool
+// exhaustion. For multi-statement atomic work, use withUser() directly instead.
+function withUserPool(userId) {
+  return {
+    query: (text, params) => withUser(userId, (client) => client.query(text, params)),
+  };
+}
+
 export default {
   query: (...args) => getPool().query(...args),
   withUser,
+  withUserPool,
   getPool,
   getIngestAuthPool,
   getOpsPool,

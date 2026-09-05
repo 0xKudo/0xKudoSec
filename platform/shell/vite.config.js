@@ -36,6 +36,11 @@ export default defineConfig({
   plugins: [react(), sri()],
   base: process.env.VITE_BASE_URL || '/',
   server: {
+    // Allow importing shared modules from platform/shared (one level up from the
+    // shell root). Without this, Vite's dev server fs.strict blocks the import.
+    fs: {
+      allow: ['..'],
+    },
     proxy: {
       '/api': {
         target: 'http://localhost:4000',

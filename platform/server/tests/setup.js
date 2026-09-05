@@ -10,8 +10,24 @@ vi.mock('../middleware/requireAuth.js', () => ({
 }));
 
 // Mock db.js so tests don't need a real PostgreSQL connection.
-vi.mock('../services/db.js', () => ({
-  default: {
-    query: vi.fn().mockResolvedValue({ rows: [], rowCount: 0 }),
-  },
+// All access paths (query, withUserPool().query, withUser's client, the pools'
+// connect().query) funnel to one shared query mock, so a test that does
+// pool.query.mockResolvedValueOnce(...) controls every path including req.db.
+const { dbQuery } = vi.hoisted(() => ({
+  dbQuery: vi.fn().mockResolvedValue({ rows: [], rowCount: 0 }),
 }));
+
+vi.mock('../services/db.js', () => {
+  const client = { query: dbQuery, release: () => {} };
+  const connectable = { connect: async () => client, query: dbQuery };
+  return {
+    default: {
+      query: dbQuery,
+      withUser: (userId, fn) => fn(client),
+      withUserPool: () => ({ query: dbQuery }),
+      getPool: () => connectable,
+      getOpsPool: () => connectable,
+      getIngestAuthPool: () => connectable,
+    },
+  };
+});

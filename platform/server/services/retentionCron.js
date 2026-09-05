@@ -9,7 +9,6 @@ import { createHash } from 'crypto';
 import cron from 'node-cron';
 import db from './db.js';
 
-const pool = db;
 let _opsPool;
 function getOpsPool() {
   if (!_opsPool) _opsPool = db.getOpsPool();
@@ -21,8 +20,9 @@ const DEFAULT_AUDIT_RETENTION_DAYS = 365;
 
 async function runRetention() {
   try {
-    // Load all user settings
-    const { rows: settings } = await pool.query(
+    // Load all user settings. Cross-user maintenance runs on the BYPASSRLS ops
+    // pool — with strict RLS and no app.user_id context the main pool sees no rows.
+    const { rows: settings } = await getOpsPool().query(
       `SELECT user_id, log_retention_days, audit_log_retention_enabled, audit_log_retention_days
        FROM user_settings`
     );
@@ -33,14 +33,14 @@ async function runRetention() {
     }
 
     // ── Event log retention ───────────────────────────────────────────────────
-    const { rows: logUsers } = await pool.query(
+    const { rows: logUsers } = await getOpsPool().query(
       'SELECT DISTINCT user_id FROM logs WHERE user_id IS NOT NULL'
     );
 
     let totalDeleted = 0;
     for (const { user_id } of logUsers) {
       const days = userMap[user_id]?.log_retention_days ?? DEFAULT_RETENTION_DAYS;
-      const { rowCount } = await pool.query(
+      const { rowCount } = await getOpsPool().query(
         `DELETE FROM logs WHERE user_id = $1 AND timestamp < NOW() - INTERVAL '${days} days'`,
         [user_id]
       );
@@ -58,7 +58,7 @@ async function runRetention() {
     // Per-user: only purge if audit_log_retention_enabled = true (or no setting on file).
     // Users with audit_log_retention_enabled = false keep their audit log indefinitely
     // (e.g. they have an external archiving pipeline). Warn in logs when this is the case.
-    const { rows: auditUsers } = await pool.query(
+    const { rows: auditUsers } = await getOpsPool().query(
       'SELECT DISTINCT user_id FROM audit_log WHERE user_id IS NOT NULL'
     );
 
@@ -102,7 +102,7 @@ async function runRetention() {
 
 async function runIntegrityCheck() {
   try {
-    const { rows } = await pool.query(
+    const { rows } = await getOpsPool().query(
       `SELECT id, user_id, action, meta, ip, created_at, row_hash
        FROM audit_log
        WHERE created_at > NOW() - INTERVAL '25 hours'

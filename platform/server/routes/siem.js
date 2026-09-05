@@ -11,7 +11,9 @@ import { fileURLToPath } from 'url';
 import archiver from 'archiver';
 import pool from '../services/db.js';
 import { requireAuth } from '../middleware/requireAuth.js';
+import { dbContext } from '../middleware/dbContext.js';
 import { runDetectionRules } from '../services/detection.js';
+import { validateTechniqueIds } from '../../shared/attack.js';
 import { audit } from '../services/audit.js';
 import { broadcast } from '../services/wsBroadcast.js';
 import { ingestKeyLimiter, ruleImportLimiter } from '../middleware/rateLimiter.js';
@@ -20,6 +22,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const router = Router();
 router.use(requireAuth);
+router.use(dbContext); // req.db runs every query with RLS app.user_id set
 
 // Wrap async route handlers so unhandled promise rejections reach the error middleware
 function wrap(fn) {
@@ -68,7 +71,7 @@ function enrichFromRaw(row) {
 // Fetch active suppress rules and return inline NOT(...) conditions + params to append to any query.
 // Pass params array (already containing [$1=userId, ...]) and conditions array to mutate in place.
 async function applySuppressFilters(userId, params, conditions) {
-  const { rows: rules } = await pool.query(
+  const { rows: rules } = await pool.withUserPool(userId).query(
     `SELECT * FROM detection_rules WHERE user_id = $1 AND enabled = true AND action = 'suppress'`,
     [userId]
   );
@@ -96,7 +99,7 @@ router.get('/stats', wrap(async (req, res) => {
   params.push(hours); const conditions = [`user_id = $1`, `timestamp > NOW() - make_interval(hours := $${params.length})`];
   if (req.query.showSuppressed !== '1') await applySuppressFilters(userId, params, conditions);
 
-  const { rows } = await pool.query(
+  const { rows } = await req.db.query(
     `SELECT
       COUNT(*)                                          AS total,
       COUNT(*) FILTER (WHERE severity = 'critical')    AS critical,
@@ -223,7 +226,7 @@ router.get('/events/recent', wrap(async (req, res) => {
   for (const c of buildSearchConditions(q, params)) conditions.push(c);
   if (req.query.showSuppressed !== '1') await applySuppressFilters(userId, params, conditions);
 
-  const { rows } = await pool.query(
+  const { rows } = await req.db.query(
     `SELECT id, timestamp, severity, event_id, event_category, message,
             host, source_ip, dest_ip, dest_port, protocol,
             username, domain, logon_type,
@@ -242,7 +245,7 @@ router.get('/events/by-severity', wrap(async (req, res) => {
   const params = [userId];
   params.push(hours); const conditions = [`user_id = $1`, `timestamp > NOW() - make_interval(hours := $${params.length})`];
   if (req.query.showSuppressed !== '1') await applySuppressFilters(userId, params, conditions);
-  const { rows } = await pool.query(
+  const { rows } = await req.db.query(
     `SELECT severity, COUNT(*) AS count FROM logs WHERE ${conditions.join(' AND ')} GROUP BY severity ORDER BY count DESC`,
     params
   );
@@ -251,7 +254,7 @@ router.get('/events/by-severity', wrap(async (req, res) => {
 
 router.get('/events/by-source', async (req, res) => {
   const hours = hoursParam(req);
-  const { rows } = await pool.query(
+  const { rows } = await req.db.query(
     `SELECT host, COUNT(*) AS count
      FROM logs
      WHERE user_id = $1 AND timestamp > NOW() - make_interval(hours := $2)
@@ -267,7 +270,7 @@ router.get('/events/top-event-ids', wrap(async (req, res) => {
   const params = [userId];
   params.push(hours); const conditions = [`user_id = $1`, `timestamp > NOW() - make_interval(hours := $${params.length})`, `event_id IS NOT NULL`];
   if (req.query.showSuppressed !== '1') await applySuppressFilters(userId, params, conditions);
-  const { rows } = await pool.query(
+  const { rows } = await req.db.query(
     `SELECT event_id, COUNT(*) AS count FROM logs WHERE ${conditions.join(' AND ')} GROUP BY event_id ORDER BY count DESC LIMIT 10`,
     params
   );
@@ -276,7 +279,7 @@ router.get('/events/top-event-ids', wrap(async (req, res) => {
 
 router.get('/events/top-usernames', async (req, res) => {
   const hours = hoursParam(req);
-  const { rows } = await pool.query(
+  const { rows } = await req.db.query(
     `SELECT username, COUNT(*) AS count
      FROM logs
      WHERE user_id = $1 AND timestamp > NOW() - make_interval(hours := $2)
@@ -289,7 +292,7 @@ router.get('/events/top-usernames', async (req, res) => {
 
 router.get('/events/top-dest-ports', async (req, res) => {
   const hours = hoursParam(req);
-  const { rows } = await pool.query(
+  const { rows } = await req.db.query(
     `SELECT dest_port, COUNT(*) AS count
      FROM logs
      WHERE user_id = $1 AND timestamp > NOW() - make_interval(hours := $2)
@@ -302,7 +305,7 @@ router.get('/events/top-dest-ports', async (req, res) => {
 
 router.get('/events/top-processes', async (req, res) => {
   const hours = hoursParam(req);
-  const { rows } = await pool.query(
+  const { rows } = await req.db.query(
     `SELECT process_name, COUNT(*) AS count
      FROM logs
      WHERE user_id = $1 AND timestamp > NOW() - make_interval(hours := $2)
@@ -315,7 +318,7 @@ router.get('/events/top-processes', async (req, res) => {
 
 router.get('/events/top-dest-ips', async (req, res) => {
   const hours = hoursParam(req);
-  const { rows } = await pool.query(
+  const { rows } = await req.db.query(
     `SELECT dest_ip, COUNT(*) AS count
      FROM logs
      WHERE user_id = $1 AND timestamp > NOW() - make_interval(hours := $2)
@@ -328,7 +331,7 @@ router.get('/events/top-dest-ips', async (req, res) => {
 
 router.get('/events/categories', async (req, res) => {
   const hours = hoursParam(req);
-  const { rows } = await pool.query(
+  const { rows } = await req.db.query(
     `SELECT event_category AS category, COUNT(*) AS count
      FROM logs
      WHERE user_id = $1
@@ -342,7 +345,7 @@ router.get('/events/categories', async (req, res) => {
 
 router.get('/events/sources-list', async (req, res) => {
   const hours = hoursParam(req);
-  const { rows } = await pool.query(
+  const { rows } = await req.db.query(
     `SELECT source, COUNT(*) AS count
      FROM logs
      WHERE user_id = $1
@@ -356,7 +359,7 @@ router.get('/events/sources-list', async (req, res) => {
 
 router.get('/events/hourly', async (req, res) => {
   const hours = hoursParam(req);
-  const { rows } = await pool.query(
+  const { rows } = await req.db.query(
     `SELECT
        date_trunc('hour', timestamp) AS hour,
        severity,
@@ -372,7 +375,7 @@ router.get('/events/hourly', async (req, res) => {
 
 router.get('/events/failed-logins', wrap(async (req, res) => {
   const hours = hoursParam(req);
-  const { rows } = await pool.query(
+  const { rows } = await req.db.query(
     `SELECT timestamp, username, host, source_ip, message
      FROM logs
      WHERE user_id = $1 AND timestamp > NOW() - make_interval(hours := $2)
@@ -392,7 +395,7 @@ router.get('/events/process-tree', wrap(async (req, res) => {
 
   if (process_guid) {
     // GUID-based recursive walk — reliable even across PID recycling
-    const { rows } = await pool.query(
+    const { rows } = await req.db.query(
       `WITH RECURSIVE
         -- One representative row per process_guid: prefer EID 1 (process create), else earliest row
         best_rows AS (
@@ -449,7 +452,7 @@ router.get('/events/process-tree', wrap(async (req, res) => {
   // Fallback: no guid available — find events with same process_name on same host in time window
   if (process_name && host) {
     const safeHours = parseInt(hours, 10);
-    const { rows } = await pool.query(
+    const { rows } = await req.db.query(
       `SELECT id, process_guid, parent_process_guid, process_name, process_id,
               parent_process_name, parent_process_id, username, host, timestamp,
               event_id, message, 0 AS depth
@@ -469,7 +472,7 @@ router.get('/events/process-tree', wrap(async (req, res) => {
 router.get('/events/:id', wrap(async (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (!id) return res.status(400).json({ error: 'Invalid id' });
-  const { rows } = await pool.query(
+  const { rows } = await req.db.query(
     `SELECT id, timestamp, severity, event_id, event_category, source,
             message, username, domain, host, source_ip, dest_ip, dest_port, protocol,
             process_name, process_id, process_guid,
@@ -483,7 +486,7 @@ router.get('/events/:id', wrap(async (req, res) => {
 }));
 
 router.get('/alerts/trend', wrap(async (req, res) => {
-  const { rows } = await pool.query(
+  const { rows } = await req.db.query(
     `SELECT date_trunc('day', created_at) AS day, COUNT(*) AS count
      FROM alerts
      WHERE user_id = $1 AND created_at > NOW() - INTERVAL '7 days'
@@ -501,7 +504,7 @@ router.get('/alerts/hourly', wrap(async (req, res) => {
   // bucket sizes: 1h=5min, 6h=30min, 24h=2hr, 48h=4hr, 7d=1day
   const bucketMinutes = hours === 1 ? 5 : hours === 6 ? 30 : hours === 24 ? 120 : hours === 48 ? 240 : 1440;
   const bucketMs = bucketMinutes * 60000;
-  const { rows } = await pool.query(
+  const { rows } = await req.db.query(
     `SELECT date_trunc('minute', last_seen) AS hour, COUNT(*) AS count
      FROM alerts
      WHERE user_id = $1 AND last_seen > NOW() - ($2 || ' hours')::INTERVAL
@@ -530,7 +533,7 @@ router.get('/alerts/hourly/detail', wrap(async (req, res) => {
   const bucketStart = new Date(bucketTs);
   const bucketEnd = new Date(bucketTs + bucketMs);
   const userId = uid(req);
-  const { rows } = await pool.query(
+  const { rows } = await req.db.query(
     `SELECT a.id AS alert_id, a.title, a.severity, a.count, a.last_seen, a.host,
             a.occurrence_times,
             l.id AS log_id, l.event_id, l.event_category, l.source, l.process_name,
@@ -548,7 +551,7 @@ router.get('/alerts/hourly/detail', wrap(async (req, res) => {
 
 router.get('/rules/hit-counts', wrap(async (req, res) => {
   const hours = hoursParam(req);
-  const { rows } = await pool.query(
+  const { rows } = await req.db.query(
     `SELECT r.id, r.name, r.severity,
             r.match_event_id, r.match_category, r.match_severity,
             r.match_username, r.match_host, r.match_message, r.match_process,
@@ -567,7 +570,7 @@ router.get('/rules/hit-counts', wrap(async (req, res) => {
 }));
 
 router.get('/sources', async (req, res) => {
-  const { rows } = await pool.query(
+  const { rows } = await req.db.query(
     `SELECT * FROM ingest_sources WHERE user_id = $1 ORDER BY last_seen DESC`,
     [uid(req)]
   );
@@ -578,7 +581,7 @@ router.get('/sources', async (req, res) => {
 const MAX_INGEST_KEYS = 20;
 
 router.get('/ingest-key', async (req, res) => {
-  const { rows } = await pool.query(
+  const { rows } = await req.db.query(
     `SELECT id, name, created_at, expires_at, expiry_days, last_used_at
      FROM user_ingest_keys WHERE user_id = $1
      ORDER BY created_at DESC`,
@@ -605,14 +608,14 @@ router.post('/ingest-key', ingestKeyLimiter, async (req, res) => {
   let name = typeof req.body.name === 'string' ? req.body.name.trim().slice(0, 60) : '';
   if (!name) name = 'Unnamed key';
 
-  const { rows: countRows } = await pool.query(
+  const { rows: countRows } = await req.db.query(
     'SELECT COUNT(*)::int AS n FROM user_ingest_keys WHERE user_id = $1', [uid(req)]
   );
   if (countRows[0].n >= MAX_INGEST_KEYS) {
     return res.status(400).json({ error: `Maximum of ${MAX_INGEST_KEYS} keys reached. Revoke one first.` });
   }
 
-  const { rows } = await pool.query(
+  const { rows } = await req.db.query(
     `INSERT INTO user_ingest_keys (user_id, api_key, name, expiry_days, expires_at)
      VALUES ($1, $2, $3, $4, NOW() + make_interval(days := $4))
      RETURNING id, name, created_at, expires_at, expiry_days`,
@@ -633,7 +636,7 @@ router.post('/ingest-key', ingestKeyLimiter, async (req, res) => {
 router.delete('/ingest-key/:id', async (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (isNaN(id)) return res.status(400).json({ error: 'Invalid key id.' });
-  const { rowCount } = await pool.query(
+  const { rowCount } = await req.db.query(
     'DELETE FROM user_ingest_keys WHERE user_id = $1 AND id = $2', [uid(req), id]
   );
   if (!rowCount) return res.status(404).json({ error: 'Key not found.' });
@@ -676,7 +679,7 @@ function validateWpRulePattern(type, pattern) {
 }
 
 router.get('/wp-rules', wrap(async (req, res) => {
-  const { rows } = await pool.query(
+  const { rows } = await req.db.query(
     'SELECT id, rule_type, pattern, action, enabled, created_at FROM wp_protection_rules WHERE user_id = $1 ORDER BY id DESC',
     [uid(req)]
   );
@@ -696,13 +699,13 @@ router.post('/wp-rules', wrap(async (req, res) => {
   if (clean === null) {
     return res.status(400).json({ error: 'Invalid pattern for rule type' });
   }
-  const { rows: countRows } = await pool.query(
+  const { rows: countRows } = await req.db.query(
     'SELECT COUNT(*)::int AS n FROM wp_protection_rules WHERE user_id = $1', [uid(req)]
   );
   if (countRows[0].n >= 200) {
     return res.status(400).json({ error: 'Rule limit reached (200)' });
   }
-  const { rows } = await pool.query(
+  const { rows } = await req.db.query(
     `INSERT INTO wp_protection_rules (user_id, rule_type, pattern, action, enabled)
      VALUES ($1, $2, $3, $4, true)
      RETURNING id, rule_type, pattern, action, enabled, created_at`,
@@ -717,7 +720,7 @@ router.patch('/wp-rules/:id', wrap(async (req, res) => {
   if (isNaN(id) || typeof req.body?.enabled !== 'boolean') {
     return res.status(400).json({ error: 'Expected { enabled: boolean }' });
   }
-  const { rows } = await pool.query(
+  const { rows } = await req.db.query(
     'UPDATE wp_protection_rules SET enabled = $1 WHERE id = $2 AND user_id = $3 RETURNING id, enabled',
     [req.body.enabled, id, uid(req)]
   );
@@ -728,7 +731,7 @@ router.patch('/wp-rules/:id', wrap(async (req, res) => {
 router.delete('/wp-rules/:id', wrap(async (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (isNaN(id)) return res.status(400).json({ error: 'Invalid id' });
-  const { rowCount } = await pool.query(
+  const { rowCount } = await req.db.query(
     'DELETE FROM wp_protection_rules WHERE id = $1 AND user_id = $2', [id, uid(req)]
   );
   if (!rowCount) return res.status(404).json({ error: 'Rule not found' });
@@ -737,7 +740,7 @@ router.delete('/wp-rules/:id', wrap(async (req, res) => {
 }));
 
 router.get('/shipper-download', wrap(async (req, res) => {
-  const { rows } = await pool.query(
+  const { rows } = await req.db.query(
     'SELECT api_key FROM user_ingest_keys WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1',
     [uid(req)]
   );
@@ -768,7 +771,7 @@ router.get('/shipper-download', wrap(async (req, res) => {
 // ── DETECTION RULES ─────────────────────────────────────────────────────────
 
 router.get('/rules', wrap(async (req, res) => {
-  const { rows } = await pool.query(
+  const { rows } = await req.db.query(
     'SELECT * FROM detection_rules WHERE user_id = $1 ORDER BY created_at DESC',
     [uid(req)]
   );
@@ -778,13 +781,18 @@ router.get('/rules', wrap(async (req, res) => {
 router.post('/rules', wrap(async (req, res) => {
   const { name, description, enabled, severity, action, match_event_id, match_category,
           match_severity, match_username, match_host, match_message,
-          match_process, match_src_ip, match_dest_ip, match_dest_port } = req.body;
+          match_process, match_src_ip, match_dest_ip, match_dest_port,
+          attack_techniques } = req.body;
   if (!name || typeof name !== 'string' || !name.trim()) return res.status(400).json({ error: 'name required' });
   const validSev = ['critical', 'high', 'medium', 'low', 'info'];
   const validActions = ['alert', 'suppress'];
   const ruleSev = validSev.includes(severity) ? severity : 'high';
   const ruleAction = validActions.includes(action) ? action : 'alert';
-  const { rows: existing } = await pool.query(
+  // Only store recognized ATT&CK technique IDs; silently drop unknown ones.
+  const techniques = Array.isArray(attack_techniques)
+    ? validateTechniqueIds(attack_techniques.map(String)).valid.slice(0, 50)
+    : [];
+  const { rows: existing } = await req.db.query(
     `SELECT id FROM detection_rules WHERE user_id = $1 AND action = $2
      AND COALESCE(match_event_id, -1) = COALESCE($3, -1)
      AND COALESCE(match_category, '') = COALESCE($4, '')
@@ -810,12 +818,13 @@ router.post('/rules', wrap(async (req, res) => {
     ]
   );
   if (existing.length) return res.status(409).json({ error: 'A rule with identical match conditions already exists.' });
-  const { rows } = await pool.query(
+  const { rows } = await req.db.query(
     `INSERT INTO detection_rules
       (user_id, name, description, enabled, severity, action,
        match_event_id, match_category, match_severity, match_username,
-       match_host, match_message, match_process, match_src_ip, match_dest_ip, match_dest_port)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
+       match_host, match_message, match_process, match_src_ip, match_dest_ip, match_dest_port,
+       attack_techniques)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
      RETURNING *`,
     [uid(req), name.trim().slice(0, 255),
      description ? String(description).slice(0, 1000) : null,
@@ -832,6 +841,7 @@ router.post('/rules', wrap(async (req, res) => {
      match_src_ip ? String(match_src_ip).slice(0, 64) : null,
      match_dest_ip ? String(match_dest_ip).slice(0, 64) : null,
      match_dest_port ? parseInt(match_dest_port, 10) || null : null,
+     techniques,
     ]
   );
   audit(uid(req), 'rule.create', { name: rows[0].name, action: ruleAction, severity: ruleSev }, req.ip);
@@ -853,9 +863,17 @@ router.patch('/rules/:id', wrap(async (req, res) => {
       updates.push(`${key} = $${params.length}`);
     }
   }
+  // attack_techniques is an array field, validated against the known set before storing.
+  if ('attack_techniques' in req.body) {
+    const techniques = Array.isArray(req.body.attack_techniques)
+      ? validateTechniqueIds(req.body.attack_techniques.map(String)).valid.slice(0, 50)
+      : [];
+    params.push(techniques);
+    updates.push(`attack_techniques = $${params.length}`);
+  }
   if (!updates.length) return res.status(400).json({ error: 'nothing to update' });
   updates.push(`updated_at = NOW()`);
-  const { rows } = await pool.query(
+  const { rows } = await req.db.query(
     `UPDATE detection_rules SET ${updates.join(', ')}
      WHERE user_id = $1 AND id = $2 RETURNING *`,
     params
@@ -874,16 +892,16 @@ router.patch('/rules/:id', wrap(async (req, res) => {
 router.delete('/rules/:id', wrap(async (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (isNaN(id)) return res.status(400).json({ error: 'invalid id' });
-  const { rows: ruleRows } = await pool.query('SELECT name FROM detection_rules WHERE user_id = $1 AND id = $2', [uid(req), id]);
-  await pool.query('DELETE FROM alerts WHERE user_id = $1 AND rule_id = $2', [uid(req), id]);
-  await pool.query('DELETE FROM detection_rules WHERE user_id = $1 AND id = $2', [uid(req), id]);
+  const { rows: ruleRows } = await req.db.query('SELECT name FROM detection_rules WHERE user_id = $1 AND id = $2', [uid(req), id]);
+  await req.db.query('DELETE FROM alerts WHERE user_id = $1 AND rule_id = $2', [uid(req), id]);
+  await req.db.query('DELETE FROM detection_rules WHERE user_id = $1 AND id = $2', [uid(req), id]);
   audit(uid(req), 'rule.delete', { id, name: ruleRows[0]?.name }, req.ip);
   res.json({ ok: true });
 }));
 
 
 router.get('/rules/export', wrap(async (req, res) => {
-  const { rows } = await pool.query(
+  const { rows } = await req.db.query(
     `SELECT name, description, enabled, severity, action,
             match_event_id, match_category, match_severity, match_username,
             match_host, match_message, match_process, match_src_ip, match_dest_ip, match_dest_port
@@ -911,12 +929,12 @@ router.post('/rules/import', ruleImportLimiter, wrap(async (req, res) => {
     if (!rule.name || typeof rule.name !== 'string' || !rule.name.trim()) { skipped++; continue; }
     const name = rule.name.trim().slice(0, 255);
     // Skip duplicates by name
-    const { rows: existing } = await pool.query(
+    const { rows: existing } = await req.db.query(
       'SELECT id FROM detection_rules WHERE user_id = $1 AND name = $2', [userId, name]
     );
     if (existing.length) { skipped++; continue; }
 
-    await pool.query(
+    await req.db.query(
       `INSERT INTO detection_rules
         (user_id, name, description, enabled, severity, action,
          match_event_id, match_category, match_severity, match_username,
@@ -960,8 +978,8 @@ router.get('/alerts', wrap(async (req, res) => {
   const params = [uid(req)];
   const conds = ['a.user_id = $1'];
   if (status) { params.push(status); conds.push(`a.status = $${params.length}`); }
-  const { rows } = await pool.query(
-    `SELECT a.*, r.name AS rule_name
+  const { rows } = await req.db.query(
+    `SELECT a.*, r.name AS rule_name, r.attack_techniques
      FROM alerts a
      LEFT JOIN detection_rules r ON r.id = a.rule_id
      WHERE ${conds.join(' AND ')}
@@ -972,7 +990,7 @@ router.get('/alerts', wrap(async (req, res) => {
 }));
 
 router.get('/alerts/counts', wrap(async (req, res) => {
-  const { rows } = await pool.query(
+  const { rows } = await req.db.query(
     `SELECT status, COUNT(*) AS count FROM alerts a WHERE a.user_id = $1 GROUP BY status`,
     [uid(req)]
   );
@@ -985,7 +1003,7 @@ router.patch('/alerts/:id', wrap(async (req, res) => {
   const validStatuses = ['new', 'acknowledged', 'resolved'];
   const status = validStatuses.includes(req.body.status) ? req.body.status : null;
   if (!status) return res.status(400).json({ error: 'valid status required' });
-  const { rows } = await pool.query(
+  const { rows } = await req.db.query(
     `UPDATE alerts SET status = $1, updated_at = NOW()
      WHERE user_id = $2 AND id = $3 RETURNING *`,
     [status, uid(req), id]
@@ -1002,10 +1020,10 @@ router.post('/alerts/bulk', wrap(async (req, res) => {
   if (!safeIds.length) return res.status(400).json({ error: 'no valid ids' });
   const placeholders = safeIds.map((_, i) => `$${i + 2}`).join(', ');
   if (action === 'delete') {
-    await pool.query(`DELETE FROM alerts WHERE user_id = $1 AND id IN (${placeholders})`, [uid(req), ...safeIds]);
+    await req.db.query(`DELETE FROM alerts WHERE user_id = $1 AND id IN (${placeholders})`, [uid(req), ...safeIds]);
     audit(uid(req), 'alerts.bulk_delete', { count: safeIds.length }, req.ip);
   } else if (action === 'status' && STATUS_VALUES.includes(status)) {
-    await pool.query(`UPDATE alerts SET status = $2 WHERE user_id = $1 AND id IN (${placeholders})`, [uid(req), status, ...safeIds]);
+    await req.db.query(`UPDATE alerts SET status = $2 WHERE user_id = $1 AND id IN (${placeholders})`, [uid(req), status, ...safeIds]);
     audit(uid(req), 'alerts.bulk_status', { count: safeIds.length, status }, req.ip);
   } else {
     return res.status(400).json({ error: 'invalid action' });
@@ -1016,7 +1034,7 @@ router.post('/alerts/bulk', wrap(async (req, res) => {
 router.delete('/alerts/:id', wrap(async (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (isNaN(id)) return res.status(400).json({ error: 'invalid id' });
-  await pool.query('DELETE FROM alerts WHERE user_id = $1 AND id = $2', [uid(req), id]);
+  await req.db.query('DELETE FROM alerts WHERE user_id = $1 AND id = $2', [uid(req), id]);
   audit(uid(req), 'alert.delete', { id }, req.ip);
   res.json({ ok: true });
 }));
@@ -1024,7 +1042,7 @@ router.delete('/alerts/:id', wrap(async (req, res) => {
 // ── CASES ────────────────────────────────────────────────────────────────────
 
 router.get('/cases', wrap(async (req, res) => {
-  const { rows } = await pool.query(
+  const { rows } = await req.db.query(
     `SELECT c.*,
        COUNT(ca.alert_id) AS alert_count
      FROM cases c
@@ -1041,7 +1059,7 @@ router.post('/cases', wrap(async (req, res) => {
   const { title, description, severity } = req.body;
   if (!title || typeof title !== 'string' || !title.trim()) return res.status(400).json({ error: 'title required' });
   const validSev = ['critical', 'high', 'medium', 'low', 'info'];
-  const { rows } = await pool.query(
+  const { rows } = await req.db.query(
     `INSERT INTO cases (user_id, title, description, severity)
      VALUES ($1, $2, $3, $4) RETURNING *`,
     [uid(req), title.trim().slice(0, 255),
@@ -1066,7 +1084,7 @@ router.patch('/cases/:id', wrap(async (req, res) => {
   }
   if (!updates.length) return res.status(400).json({ error: 'nothing to update' });
   updates.push('updated_at = NOW()');
-  const { rows } = await pool.query(
+  const { rows } = await req.db.query(
     `UPDATE cases SET ${updates.join(', ')} WHERE user_id = $1 AND id = $2 RETURNING *`,
     params
   );
@@ -1082,7 +1100,7 @@ router.patch('/cases/:id', wrap(async (req, res) => {
 router.delete('/cases/:id', wrap(async (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (isNaN(id)) return res.status(400).json({ error: 'invalid id' });
-  await pool.query('DELETE FROM cases WHERE user_id = $1 AND id = $2', [uid(req), id]);
+  await req.db.query('DELETE FROM cases WHERE user_id = $1 AND id = $2', [uid(req), id]);
   audit(uid(req), 'case.delete', { id }, req.ip);
   res.json({ ok: true });
 }));
@@ -1092,20 +1110,20 @@ router.post('/cases/:id/alerts', wrap(async (req, res) => {
   const alertId = parseInt(req.body.alert_id, 10);
   if (isNaN(caseId) || isNaN(alertId)) return res.status(400).json({ error: 'invalid ids' });
   // Verify case belongs to user
-  const { rows: caseRows } = await pool.query('SELECT id FROM cases WHERE id = $1 AND user_id = $2', [caseId, uid(req)]);
+  const { rows: caseRows } = await req.db.query('SELECT id FROM cases WHERE id = $1 AND user_id = $2', [caseId, uid(req)]);
   if (!caseRows.length) return res.status(404).json({ error: 'case not found' });
-  await pool.query(
+  await req.db.query(
     'INSERT INTO case_alerts (case_id, alert_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
     [caseId, alertId]
   );
-  await pool.query('UPDATE cases SET updated_at = NOW() WHERE id = $1', [caseId]);
+  await req.db.query('UPDATE cases SET updated_at = NOW() WHERE id = $1', [caseId]);
   res.json({ ok: true });
 }));
 
 router.get('/cases/:id/alerts', wrap(async (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (isNaN(id)) return res.status(400).json({ error: 'invalid id' });
-  const { rows } = await pool.query(
+  const { rows } = await req.db.query(
     `SELECT a.* FROM alerts a
      JOIN case_alerts ca ON ca.alert_id = a.id
      WHERE ca.case_id = $1 AND a.user_id = $2
@@ -1118,7 +1136,7 @@ router.get('/cases/:id/alerts', wrap(async (req, res) => {
 // ── USER SETTINGS ────────────────────────────────────────────────────────────
 
 router.get('/settings', wrap(async (req, res) => {
-  const { rows } = await pool.query(
+  const { rows } = await req.db.query(
     'SELECT * FROM user_settings WHERE user_id = $1',
     [uid(req)]
   );
@@ -1144,7 +1162,7 @@ router.patch('/settings', wrap(async (req, res) => {
     }
   }
 
-  const { rows } = await pool.query(
+  const { rows } = await req.db.query(
     `INSERT INTO user_settings (user_id, log_retention_days, audit_log_retention_enabled, audit_log_retention_days)
      VALUES ($1, $2, COALESCE($3, true), COALESCE($4, 365))
      ON CONFLICT (user_id) DO UPDATE SET
@@ -1175,7 +1193,7 @@ router.get('/logs/export', wrap(async (req, res) => {
   if (!toDate   || isNaN(toDate.getTime()))   return res.status(400).json({ error: 'valid "to" date required (ISO 8601)' });
   if (toDate <= fromDate) return res.status(400).json({ error: '"to" must be after "from"' });
 
-  const { rows } = await pool.query(
+  const { rows } = await req.db.query(
     `SELECT id, timestamp, severity, event_id, event_category, source,
             host, source_ip, dest_ip, dest_port, protocol,
             username, domain, logon_type,
@@ -1264,8 +1282,11 @@ router.delete('/account', wrap(async (req, res) => {
   // Write a final audit entry before anonymizing
   await audit(userId, 'account.delete', { initiated_by: userId }, req.ip);
 
-  // Delete all user data in dependency order
-  const client = await pool.getPool().connect();
+  // Delete all user data in dependency order. Runs on the ops (BYPASSRLS) pool:
+  // deletes are explicitly WHERE user_id = $1 scoped, and the audit_log
+  // anonymization both re-writes user_id (would fail a strict RLS WITH CHECK)
+  // and must bypass the append-only trigger. Same role the retention cron uses.
+  const client = await pool.getOpsPool().connect();
   try {
     await client.query('BEGIN');
 
@@ -1336,7 +1357,7 @@ router.get('/audit-log', wrap(async (req, res) => {
   // Build query safely
   const whereAction = action ? `AND action = $2` : '';
   const limitParam = action ? '$3' : '$2';
-  const { rows } = await pool.query(
+  const { rows } = await req.db.query(
     `SELECT id, action, meta, ip, created_at
      FROM audit_log
      WHERE user_id = $1 ${whereAction}
@@ -1357,7 +1378,7 @@ router.get('/realtime/alerts', wrap(async (req, res) => {
   const sinceId = parseInt(req.query.since, 10);
   if (isNaN(sinceId) || sinceId < 0) return res.status(400).json({ error: 'since must be a non-negative integer' });
   const userId = uid(req);
-  const { rows } = await pool.query(
+  const { rows } = await req.db.query(
     `SELECT a.id AS alert_id, a.title, a.severity, a.rule_id,
             l.id AS log_id, l.event_id, l.event_category, l.host, l.source,
             l.process_name, l.process_id, l.username, l.source_ip, l.dest_ip,
@@ -1391,11 +1412,11 @@ router.post('/realtime/result', wrap(async (req, res) => {
   if (!VALID_SIGNALS.includes(signal_type)) return res.status(400).json({ error: 'invalid signal_type' });
 
   // Verify log belongs to this user
-  const { rows: logRows } = await pool.query('SELECT id FROM logs WHERE id = $1 AND user_id = $2', [log_id, userId]);
+  const { rows: logRows } = await req.db.query('SELECT id FROM logs WHERE id = $1 AND user_id = $2', [log_id, userId]);
   if (!logRows.length) return res.status(404).json({ error: 'log not found' });
 
   // Upsert — overwrite if already analyzed (re-analysis should update the result)
-  await pool.query(
+  await req.db.query(
     `INSERT INTO realtime_analysis (user_id, log_id, signal_type, explanation, cve_safe, cve_note)
      VALUES ($1, $2, $3, $4, $5, $6)
      ON CONFLICT (user_id, log_id) DO UPDATE SET
@@ -1415,7 +1436,7 @@ router.post('/realtime/result', wrap(async (req, res) => {
 // Returns the last 50 realtime_analysis rows for the dashboard panel, joined with log data.
 router.get('/realtime/results', wrap(async (req, res) => {
   const userId = uid(req);
-  const { rows } = await pool.query(
+  const { rows } = await req.db.query(
     `SELECT ra.id, ra.log_id, ra.signal_type, ra.explanation, ra.cve_safe, ra.cve_note, ra.analyzed_at,
             l.event_id, l.severity, l.host, l.process_name, l.username, l.message, l.timestamp
      FROM realtime_analysis ra

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useIsMobile } from '../hooks/useIsMobile.js';
 import { badgeStyle } from './ui/index.js';
+import { ATTACK_TECHNIQUES, ATTACK_TACTIC_BY_ID, techniqueLabel } from '../../../shared/attack.js';
 
 const SEV_COLOR = {
   critical: 'var(--severity-critical)',
@@ -16,6 +17,7 @@ const EMPTY_FORM = (action = 'alert') => ({
   match_event_id: '', match_category: '', match_severity: '',
   match_username: '', match_host: '', match_message: '',
   match_process: '', match_src_ip: '', match_dest_ip: '', match_dest_port: '',
+  attack_techniques: [],
 });
 
 const CATEGORIES = ['', 'authentication', 'network', 'process', 'file', 'dns', 'registry', 'system', 'firewall', 'account', 'policy'];
@@ -156,6 +158,7 @@ export function DetectionRules({ onNavigate }) {
       match_host: rule.match_host ?? '', match_message: rule.match_message ?? '',
       match_process: rule.match_process ?? '', match_src_ip: rule.match_src_ip ?? '',
       match_dest_ip: rule.match_dest_ip ?? '', match_dest_port: rule.match_dest_port ?? '',
+      attack_techniques: Array.isArray(rule.attack_techniques) ? rule.attack_techniques : [],
     });
     setFormOpen(true);
   }
@@ -397,6 +400,13 @@ export function DetectionRules({ onNavigate }) {
               <div style={{ fontSize: '11px', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {conditionSummary(rule)}
               </div>
+              {rule.attack_techniques?.length > 0 && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '6px' }}>
+                  {rule.attack_techniques.map(id => (
+                    <span key={id} style={{ ...badgeStyle('info'), fontSize: '10px' }}>{id}</span>
+                  ))}
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -430,8 +440,15 @@ export function DetectionRules({ onNavigate }) {
                 >
                   <td style={{ ...s.td, color: 'var(--text-primary)' }}>{rule.name}</td>
                   <td style={s.td}><span style={s.sevBadge(sevColor(rule.severity))}>{rule.severity}</span></td>
-                  <td style={{ ...s.td, fontFamily: 'var(--font)', fontSize: '11px', maxWidth: '400px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {conditionSummary(rule)}
+                  <td style={{ ...s.td, fontFamily: 'var(--font)', fontSize: '11px', maxWidth: '400px' }}>
+                    <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{conditionSummary(rule)}</div>
+                    {rule.attack_techniques?.length > 0 && (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '4px' }}>
+                        {rule.attack_techniques.map(id => (
+                          <span key={id} style={{ ...badgeStyle('info'), fontSize: '10px' }} title={techniqueLabel(id)}>{id}</span>
+                        ))}
+                      </div>
+                    )}
                   </td>
                   <td style={s.td} onClick={e => { e.stopPropagation(); toggleEnabled(rule); }}>
                     <span style={{ cursor: 'pointer', color: rule.enabled ? 'var(--severity-low)' : 'var(--text-muted)' }}>
@@ -538,6 +555,48 @@ export function DetectionRules({ onNavigate }) {
               <div style={isMobile ? { display: 'flex', flexDirection: 'column', gap: '4px' } : s.formRow}>
                 <span style={s.label}>Dest Port</span>
                 <input style={s.input} type="number" min="1" max="65535" value={form.match_dest_port} onChange={e => set('match_dest_port', e.target.value)} placeholder="e.g. 4444" />
+              </div>
+
+              <div style={s.sectionDivider}>MITRE ATT&CK Techniques</div>
+              <div style={s.hint}>Tag this rule with the techniques it detects. Drives the coverage view.</div>
+              {form.attack_techniques.length > 0 && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '8px' }}>
+                  {form.attack_techniques.map(id => (
+                    <span key={id} style={{ ...badgeStyle('info'), display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                      {techniqueLabel(id)}
+                      <button
+                        type="button"
+                        onClick={() => set('attack_techniques', form.attack_techniques.filter(t => t !== id))}
+                        style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', fontFamily: 'var(--font)', fontSize: '12px', padding: 0, lineHeight: 1 }}
+                        aria-label={`Remove ${id}`}
+                      >×</button>
+                    </span>
+                  ))}
+                </div>
+              )}
+              <div style={isMobile ? { display: 'flex', flexDirection: 'column', gap: '4px' } : s.formRow}>
+                <span style={s.label}>Add technique</span>
+                <select
+                  style={s.select}
+                  value=""
+                  onChange={e => {
+                    const id = e.target.value;
+                    if (id && !form.attack_techniques.includes(id)) {
+                      set('attack_techniques', [...form.attack_techniques, id]);
+                    }
+                  }}
+                >
+                  <option value="">select a technique…</option>
+                  {Object.values(ATTACK_TACTIC_BY_ID).map(tactic => {
+                    const techs = ATTACK_TECHNIQUES.filter(t => t.tactics.includes(tactic.id) && !form.attack_techniques.includes(t.id));
+                    if (!techs.length) return null;
+                    return (
+                      <optgroup key={tactic.id} label={tactic.name}>
+                        {techs.map(t => <option key={t.id} value={t.id}>{t.id} {t.name}</option>)}
+                      </optgroup>
+                    );
+                  })}
+                </select>
               </div>
             </div>
             <div style={s.modalActions}>

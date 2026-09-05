@@ -174,6 +174,7 @@ CREATE TABLE public.detection_rules (
     match_dest_ip text,
     match_dest_port integer,
     action text DEFAULT 'alert'::text,
+    attack_techniques text[] DEFAULT '{}'::text[] NOT NULL,
     created_at timestamp with time zone DEFAULT now(),
     updated_at timestamp with time zone DEFAULT now()
 );
@@ -850,77 +851,77 @@ ALTER TABLE public.user_ingest_keys ENABLE ROW LEVEL SECURITY;
 -- Name: alerts user_isolation; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY user_isolation ON public.alerts USING (((current_setting('app.user_id'::text, true) IS NULL) OR (user_id = current_setting('app.user_id'::text, true)))) WITH CHECK (((current_setting('app.user_id'::text, true) IS NULL) OR (user_id = current_setting('app.user_id'::text, true))));
+CREATE POLICY user_isolation ON public.alerts USING ((user_id = current_setting('app.user_id'::text, true))) WITH CHECK ((user_id = current_setting('app.user_id'::text, true)));
 
 
 --
 -- Name: audit_log user_isolation; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY user_isolation ON public.audit_log USING (((current_setting('app.user_id'::text, true) IS NULL) OR (user_id = current_setting('app.user_id'::text, true)))) WITH CHECK (((current_setting('app.user_id'::text, true) IS NULL) OR (user_id = current_setting('app.user_id'::text, true))));
+CREATE POLICY user_isolation ON public.audit_log USING ((user_id = current_setting('app.user_id'::text, true))) WITH CHECK ((user_id = current_setting('app.user_id'::text, true)));
 
 
 --
 -- Name: cases user_isolation; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY user_isolation ON public.cases USING (((current_setting('app.user_id'::text, true) IS NULL) OR (user_id = current_setting('app.user_id'::text, true)))) WITH CHECK (((current_setting('app.user_id'::text, true) IS NULL) OR (user_id = current_setting('app.user_id'::text, true))));
+CREATE POLICY user_isolation ON public.cases USING ((user_id = current_setting('app.user_id'::text, true))) WITH CHECK ((user_id = current_setting('app.user_id'::text, true)));
 
 
 --
 -- Name: detection_rules user_isolation; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY user_isolation ON public.detection_rules USING (((current_setting('app.user_id'::text, true) IS NULL) OR (user_id = current_setting('app.user_id'::text, true)))) WITH CHECK (((current_setting('app.user_id'::text, true) IS NULL) OR (user_id = current_setting('app.user_id'::text, true))));
+CREATE POLICY user_isolation ON public.detection_rules USING ((user_id = current_setting('app.user_id'::text, true))) WITH CHECK ((user_id = current_setting('app.user_id'::text, true)));
 
 
 --
 -- Name: ingest_sources user_isolation; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY user_isolation ON public.ingest_sources USING (((current_setting('app.user_id'::text, true) IS NULL) OR (user_id = current_setting('app.user_id'::text, true)))) WITH CHECK (((current_setting('app.user_id'::text, true) IS NULL) OR (user_id = current_setting('app.user_id'::text, true))));
+CREATE POLICY user_isolation ON public.ingest_sources USING ((user_id = current_setting('app.user_id'::text, true))) WITH CHECK ((user_id = current_setting('app.user_id'::text, true)));
 
 
 --
 -- Name: logs user_isolation; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY user_isolation ON public.logs USING (((current_setting('app.user_id'::text, true) IS NULL) OR (user_id = current_setting('app.user_id'::text, true)))) WITH CHECK (((current_setting('app.user_id'::text, true) IS NULL) OR (user_id = current_setting('app.user_id'::text, true))));
+CREATE POLICY user_isolation ON public.logs USING ((user_id = current_setting('app.user_id'::text, true))) WITH CHECK ((user_id = current_setting('app.user_id'::text, true)));
 
 
 --
 -- Name: noise_candidates user_isolation; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY user_isolation ON public.noise_candidates USING (((current_setting('app.user_id'::text, true) IS NULL) OR (user_id = current_setting('app.user_id'::text, true)))) WITH CHECK (((current_setting('app.user_id'::text, true) IS NULL) OR (user_id = current_setting('app.user_id'::text, true))));
+CREATE POLICY user_isolation ON public.noise_candidates USING ((user_id = current_setting('app.user_id'::text, true))) WITH CHECK ((user_id = current_setting('app.user_id'::text, true)));
 
 
 --
 -- Name: realtime_analysis user_isolation; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY user_isolation ON public.realtime_analysis USING (((current_setting('app.user_id'::text, true) IS NULL) OR (user_id = current_setting('app.user_id'::text, true)))) WITH CHECK (((current_setting('app.user_id'::text, true) IS NULL) OR (user_id = current_setting('app.user_id'::text, true))));
+CREATE POLICY user_isolation ON public.realtime_analysis USING ((user_id = current_setting('app.user_id'::text, true))) WITH CHECK ((user_id = current_setting('app.user_id'::text, true)));
 
 
 --
 -- Name: user_ingest_keys user_isolation; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY user_isolation ON public.user_ingest_keys USING (((current_setting('app.user_id'::text, true) IS NULL) OR (user_id = current_setting('app.user_id'::text, true)))) WITH CHECK (((current_setting('app.user_id'::text, true) IS NULL) OR (user_id = current_setting('app.user_id'::text, true))));
+CREATE POLICY user_isolation ON public.user_ingest_keys USING ((user_id = current_setting('app.user_id'::text, true))) WITH CHECK ((user_id = current_setting('app.user_id'::text, true)));
 
 
 --
 -- Name: user_settings user_isolation; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY user_isolation ON public.user_settings USING (((current_setting('app.user_id'::text, true) IS NULL) OR (user_id = current_setting('app.user_id'::text, true)))) WITH CHECK (((current_setting('app.user_id'::text, true) IS NULL) OR (user_id = current_setting('app.user_id'::text, true))));
+CREATE POLICY user_isolation ON public.user_settings USING ((user_id = current_setting('app.user_id'::text, true))) WITH CHECK ((user_id = current_setting('app.user_id'::text, true)));
 
 
 --
 -- Name: wp_protection_rules user_isolation; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY user_isolation ON public.wp_protection_rules USING (((current_setting('app.user_id'::text, true) IS NULL) OR (user_id = current_setting('app.user_id'::text, true)))) WITH CHECK (((current_setting('app.user_id'::text, true) IS NULL) OR (user_id = current_setting('app.user_id'::text, true))));
+CREATE POLICY user_isolation ON public.wp_protection_rules USING ((user_id = current_setting('app.user_id'::text, true))) WITH CHECK ((user_id = current_setting('app.user_id'::text, true)));
 
 
 --

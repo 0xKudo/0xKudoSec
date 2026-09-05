@@ -85,10 +85,12 @@ router.post('/beats', ingestBeatsLimiter, requireIngestKey, async (req, res) => 
 async function insertEvents(events, userId) {
   let accepted = 0;
   const insertedIds = [];
+  // Run inserts with RLS context set so they pass strict user_isolation WITH CHECK.
+  const udb = db.withUserPool(userId);
   for (const raw of events) {
     try {
       const e = normalizeEvent(raw);
-      const { rows } = await pool.query(
+      const { rows } = await udb.query(
         `INSERT INTO logs (
           source, host, source_ip, dest_ip, dest_port, protocol,
           timestamp, level, severity, event_id, event_category,
@@ -110,7 +112,7 @@ async function insertEvents(events, userId) {
         ]
       );
       insertedIds.push(rows[0].id);
-      await pool.query(
+      await udb.query(
         `INSERT INTO ingest_sources (name, type, last_seen, event_count, user_id)
          VALUES ($1, $2, NOW(), 1, $3)
          ON CONFLICT (name, user_id) DO UPDATE

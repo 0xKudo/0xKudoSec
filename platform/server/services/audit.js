@@ -17,9 +17,13 @@ export async function audit(userId, action, meta = {}, ip = null, requestId = nu
     const createdAt = new Date().toISOString();
     const hashInput = `${userId}|${action}|${JSON.stringify(metaWithId)}|${ip}|${createdAt}`;
     const rowHash = createHash('sha256').update(hashInput).digest('hex');
-    await pool.query(
-      `INSERT INTO audit_log (user_id, action, meta, ip, created_at, row_hash) VALUES ($1, $2, $3, $4, $5, $6)`,
-      [userId, action, JSON.stringify(metaWithId), ip, createdAt, rowHash]
+    // Run under RLS context so the INSERT's WITH CHECK (user_id = app.user_id)
+    // passes once policies are strict. audit() always receives the row's userId.
+    await pool.withUser(userId, (client) =>
+      client.query(
+        `INSERT INTO audit_log (user_id, action, meta, ip, created_at, row_hash) VALUES ($1, $2, $3, $4, $5, $6)`,
+        [userId, action, JSON.stringify(metaWithId), ip, createdAt, rowHash]
+      )
     );
   } catch (err) {
     // Never let an audit failure break the main request

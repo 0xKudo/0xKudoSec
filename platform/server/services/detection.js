@@ -27,7 +27,9 @@ function ruleConditions(rule, userId) {
 // If logIds is provided, only evaluate those specific log rows (ingest-time detection).
 // If logIds is null, scans last 24 hours (manual run).
 export async function runDetectionRules(userId, logIds = null) {
-  const { rows: rules } = await pool.query(
+  // All queries run with RLS context set to this user (strict user_isolation).
+  const udb = pool.withUserPool(userId);
+  const { rows: rules } = await udb.query(
     'SELECT * FROM detection_rules WHERE user_id = $1 AND enabled = true',
     [userId]
   );
@@ -52,13 +54,13 @@ export async function runDetectionRules(userId, logIds = null) {
       conds.push(`l.timestamp > NOW() - INTERVAL '24 hours'`);
     }
 
-    const { rows: matches } = await pool.query(
+    const { rows: matches } = await udb.query(
       `SELECT l.id, l.host, l.source_ip, l.username, l.event_id, l.message
        FROM logs l WHERE ${conds.join(' AND ')} LIMIT 500`,
       params
     );
     for (const log of matches) {
-      const result = await pool.query(
+      const result = await udb.query(
         `INSERT INTO alerts (user_id, rule_id, log_id, title, severity, host, source_ip, username, event_id, message, count, last_seen, occurrence_times)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 1, NOW(), ARRAY[NOW()])
          ON CONFLICT ON CONSTRAINT alerts_dedup
@@ -88,7 +90,7 @@ export async function runDetectionRules(userId, logIds = null) {
     } else {
       conds.push(`l.timestamp > NOW() - INTERVAL '24 hours'`);
     }
-    const { rows } = await pool.query(
+    const { rows } = await udb.query(
       `SELECT l.id FROM logs l WHERE ${conds.join(' AND ')} LIMIT 10000`,
       params
     );

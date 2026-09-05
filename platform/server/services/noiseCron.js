@@ -6,7 +6,7 @@ const HIGH_THRESHOLD = 70;
 const MEDIUM_THRESHOLD = 40;
 
 export async function scoreNoiseCandidates(userId, onProgress = null) {
-  const pool = db.getPool();
+  const pool = db.withUserPool(userId);
 
   const { rows: thresholdRows } = await pool.query(`
     SELECT
@@ -135,7 +135,7 @@ export async function scoreNoiseCandidates(userId, onProgress = null) {
 }
 
 export async function runAutoSuppress(userId) {
-  const pool = db.getPool();
+  const pool = db.withUserPool(userId);
 
   const { rows: settingRows } = await pool.query(
     `SELECT noise_auto_suppress FROM user_settings WHERE user_id = $1`,
@@ -201,7 +201,7 @@ export async function runAutoSuppress(userId) {
 // create a synthetic noise candidate with is_suppression_conflict = true so the
 // LLM pipeline can flag it to the analyst.
 export async function scoreSuppressConflicts(userId) {
-  const pool = db.getPool();
+  const pool = db.withUserPool(userId);
 
   // Active suppression rules for this user
   const { rows: rules } = await pool.query(`
@@ -306,7 +306,9 @@ export async function scoreSuppressConflicts(userId) {
 export async function scheduleNoiseCron() {
   const cron = (await import('node-cron')).default;
   cron.schedule('30 2 * * *', async () => {
-    const pool = db.getPool();
+    // Cross-user enumeration: needs the BYPASSRLS ops pool because with strict
+    // RLS and no app.user_id context the main pool would see zero rows.
+    const pool = db.getOpsPool();
     const { rows: users } = await pool.query(`SELECT DISTINCT user_id FROM logs`);
     for (const { user_id } of users) {
       try {

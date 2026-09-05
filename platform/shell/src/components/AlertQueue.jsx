@@ -476,7 +476,16 @@ export function AlertQueue({ onNavigate }) {
                         {a.count > 1 && <span style={{ flexShrink: 0, fontSize: '10px', padding: '1px 5px', border: '1px solid var(--text-muted)', color: 'var(--text-muted)' }}>{a.count}×</span>}
                       </div>
                     </td>
-                    <td style={s.td}>{a.rule_name || '-'}</td>
+                    <td style={s.td}>
+                      <div>{a.rule_name || '-'}</div>
+                      {a.attack_techniques?.length > 0 && (
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '4px' }}>
+                          {a.attack_techniques.map(id => (
+                            <span key={id} style={{ ...badgeStyle('info'), fontSize: '10px' }}>{id}</span>
+                          ))}
+                        </div>
+                      )}
+                    </td>
                     <td style={s.td}>{a.host || '-'}</td>
                     <td style={s.td}>{a.username || '-'}</td>
                     <td style={s.td}>{a.event_id || '-'}</td>
