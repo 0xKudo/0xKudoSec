@@ -1,9 +1,11 @@
-import { useState, useEffect } from 'react';
-import { useAuth0 } from '@auth0/auth0-react';
+import { useState, useEffect, useRef } from 'react';
 import { useWorkspace } from '../../../platform/shell/src/context/WorkspaceContext.jsx';
 import { useIsMobile } from '../../../platform/shell/src/hooks/useIsMobile.js';
 import { Button, Input, EmptyState } from '../../../platform/shell/src/components/ui/index.js';
+import DesktopOnly from '../../../platform/shell/src/components/DesktopOnly.jsx';
 import { ShieldCheck } from 'lucide-react';
+
+const isElectron = typeof window !== 'undefined' && window.electron?.isElectron === true;
 
 const SEVERITY_ORDER = ['critical', 'high', 'medium', 'low', 'info'];
 const SEVERITY_COLOR = {
@@ -132,13 +134,17 @@ const styles = {
 
 export default function Scanner() {
   const isMobile = useIsMobile();
-  const { getAccessTokenSilently } = useAuth0();
   const [url, setUrl] = useState('');
   const [activeMode, setActiveMode] = useState(false);
   const [authorized, setAuthorized] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [result, setResult] = useState(null);
+  const [findings, setFindings] = useState([]); // streamed live
+  const [risk, setRisk] = useState(null);        // rule-based summary, set on done
+  const [mode, setMode] = useState('passive');
+  const [scanUrl, setScanUrl] = useState('');
+  const [started, setStarted] = useState(false);
+  const runIdRef = useRef(null);
   const { push } = useWorkspace();
 
   useEffect(() => {
@@ -149,65 +155,73 @@ export default function Scanner() {
         localStorage.removeItem('payload-generator-import');
       }
     } catch {}
-    try {
-      const restore = JSON.parse(localStorage.getItem('workspace-restore-scanner') || 'null');
-      if (restore) {
-        setUrl(restore.url || '');
-        setResult(restore);
-        localStorage.removeItem('workspace-restore-scanner');
-      }
-    } catch {}
+  }, []);
+
+  // Subscribe to local vuln-scanner IPC events (desktop app only). Dispatch by runId.
+  useEffect(() => {
+    if (!isElectron) return;
+    const offFinding = window.electron.vulnScanner.onFinding((d) => {
+      if (d.runId !== runIdRef.current) return;
+      const { runId, ...f } = d;
+      setFindings(prev => [...prev, f]);
+    });
+    const offDone = window.electron.vulnScanner.onDone((d) => {
+      if (d.runId !== runIdRef.current) return;
+      setFindings(d.findings);
+      setRisk(d.risk);
+      setMode(d.mode);
+      setLoading(false);
+      runIdRef.current = null;
+      push('scanner', `Scan: ${d.url} (${d.findings.length} findings)`,
+        { url: d.url, findings: d.findings, risk: d.risk }, 'scanner');
+    });
+    const offError = window.electron.vulnScanner.onError((d) => {
+      if (d.runId !== runIdRef.current) return;
+      setError(d.error);
+      setLoading(false);
+      runIdRef.current = null;
+    });
+    return () => { offFinding?.(); offDone?.(); offError?.(); };
   }, []);
 
   async function handleScan() {
     setLoading(true);
     setError(null);
-    setResult(null);
+    setFindings([]);
+    setRisk(null);
+    setStarted(true);
+    setScanUrl(url.trim());
+    setMode(activeMode ? 'active' : 'passive');
+    runIdRef.current = null;
 
-    try {
-      const token = await getAccessTokenSilently();
-      const res = await fetch('/api/tools/scanner/scan', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ url: url.trim(), activeMode, authorized }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.error || 'Scan failed.');
-      } else {
-        setResult(data);
-        push(
-          'scanner',
-          `Scan: ${data.url} (${data.findings.length} findings)`,
-          { url: data.url, findings: data.findings, analysis: data.analysis },
-          'scanner'
-        );
-      }
-    } catch {
-      setError('Network error. Is the server running?');
-    } finally {
+    const out = await window.electron.vulnScanner.start({ url: url.trim(), activeMode, authorized });
+    if (out.error) {
+      setError(out.error);
       setLoading(false);
+      return;
     }
+    runIdRef.current = out.runId;
+  }
+
+  async function handleStop() {
+    if (runIdRef.current) await window.electron.vulnScanner.cancel(runIdRef.current);
   }
 
   const canScan = !loading && url.trim().length > 0 && (!activeMode || authorized);
 
-  const findingsBySeverity = result
-    ? SEVERITY_ORDER.reduce((acc, sev) => {
-        const group = result.findings.filter(f => f.severity === sev);
-        if (group.length > 0) acc[sev] = group;
-        return acc;
-      }, {})
-    : {};
+  const findingsBySeverity = SEVERITY_ORDER.reduce((acc, sev) => {
+    const group = findings.filter(f => f.severity === sev);
+    if (group.length > 0) acc[sev] = group;
+    return acc;
+  }, {});
 
-  const severityCounts = result
-    ? SEVERITY_ORDER.reduce((acc, sev) => {
-        const count = result.findings.filter(f => f.severity === sev).length;
-        if (count > 0) acc[sev] = count;
-        return acc;
-      }, {})
-    : {};
+  const severityCounts = SEVERITY_ORDER.reduce((acc, sev) => {
+    const count = findings.filter(f => f.severity === sev).length;
+    if (count > 0) acc[sev] = count;
+    return acc;
+  }, {});
+
+  if (!isElectron) return <DesktopOnly toolName="Vulnerability Scanner" downloadUrl="https://0xkudo.com/download" />;
 
   return (
     <div style={styles.container}>
@@ -229,9 +243,11 @@ export default function Scanner() {
             disabled={loading}
             onKeyDown={e => e.key === 'Enter' && canScan && handleScan()}
           />
-          <Button loading={loading} onClick={handleScan} disabled={!canScan}>
-            {loading ? 'Scanning…' : 'Scan'}
-          </Button>
+          {loading ? (
+            <Button variant="danger" onClick={handleStop}>Stop</Button>
+          ) : (
+            <Button onClick={handleScan} disabled={!canScan}>Scan</Button>
+          )}
         </div>
       </div>
 
@@ -267,34 +283,30 @@ export default function Scanner() {
 
       {error && <p style={styles.error}>{error}</p>}
 
-      {result && (
+      {started && (
         <div style={styles.results}>
-          {/* AI Analysis */}
+          {/* Risk summary (rule-based, populated on completion) */}
           <div style={styles.analysisCard}>
             <div style={styles.analysisHeader}>
-              <span style={styles.analysisTitle}>AI Analysis</span>
-              {result.analysis?.riskLevel && (
-                <span style={styles.riskBadge(result.analysis.riskLevel)}>
-                  {result.analysis.riskLevel}
-                </span>
+              <span style={styles.analysisTitle}>Risk Summary</span>
+              {risk?.riskLevel && (
+                <span style={styles.riskBadge(risk.riskLevel)}>{risk.riskLevel}</span>
               )}
               <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>
-                {result.mode === 'active' ? 'Active scan' : 'Passive scan'}: {result.findings.length} finding{result.findings.length !== 1 ? 's' : ''}
+                {mode === 'active' ? 'Active scan' : 'Passive scan'}: {findings.length} finding{findings.length !== 1 ? 's' : ''}
+                {loading ? ' (scanning…)' : ''}
               </span>
             </div>
-            {result.analysis?.summary && (
-              <p style={styles.summary}>{result.analysis.summary}</p>
+            {risk?.summary && (
+              <p style={styles.summary}>{risk.summary}</p>
             )}
-            {result.analysis?.topPriorities?.length > 0 && (
+            {risk?.topPriorities?.length > 0 && (
               <>
                 <div style={styles.listLabel}>Top Priorities</div>
-                {result.analysis.topPriorities.map((p, i) => (
+                {risk.topPriorities.map((p, i) => (
                   <div key={i} style={styles.listItem}>• {p}</div>
                 ))}
               </>
-            )}
-            {result.analysis?.notes && (
-              <div style={{ ...styles.listItem, marginTop: '8px', color: 'var(--text-muted)' }}>{result.analysis.notes}</div>
             )}
           </div>
 
@@ -309,9 +321,9 @@ export default function Scanner() {
             </div>
           )}
 
-          {/* Findings grouped by severity */}
-          {result.findings.length === 0 ? (
-            <EmptyState icon={<ShieldCheck size={24} />} text="No issues found." />
+          {/* Findings grouped by severity — stream in live */}
+          {findings.length === 0 ? (
+            <EmptyState icon={<ShieldCheck size={24} />} text={loading ? 'Scanning…' : 'No issues found.'} />
           ) : (
             SEVERITY_ORDER.filter(s => findingsBySeverity[s]).map(sev => (
               <div key={sev}>

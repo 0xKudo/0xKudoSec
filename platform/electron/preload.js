@@ -53,6 +53,14 @@ contextBridge.exposeInMainWorld('electron', {
     onError: (cb) => on('intruder:error', cb),
   },
 
+  vulnScanner: {
+    start: (config) => ipcRenderer.invoke('vuln-scanner:start', config),
+    cancel: (runId) => ipcRenderer.invoke('vuln-scanner:cancel', runId),
+    onFinding: (cb) => on('vuln-scanner:finding', cb),
+    onDone: (cb) => on('vuln-scanner:done', cb),
+    onError: (cb) => on('vuln-scanner:error', cb),
+  },
+
   fluentBit: {
     getStatus: () => ipcRenderer.invoke('fluent-bit:status'),
     start: () => ipcRenderer.invoke('fluent-bit:start'),

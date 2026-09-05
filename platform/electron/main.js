@@ -685,6 +685,9 @@ app.whenReady().then(async () => {
   const registerIntruder = require('./tools/intruder');
   registerIntruder(ipcMain, { getMainWindow: () => mainWindow, isValidSender });
 
+  const registerVulnScanner = require('./tools/scanner');
+  registerVulnScanner(ipcMain, { getMainWindow: () => mainWindow, isValidSender });
+
   setupAutoUpdater();
 });
 
