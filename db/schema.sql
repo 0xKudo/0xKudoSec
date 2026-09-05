@@ -527,6 +527,16 @@ ALTER TABLE ONLY public.alerts
 
 
 --
+-- Name: alerts alerts_dedup; Type: CONSTRAINT; Schema: public; Owner: -
+-- Dedup key for detection.js ON CONFLICT: repeat events of the same rule +
+-- event_id collapse into one alert (count++ / occurrence_times append).
+--
+
+ALTER TABLE ONLY public.alerts
+    ADD CONSTRAINT alerts_dedup UNIQUE (user_id, rule_id, event_id);
+
+
+--
 -- Name: audit_log audit_log_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 

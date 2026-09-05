@@ -558,7 +558,7 @@ export function DetectionRules({ onNavigate }) {
               </div>
 
               <div style={s.sectionDivider}>MITRE ATT&CK Techniques</div>
-              <div style={s.hint}>Tag this rule with the techniques it detects. Drives the coverage view.</div>
+              <div style={s.hint}>Tag this rule with the techniques it detects.</div>
               {form.attack_techniques.length > 0 && (
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '8px' }}>
                   {form.attack_techniques.map(id => (
