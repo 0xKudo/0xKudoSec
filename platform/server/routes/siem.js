@@ -1166,6 +1166,32 @@ router.get('/rules/sigma/catalog', wrap(async (req, res) => {
   });
 }));
 
+// Full detail for one catalog rule — drives the Rule Library detail modal.
+// Returns the converted rule document (the boolean condition tree that decides a
+// match), the coarse ingest prefilter signature (which event ids / categories /
+// sources gate the rule), and the caller's effective enable/severity so the modal
+// can explain exactly how and when the rule fires an alert.
+router.get('/rules/sigma/catalog/:identity', wrap(async (req, res) => {
+  const identity = String(req.params.identity).slice(0, 200);
+  const { rows: st } = await req.db.query(
+    'SELECT sigma_enabled_categories FROM user_settings WHERE user_id = $1', [uid(req)]
+  );
+  const enabledCats = st[0]?.sigma_enabled_categories || [];
+  const { rows } = await req.db.query(
+    `SELECT s.identity, s.sigma_id, s.title, s.category, s.path, s.severity,
+            s.attack_techniques, s.convert_status, s.reject_reason, s.fidelity,
+            s.rule, s.source_sha, s.sig_event_ids, s.sig_categories, s.sig_sources,
+            o.enabled AS override_enabled, o.severity AS override_severity,
+            ( (s.category = ANY($2::text[]) AND COALESCE(o.enabled, true) = true) OR o.enabled = true ) AS effective_enabled
+     FROM sigma_rules s
+     LEFT JOIN sigma_rule_overrides o ON o.user_id = $1 AND o.sigma_identity = s.identity
+     WHERE s.identity = $3`,
+    [uid(req), enabledCats, identity]
+  );
+  if (!rows.length) return res.status(404).json({ error: 'Rule not found' });
+  res.json(rows[0]);
+}));
+
 // Set a per-rule override (disable / severity). Absent fields are preserved.
 router.put('/rules/sigma/overrides/:identity', wrap(async (req, res) => {
   const identity = String(req.params.identity).slice(0, 200);

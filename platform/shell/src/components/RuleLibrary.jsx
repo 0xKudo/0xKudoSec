@@ -18,6 +18,35 @@ const CATEGORY_LABEL = {
 const SEVERITIES = ['critical', 'high', 'medium', 'low', 'info'];
 const SIGMA_REPO = 'https://github.com/SigmaHQ/sigma';
 
+const SEV_COLOR = {
+  critical: 'var(--severity-critical)', high: 'var(--severity-high)', medium: 'var(--severity-medium)',
+  low: 'var(--severity-low)', info: 'var(--severity-info)',
+};
+const sevColor = (s0) => SEV_COLOR[s0] || 'var(--text-muted)';
+
+// How each condition operator reads in plain English inside the detection tree.
+const OP_LABEL = {
+  eq: 'equals', ne: 'does not equal', contains: 'contains',
+  startswith: 'starts with', endswith: 'ends with',
+  contains_cs: 'contains (case-sensitive)', startswith_cs: 'starts with (case-sensitive)',
+  endswith_cs: 'ends with (case-sensitive)', re: 'matches regex', cidr: 'is in CIDR range',
+  exists: 'exists', gt: '>', gte: '≥', lt: '<', lte: '≤', in: 'is one of', fieldref: 'equals field',
+};
+
+// Collect every distinct log field a condition tree reads, so the modal can show
+// which columns of an incoming event actually decide a match.
+function collectFields(node, out = new Set()) {
+  if (!node || typeof node !== 'object') return out;
+  if (Array.isArray(node.all)) node.all.forEach(c => collectFields(c, out));
+  else if (Array.isArray(node.any)) node.any.forEach(c => collectFields(c, out));
+  else if (node.not) collectFields(node.not, out);
+  else if (Array.isArray(node.keyword)) out.add('message / raw');
+  else if (node.field) out.add(node.field);
+  else if (node.raw) out.add(`raw:${node.raw}`);
+  else Object.keys(node).forEach(k => out.add(k)); // flat selection object
+  return out;
+}
+
 // A window of at least 5 page numbers centered on the current page, clamped to
 // [1, totalPages]. First/last jumps are rendered separately when out of window.
 function pageWindow(current, totalPages, span = 5) {
@@ -97,7 +126,64 @@ const s = {
     position: 'fixed', bottom: '24px', right: '24px', zIndex: 2000, background: 'var(--bg-surface)',
     border: '1px solid var(--border)', padding: '10px 16px', fontSize: '12px', color: 'var(--text-primary)',
   },
+  // Detail modal — mirrors the SIEM event info card (SiemDashboard) exactly.
+  overlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 },
+  modal: { background: 'var(--bg-primary)', border: '1px solid var(--border)', width: '720px', maxWidth: '95vw', height: '82vh', display: 'flex', flexDirection: 'column' },
+  modalHeader: { padding: '12px 16px', borderBottom: '1px solid var(--border)', background: 'var(--bg-surface)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' },
+  modalTitle: { fontSize: '12px', color: 'var(--text-primary)', letterSpacing: '0.04em' },
+  modalClose: { background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '16px', cursor: 'pointer', fontFamily: 'var(--font)', lineHeight: 1 },
+  modalBody: { padding: '16px', overflow: 'auto', flex: 1 },
+  fieldRow: { display: 'grid', gridTemplateColumns: '150px 1fr', borderBottom: '1px solid var(--border-subtle)', padding: '6px 0', gap: '12px' },
+  fieldLabel: { fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', paddingTop: '2px' },
+  fieldValue: { fontSize: '12px', color: 'var(--text-primary)', wordBreak: 'break-word', whiteSpace: 'pre-wrap' },
+  block: { marginTop: '16px', border: '1px solid var(--border)', background: 'var(--bg-primary)' },
+  blockHead: { fontSize: '10px', color: 'var(--text-muted)', letterSpacing: '0.06em', textTransform: 'uppercase', padding: '8px 12px', borderBottom: '1px solid var(--border-subtle)', background: 'var(--bg-surface)' },
+  blockBody: { padding: '12px' },
+  english: { fontSize: '12px', color: 'var(--text-primary)', lineHeight: 1.55, marginBottom: '12px' },
+  treeGroup: { fontSize: '10px', letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--accent-amber)', margin: '2px 0' },
+  treeIndent: { marginLeft: '14px', borderLeft: '1px solid var(--border-subtle)', paddingLeft: '10px' },
+  leaf: { fontSize: '12px', color: 'var(--text-primary)', padding: '2px 0', lineHeight: 1.5 },
+  code: { color: 'var(--accent-amber)' },
+  val: { color: 'var(--text-primary)', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', padding: '0 4px' },
 };
+
+// Render a converted condition tree as an indented, human-readable outline.
+// Groups (ALL/ANY/NOT) nest; leaves read as "field  operator  value".
+function WhereTree({ node, depth = 0, k = 'r' }) {
+  if (!node || typeof node !== 'object') return null;
+  const group = (label, children) => (
+    <div key={k}>
+      <div style={s.treeGroup}>{label}</div>
+      <div style={s.treeIndent}>{children}</div>
+    </div>
+  );
+  if (Array.isArray(node.all)) return group('ALL of', node.all.map((c, i) => <WhereTree key={i} node={c} depth={depth + 1} k={`${k}.a${i}`} />));
+  if (Array.isArray(node.any)) return group('ANY of', node.any.map((c, i) => <WhereTree key={i} node={c} depth={depth + 1} k={`${k}.o${i}`} />));
+  if (node.not) return group('NOT', <WhereTree node={node.not} depth={depth + 1} k={`${k}.n`} />);
+  if (Array.isArray(node.keyword)) {
+    return (
+      <div style={s.leaf}>
+        <span style={s.code}>message / raw</span> contains any of{' '}
+        {node.keyword.map((v, i) => <span key={i}><span style={s.val}>{String(v)}</span>{i < node.keyword.length - 1 ? ', ' : ''}</span>)}
+      </div>
+    );
+  }
+  const leaf = (field, op, value, isRaw) => {
+    const opTxt = OP_LABEL[op] || op;
+    const vals = Array.isArray(value) ? value : (value === undefined ? [] : [value]);
+    return (
+      <div style={s.leaf} key={`${k}-${field}`}>
+        <span style={s.code}>{field}</span>{isRaw && <span style={s.sub}> (raw field)</span>} {opTxt}
+        {vals.length > 0 && ' '}
+        {vals.map((v, i) => <span key={i}><span style={s.val}>{String(v)}</span>{i < vals.length - 1 ? (op === 'in' ? ', ' : ' / ') : ''}</span>)}
+      </div>
+    );
+  };
+  if (node.field) return leaf(node.field, node.op || 'eq', node.value, false);
+  if (node.raw) return leaf(node.raw, node.op || 'eq', node.value, true);
+  // Flat legacy selection object: { field: value, ... } → each pair is an equals leaf.
+  return <>{Object.entries(node).map(([f, v]) => leaf(f, Array.isArray(v) ? 'in' : 'eq', v))}</>;
+}
 
 export function RuleLibrary({ embedded = false }) {
   const { getAccessTokenSilently } = useAuth0();
@@ -113,6 +199,8 @@ export function RuleLibrary({ embedded = false }) {
   const [filters, setFilters] = useState({ category: '', status: '', fidelity: '', technique: '', q: '' });
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState(null);
+  const [detail, setDetail] = useState(null);       // full rule doc for the modal
+  const [detailLoading, setDetailLoading] = useState(false);
   const pollRef = useRef(null);
 
   const showToast = (m) => { setToast(m); setTimeout(() => setToast(null), 3000); };
@@ -205,6 +293,21 @@ export function RuleLibrary({ embedded = false }) {
     const h = await authHeaders();
     const res = await fetch(`/api/siem/rules/sigma/overrides/${encodeURIComponent(row.identity)}`, { method: 'DELETE', headers: h });
     if (res.ok) loadCatalog(page); else showToast('Could not reset rule');
+  }
+
+  async function openDetail(identity) {
+    setDetail({ identity, loading: true });
+    setDetailLoading(true);
+    try {
+      const h = await authHeaders();
+      const res = await fetch(`/api/siem/rules/sigma/catalog/${encodeURIComponent(identity)}`, { headers: h });
+      if (res.ok) setDetail(await res.json());
+      else { setDetail(null); showToast('Could not load rule detail'); }
+    } catch {
+      setDetail(null); showToast('Could not load rule detail');
+    } finally {
+      setDetailLoading(false);
+    }
   }
 
   const last = status?.last_sync;
@@ -324,7 +427,11 @@ export function RuleLibrary({ embedded = false }) {
                 const rejected = r.convert_status === 'rejected';
                 const effSev = r.override_severity || r.severity;
                 return (
-                  <tr key={r.identity}>
+                  <tr key={r.identity}
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => openDetail(r.identity)}
+                    onMouseEnter={e => Array.from(e.currentTarget.cells).forEach(c => c.style.background = 'var(--bg-surface)')}
+                    onMouseLeave={e => Array.from(e.currentTarget.cells).forEach(c => c.style.background = '')}>
                     <td style={{ ...s.td, color: 'var(--text-primary)' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                         <span>{r.title || r.identity}</span>
@@ -341,6 +448,7 @@ export function RuleLibrary({ embedded = false }) {
                       {rejected ? '-' : (
                         <select style={s.select}
                           value={effSev || 'medium'}
+                          onClick={e => e.stopPropagation()}
                           onChange={e => setOverride(r, { severity: e.target.value })}>
                           {SEVERITIES.map(sv => <option key={sv} value={sv}>{sv}</option>)}
                         </select>
@@ -357,11 +465,11 @@ export function RuleLibrary({ embedded = false }) {
                       {rejected ? <span style={s.sub}>Unsupported</span> : (
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                           <button style={s.toggle(r.effective_enabled)}
-                            onClick={() => setOverride(r, { enabled: !r.effective_enabled })}>
+                            onClick={e => { e.stopPropagation(); setOverride(r, { enabled: !r.effective_enabled }); }}>
                             {r.effective_enabled ? 'On' : 'Off'}
                           </button>
                           {(r.override_enabled !== null || r.override_severity) && (
-                            <button style={s.btn} title="Reset to category default" onClick={() => clearOverride(r)}>reset</button>
+                            <button style={s.btn} title="Reset to category default" onClick={e => { e.stopPropagation(); clearOverride(r); }}>reset</button>
                           )}
                         </div>
                       )}
@@ -397,6 +505,99 @@ export function RuleLibrary({ embedded = false }) {
           </div>
         )}
       </div>
+
+      {detail && (
+        <div style={s.overlay} onClick={() => setDetail(null)}>
+          <div style={s.modal} onClick={e => e.stopPropagation()}>
+            <div style={s.modalHeader}>
+              <span style={s.modalTitle}>
+                {detail.title || detail.identity}
+                {detail.category && <>&nbsp;·&nbsp;<span style={s.sub}>{CATEGORY_LABEL[detail.category] || detail.category}</span></>}
+                {detail.rule && <>&nbsp;·&nbsp;<span style={{ color: sevColor(detail.override_severity || detail.severity) }}>{detail.override_severity || detail.severity}</span></>}
+              </span>
+              <button style={s.modalClose} onClick={() => setDetail(null)}>✕</button>
+            </div>
+            <div style={s.modalBody}>
+              {detail.loading || detailLoading ? (
+                <div style={s.muted}>Loading…</div>
+              ) : (() => {
+                const doc = detail.rule || {};
+                const tree = doc.where ?? doc.selection;
+                const fields = tree ? [...collectFields(tree)] : [];
+                const rejected = detail.convert_status === 'rejected';
+                const pf = [
+                  detail.sig_event_ids?.length ? `event IDs ${detail.sig_event_ids.join(', ')}` : null,
+                  detail.sig_categories?.length ? `categories ${detail.sig_categories.join(', ')}` : null,
+                  detail.sig_sources?.length ? `sources ${detail.sig_sources.join(', ')}` : null,
+                ].filter(Boolean);
+                const summary = rejected
+                  ? `This rule could not be converted to the engine's format, so it never runs. Reason: ${detail.reject_reason || 'unsupported construct'}.`
+                  : doc.type === 'threshold'
+                    ? `Fires when at least ${doc.count} events matching the condition below share the same ${(doc.group_by || []).join(', ')} within ${doc.window}. Counted with sliding-window state as events arrive.`
+                    : 'Fires an alert the moment a single incoming log event matches the condition tree below. Every new event is checked at ingest against this rule; repeat matches on the same event are deduplicated into one alert.';
+                return (
+                  <>
+                    {[
+                      ['Description', doc.description],
+                      ['Detection type', rejected ? 'unsupported' : (doc.type || 'single_event')],
+                      ['Fidelity', detail.fidelity],
+                      ['Enabled for you', detail.effective_enabled ? 'Yes' : 'No'],
+                      ['Sigma source', detail.path],
+                    ].filter(([, v]) => v != null && v !== '').map(([label, value]) => (
+                      <div key={label} style={s.fieldRow}>
+                        <div style={s.fieldLabel}>{label}</div>
+                        <div style={s.fieldValue}>{String(value)}</div>
+                      </div>
+                    ))}
+                    {(detail.attack_techniques || []).length > 0 && (
+                      <div style={s.fieldRow}>
+                        <div style={s.fieldLabel}>ATT&CK</div>
+                        <div style={{ ...s.fieldValue, display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                          {detail.attack_techniques.map(id => (
+                            <a key={id} href={`https://attack.mitre.org/techniques/${id.replace('.', '/')}/`} target="_blank" rel="noreferrer"
+                               style={{ ...badgeStyle('info'), fontSize: '10px', textDecoration: 'none' }}>{id}</a>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <div style={s.block}>
+                      <div style={s.blockHead}>How it's detected</div>
+                      <div style={s.blockBody}>
+                        <div style={s.english}>{summary}</div>
+                        {!rejected && tree && <WhereTree node={tree} />}
+                      </div>
+                    </div>
+
+                    {!rejected && (
+                      <div style={s.block}>
+                        <div style={s.blockHead}>How the SIEM triggers it</div>
+                        <div style={s.blockBody}>
+                          <div style={s.english}>
+                            {fields.length > 0 && <>Log fields evaluated: {fields.map((f, i) => <span key={f}><span style={s.code}>{f}</span>{i < fields.length - 1 ? ', ' : ''}</span>)}.<br /></>}
+                            {pf.length > 0
+                              ? <>For speed, this rule is only evaluated when the incoming batch contains {pf.join('; ')}. Batches without any of those are skipped.</>
+                              : <>No coarse prefilter — this rule is evaluated against every ingested batch.</>}
+                            <br />
+                            {detail.effective_enabled
+                              ? 'It is currently enabled for your account, so a matching event will raise a Sigma-badged alert in the Alerts queue.'
+                              : 'It is currently disabled for you — enable its category or toggle it On below to have matching events raise alerts.'}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    <div style={s.attribution}>
+                      From <a href={`${SIGMA_REPO}/blob/master/${detail.path || ''}`} target="_blank" rel="noreferrer" style={s.link}>SigmaHQ</a>
+                      {detail.sigma_id ? ` · rule id ${detail.sigma_id}` : ''} · DRL 1.1
+                    </div>
+                  </>
+                );
+              })()}
+            </div>
+          </div>
+        </div>
+      )}
 
       {toast && <div style={s.toast}>{toast}</div>}
     </div>
