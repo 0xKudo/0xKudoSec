@@ -147,7 +147,15 @@ Remaining: confirm web `<DesktopOnly>` fallback (minor), then the shared release
   `git filter-branch` (per user request — no AI attribution in commits/code). SHAs were rewritten;
   branch is unpushed so this is safe. Do NOT re-add them.
 
-**STILL TODO (user does these — this shell has no VPS SSH key and no GitHub push key):**
+**ROLLOUT COMPLETE (2026-09-05):** branch merged → `main` (ff), pushed to GitHub, VPS deployed.
+VPS pulled to `2b6461b`, shell rebuilt, `pm2 restart cybertools-server` (id 6, online). Verified:
+home 200, `/api/tools` 200 (19 tools), tool routes 401 (auth-gated + mounted; the 410 sits behind
+auth), no startup errors (the only log lines were UnauthorizedError from unauth smoke-test curls).
+v1.2.50 exe published on 0xKudoSec-releases. **All 5 tools now run locally in the desktop app and show
+DesktopOnly on the web.** (SSH from this machine works with `~/.ssh/vps_cybertools` once the repo is
+public or an https credential exists; the repo was made public to allow the VPS https `git pull`.)
+
+Historical steps (now done):
 1. Merge `feat/desktop-only-network-scanner` → `main`, push to GitHub.
 2. VPS deploy (sequencing is now safe — the v1.2.50 exe is published so desktop users can update to
    the build that carries the `window.electron.*` IPC bridge):
