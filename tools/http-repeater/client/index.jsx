@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
-import { useAuth0 } from '@auth0/auth0-react';
 import { useIsMobile } from '../../../platform/shell/src/hooks/useIsMobile.js';
 import { Button, Input } from '../../../platform/shell/src/components/ui/index.js';
+import DesktopOnly from '../../../platform/shell/src/components/DesktopOnly.jsx';
+
+const isElectron = typeof window !== 'undefined' && window.electron?.isElectron === true;
 
 const METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'];
 
@@ -173,7 +175,6 @@ const styles = {
 
 export default function HttpRepeater() {
   const isMobile = useIsMobile();
-  const { getAccessTokenSilently } = useAuth0();
   const [method, setMethod] = useState('GET');
   const [url, setUrl] = useState('');
   const [headersText, setHeadersText] = useState('');
@@ -206,21 +207,16 @@ export default function HttpRepeater() {
     setResponse(null);
 
     try {
-      const token = await getAccessTokenSilently();
-      const res = await fetch('/api/tools/http-repeater/send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({
-          method,
-          url: url.trim(),
-          headers: headersText,
-          body: bodyText || undefined,
-        }),
+      // Runs locally in the desktop app via IPC (no VPS round-trip, reaches local/private hosts).
+      const data = await window.electron.httpRepeater.send({
+        method,
+        url: url.trim(),
+        headers: headersText,
+        body: bodyText || undefined,
       });
 
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.error || 'Request failed.');
+      if (data.error) {
+        setError(data.error);
       } else {
         setResponse(data);
         setResponseTab('body');
@@ -229,8 +225,8 @@ export default function HttpRepeater() {
         setHistory(prev => [entry, ...prev.filter(h => !(h.method === entry.method && h.url === entry.url))].slice(0, MAX_HISTORY));
         setActiveHistoryIdx(0);
       }
-    } catch {
-      setError('Network error. Is the server running?');
+    } catch (e) {
+      setError(`Request failed: ${e.message}`);
     } finally {
       setLoading(false);
     }
@@ -259,6 +255,8 @@ export default function HttpRepeater() {
   const headersFormatted = response
     ? Object.entries(response.headers).map(([k, v]) => `${k}: ${v}`).join('\n')
     : '';
+
+  if (!isElectron) return <DesktopOnly toolName="HTTP Repeater" downloadUrl="https://0xkudo.com/download" />;
 
   return (
     <div style={styles.container}>

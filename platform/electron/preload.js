@@ -32,6 +32,10 @@ contextBridge.exposeInMainWorld('electron', {
     install: () => ipcRenderer.invoke('nmap:install'),
   },
 
+  httpRepeater: {
+    send: (req) => ipcRenderer.invoke('http-repeater:send', req),
+  },
+
   fluentBit: {
     getStatus: () => ipcRenderer.invoke('fluent-bit:status'),
     start: () => ipcRenderer.invoke('fluent-bit:start'),

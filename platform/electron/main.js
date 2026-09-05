@@ -679,6 +679,9 @@ app.whenReady().then(async () => {
   const registerNetworkScanner = require('./tools/network-scanner');
   registerNetworkScanner(ipcMain, { getMainWindow: () => mainWindow, isValidSender });
 
+  const registerHttpRepeater = require('./tools/http-repeater');
+  registerHttpRepeater(ipcMain, { getMainWindow: () => mainWindow, isValidSender });
+
   setupAutoUpdater();
 });
 
