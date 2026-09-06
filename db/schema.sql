@@ -309,7 +309,7 @@ ALTER SEQUENCE public.logs_id_seq OWNED BY public.logs.id;
 CREATE TABLE public.noise_candidates (
     id text DEFAULT lower(replace((gen_random_uuid())::text, '-'::text, ''::text)) NOT NULL,
     user_id text NOT NULL,
-    field_signature text NOT NULL,
+    field_signature jsonb NOT NULL,
     score integer DEFAULT 0 NOT NULL,
     confidence text DEFAULT 'low'::text NOT NULL,
     daily_avg real,
