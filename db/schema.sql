@@ -1138,6 +1138,9 @@ CREATE TABLE IF NOT EXISTS public.sigma_rules (
   sig_sources       text[] DEFAULT '{}'::text[] NOT NULL,
   -- Sigma Full Coverage Phase 6: exact | approximate (rejected rows are null).
   fidelity          text,
+  -- Sigma Phase C: high-selectivity field pins + regex flag (window prefilter).
+  sig_terms         jsonb DEFAULT '{}'::jsonb NOT NULL,
+  has_regex         boolean DEFAULT false NOT NULL,
   updated_at        timestamp with time zone DEFAULT now()
 );
 
@@ -1150,6 +1153,7 @@ CREATE INDEX IF NOT EXISTS idx_sigma_rules_sig_event_ids  ON public.sigma_rules 
 CREATE INDEX IF NOT EXISTS idx_sigma_rules_sig_categories ON public.sigma_rules USING gin (sig_categories);
 CREATE INDEX IF NOT EXISTS idx_sigma_rules_sig_sources    ON public.sigma_rules USING gin (sig_sources);
 CREATE INDEX IF NOT EXISTS idx_sigma_rules_fidelity        ON public.sigma_rules USING btree (fidelity);
+CREATE INDEX IF NOT EXISTS idx_sigma_rules_has_regex        ON public.sigma_rules USING btree (has_regex);
 
 
 --

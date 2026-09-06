@@ -157,6 +157,124 @@ export function extractSignature(doc) {
   };
 }
 
+// ── Phase C: high-selectivity field signature (the "run only rules whose fields
+// appear in recent telemetry" prefilter) ─────────────────────────────────────
+//
+// The coarse signature above only pins event_id/category/source, which ~90% of
+// Sigma rules do not set. Phase C extends the idea to the indexed high-cardinality
+// columns rules actually pin — process_name (Image), parent_process_name
+// (ParentImage), file_path (TargetFilename), registry_key (TargetObject) — so the
+// scheduled window pass can skip a rule whose required field values are absent
+// from the recent window. Same conservative tree-walk as extractSignature: a term
+// is recorded ONLY when the tree GUARANTEES it (so a skip is never a false negative).
+
+// The columns whose ILIKE we index (Phase B trigram GIN) and that are worth pinning.
+export const PREFILTER_FIELDS = new Set([
+  'process_name', 'parent_process_name', 'file_path', 'registry_key',
+]);
+// Text ops whose value is a literal we can test against a recent-value profile.
+const PREFILTER_OPS = new Set([
+  'eq', 'contains', 'startswith', 'endswith',
+  'contains_cs', 'startswith_cs', 'endswith_cs',
+]);
+// Normalize an op to its case-insensitive base (the profile match is always CI,
+// which is permissive: it can only admit MORE rules, never wrongly skip one).
+function baseOp(op) { return op.replace(/_cs$/, ''); }
+
+// Does any leaf anywhere in the tree use the `re` (regex) op? Regex rules that pin
+// nothing prefilterable are the ~200 that seq-scan the window with no index answer;
+// they are skipped until the in-memory matcher (Phase D) lands.
+function treeHasRegex(node) {
+  if (!node) return false;
+  if (Array.isArray(node.all)) return node.all.some(treeHasRegex);
+  if (Array.isArray(node.any)) return node.any.some(treeHasRegex);
+  if (node.not !== undefined) return treeHasRegex(node.not);
+  return node.op === 're';
+}
+
+// Extract per-field GUARANTEED literal terms for the prefilterable columns, plus a
+// has_regex flag. Returns { sig_terms: { field: [{op, v}] }, has_regex }.
+export function extractFieldSignature(doc) {
+  function leafTerms(node) {
+    if (!node || node.op == null) return {};
+    if (!PREFILTER_FIELDS.has(node.field) || !PREFILTER_OPS.has(node.op)) return {};
+    if (typeof node.value !== 'string' || node.value === '') return {};
+    return { [node.field]: [{ op: baseOp(node.op), v: node.value.toLowerCase() }] };
+  }
+  // union (all): a field required by ANY child is required by the AND.
+  // intersect (any): a field is only guaranteed if EVERY branch requires it;
+  //   its alternatives are the union across branches (match any branch's value).
+  function combine(a, b, mode) {
+    if (mode === 'union') {
+      const out = { ...a };
+      for (const f of Object.keys(b)) out[f] = [...(out[f] || []), ...b[f]];
+      return out;
+    }
+    const out = {};
+    for (const f of Object.keys(a)) if (b[f]) out[f] = dedupeTerms([...a[f], ...b[f]]);
+    return out;
+  }
+  function dedupeTerms(terms) {
+    const seen = new Set(); const out = [];
+    for (const t of terms) { const k = t.op + ' ' + t.v; if (!seen.has(k)) { seen.add(k); out.push(t); } }
+    return out;
+  }
+  function walk(node) {
+    if (!node) return {};
+    if (Array.isArray(node.all)) return node.all.map(walk).reduce((acc, p) => combine(acc, p, 'union'), {});
+    if (Array.isArray(node.any)) {
+      const parts = node.any.map(walk);
+      return parts.length ? parts.reduce((acc, p) => combine(acc, p, 'intersect')) : {};
+    }
+    if (node.not !== undefined) return {};       // negation cannot narrow the window
+    if (node.keyword !== undefined) return {};
+    return leafTerms(node);
+  }
+  const root = (doc && doc.where) ? doc.where : { all: (doc && Array.isArray(doc.selection)) ? doc.selection : [] };
+  const raw = walk(root);
+  const sig_terms = {};
+  for (const f of Object.keys(raw)) sig_terms[f] = raw[f];
+  return { sig_terms, has_regex: treeHasRegex(root) };
+}
+
+// Runtime: can a rule with these sig_terms possibly match the recent-window
+// profile? Skip iff SOME pinned field has terms yet NONE of its alternatives match
+// any recent value for that field (AND across fields, OR within a field). An empty
+// sig_terms is always a candidate. Matching is case-insensitive substring/suffix/
+// prefix/equality, mirroring the compiled predicate but coarsely (permissive).
+export function catalogRuleMatchesProfile(sigTerms, profile) {
+  if (!sigTerms || typeof sigTerms !== 'object') return true;
+  for (const field of Object.keys(sigTerms)) {
+    const terms = sigTerms[field];
+    if (!Array.isArray(terms) || !terms.length) continue;
+    const values = (profile && profile[field]) || [];
+    const anyMatch = terms.some(t => values.some(val => termMatches(t, String(val).toLowerCase())));
+    if (!anyMatch) return false; // this field is required and cannot match → skip
+  }
+  return true;
+}
+
+function termMatches(term, val) {
+  const v = term.v;
+  switch (term.op) {
+    case 'eq': return val === v;
+    case 'startswith': return val.startsWith(v);
+    case 'endswith': return val.endsWith(v);
+    case 'contains': return val.includes(v);
+    default: return true; // unknown op → be permissive (never false-skip)
+  }
+}
+
+// A catalog row is prefilterable if it pins ANY coarse dimension or high-selectivity
+// field. An unprefilterable row cannot be narrowed by recent telemetry.
+export function ruleIsPrefilterable(row) {
+  const st = row.sig_terms || {};
+  return (row.sig_event_ids && row.sig_event_ids.length > 0)
+    || (row.sig_categories && row.sig_categories.length > 0)
+    || (row.sig_sources && row.sig_sources.length > 0)
+    || Object.keys(st).length > 0;
+}
+
 // Convert one raw YAML entry into a catalog row. Never throws.
 export function entryToRow({ category, relPath }, content, sourceSha) {
   let doc = null;
@@ -165,7 +283,7 @@ export function entryToRow({ category, relPath }, content, sourceSha) {
   const title = doc && typeof doc === 'object' && doc.title ? String(doc.title).slice(0, 500) : null;
   const identity = ruleIdentity(sigmaId, relPath);
 
-  const emptySig = { sig_event_ids: [], sig_categories: [], sig_sources: [] };
+  const emptySig = { sig_event_ids: [], sig_categories: [], sig_sources: [], sig_terms: {}, has_regex: false };
   const base = {
     sigma_id: sigmaId && UUID_RE.test(String(sigmaId)) ? String(sigmaId).toLowerCase() : null,
     identity,
@@ -186,6 +304,7 @@ export function entryToRow({ category, relPath }, content, sourceSha) {
       reject_reason: null,
       fidelity: fidelity || 'exact',
       ...extractSignature(rule),
+      ...extractFieldSignature(rule),
     };
   } catch (e) {
     const reason = e instanceof SigmaUnsupportedError ? e.message : `conversion error: ${e.message}`;
@@ -341,8 +460,8 @@ async function upsertRows(pool, rows) {
     const values = [];
     const params = [];
     batch.forEach((r, idx) => {
-      const b = idx * 15;
-      values.push(`($${b+1},$${b+2},$${b+3},$${b+4},$${b+5},$${b+6}::jsonb,$${b+7},$${b+8}::text[],$${b+9},$${b+10},$${b+11},$${b+12}::integer[],$${b+13}::text[],$${b+14}::text[],$${b+15},false,NOW())`);
+      const b = idx * 17;
+      values.push(`($${b+1},$${b+2},$${b+3},$${b+4},$${b+5},$${b+6}::jsonb,$${b+7},$${b+8}::text[],$${b+9},$${b+10},$${b+11},$${b+12}::integer[],$${b+13}::text[],$${b+14}::text[],$${b+15},$${b+16}::jsonb,$${b+17},false,NOW())`);
       params.push(
         r.sigma_id, r.identity, r.title, r.category, r.path,
         r.rule ? JSON.stringify(r.rule) : null,
@@ -350,13 +469,14 @@ async function upsertRows(pool, rows) {
         r.convert_status, r.reject_reason, r.source_sha,
         r.sig_event_ids || [], r.sig_categories || [], r.sig_sources || [],
         r.fidelity ?? null,
+        JSON.stringify(r.sig_terms || {}), r.has_regex === true,
       );
     });
     await pool.query(`
       INSERT INTO sigma_rules
         (sigma_id, identity, title, category, path, rule, severity, attack_techniques,
          convert_status, reject_reason, source_sha, sig_event_ids, sig_categories, sig_sources,
-         fidelity, retired, updated_at)
+         fidelity, sig_terms, has_regex, retired, updated_at)
       VALUES ${values.join(',')}
       ON CONFLICT (identity) DO UPDATE SET
         sigma_id = EXCLUDED.sigma_id,
@@ -373,6 +493,8 @@ async function upsertRows(pool, rows) {
         sig_categories = EXCLUDED.sig_categories,
         sig_sources = EXCLUDED.sig_sources,
         fidelity = EXCLUDED.fidelity,
+        sig_terms = EXCLUDED.sig_terms,
+        has_regex = EXCLUDED.has_regex,
         retired = false,
         updated_at = NOW()
     `, params);

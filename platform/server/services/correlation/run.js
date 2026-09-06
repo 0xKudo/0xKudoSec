@@ -19,6 +19,7 @@ import { runDetectionRules } from '../detection.js';
 import { parseWindowSeconds } from '../../../shared/correlationRule.js';
 import { compileRule, compileMatch } from './compile.js';
 import { recordThresholdEvent, recordSequenceEvent } from './state.js';
+import { catalogRuleMatchesProfile, ruleIsPrefilterable, PREFILTER_FIELDS } from '../sigmaCron.js';
 
 // Upsert one correlation alert, deduping on (user_id, correlation_rule_id, group_key)
 // via the alerts_corr_dedup partial unique index. Returns true if newly created.
@@ -212,6 +213,7 @@ async function runCatalogRules(client, userId, logIds, opts = {}) {
 
   const { rows: rules } = await client.query(
     `SELECT s.identity, s.title, s.rule, s.severity,
+            s.sig_event_ids, s.sig_categories, s.sig_sources, s.sig_terms, s.has_regex,
             o.enabled AS o_enabled, o.severity AS o_severity
      FROM sigma_rules s
      LEFT JOIN sigma_rule_overrides o ON o.user_id = $1 AND o.sigma_identity = s.identity
@@ -222,7 +224,30 @@ async function runCatalogRules(client, userId, logIds, opts = {}) {
   );
   if (!rules.length) return { created, deduped };
 
-  for (const r of rules) {
+  // Phase C window-mode prefilter. On the scheduled full pass (logIds null) there
+  // is no batch for the SQL prefilter above, so profile the recent window ONCE and
+  // skip, in application code, every rule whose required fields/dimensions are
+  // absent from it. This turns "run all ~3.6k enabled rules" into "run the handful
+  // whose fields appear in recent telemetry". See docs/plans/2026-09-06-sigma-catalog-performance.md Phase C.
+  let activeRules = rules;
+  if (!logIds) {
+    const profile = await buildWindowProfile(client, userId, opts.lookbackSeconds);
+    activeRules = rules.filter((r) => {
+      // Deferred until the in-memory matcher (Phase D): a regex rule that pins
+      // nothing prefilterable can only be found by a seq scan, which has no SQL
+      // index answer and pegs the box. Skip it here.
+      if (r.has_regex && !ruleIsPrefilterable(r)) return false;
+      // Coarse dimensions (event_id/category/source): if pinned but none present
+      // in the window, the rule cannot match.
+      if (!coarseDimsPresent(r, profile)) return false;
+      // High-selectivity fields (process_name/file_path/…): same test, per field.
+      if (!catalogRuleMatchesProfile(r.sig_terms, profile)) return false;
+      return true;
+    });
+    if (!activeRules.length) return { created, deduped };
+  }
+
+  for (const r of activeRules) {
     // SAVEPOINT-isolate every rule. A rule whose SQL raises a real Postgres error
     // (a bad `re` regex, a numeric/text mismatch, a statement timeout) aborts the
     // surrounding transaction; without a savepoint, EVERY rule evaluated after it
@@ -257,6 +282,47 @@ async function runCatalogRules(client, userId, logIds, opts = {}) {
     }
   }
   return { created, deduped };
+}
+
+// Profile the recent look-back window ONCE: the distinct values present for each
+// coarse dimension and each prefilterable field. One aggregation replaces a
+// per-rule scan. Values are lowercased for the case-insensitive term match; the
+// per-field DISTINCT set over a short window is small (dozens to low hundreds).
+const PROFILE_VALUE_CAP = 5000;
+async function buildWindowProfile(client, userId, lookbackSeconds) {
+  const secs = Number.isFinite(lookbackSeconds) && lookbackSeconds > 0 ? Math.floor(lookbackSeconds) : 1200;
+  const fields = [...PREFILTER_FIELDS];
+  const fieldAggs = fields
+    .map((f, i) => `coalesce(array_agg(DISTINCT lower(${f})) FILTER (WHERE ${f} IS NOT NULL), '{}') AS f${i}`)
+    .join(',\n         ');
+  const { rows } = await client.query(
+    `SELECT
+         coalesce(array_agg(DISTINCT event_id)       FILTER (WHERE event_id IS NOT NULL), '{}')       AS eids,
+         coalesce(array_agg(DISTINCT event_category) FILTER (WHERE event_category IS NOT NULL), '{}') AS cats,
+         coalesce(array_agg(DISTINCT source)         FILTER (WHERE source IS NOT NULL), '{}')         AS srcs,
+         ${fieldAggs}
+       FROM logs
+       WHERE user_id = $1 AND timestamp >= NOW() - make_interval(secs => $2)`,
+    [userId, secs],
+  );
+  const row = rows[0] || {};
+  const profile = {
+    event_ids: (row.eids || []).map(Number),
+    event_categories: (row.cats || []).map(String),
+    sources: (row.srcs || []).map(String),
+  };
+  fields.forEach((f, i) => { profile[f] = (row[`f${i}`] || []).slice(0, PROFILE_VALUE_CAP); });
+  return profile;
+}
+
+// Coarse-dimension presence check, mirroring the ingest SQL prefilter: a rule is
+// admissible unless it pins a dimension (via eq/in) whose values are all absent
+// from the window. An empty sig array never excludes.
+function coarseDimsPresent(r, profile) {
+  const has = (sig, present) => !sig || sig.length === 0 || sig.some(v => present.includes(v));
+  return has((r.sig_event_ids || []).map(Number), profile.event_ids)
+    && has((r.sig_categories || []).map(String), profile.event_categories)
+    && has((r.sig_sources || []).map(String), profile.sources);
 }
 
 // State helpers accept a `deps` with withUser; here we already hold a client, so

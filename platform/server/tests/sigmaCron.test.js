@@ -14,6 +14,9 @@ import {
   buildCatalogRows,
   summarize,
   extractSignature,
+  extractFieldSignature,
+  catalogRuleMatchesProfile,
+  ruleIsPrefilterable,
   CATEGORY_BY_FOLDER,
 } from '../services/sigmaCron.js';
 
@@ -207,6 +210,113 @@ describe('extractSignature', () => {
       { not: { field: 'source', op: 'eq', value: 'win' } } ] } });
     expect(sig.sig_event_ids).toEqual([1]);
     expect(sig.sig_sources).toEqual([]);
+  });
+});
+
+// ── Phase C: high-selectivity field signature + window-pass prefilter ──────────
+
+describe('extractFieldSignature', () => {
+  it('pins a prefilterable field via endswith (lowercased term)', () => {
+    const { sig_terms, has_regex } = extractFieldSignature({
+      where: { all: [{ field: 'process_name', op: 'endswith', value: '\\BitLockerToGo.exe' }] },
+    });
+    expect(has_regex).toBe(false);
+    expect(sig_terms).toEqual({ process_name: [{ op: 'endswith', v: '\\bitlockertogo.exe' }] });
+  });
+
+  it('pins process_name, parent_process_name, file_path, registry_key with eq/contains/startswith', () => {
+    const { sig_terms } = extractFieldSignature({ where: { all: [
+      { field: 'process_name', op: 'eq', value: 'evil.exe' },
+      { field: 'parent_process_name', op: 'endswith', value: '\\services.exe' },
+      { field: 'file_path', op: 'contains', value: '\\Temp\\' },
+      { field: 'registry_key', op: 'startswith', value: 'HKLM\\Software\\Run' },
+    ] } });
+    expect(Object.keys(sig_terms).sort()).toEqual(['file_path', 'parent_process_name', 'process_name', 'registry_key']);
+  });
+
+  it('ignores non-prefilterable fields (message, username) and non-prefilterable ops (gt, re, cidr)', () => {
+    const { sig_terms } = extractFieldSignature({ where: { all: [
+      { field: 'message', op: 'contains', value: 'powershell' },
+      { field: 'username', op: 'eq', value: 'admin' },
+      { field: 'process_name', op: 're', value: '.*\\.exe' },
+    ] } });
+    expect(sig_terms).toEqual({});
+  });
+
+  it('flags has_regex when any leaf uses the re op, anywhere in the tree', () => {
+    expect(extractFieldSignature({ where: { any: [
+      { field: 'process_name', op: 'endswith', value: '\\x.exe' },
+      { not: { field: 'message', op: 're', value: 'foo.*bar' } },
+    ] } }).has_regex).toBe(true);
+  });
+
+  it('does NOT pin a field when only one any-branch requires it (no false skip)', () => {
+    const { sig_terms } = extractFieldSignature({ where: { any: [
+      { all: [{ field: 'process_name', op: 'endswith', value: '\\a.exe' }] },
+      { all: [{ field: 'file_path', op: 'contains', value: '\\b\\' }] },
+    ] } });
+    // process_name is only required in one branch; the rule can still match via the
+    // other branch, so it must not be treated as a guaranteed pin.
+    expect(sig_terms).toEqual({});
+  });
+
+  it('a not-branch contributes no pins', () => {
+    const { sig_terms } = extractFieldSignature({ where: { all: [
+      { field: 'process_name', op: 'endswith', value: '\\a.exe' },
+      { not: { field: 'file_path', op: 'contains', value: '\\b\\' } },
+    ] } });
+    expect(sig_terms).toEqual({ process_name: [{ op: 'endswith', v: '\\a.exe' }] });
+  });
+});
+
+describe('catalogRuleMatchesProfile', () => {
+  const profile = {
+    process_name: ['c:\\windows\\bitlockertogo.exe', 'c:\\windows\\explorer.exe'],
+    parent_process_name: ['c:\\windows\\services.exe'],
+    file_path: ['c:\\users\\bob\\downloads\\a\\b\\payload.dll'],
+    registry_key: [],
+  };
+
+  it('keeps a rule whose endswith term matches a recent value', () => {
+    const terms = { process_name: [{ op: 'endswith', v: '\\bitlockertogo.exe' }] };
+    expect(catalogRuleMatchesProfile(terms, profile)).toBe(true);
+  });
+
+  it('skips a rule whose only pinned field has no matching recent value', () => {
+    const terms = { process_name: [{ op: 'endswith', v: '\\mimikatz.exe' }] };
+    expect(catalogRuleMatchesProfile(terms, profile)).toBe(false);
+  });
+
+  it('requires EVERY pinned field to match (AND across fields)', () => {
+    const terms = {
+      process_name: [{ op: 'endswith', v: '\\bitlockertogo.exe' }], // present
+      registry_key: [{ op: 'startswith', v: 'hklm\\software\\run' }], // absent (empty profile)
+    };
+    expect(catalogRuleMatchesProfile(terms, profile)).toBe(false);
+  });
+
+  it('matches if ANY alternative for a field is present (OR within a field)', () => {
+    const terms = { process_name: [
+      { op: 'endswith', v: '\\notpresent.exe' },
+      { op: 'endswith', v: '\\explorer.exe' },
+    ] };
+    expect(catalogRuleMatchesProfile(terms, profile)).toBe(true);
+  });
+
+  it('an empty sig_terms is always a candidate (cannot be excluded)', () => {
+    expect(catalogRuleMatchesProfile({}, profile)).toBe(true);
+  });
+});
+
+describe('ruleIsPrefilterable', () => {
+  it('true when the rule pins any coarse dimension', () => {
+    expect(ruleIsPrefilterable({ sig_event_ids: [4104], sig_categories: [], sig_sources: [], sig_terms: {} })).toBe(true);
+  });
+  it('true when the rule pins a high-selectivity field', () => {
+    expect(ruleIsPrefilterable({ sig_event_ids: [], sig_categories: [], sig_sources: [], sig_terms: { process_name: [{ op: 'eq', v: 'x' }] } })).toBe(true);
+  });
+  it('false when the rule pins nothing (unprefilterable)', () => {
+    expect(ruleIsPrefilterable({ sig_event_ids: [], sig_categories: [], sig_sources: [], sig_terms: {} })).toBe(false);
   });
 });
 
