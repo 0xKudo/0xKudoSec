@@ -20,10 +20,23 @@ import db from '../db.js';
 import { runCatalogForUser } from './run.js';
 import { broadcast } from '../wsBroadcast.js';
 
-// Cadence and look-back. Interval is clamped to >= 1 min; the look-back adds a
-// 60s overlap so an event that lands between runs is never missed.
+// Cadence and look-back. Interval is clamped to >= 1 min.
+//
+// The look-back must comfortably exceed how long a full pass takes, not just the
+// interval. A pass over the enabled catalog is IO-bound on the residual rules a
+// trigram/GIN index cannot serve (chiefly `re` regex rules that seq-scan the
+// window), so a pass can run several minutes even though CPU stays low. If the
+// window were only interval+60s, a rule evaluated late in a slow pass would query
+// `NOW() - window` and miss an event that was recent when the pass began — the
+// event "ages out" mid-pass and never alerts. A generous window keeps every event
+// visible to every rule for the whole pass; re-matching over the overlap is
+// idempotent (dedup on alerts_sigma_dedup), so a wide window is safe and only
+// costs cheap indexed re-scans. Override with CATALOG_LOOKBACK_SECONDS.
 const INTERVAL_MIN = Math.max(1, Number(process.env.CATALOG_EVAL_INTERVAL_MIN) || 3);
-const LOOKBACK_SECONDS = INTERVAL_MIN * 60 + 60;
+const LOOKBACK_SECONDS = Math.max(
+  INTERVAL_MIN * 60 + 60,
+  Number(process.env.CATALOG_LOOKBACK_SECONDS) || 1200,
+);
 
 let running = false;
 export function isCatalogEvalRunning() { return running; }
