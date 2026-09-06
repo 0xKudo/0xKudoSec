@@ -326,8 +326,14 @@ export async function evaluateCatalog(userId, { logIds = null, lookbackSeconds }
   let created = 0;
   let deduped = 0;
   await deps.withUser(userId, async (client) => {
-    // Wider timeout than ingest — this is a background pass, not the hot path.
-    await client.query("SET LOCAL statement_timeout = '20000ms'");
+    // Per-rule timeout. Kept deliberately tight: a pass evaluates ~3,600 rules,
+    // and a rule that cannot finish in 2s over a short look-back window (many are
+    // unindexed raw `->> ILIKE` seq scans) would otherwise stall the whole pass
+    // for up to 20s each, pushing pass duration past the look-back window so later
+    // rules never see recent events and alerts commit minutes late. A slow rule
+    // fails fast in isolation (savepoint) and the pass keeps moving. The durable
+    // fix is indexing raw fields / an in-memory compiled matcher (see notes above).
+    await client.query("SET LOCAL statement_timeout = '2000ms'");
     const c = await runCatalogRules(client, userId, logIds, { lookbackSeconds });
     created += c.created;
     deduped += c.deduped;
