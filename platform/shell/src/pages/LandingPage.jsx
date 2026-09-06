@@ -143,15 +143,6 @@ const s = {
   btnSecondary: { background: 'none', color: 'var(--text-muted)', border: '1px solid var(--border)', fontFamily: 'var(--font)', fontSize: '12px', lineHeight: 1, padding: '12px 28px 10px', cursor: 'pointer', letterSpacing: '0.04em' },
   btnSecondaryFull: { background: 'none', color: 'var(--text-muted)', border: '1px solid var(--border)', fontFamily: 'var(--font)', fontSize: '12px', lineHeight: 1, padding: '12px 28px 10px', cursor: 'pointer', letterSpacing: '0.04em', width: '100%' },
 
-  // stat bar
-  statBar: { display: 'flex', borderBottom: '1px solid var(--border)', background: 'var(--bg-surface)' },
-  statBarMobile: { display: 'grid', gridTemplateColumns: '1fr 1fr', background: 'var(--bg-surface)', borderBottom: '1px solid var(--border)' },
-  statItem: { flex: 1, padding: '16px 24px', borderRight: '1px solid var(--border)' },
-  statItemMobile: { padding: '14px 16px', borderRight: '1px solid var(--border)', borderBottom: '1px solid var(--border)' },
-  statNum: { fontSize: '20px', fontWeight: 600, color: 'var(--text-primary)' },
-  statNumAmber: { fontSize: '20px', fontWeight: 600, color: 'var(--accent-amber)' },
-  statLabel: { fontSize: '11px', color: 'var(--text-muted)', letterSpacing: '0.04em', marginTop: '2px' },
-
   // editorial layout (desktop)
   editorial: { display: 'grid', gridTemplateColumns: '200px 1fr', borderTop: '1px solid var(--border)' },
   editorialLabelCol: { padding: '56px 48px', borderRight: '1px solid var(--border)', background: 'var(--bg-surface)' },
@@ -447,13 +438,12 @@ function DesktopLanding({ onLogin }) {
       {/* Hero */}
       <section style={s.hero}>
         <div style={s.heroGrid} />
-        <div style={s.heroTag}>Open Security Operations Platform</div>
         <h1 style={s.heroHeadline}>
           Security operations,{' '}
           <span style={s.heroHeadlineAccent}>unified.</span>
         </h1>
         <p style={s.heroSub}>
-          Real-time SIEM and 19 security tools covering detection, investigation, reporting, compliance, and simulation. Built for SOC analysts, pen testers, and security engineers.
+          Real-time SIEM and 19 security tools covering detection, investigation, reporting, compliance, and simulation. Built to be easy to use for SOC analysts, pen testers, and security engineers.
         </p>
         <div style={s.heroCtas}>
           <button
@@ -480,21 +470,6 @@ function DesktopLanding({ onLogin }) {
           {' '}No credit card required
         </p>
       </section>
-
-      {/* Stat bar */}
-      <div style={s.statBar}>
-        {[
-          ['SIEM', 'Real-Time Ingestion', true],
-          ['19',   'Security Tools',      false],
-          ['Windows', 'Event Log + Sysmon', false],
-          ['Auth0', 'Secure Login',       false],
-        ].map(([num, label, amber], i, arr) => (
-          <div key={label} style={{ ...s.statItem, ...(i === arr.length - 1 ? { borderRight: 'none' } : {}) }}>
-            <div style={amber ? s.statNumAmber : s.statNum}>{num}</div>
-            <div style={s.statLabel}>{label}</div>
-          </div>
-        ))}
-      </div>
 
       {/* SIEM capabilities */}
       <div ref={siemRef} style={s.editorial}>
@@ -525,7 +500,7 @@ function DesktopLanding({ onLogin }) {
           <div style={s.editorialTitle}>How it works</div>
         </div>
         <div style={s.editorialContent}>
-          <p style={s.editorialIntro}>Three capabilities that set it apart from a basic log viewer.</p>
+          <p style={s.editorialIntro}>Four capabilities, from real-time ingestion to case management.</p>
           <div style={s.deepGrid}>
             {SIEM_DEEP.map((d, i) => (
               <div key={d.num} style={{ ...s.deepCard, ...(i === SIEM_DEEP.length - 1 ? { borderBottom: 'none' } : {}) }}>
@@ -610,7 +585,6 @@ function MobileLanding({ onLogin }) {
       {/* Hero */}
       <section style={s.heroMobile}>
         <div style={s.heroGrid} />
-        <div style={{ ...s.heroTag, marginBottom: '20px' }}>Open Security Operations Platform</div>
         <h1 style={s.heroHeadlineMobile}>
           Security operations,{' '}
           <span style={s.heroHeadlineAccent}>unified.</span>
@@ -627,20 +601,6 @@ function MobileLanding({ onLogin }) {
           {' '}No credit card required
         </p>
       </section>
-
-      {/* Stat bar: 2x2 grid on mobile */}
-      <div style={s.statBarMobile}>
-        {[
-          ['SIEM', 'Real-Time Ingestion', true],
-          ['19',   'Security Tools',      false],
-          ['Auth0', 'Secure Login',       false],
-        ].map(([num, label, amber]) => (
-          <div key={label} style={s.statItemMobile}>
-            <div style={amber ? s.statNumAmber : s.statNum}>{num}</div>
-            <div style={s.statLabel}>{label}</div>
-          </div>
-        ))}
-      </div>
 
       {/* SIEM capabilities: no dashboard preview on mobile, flat list */}
       <div ref={siemRef} style={s.editorialMobile}>
@@ -668,7 +628,7 @@ function MobileLanding({ onLogin }) {
           <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>How it works</span>
         </div>
         <div style={s.editorialMobileContent}>
-          <p style={s.editorialMobileIntro}>Three capabilities that set it apart from a basic log viewer.</p>
+          <p style={s.editorialMobileIntro}>Four capabilities, from real-time ingestion to case management.</p>
           {SIEM_DEEP.map((d, i) => (
             <div key={d.num} style={{ ...s.deepCardMobile, ...(i === SIEM_DEEP.length - 1 ? { borderBottom: 'none' } : {}) }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
