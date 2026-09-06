@@ -8,8 +8,23 @@
 //
 // An `event` is a logs row object: first-class LOG_FIELDS columns (event_id etc.
 // as their native JS types), plus `raw_json` (the parsed jsonb object) and
-// `search_text`. This module is pure: no DB, no network, no rule compilation.
+// `search_text`. This module is pure (no DB, no network, no rule compilation),
+// except that `re` leaves compile through re2 when available (D4, see safeRegex).
 // The compiled matcher (Phase D2) will call it after precomputing candidates.
+
+import { createRequire } from 'module';
+
+// re2 (linear-time regex, no catastrophic backtracking) is a native dependency.
+// Load it optionally: on the server it is present and every `re` leaf runs through
+// it, removing the main-thread ReDoS risk that a raw JS RegExp carries. Where re2
+// is unavailable (e.g. an environment without the native build), fall back to JS
+// RegExp so the evaluator still works; the fallback is the documented residual risk.
+let RE2 = null;
+try {
+  RE2 = createRequire(import.meta.url)('re2');
+} catch {
+  RE2 = null;
+}
 
 // Integer columns — text operators coerce them to string, mirroring compile.js
 // INTEGER_COLUMNS (::text casts) and its numeric equality/compare.
@@ -167,10 +182,29 @@ function cmp(leaf, val) {
   return a < b ? -1 : a > b ? 1 : 0;
 }
 
-// Case-insensitive regex (~*). Phase D4 swaps this for re2 (linear-time) to remove
-// the main-thread ReDoS risk; the JS RegExp here is adequate for D1 correctness.
+// Case-insensitive regex (~*), compiled through re2 (linear-time) when available so
+// a pathological Sigma `re` pattern cannot hang the event loop — the ingest matcher
+// runs on the main thread, where the SQL model's statement_timeout no longer guards
+// it. Compiled regexes are cached per (pattern) since one pattern is tested against
+// many events. re2 rejects a few JS-only constructs (backreferences, lookaround); a
+// pattern it cannot compile falls back to JS RegExp (rare, and the only remaining
+// backtracking exposure — the converter's pattern-length cap still applies).
+const _reCache = new Map();
 function safeRegex(pattern) {
-  return new RegExp(String(pattern), 'i');
+  const key = String(pattern);
+  let re = _reCache.get(key);
+  if (re) return re;
+  if (RE2) {
+    try {
+      re = new RE2(key, 'i');
+    } catch {
+      re = new RegExp(key, 'i'); // re2 could not compile this construct
+    }
+  } else {
+    re = new RegExp(key, 'i');
+  }
+  _reCache.set(key, re);
+  return re;
 }
 
 // Evaluate a where-tree node. all=AND, any=OR, not=negation, else a leaf.

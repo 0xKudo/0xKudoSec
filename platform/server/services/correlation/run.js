@@ -16,10 +16,16 @@
 
 import db from '../db.js';
 import { runDetectionRules } from '../detection.js';
-import { parseWindowSeconds } from '../../../shared/correlationRule.js';
+import { parseWindowSeconds, LOG_FIELDS } from '../../../shared/correlationRule.js';
 import { compileRule, compileMatch } from './compile.js';
 import { recordThresholdEvent, recordSequenceEvent } from './state.js';
 import { catalogRuleMatchesProfile, ruleIsPrefilterable, PREFILTER_FIELDS } from '../sigmaCron.js';
+import { getMatcher } from './catalogMatcher.js';
+
+// First-class log columns the in-memory matcher may read (matches the evalRule
+// column accessors). Identity map, so the SELECT alias equals the field name the
+// evaluator looks up on the row object.
+const MATCHER_LOG_COLS = Object.values(LOG_FIELDS).join(', ');
 
 // Upsert one correlation alert, deduping on (user_id, correlation_rule_id, group_key)
 // via the alerts_corr_dedup partial unique index. Returns true if newly created.
@@ -260,20 +266,18 @@ async function runCatalogRules(client, userId, logIds, opts = {}) {
       const sev = r.o_severity || r.severity || doc.severity || 'medium';
       const bump = (isNew) => { if (isNew) created++; else deduped++; };
 
-      if (doc.type === 'single_event') {
-        const { sql, params } = compileMatch(doc.where ?? doc.selection, userId, { logIds, lookbackSeconds: opts.lookbackSeconds, limit: 500 });
-        const { rows } = await client.query(sql, params);
-        for (const row of rows) {
-          bump(await upsertSigmaAlert(client, userId, r.identity, r.title, sev, row.event_id ?? row.id, repFrom(row)));
-        }
-      } else if (doc.type === 'threshold') {
+      // Phase D: single_event catalog rules are evaluated real-time on the ingest
+      // batch by the in-memory compiled matcher (runCatalogMatcher), not here. The
+      // scheduled cron now evaluates ONLY stateful (threshold) catalog rules, whose
+      // count is small and which are inherently windowed. sigmaToRule emits only
+      // single_event/threshold; single_event is intentionally skipped on this path.
+      if (doc.type === 'threshold') {
         const { sql, params } = compileRule(doc, userId, { limit: 1000 });
         const { rows } = await client.query(sql, params);
         for (const row of rows) {
           bump(await upsertSigmaAlert(client, userId, r.identity, r.title, sev, row.group_key, repFrom(row)));
         }
       }
-      // sigmaToRule emits only single_event/threshold; any other type is skipped.
       await client.query('RELEASE SAVEPOINT cat_rule');
     } catch (err) {
       // Recover the aborted transaction so subsequent rules still evaluate.
@@ -336,6 +340,84 @@ async function recordSequenceEventOn(client, userId, ruleId, stateKey, step, eve
   return recordSequenceEvent(userId, ruleId, stateKey, step, eventTs, windowSecs, numSteps, wrap);
 }
 
+// Phase D — real-time community-catalog detection via the in-memory compiled
+// matcher. Runs on the ingest batch (logIds) instead of the scheduled SQL cron:
+// fetch the batch rows ONCE, pass each through the global compiled matcher (one
+// pass tests the whole single_event catalog, O(events) not O(rules)), then filter
+// hits to the user's enabled set and upsert. Touches the DB only to read the batch
+// and insert hits.
+//
+// Gating: caller ensures CATALOG_DISABLED !== '1'. CATALOG_MATCHER_SHADOW=1 runs the
+// matcher and logs timing/hit counts but inserts NO alerts (rollout step 1).
+async function runCatalogMatcher(userId, logIds, deps) {
+  if (!logIds || !logIds.length) return { created: 0, deduped: 0, matched: 0 };
+  const shadow = process.env.CATALOG_MATCHER_SHADOW === '1';
+  const started = Date.now();
+  let created = 0;
+  let deduped = 0;
+  let matched = 0;
+  let rowCount = 0;
+
+  // Global compiled matcher over the live catalog (cached; rebuilds only on a
+  // catalog sync). Built on the ops/global pool since sigma_rules is not RLS-scoped.
+  const built = await getMatcher(deps);
+  const matcher = built.matcher;
+
+  await deps.withUser(userId, async (client) => {
+    // 1) The user's enabled single_event catalog identities, with title/severity
+    //    (+ per-rule override). Effective set mirrors runCatalogRules' enablement:
+    //    (category enabled AND not override-disabled) OR (explicitly enabled).
+    const { rows: settings } = await client.query(
+      'SELECT sigma_enabled_categories FROM user_settings WHERE user_id = $1', [userId],
+    );
+    const categories = settings[0]?.sigma_enabled_categories || [];
+    const { rows: enabled } = await client.query(
+      `SELECT s.identity, s.title, s.severity, o.severity AS o_severity
+         FROM sigma_rules s
+         LEFT JOIN sigma_rule_overrides o ON o.user_id = $1 AND o.sigma_identity = s.identity
+        WHERE s.convert_status = 'converted' AND s.retired = false AND s.rule IS NOT NULL
+          AND s.rule->>'type' = 'single_event'
+          AND ( (s.category = ANY($2::text[]) AND COALESCE(o.enabled, true) = true)
+                OR o.enabled = true )`,
+      [userId, categories],
+    );
+    if (!enabled.length) return;
+    const meta = new Map(enabled.map((r) => [r.identity, r]));
+
+    // 2) Fetch the batch rows ONCE — every column the matcher reads: first-class
+    //    LOG_FIELDS columns plus raw_json (parsed jsonb) and search_text.
+    const { rows } = await client.query(
+      `SELECT id, ${MATCHER_LOG_COLS}, raw_json, search_text
+         FROM logs WHERE user_id = $1 AND id = ANY($2)`,
+      [userId, logIds],
+    );
+    rowCount = rows.length;
+
+    for (const row of rows) {
+      const hits = matcher.match(row); // Set<identity> over the WHOLE catalog
+      for (const identity of hits) {
+        const m = meta.get(identity);
+        if (!m) continue; // matched a catalog rule this user has not enabled
+        matched++;
+        if (shadow) continue; // shadow mode: count, do not insert
+        const sev = m.o_severity || m.severity || 'medium';
+        const isNew = await upsertSigmaAlert(
+          client, userId, identity, m.title, sev, row.event_id ?? row.id, repFrom(row),
+        );
+        if (isNew) created++; else deduped++;
+      }
+    }
+  });
+
+  if (matched > 0 || process.env.CATALOG_MATCHER_DEBUG === '1') {
+    console.log(
+      `[catalogMatcher]${shadow ? ' SHADOW' : ''} user ${userId}: ${rowCount} rows, `
+      + `${matched} hit(s), ${created} new, ${deduped} deduped in ${Date.now() - started}ms`,
+    );
+  }
+  return { created, deduped, matched };
+}
+
 // Public API — mirrors runDetectionRules(userId, logIds).
 export async function runCorrelation(userId, logIds = null, deps = db) {
   // 1) detection_rules via the existing engine (unchanged behavior + suppression).
@@ -365,12 +447,25 @@ export async function runCorrelation(userId, logIds = null, deps = db) {
         }
       }
 
-      // NOTE: community-catalog (Sigma) rules are intentionally NOT evaluated here.
-      // With ~3.6k enabled rules, running them per ingest batch pegged the CPU
-      // (thousands of queries per flush). They are now evaluated by the scheduled
-      // catalogCron over a recent time window. The user's own detection_rules and
-      // correlation_rules above stay real-time on ingest.
+      // NOTE: single_event community-catalog (Sigma) rules are NOT evaluated with
+      // per-rule SQL here — that pegged the CPU at ~3.6k queries/flush. They now run
+      // through the in-memory compiled matcher below (Phase D), real-time on this
+      // batch, O(events) not O(rules). Stateful catalog rules (threshold) still run
+      // on the scheduled catalogCron.
     });
+
+    // Community-catalog single_event rules via the compiled matcher (Phase D).
+    // Gated by the master kill-switch; a separate txn so a matcher failure cannot
+    // roll back the correlation_rules alerts already committed above.
+    if (logIds && logIds.length && process.env.CATALOG_DISABLED !== '1') {
+      try {
+        const c = await runCatalogMatcher(userId, logIds, deps);
+        catCreated += c.created;
+        catDeduped += c.deduped;
+      } catch (err) {
+        console.error('[catalogMatcher] run failed:', err.message);
+      }
+    }
   } catch (err) {
     console.error('[correlation] run failed:', err.message);
   }

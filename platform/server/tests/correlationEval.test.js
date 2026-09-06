@@ -208,3 +208,25 @@ describe('matchesWhere vs Postgres (SQL parity spot-check)', () => {
     }
   });
 });
+
+// D4 — regex safety. A `re` leaf must not hang the event loop on a catastrophic-
+// backtracking pattern. With re2 (linear time) this returns effectively instantly;
+// a raw JS RegExp on this input would run for many seconds. Budget generously to
+// stay non-flaky while still catching a true hang (JS RegExp would blow past it).
+describe('evalRule — regex safety (re2)', () => {
+  it('a ReDoS pattern completes within a small time budget', () => {
+    const leaf = { field: 'process_name', op: 're', value: '(a+)+$' };
+    const evt = { process_name: 'a'.repeat(40) + '!' }; // classic backtracking bait
+    const started = Date.now();
+    const matched = matchesWhere({ all: [leaf] }, evt);
+    const ms = Date.now() - started;
+    expect(matched).toBe(false); // trailing '!' means no match
+    expect(ms).toBeLessThan(1000);
+  });
+
+  it('re2 still matches a normal pattern correctly', () => {
+    const leaf = { field: 'process_name', op: 're', value: 'cmd\.exe$' };
+    expect(matchesWhere({ all: [leaf] }, { process_name: 'C:\Windows\cmd.exe' })).toBe(true);
+    expect(matchesWhere({ all: [leaf] }, { process_name: 'C:\Windows\notepad.exe' })).toBe(false);
+  });
+});

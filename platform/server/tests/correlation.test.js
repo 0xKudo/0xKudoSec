@@ -193,30 +193,148 @@ detection:
   });
 });
 
-// ── Phase C: scheduled window-pass field prefilter for catalog (Sigma) rules ────
+// ── Phase D: real-time community-catalog detection via the in-memory matcher ────
+// single_event catalog rules now fire on the ingest batch through runCatalogMatcher
+// (not the scheduled SQL cron). The Phase C window prefilter is unit-tested in
+// sigmaCron.test.js; here we prove the end-to-end matcher path.
 
-describe('evaluateCatalog — window-mode field prefilter', () => {
-  const IDS = ['aaaa1111-0000-0000-0000-000000000001', 'aaaa1111-0000-0000-0000-000000000002', 'aaaa1111-0000-0000-0000-000000000003'];
+describe('runCorrelation — catalog matcher (Phase D)', () => {
+  const IDS = ['bbbb2222-0000-0000-0000-000000000001', 'bbbb2222-0000-0000-0000-000000000002',
+    'bbbb2222-0000-0000-0000-000000000003', 'bbbb2222-0000-0000-0000-000000000004',
+    'bbbb2222-0000-0000-0000-000000000005'];
+  let _resetMatcherCache;
 
-  async function makeCatalogRule(identity, doc, sig = {}) {
+  async function makeCatalogRule(identity, doc, category = 'generic') {
     await superPool.query(
       `INSERT INTO sigma_rules
-         (identity, title, category, path, rule, severity, convert_status, retired,
-          sig_event_ids, sig_categories, sig_sources, sig_terms, has_regex)
-       VALUES ($1,$2,'generic',$3,$4::jsonb,'high','converted',false,
-               $5::integer[],$6::text[],$7::text[],$8::jsonb,$9)
-       ON CONFLICT (identity) DO UPDATE SET rule = EXCLUDED.rule, sig_terms = EXCLUDED.sig_terms,
-         has_regex = EXCLUDED.has_regex, retired = false, convert_status = 'converted'`,
-      [identity, 'cat ' + identity.slice(0, 8), 'rules/' + identity + '.yml', JSON.stringify(doc),
-       sig.sig_event_ids || [], sig.sig_categories || [], sig.sig_sources || [],
-       JSON.stringify(sig.sig_terms || {}), sig.has_regex === true],
+         (identity, title, category, path, rule, severity, convert_status, retired)
+       VALUES ($1,$2,$3,$4,$5::jsonb,'high','converted',false)
+       ON CONFLICT (identity) DO UPDATE SET rule = EXCLUDED.rule, category = EXCLUDED.category,
+         retired = false, convert_status = 'converted', updated_at = NOW()`,
+      [identity, 'cat ' + identity.slice(0, 8), category, 'rules/' + identity + '.yml', JSON.stringify(doc)],
     );
   }
   async function insertProcLog(process_name, message = '') {
-    await superPool.query(
+    const { rows } = await superPool.query(
       `INSERT INTO logs (user_id, source, host, event_id, severity, process_name, message, timestamp)
-       VALUES ($1,'fluent-bit','h',1,'info',$2,$3,NOW())`,
+       VALUES ($1,'fluent-bit','h',1,'info',$2,$3,NOW()) RETURNING id`,
       [USER, process_name, message],
+    );
+    return rows[0].id;
+  }
+  async function sigmaAlertCount(identity) {
+    const { rows } = await superPool.query(
+      'SELECT count(*)::int AS n FROM alerts WHERE user_id = $1 AND sigma_identity = $2', [USER, identity]);
+    return rows[0].n;
+  }
+
+  beforeAll(async () => {
+    if (!reachable) return;
+    ({ _resetMatcherCache } = await vi.importActual('../services/correlation/catalogMatcher.js'));
+  });
+
+  beforeEach(async () => {
+    if (!reachable) return;
+    delete process.env.CATALOG_DISABLED;
+    delete process.env.CATALOG_MATCHER_SHADOW;
+    await superPool.query('DELETE FROM sigma_rules WHERE identity = ANY($1)', [IDS]);
+    await superPool.query('DELETE FROM sigma_rule_overrides WHERE user_id = $1', [USER]);
+    await superPool.query('DELETE FROM alerts WHERE user_id = $1', [USER]);
+    await superPool.query('DELETE FROM logs WHERE user_id = $1', [USER]);
+    await superPool.query(
+      `INSERT INTO user_settings (user_id, sigma_enabled_categories) VALUES ($1,'{generic}')
+       ON CONFLICT (user_id) DO UPDATE SET sigma_enabled_categories = '{generic}'`, [USER]);
+    _resetMatcherCache();
+  });
+
+  afterAll(async () => {
+    if (superPool) {
+      await superPool.query('DELETE FROM sigma_rules WHERE identity = ANY($1)', [IDS]);
+      await superPool.query('DELETE FROM sigma_rule_overrides WHERE user_id = $1', [USER]);
+      await superPool.query("UPDATE user_settings SET sigma_enabled_categories='{}' WHERE user_id=$1", [USER]);
+    }
+  });
+
+  it.runIf(() => reachable)('an enabled single_event catalog rule fires in real time on the ingest batch', async () => {
+    await makeCatalogRule(IDS[0],
+      { type: 'single_event', where: { all: [{ field: 'process_name', op: 'endswith', value: '\\evilwin.exe' }] } });
+    _resetMatcherCache();
+    const id = await insertProcLog('C:\\Windows\\Temp\\evilwin.exe');
+    const r = await runCorrelation(USER, [id], db);
+    expect(r.catalog.created).toBe(1);
+    expect(await sigmaAlertCount(IDS[0])).toBe(1);
+  });
+
+  it.runIf(() => reachable)('a non-matching batch fires nothing', async () => {
+    await makeCatalogRule(IDS[1],
+      { type: 'single_event', where: { all: [{ field: 'process_name', op: 'endswith', value: '\\mimikatz.exe' }] } });
+    _resetMatcherCache();
+    const id = await insertProcLog('C:\\Windows\\explorer.exe');
+    const r = await runCorrelation(USER, [id], db);
+    expect(r.catalog.created).toBe(0);
+    expect(await sigmaAlertCount(IDS[1])).toBe(0);
+  });
+
+  it.runIf(() => reachable)('a regex rule now fires via the matcher (was deferred in Phase C)', async () => {
+    await makeCatalogRule(IDS[2],
+      { type: 'single_event', where: { all: [{ field: 'message', op: 're', value: 'evil.*payload' }] } });
+    _resetMatcherCache();
+    const id = await insertProcLog('C:\\Windows\\explorer.exe', 'evil then payload');
+    const r = await runCorrelation(USER, [id], db);
+    expect(r.catalog.created).toBe(1);
+    expect(await sigmaAlertCount(IDS[2])).toBe(1);
+  });
+
+  it.runIf(() => reachable)('a rule in a disabled category fires nothing', async () => {
+    await makeCatalogRule(IDS[3],
+      { type: 'single_event', where: { all: [{ field: 'process_name', op: 'endswith', value: '\\evilwin.exe' }] } },
+      'threat_hunting'); // category NOT in the user's enabled set
+    _resetMatcherCache();
+    const id = await insertProcLog('C:\\Windows\\Temp\\evilwin.exe');
+    const r = await runCorrelation(USER, [id], db);
+    expect(r.catalog.created).toBe(0);
+    expect(await sigmaAlertCount(IDS[3])).toBe(0);
+  });
+
+  it.runIf(() => reachable)('shadow mode computes hits but inserts no alerts', async () => {
+    await makeCatalogRule(IDS[4],
+      { type: 'single_event', where: { all: [{ field: 'process_name', op: 'endswith', value: '\\evilwin.exe' }] } });
+    _resetMatcherCache();
+    process.env.CATALOG_MATCHER_SHADOW = '1';
+    const id = await insertProcLog('C:\\Windows\\Temp\\evilwin.exe');
+    const r = await runCorrelation(USER, [id], db);
+    expect(r.catalog.created).toBe(0); // shadow: no insert
+    expect(await sigmaAlertCount(IDS[4])).toBe(0);
+    delete process.env.CATALOG_MATCHER_SHADOW;
+  });
+
+  it.runIf(() => reachable)('the master kill-switch disables the matcher', async () => {
+    await makeCatalogRule(IDS[0],
+      { type: 'single_event', where: { all: [{ field: 'process_name', op: 'endswith', value: '\\evilwin.exe' }] } });
+    _resetMatcherCache();
+    process.env.CATALOG_DISABLED = '1';
+    const id = await insertProcLog('C:\\Windows\\Temp\\evilwin.exe');
+    const r = await runCorrelation(USER, [id], db);
+    expect(r.catalog.created).toBe(0);
+    expect(await sigmaAlertCount(IDS[0])).toBe(0);
+    delete process.env.CATALOG_DISABLED;
+  });
+});
+
+// ── Phase D: the scheduled cron now evaluates ONLY stateful (threshold) catalog
+// rules; single_event is off this path entirely. ─────────────────────────────────
+
+describe('evaluateCatalog — cron keeps stateful (threshold) rules only', () => {
+  const TID = 'cccc3333-0000-0000-0000-000000000001';
+  const SID = 'cccc3333-0000-0000-0000-000000000002';
+
+  async function makeCatalogRule(identity, doc) {
+    await superPool.query(
+      `INSERT INTO sigma_rules (identity, title, category, path, rule, severity, convert_status, retired)
+       VALUES ($1,$2,'generic',$3,$4::jsonb,'high','converted',false)
+       ON CONFLICT (identity) DO UPDATE SET rule = EXCLUDED.rule, retired = false,
+         convert_status = 'converted', updated_at = NOW()`,
+      [identity, 'cat ' + identity.slice(0, 8), 'rules/' + identity + '.yml', JSON.stringify(doc)],
     );
   }
   async function sigmaAlertCount(identity) {
@@ -227,7 +345,7 @@ describe('evaluateCatalog — window-mode field prefilter', () => {
 
   beforeEach(async () => {
     if (!reachable) return;
-    await superPool.query('DELETE FROM sigma_rules WHERE identity = ANY($1)', [IDS]);
+    await superPool.query('DELETE FROM sigma_rules WHERE identity = ANY($1)', [[TID, SID]]);
     await superPool.query('DELETE FROM alerts WHERE user_id = $1', [USER]);
     await superPool.query('DELETE FROM logs WHERE user_id = $1', [USER]);
     await superPool.query(
@@ -237,38 +355,33 @@ describe('evaluateCatalog — window-mode field prefilter', () => {
 
   afterAll(async () => {
     if (superPool) {
-      await superPool.query('DELETE FROM sigma_rules WHERE identity = ANY($1)', [IDS]);
+      await superPool.query('DELETE FROM sigma_rules WHERE identity = ANY($1)', [[TID, SID]]);
       await superPool.query("UPDATE user_settings SET sigma_enabled_categories='{}' WHERE user_id=$1", [USER]);
     }
   });
 
-  it.runIf(() => reachable)('runs a rule whose pinned process_name appears in the window, and fires', async () => {
-    await makeCatalogRule(IDS[0],
-      { type: 'single_event', where: { all: [{ field: 'process_name', op: 'endswith', value: '\\evilwin.exe' }] } },
-      { sig_terms: { process_name: [{ op: 'endswith', v: '\\evilwin.exe' }] } });
-    await insertProcLog('C:\\Windows\\Temp\\evilwin.exe');
+  it.runIf(() => reachable)('a threshold catalog rule still fires on the scheduled pass', async () => {
+    await makeCatalogRule(TID, { type: 'threshold', selection: [{ field: 'event_id', op: 'eq', value: 4625 }],
+      group_by: 'source_ip', window: '1h', count: 2 });
+    const base = Date.now();
+    await superPool.query(
+      `INSERT INTO logs (user_id, source, host, source_ip, event_id, severity, timestamp)
+       VALUES ($1,'fluent-bit','h','7.7.7.7',4625,'info',$2),
+              ($1,'fluent-bit','h','7.7.7.7',4625,'info',$3)`,
+      [USER, new Date(base), new Date(base + 1000)]);
     const r = await evaluateCatalog(USER, { lookbackSeconds: 1200 }, db);
     expect(r.created).toBe(1);
-    expect(await sigmaAlertCount(IDS[0])).toBe(1);
+    expect(await sigmaAlertCount(TID)).toBe(1);
   });
 
-  it.runIf(() => reachable)('skips a rule whose pinned process_name is absent from the window (no alert, no error)', async () => {
-    await makeCatalogRule(IDS[1],
-      { type: 'single_event', where: { all: [{ field: 'process_name', op: 'endswith', value: '\\mimikatz.exe' }] } },
-      { sig_terms: { process_name: [{ op: 'endswith', v: '\\mimikatz.exe' }] } });
-    await insertProcLog('C:\\Windows\\explorer.exe'); // present, but not the pinned value
+  it.runIf(() => reachable)('a single_event catalog rule does NOT fire on the scheduled pass (moved to the matcher)', async () => {
+    await makeCatalogRule(SID,
+      { type: 'single_event', where: { all: [{ field: 'process_name', op: 'endswith', value: '\\evilwin.exe' }] } });
+    await superPool.query(
+      `INSERT INTO logs (user_id, source, host, event_id, severity, process_name, timestamp)
+       VALUES ($1,'fluent-bit','h',1,'info','C:\\Windows\\Temp\\evilwin.exe',NOW())`, [USER]);
     const r = await evaluateCatalog(USER, { lookbackSeconds: 1200 }, db);
     expect(r.created).toBe(0);
-    expect(await sigmaAlertCount(IDS[1])).toBe(0);
-  });
-
-  it.runIf(() => reachable)('defers a pure-regex unprefilterable rule (has_regex, no signature)', async () => {
-    await makeCatalogRule(IDS[2],
-      { type: 'single_event', where: { all: [{ field: 'message', op: 're', value: 'evil.*payload' }] } },
-      { has_regex: true }); // no sig_terms, no coarse dims → unprefilterable
-    await insertProcLog('C:\\Windows\\explorer.exe', 'evil then payload'); // would match the regex
-    const r = await evaluateCatalog(USER, { lookbackSeconds: 1200 }, db);
-    expect(r.created).toBe(0); // skipped until Phase D
-    expect(await sigmaAlertCount(IDS[2])).toBe(0);
+    expect(await sigmaAlertCount(SID)).toBe(0);
   });
 });
