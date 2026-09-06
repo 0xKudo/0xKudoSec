@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { ProcessTreePanel, ContextMenu } from './ProcessTreePanel.jsx';
 import { TimeFieldValue, badgeStyle } from './ui/index.js';
-import { AttackCoverageTile } from './AttackCoverage.jsx';
 
 const SEV_COLOR = {
   critical: 'var(--severity-critical)',
@@ -889,14 +888,6 @@ export function SiemDashboard({ onNavigate }) {
           <div style={s.kpiValue()}>{fmt(stats?.total)}</div>
           <div style={s.kpiSub}>last {hours < 24 ? `${hours}h` : hours === 24 ? '24h' : hours === 48 ? '48h' : '7d'}</div>
         </div>
-      </div>
-
-      {/* ATT&CK coverage tile — links into the Rule Library coverage matrix */}
-      <div style={{ borderBottom: '1px solid var(--border)' }}>
-        <AttackCoverageTile onOpen={() => {
-          try { sessionStorage.setItem('siem_open_rule_library', '1'); } catch { /* ignore */ }
-          onNavigate('rules');
-        }} />
       </div>
 
       {/* Main Charts + Alerts Row */}

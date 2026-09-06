@@ -143,48 +143,6 @@ export function AttackCoverage({ onSelectTechnique }) {
   );
 }
 
-// ── Compact dashboard tile ─────────────────────────────────────────────────────
-export function AttackCoverageTile({ onOpen }) {
-  const { getAccessTokenSilently } = useAuth0();
-  const [data, setData] = useState(null);
-  useEffect(() => {
-    let alive = true;
-    fetchCoverage(getAccessTokenSilently, 30).then(d => { if (alive) setData(d); }).catch(() => {});
-    return () => { alive = false; };
-  }, [getAccessTokenSilently]);
-
-  const covered = data ? Object.keys(data.rules).length : 0;
-  const perTactic = useMemo(() => {
-    if (!data) return [];
-    const byId = new Map(ATTACK_TECHNIQUES.map(t => [t.id, t]));
-    const counts = ATTACK_TACTICS.map(() => 0);
-    const idx = Object.fromEntries(ATTACK_TACTICS.map((t, i) => [t.id, i]));
-    for (const id of Object.keys(data.rules)) {
-      const tac = byId.get(id)?.tactics || [];
-      for (const ta of tac) if (idx[ta] != null) counts[idx[ta]] += 1;
-    }
-    return counts;
-  }, [data]);
-  const maxBar = Math.max(1, ...perTactic);
-  const tacticsCovered = perTactic.filter(n => n > 0).length;
-
-  return (
-    <div style={s.tile} onClick={onOpen} role="button" title="Open the ATT&CK coverage matrix">
-      <div style={s.tileLabel}>ATT&amp;CK Coverage</div>
-      <div style={s.tileValue}>{covered} <span style={s.tileValueSub}>techniques</span></div>
-      <div style={s.tileSub}>{tacticsCovered} of {ATTACK_TACTICS.length} tactics covered</div>
-      <div style={s.tileBars}>
-        {perTactic.map((n, i) => (
-          <div key={i} title={`${ATTACK_TACTICS[i].name}: ${n}`}
-               style={{ ...s.tileBar, height: `${Math.max(2, Math.round((n / maxBar) * 22))}px`,
-                        background: n ? 'var(--accent-amber)' : 'var(--border)' }} />
-        ))}
-      </div>
-      <div style={s.tileLink}>View matrix →</div>
-    </div>
-  );
-}
-
 const s = {
   wrap: { padding: '4px 0' },
   toolbar: { display: 'flex', flexWrap: 'wrap', gap: '10px 16px', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' },
@@ -213,13 +171,4 @@ const s = {
   cellName: { fontSize: '9px', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
   cellCount: { position: 'absolute', top: '3px', right: '5px', fontSize: '10px', color: 'var(--text-primary)' },
   muted: { fontSize: '11px', color: 'var(--text-muted)', padding: '8px 0' },
-  // dashboard tile
-  tile: { background: 'var(--bg-surface)', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '4px', cursor: 'pointer' },
-  tileLabel: { fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' },
-  tileValue: { fontSize: '28px', color: 'var(--text-primary)', lineHeight: 1 },
-  tileValueSub: { fontSize: '12px', color: 'var(--text-muted)' },
-  tileSub: { fontSize: '11px', color: 'var(--text-muted)' },
-  tileBars: { display: 'flex', gap: '2px', alignItems: 'flex-end', height: '24px', marginTop: '6px' },
-  tileBar: { flex: 1, minWidth: '3px', borderRadius: '1px' },
-  tileLink: { fontSize: '10px', color: 'var(--accent-amber)', marginTop: '4px', letterSpacing: '0.04em' },
 };

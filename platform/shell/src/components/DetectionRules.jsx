@@ -113,18 +113,7 @@ export function DetectionRules({ onNavigate }) {
   const { getAccessTokenSilently } = useAuth0();
   const [rules, setRules] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState(() => {
-    // The dashboard ATT&CK coverage tile deep-links here by setting a session hint.
-    try { if (sessionStorage.getItem('siem_open_rule_library') === '1') return 'library'; } catch { /* ignore */ }
-    return 'alert';
-  }); // 'alert' | 'suppress' | 'library'
-  useEffect(() => {
-    let hinted = false;
-    try { hinted = sessionStorage.getItem('siem_open_rule_library') === '1'; sessionStorage.removeItem('siem_open_rule_library'); } catch { /* ignore */ }
-    if (!hinted) return undefined;
-    const t = setTimeout(() => document.getElementById('attack-coverage')?.scrollIntoView({ behavior: 'smooth' }), 400);
-    return () => clearTimeout(t);
-  }, []);
+  const [tab, setTab] = useState('alert'); // 'alert' | 'suppress' | 'library'
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null);
