@@ -88,6 +88,29 @@ describe('compileNode — boolean where-trees', () => {
     expect(p.params).toEqual(['ScriptBlockText', '%x%']);
   });
 
+  it('raw-field contains adds a trigram search_text prefilter for >=3-char literals', () => {
+    const p = P();
+    const sql = compileNode({ raw: 'ScriptBlockText', op: 'contains', value: 'mimikatz' }, p);
+    expect(sql).toMatch(/l\.search_text ILIKE \$\d+\) AND \(l\.raw_json ->> \$\d+\) ILIKE \$\d+/);
+    expect(p.params).toContain('%mimikatz%');
+    expect(p.params).toContain('ScriptBlockText');
+  });
+
+  it('raw-field eq adds a trigram prefilter and keeps the exact ->> equality', () => {
+    const p = P();
+    const sql = compileNode({ raw: 'host.scan.vuln', op: 'eq', value: '13532' }, p);
+    expect(sql).toMatch(/l\.search_text ILIKE \$\d+\) AND \(l\.raw_json ->> \$\d+\) = \$\d+/);
+    expect(p.params).toContain('%13532%');
+    expect(p.params).toContain('13532');
+    expect(p.params).toContain('host.scan.vuln');
+  });
+
+  it('raw-field short literal (<3 chars) skips the trigram prefilter', () => {
+    const p = P();
+    expect(compileNode({ raw: 'Foo', op: 'contains', value: 'ab' }, p))
+      .toBe('(l.raw_json ->> $1) ILIKE $2');
+  });
+
   it('compiles a raw-field exists to a jsonb key test', () => {
     const p = P();
     expect(compileNode({ raw: 'Hashes', op: 'exists', value: true }, p))

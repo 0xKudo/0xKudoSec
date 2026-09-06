@@ -756,6 +756,15 @@ CREATE EXTENSION IF NOT EXISTS pg_trgm;
 CREATE INDEX idx_logs_raw_json ON public.logs USING gin (raw_json);
 CREATE INDEX idx_logs_search_text_trgm ON public.logs USING gin (search_text gin_trgm_ops);
 
+-- Sigma catalog performance Phase B (2026-09-06): trigram GIN on the hot
+-- first-class text columns so ILIKE (contains/startswith/endswith) rules
+-- index-scan instead of per-partition seq scanning.
+CREATE INDEX idx_logs_process_name_trgm ON public.logs USING gin (process_name gin_trgm_ops);
+CREATE INDEX idx_logs_parent_process_name_trgm ON public.logs USING gin (parent_process_name gin_trgm_ops);
+CREATE INDEX idx_logs_file_path_trgm ON public.logs USING gin (file_path gin_trgm_ops);
+CREATE INDEX idx_logs_registry_key_trgm ON public.logs USING gin (registry_key gin_trgm_ops);
+CREATE INDEX idx_logs_message_trgm ON public.logs USING gin (message gin_trgm_ops);
+
 
 --
 -- Name: logs_ts_brin; Type: INDEX; Schema: public; Owner: -

@@ -57,15 +57,33 @@ const KEYWORD_COL = 'search_text';
 function compileRawLeaf(cond, p, alias = 'l') {
   const nameParam = p.add(cond.raw);
   const acc = `(${alias}.raw_json ->> ${nameParam})`;
+
+  // A `raw_json ->> $field` predicate cannot use any index (the GIN jsonb index
+  // serves @>/?, not ->> text ops). But whenever the match requires the literal
+  // `value` to appear in the field, that literal must also appear in search_text
+  // (message || raw), which HAS a pg_trgm GIN index (idx_logs_search_text_trgm).
+  // So we AND-prefix `search_text ILIKE '%value%'` as an index-usable, necessary
+  // pre-condition: the planner narrows rows via the trigram index, then the exact
+  // `->>` predicate confirms the value is in that specific field. Correctness is
+  // unchanged (the exact predicate still runs; the prefilter is a superset — it
+  // is case-insensitive even for `_cs`, which only admits extra rows the exact
+  // predicate rejects). Trigram indexes need 3-grams, so only apply when the
+  // literal is >= 3 chars; shorter literals fall back to today's seq scan (rare).
+  const trigram = (value) => {
+    const s = String(value);
+    if (s.length < 3) return '';
+    return `(${alias}.search_text ILIKE ${p.add(`%${s}%`)}) AND `;
+  };
+
   switch (cond.op) {
-    case 'eq':      return `${acc} = ${p.add(String(cond.value))}`;
+    case 'eq':      return `${trigram(cond.value)}${acc} = ${p.add(String(cond.value))}`;
     case 'ne':      return `${acc} <> ${p.add(String(cond.value))}`;
-    case 'contains':   return `${acc} ILIKE ${p.add(`%${cond.value}%`)}`;
-    case 'startswith': return `${acc} ILIKE ${p.add(`${cond.value}%`)}`;
-    case 'endswith':   return `${acc} ILIKE ${p.add(`%${cond.value}`)}`;
-    case 'contains_cs':   return `${acc} LIKE ${p.add(`%${cond.value}%`)}`;
-    case 'startswith_cs': return `${acc} LIKE ${p.add(`${cond.value}%`)}`;
-    case 'endswith_cs':   return `${acc} LIKE ${p.add(`%${cond.value}`)}`;
+    case 'contains':   return `${trigram(cond.value)}${acc} ILIKE ${p.add(`%${cond.value}%`)}`;
+    case 'startswith': return `${trigram(cond.value)}${acc} ILIKE ${p.add(`${cond.value}%`)}`;
+    case 'endswith':   return `${trigram(cond.value)}${acc} ILIKE ${p.add(`%${cond.value}`)}`;
+    case 'contains_cs':   return `${trigram(cond.value)}${acc} LIKE ${p.add(`%${cond.value}%`)}`;
+    case 'startswith_cs': return `${trigram(cond.value)}${acc} LIKE ${p.add(`${cond.value}%`)}`;
+    case 'endswith_cs':   return `${trigram(cond.value)}${acc} LIKE ${p.add(`%${cond.value}`)}`;
     case 're':      return `${acc} ~* ${p.add(cond.value)}`;
     case 'gt':      return `${acc}::numeric > ${p.add(Number(cond.value))}`;
     case 'gte':     return `${acc}::numeric >= ${p.add(Number(cond.value))}`;
