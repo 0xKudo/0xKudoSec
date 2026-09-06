@@ -152,9 +152,10 @@ export function SecurityPage() {
 
         <h2 style={s.h2}>Detection Content and Open Source</h2>
         <p style={s.p}>
-          The platform's Rule Library includes community detection rules from the{' '}
+          The platform's Rule Library includes thousands of community detection rules from the{' '}
           <a href="https://github.com/SigmaHQ/sigma" target="_blank" rel="noreferrer" style={s.link}>SigmaHQ</a>{' '}
-          project, an open, vendor-neutral catalog of detection rules maintained by the security community.
+          project, an open, vendor-neutral catalog of detection rules maintained by the security community. Enabled
+          rules run in real time against your telemetry, are mapped to MITRE ATT&amp;CK, and are tunable per environment.
         </p>
         <ul style={s.ul}>
           <li style={s.li}>SigmaHQ rules are licensed under the Detection Rule License 1.1 (DRL 1.1), which permits use, modification, and redistribution, including in commercial products, provided attribution and license notices are retained.</li>

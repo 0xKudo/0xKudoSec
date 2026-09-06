@@ -43,7 +43,8 @@ function DonutChart({ size = 80 }) {
 const SIEM_CAPABILITIES = [
   { name: 'Log Ingestion',      desc: 'Fluent Bit pipeline, per-user API keys, Windows Event Log and Sysmon. Source cards show status, events per hour, and uptime.' },
   { name: 'Detection Rules',    desc: 'Pattern-based rules with severity tiers. Alerts auto-deduplicate and aggregate. No alert storms. Critical, high, medium, low, and info levels.' },
-  { name: 'Alert Queue',        desc: 'Filterable queue with severity badges, status pills, and case linking. Triage from a single view.' },
+  { name: 'Sigma Rule Library', desc: 'Thousands of community detection rules from the open SigmaHQ project, synced automatically and toggleable by category. Fire in real time, mapped to MITRE ATT&CK, and tunable per environment.' },
+  { name: 'Alert Queue',        desc: 'Filterable queue with severity badges, status pills, Sigma source badges, and case linking. Triage from a single view.' },
   { name: 'Case Management',    desc: 'Link alerts to cases. Timeline builder, evidence attachment, and status tracking.' },
   { name: 'Live Dashboard',     desc: 'KPI cards, event volume chart, severity donut, top sources. WebSocket live updates with 30-second polling fallback.' },
   { name: 'Log Search',         desc: 'Search across all ingested events. Filter by time range, source, severity, and category. Full field extraction on any event.' },
@@ -62,6 +63,11 @@ const SIEM_DEEP = [
   },
   {
     num: '3',
+    title: 'Community detection at scale with the Sigma Rule Library',
+    body: 'The full SigmaHQ community catalog, thousands of open detection rules, is synced on a schedule and converted into the platform’s own engine. Enable rule sets by category, see the exact release and commit in use, and get real-time detection mapped to MITRE ATT&CK. Noisy rules are tuned down per environment from the Rule Library and Tuning Center, so a large generic library becomes usable in your specific network.',
+  },
+  {
+    num: '4',
     title: 'Case management from alert to resolution',
     body: 'Alerts link directly to cases. Each case has a timeline of linked alerts, an evidence panel for attaching artifacts, response steps to track, and a status that moves from open to resolved.',
   },

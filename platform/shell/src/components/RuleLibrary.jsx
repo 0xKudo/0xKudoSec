@@ -22,6 +22,16 @@ const SEV_COLOR = {
   critical: 'var(--severity-critical)', high: 'var(--severity-high)', medium: 'var(--severity-medium)',
   low: 'var(--severity-low)', info: 'var(--severity-info)',
 };
+
+// Canonical severity filter pill — matches the SIEM dashboard FilterPanel:
+// colored border always, filled with the color when active.
+const sevPillStyle = (color, active) => ({
+  background: active ? color : 'none',
+  border: `1px solid ${color}`,
+  color: active ? 'var(--bg-primary)' : color,
+  fontFamily: 'var(--font)', fontSize: '11px', padding: '4px 12px',
+  cursor: 'pointer', letterSpacing: '0.04em', textTransform: 'uppercase',
+});
 const sevColor = (s0) => SEV_COLOR[s0] || 'var(--text-muted)';
 
 // SigmaHQ titles/descriptions occasionally carry em/en dashes; strip them from
@@ -415,21 +425,16 @@ export function RuleLibrary({ embedded = false }) {
             onChange={e => setFilters(f => ({ ...f, technique: e.target.value }))}
             onKeyDown={e => { if (e.key === 'Enter') loadCatalog(1); }} />
           <span style={{ width: '1px', alignSelf: 'stretch', background: 'var(--border)', margin: '0 2px' }} />
-          {Object.keys(SEV_COLOR).map(sev => {
-            const active = filters.severity.includes(sev);
-            return (
-              <button
-                key={sev}
-                style={active
-                  ? { ...s.btn, borderColor: SEV_COLOR[sev], color: SEV_COLOR[sev] }
-                  : s.btn}
-                onClick={() => setFilters(f => ({
-                  ...f,
-                  severity: f.severity.includes(sev) ? f.severity.filter(x => x !== sev) : [...f.severity, sev],
-                }))}
-              >{sev}</button>
-            );
-          })}
+          {Object.keys(SEV_COLOR).map(sev => (
+            <button
+              key={sev}
+              style={sevPillStyle(SEV_COLOR[sev], filters.severity.includes(sev))}
+              onClick={() => setFilters(f => ({
+                ...f,
+                severity: f.severity.includes(sev) ? f.severity.filter(x => x !== sev) : [...f.severity, sev],
+              }))}
+            >{sev}</button>
+          ))}
           <button style={s.btn} onClick={() => loadCatalog(1)}>Apply</button>
         </div>
 

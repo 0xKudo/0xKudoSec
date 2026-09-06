@@ -14,6 +14,16 @@ const SEV_COLOR = {
 
 const STATUS_OPTIONS = ['new', 'acknowledged', 'resolved'];
 
+// Canonical severity/Sigma filter pill — matches the SIEM dashboard FilterPanel:
+// colored border always, filled with the color when active.
+const sevPillStyle = (color, active) => ({
+  background: active ? color : 'none',
+  border: `1px solid ${color}`,
+  color: active ? 'var(--bg-primary)' : color,
+  fontFamily: 'var(--font)', fontSize: '11px', padding: '4px 12px',
+  cursor: 'pointer', letterSpacing: '0.04em', textTransform: 'uppercase',
+});
+
 // Distinct border/text color per alert status (parallels severity badge coloring).
 const STATUS_COLOR = {
   new: 'var(--severity-info)',
@@ -381,24 +391,19 @@ export function AlertQueue({ onNavigate }) {
           </button>
         ))}
         <span style={{ width: '1px', alignSelf: 'stretch', background: 'var(--border)', margin: '0 4px' }} />
-        {Object.keys(SEV_COLOR).map(sev => {
-          const active = sevFilters.has(sev);
-          return (
-            <button
-              key={sev}
-              style={active
-                ? { ...s.btnActive, borderColor: SEV_COLOR[sev], color: SEV_COLOR[sev], background: 'none' }
-                : s.btn}
-              onClick={() => setSevFilters(prev => {
-                const next = new Set(prev);
-                next.has(sev) ? next.delete(sev) : next.add(sev);
-                return next;
-              })}
-            >{sev}</button>
-          );
-        })}
+        {Object.keys(SEV_COLOR).map(sev => (
+          <button
+            key={sev}
+            style={sevPillStyle(SEV_COLOR[sev], sevFilters.has(sev))}
+            onClick={() => setSevFilters(prev => {
+              const next = new Set(prev);
+              next.has(sev) ? next.delete(sev) : next.add(sev);
+              return next;
+            })}
+          >{sev}</button>
+        ))}
         <button
-          style={sigmaOnly ? { ...s.btnActive, borderColor: 'var(--text-muted)' } : s.btn}
+          style={sevPillStyle('var(--text-muted)', sigmaOnly)}
           onClick={() => setSigmaOnly(v => !v)}
         >Sigma</button>
         {(sevFilters.size > 0 || sigmaOnly) && (

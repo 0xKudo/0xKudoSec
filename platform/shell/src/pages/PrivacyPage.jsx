@@ -140,6 +140,7 @@ export function PrivacyPage() {
           <li style={s.li}><strong>Auth0:</strong> handles authentication and identity. Your login credentials and identity are governed by Auth0's privacy policy.</li>
           <li style={s.li}><strong>Anthropic (Claude API):</strong> certain analysis tools (Alert Triage, Incident Report, Phishing Analyzer, Log Anomaly Analyzer) send security event data to the Anthropic API to generate analysis. Data sent is limited to the specific event you submit and is not stored persistently by the platform after the response is returned. Anthropic's data handling is governed by their API terms.</li>
           <li style={s.li}><strong>Threat intelligence providers:</strong> tools such as Threat Intelligence Aggregator, OSINT Recon, and CVE Exploit Mapper send IP addresses, domain names, or file hashes to third-party APIs (VirusTotal, Shodan, AbuseIPDB, IPInfo, Hunter.io) when you actively use those tools. Only data you explicitly submit is sent.</li>
+          <li style={s.li}><strong>SigmaHQ detection content (GitHub):</strong> the Rule Library periodically downloads the public, open-source SigmaHQ detection rule catalog from GitHub to keep detections current. This is a one-way download of public rules only. No user data, telemetry, or account information is sent to GitHub or SigmaHQ, and rule matching runs entirely on the platform's own servers.</li>
         </ul>
         <p style={s.p}>No data is shared with any third party outside of these service integrations.</p>
 
