@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useIsMobile } from '../hooks/useIsMobile.js';
 import { badgeStyle } from './ui/index.js';
+import { AttackCoverage } from './AttackCoverage.jsx';
 
 // Sigma Rule Library (Phase 5). Enable SigmaHQ community categories, browse the
 // converted catalog, and tune individual rules, all against the global catalog
@@ -401,7 +402,7 @@ export function RuleLibrary({ embedded = false }) {
       </div>
 
       {/* 2. Catalog browser */}
-      <div style={s.section}>
+      <div style={s.section} id="rule-catalog">
         <div style={s.sectionTitle}>Catalog</div>
         <div style={s.filterBar}>
           <input style={s.input} placeholder="Search title…" value={filters.q}
@@ -535,6 +536,14 @@ export function RuleLibrary({ embedded = false }) {
             <span style={{ ...s.sub, marginLeft: '8px' }}>{total} rules</span>
           </div>
         )}
+      </div>
+
+      <div style={s.section} id="attack-coverage">
+        <div style={s.sectionTitle}>ATT&amp;CK Coverage</div>
+        <AttackCoverage onSelectTechnique={(id) => {
+          setFilters(f => ({ ...f, technique: id }));
+          document.getElementById('rule-catalog')?.scrollIntoView({ behavior: 'smooth' });
+        }} />
       </div>
 
       {detail && (

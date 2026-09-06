@@ -1285,6 +1285,54 @@ router.get('/alerts/counts', wrap(async (req, res) => {
   res.json(rows);
 }));
 
+// ── ATT&CK COVERAGE ────────────────────────────────────────────────────────────
+// Read-only. Two technique->count maps: `rules` = distinct enabled rules covering
+// each technique (detection + correlation + enabled Sigma catalog), `alerts` =
+// fired alerts referencing each technique in the last window_days. Data feeds the
+// coverage heat map (Rule Library) + the dashboard tile.
+router.get('/attack/coverage', wrap(async (req, res) => {
+  const windowDays = Math.min(365, Math.max(1, parseInt(req.query.window_days, 10) || 30));
+  const u = uid(req);
+
+  const { rows: ruleRows } = await req.db.query(
+    `WITH tech AS (
+       SELECT unnest(attack_techniques) AS t
+         FROM detection_rules WHERE user_id = $1 AND enabled = true AND action <> 'suppress'
+       UNION ALL
+       SELECT unnest(attack_techniques) AS t
+         FROM correlation_rules WHERE user_id = $1 AND enabled = true
+       UNION ALL
+       SELECT unnest(s.attack_techniques) AS t
+         FROM sigma_rules s
+         LEFT JOIN sigma_rule_overrides o ON o.user_id = $1 AND o.sigma_identity = s.identity
+         LEFT JOIN user_settings us ON us.user_id = $1
+        WHERE s.convert_status = 'converted' AND s.retired = false
+          AND ( (s.category = ANY(COALESCE(us.sigma_enabled_categories, '{}')) AND COALESCE(o.enabled, true) = true)
+                OR o.enabled = true )
+     )
+     SELECT t, COUNT(*)::int AS n FROM tech WHERE t <> '' GROUP BY t`,
+    [u],
+  );
+
+  const { rows: alertRows } = await req.db.query(
+    `SELECT t, COUNT(*)::int AS n FROM (
+       SELECT unnest(COALESCE(r.attack_techniques, cr.attack_techniques, sr.attack_techniques, '{}'::text[])) AS t
+         FROM alerts a
+         LEFT JOIN detection_rules r ON r.id = a.rule_id
+         LEFT JOIN correlation_rules cr ON cr.id = a.correlation_rule_id
+         LEFT JOIN sigma_rules sr ON sr.identity = a.sigma_identity
+        WHERE a.user_id = $1 AND a.created_at > now() - ($2 || ' days')::interval
+     ) x WHERE t <> '' GROUP BY t`,
+    [u, String(windowDays)],
+  );
+
+  const rules = {};
+  for (const row of ruleRows) rules[row.t] = row.n;
+  const alerts = {};
+  for (const row of alertRows) alerts[row.t] = row.n;
+  res.json({ rules, alerts, window_days: windowDays });
+}));
+
 router.patch('/alerts/:id', wrap(async (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (isNaN(id)) return res.status(400).json({ error: 'invalid id' });
