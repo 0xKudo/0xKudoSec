@@ -86,6 +86,20 @@ export async function runCatalogEvaluation(deps = db, opts = {}) {
 }
 
 export function scheduleCatalogCron() {
+  // SAFETY KILL-SWITCH. Set CATALOG_DISABLED=1 to stop scheduling catalog passes.
+  // The full-catalog window pass is expensive on a small (2-core) VPS: a pass is
+  // dominated by ~200 `re` (regex) rules that no index can serve and that seq-scan
+  // the look-back window until the per-rule timeout, pegging Postgres (load ~7,
+  // 0% idle) even though the Node process stays light. On a throttling host this
+  // risks a multi-day rate-limit. Catalog eval MUST stay disabled until Phase C
+  // (window-mode prefilter) or Phase D (in-memory compiled matcher) lands — see
+  // docs/plans/2026-09-06-sigma-catalog-performance.md. Disabling only turns off
+  // the community catalog; the user's own detection_rules + correlation_rules keep
+  // running real-time on ingest.
+  if (process.env.CATALOG_DISABLED === '1') {
+    console.log('[catalogCron] DISABLED via CATALOG_DISABLED env — catalog not scheduled');
+    return;
+  }
   const expr = `*/${INTERVAL_MIN} * * * *`;
   nodeCron.schedule(expr, () => {
     runCatalogEvaluation().catch(e => console.error('[catalogCron]', e.message));
