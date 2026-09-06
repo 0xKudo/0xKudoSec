@@ -223,6 +223,13 @@ async function runCatalogRules(client, userId, logIds, opts = {}) {
   if (!rules.length) return { created, deduped };
 
   for (const r of rules) {
+    // SAVEPOINT-isolate every rule. A rule whose SQL raises a real Postgres error
+    // (a bad `re` regex, a numeric/text mismatch, a statement timeout) aborts the
+    // surrounding transaction; without a savepoint, EVERY rule evaluated after it
+    // fails with "current transaction is aborted" and is silently skipped. Rolling
+    // back to the savepoint recovers the transaction so the remaining rules run.
+    // This is what makes good the promise "one bad catalog rule must not sink the batch."
+    await client.query('SAVEPOINT cat_rule');
     try {
       const doc = r.rule; // jsonb correlation rule document
       const sev = r.o_severity || r.severity || doc.severity || 'medium';
@@ -242,8 +249,10 @@ async function runCatalogRules(client, userId, logIds, opts = {}) {
         }
       }
       // sigmaToRule emits only single_event/threshold; any other type is skipped.
+      await client.query('RELEASE SAVEPOINT cat_rule');
     } catch (err) {
-      // One bad catalog rule must not sink the batch.
+      // Recover the aborted transaction so subsequent rules still evaluate.
+      await client.query('ROLLBACK TO SAVEPOINT cat_rule');
       console.error(`[correlation] catalog rule ${r.identity} failed:`, err.message);
     }
   }
