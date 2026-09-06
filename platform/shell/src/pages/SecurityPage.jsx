@@ -118,6 +118,14 @@ export function SecurityPage() {
           <li style={s.li}>Audit log rows include tamper-detection hashes that are verified nightly. Any modification to an audit record is detectable.</li>
         </ul>
 
+        <h2 style={s.h2}>Log Collection and Ingestion</h2>
+        <ul style={s.ul}>
+          <li style={s.li}>Security telemetry (Windows Event Logs and Sysmon) is collected by <a href="https://fluentbit.io" target="_blank" rel="noreferrer" style={s.link}>Fluent Bit</a>, an open-source, CNCF-graduated log processor that runs on your own machine. You control what it ships and can stop it at any time.</li>
+          <li style={s.li}>Fluent Bit forwards events over HTTPS to a per-user ingest endpoint authenticated with your own ingest key. Keys are hashed (SHA-256) at rest and can be rotated or revoked from the platform.</li>
+          <li style={s.li}>Ingested events are tagged to your account and isolated by row-level security, so your telemetry is never visible to other users.</li>
+          <li style={s.li}>Client-side filtering lets noisy or sensitive event types be dropped before they ever leave your machine. In the desktop app, ingestion can run entirely against a local database with no data sent to the server.</li>
+        </ul>
+
         <h2 style={s.h2}>Network Security</h2>
         <ul style={s.ul}>
           <li style={s.li}>All traffic is served over HTTPS. HTTP is not accepted.</li>
