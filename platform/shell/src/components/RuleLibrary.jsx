@@ -204,7 +204,7 @@ export function RuleLibrary({ embedded = false }) {
   const [hasMore, setHasMore] = useState(false);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
-  const [filters, setFilters] = useState({ category: '', status: '', fidelity: '', technique: '', q: '' });
+  const [filters, setFilters] = useState({ category: '', status: '', fidelity: '', technique: '', q: '', severity: [] });
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState(null);
   const [detail, setDetail] = useState(null);       // full rule doc for the modal
@@ -235,6 +235,7 @@ export function RuleLibrary({ embedded = false }) {
       if (filters.status) p.set('status', filters.status);
       if (filters.fidelity) p.set('fidelity', filters.fidelity);
       if (filters.technique) p.set('technique', filters.technique);
+      if (filters.severity?.length) p.set('severity', filters.severity.join(','));
       if (filters.q) p.set('q', filters.q);
       const res = await fetch(`/api/siem/rules/sigma/catalog?${p}`, { headers: h });
       const data = await res.json();
@@ -413,6 +414,22 @@ export function RuleLibrary({ embedded = false }) {
           <input style={{ ...s.input, minWidth: '90px' }} placeholder="Txxxx" value={filters.technique}
             onChange={e => setFilters(f => ({ ...f, technique: e.target.value }))}
             onKeyDown={e => { if (e.key === 'Enter') loadCatalog(1); }} />
+          <span style={{ width: '1px', alignSelf: 'stretch', background: 'var(--border)', margin: '0 2px' }} />
+          {Object.keys(SEV_COLOR).map(sev => {
+            const active = filters.severity.includes(sev);
+            return (
+              <button
+                key={sev}
+                style={active
+                  ? { ...s.btn, borderColor: SEV_COLOR[sev], color: SEV_COLOR[sev] }
+                  : s.btn}
+                onClick={() => setFilters(f => ({
+                  ...f,
+                  severity: f.severity.includes(sev) ? f.severity.filter(x => x !== sev) : [...f.severity, sev],
+                }))}
+              >{sev}</button>
+            );
+          })}
           <button style={s.btn} onClick={() => loadCatalog(1)}>Apply</button>
         </div>
 

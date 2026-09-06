@@ -1129,6 +1129,11 @@ router.get('/rules/sigma/catalog', wrap(async (req, res) => {
     if (SIGMA_CATEGORIES.includes(req.query.category)) conds.push(`s.category = ${add(req.query.category)}`);
     if (['converted', 'rejected'].includes(req.query.status)) conds.push(`s.convert_status = ${add(req.query.status)}`);
     if (['exact', 'approximate'].includes(req.query.fidelity)) conds.push(`s.fidelity = ${add(req.query.fidelity)}`);
+    {
+      const validSev = ['critical', 'high', 'medium', 'low', 'info'];
+      const sevs = String(req.query.severity || '').split(',').map(v => v.trim()).filter(v => validSev.includes(v));
+      if (sevs.length) conds.push(`s.severity = ANY(${add(sevs)})`);
+    }
     if (req.query.technique) conds.push(`${add(String(req.query.technique).toUpperCase())} = ANY(s.attack_techniques)`);
     if (req.query.q) conds.push(`s.title ILIKE ${add(`%${String(req.query.q).slice(0, 100)}%`)}`);
     return { conds, params };
@@ -1247,10 +1252,17 @@ router.post('/rules/run', wrap(async (req, res) => {
 
 router.get('/alerts', wrap(async (req, res) => {
   const validStatuses = ['new', 'acknowledged', 'resolved'];
+  const validSeverities = ['critical', 'high', 'medium', 'low', 'info'];
   const status = validStatuses.includes(req.query.status) ? req.query.status : null;
+  // Accept one or more severities: ?severity=high or ?severity=high,medium
+  const severities = String(req.query.severity || '')
+    .split(',').map(s => s.trim()).filter(s => validSeverities.includes(s));
+  const sourceSigma = req.query.source === 'sigma';
   const params = [uid(req)];
   const conds = ['a.user_id = $1'];
   if (status) { params.push(status); conds.push(`a.status = $${params.length}`); }
+  if (severities.length) { params.push(severities); conds.push(`a.severity = ANY($${params.length})`); }
+  if (sourceSigma) { conds.push('a.sigma_identity IS NOT NULL'); }
   const { rows } = await req.db.query(
     `SELECT a.*,
             COALESCE(r.name, sr.title) AS rule_name,
@@ -1294,12 +1306,14 @@ router.post('/alerts/bulk', wrap(async (req, res) => {
   if (!Array.isArray(ids) || ids.length === 0) return res.status(400).json({ error: 'ids required' });
   const safeIds = ids.map(Number).filter(n => !isNaN(n) && n > 0);
   if (!safeIds.length) return res.status(400).json({ error: 'no valid ids' });
-  const placeholders = safeIds.map((_, i) => `$${i + 2}`).join(', ');
+  // Build the id placeholders relative to how many params precede the id list:
+  // delete = [uid, ...ids] (ids start at $2); status = [uid, status, ...ids] (ids start at $3).
+  const idPlaceholders = (start) => safeIds.map((_, i) => `$${i + start}`).join(', ');
   if (action === 'delete') {
-    await req.db.query(`DELETE FROM alerts WHERE user_id = $1 AND id IN (${placeholders})`, [uid(req), ...safeIds]);
+    await req.db.query(`DELETE FROM alerts WHERE user_id = $1 AND id IN (${idPlaceholders(2)})`, [uid(req), ...safeIds]);
     audit(uid(req), 'alerts.bulk_delete', { count: safeIds.length }, req.ip);
   } else if (action === 'status' && STATUS_VALUES.includes(status)) {
-    await req.db.query(`UPDATE alerts SET status = $2 WHERE user_id = $1 AND id IN (${placeholders})`, [uid(req), status, ...safeIds]);
+    await req.db.query(`UPDATE alerts SET status = $2, updated_at = NOW() WHERE user_id = $1 AND id IN (${idPlaceholders(3)})`, [uid(req), status, ...safeIds]);
     audit(uid(req), 'alerts.bulk_status', { count: safeIds.length, status }, req.ip);
   } else {
     return res.status(400).json({ error: 'invalid action' });

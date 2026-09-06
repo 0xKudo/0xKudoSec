@@ -116,7 +116,11 @@ button {
 
 #root {
   height: 100%;
-  zoom: 1.15;
+  /* Was 1.15, which inflated the whole app ~15% and forced content to overflow
+     (and clip, since html/body are overflow:hidden) on non-maximized Electron
+     windows. 1.0 lets layouts fit; horizontal-scroll fallbacks below catch
+     anything still wider than the window. Dial up slightly if you want it bigger. */
+  zoom: 1;
 }
 
 /* --- Redesign Phase A: global interaction polish --- */

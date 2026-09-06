@@ -121,6 +121,8 @@ export function AlertQueue({ onNavigate }) {
   const [alerts, setAlerts] = useState([]);
   const [counts, setCounts] = useState({});
   const [statusFilter, setStatusFilter] = useState(null);
+  const [sevFilters, setSevFilters] = useState(new Set()); // multi-select severity, like the SIEM dashboard
+  const [sigmaOnly, setSigmaOnly] = useState(false); // filter to Sigma-sourced alerts via the badge
   const [loading, setLoading] = useState(true);
   const [running, setRunning] = useState(false);
   const [selected, setSelected] = useState(null);
@@ -147,7 +149,11 @@ export function AlertQueue({ onNavigate }) {
     try {
       const token = await getAccessTokenSilently();
       const headers = { Authorization: `Bearer ${token}` };
-      const params = statusFilter ? `?status=${statusFilter}` : '';
+      const qs = new URLSearchParams();
+      if (statusFilter) qs.set('status', statusFilter);
+      if (sevFilters.size) qs.set('severity', [...sevFilters].join(','));
+      if (sigmaOnly) qs.set('source', 'sigma');
+      const params = qs.toString() ? `?${qs.toString()}` : '';
       const [alertsRes, countsRes] = await Promise.all([
         fetch(`/api/siem/alerts${params}`, { headers }),
         fetch('/api/siem/alerts/counts', { headers }),
@@ -163,7 +169,7 @@ export function AlertQueue({ onNavigate }) {
     } finally {
       setLoading(false);
     }
-  }, [statusFilter, getAccessTokenSilently]);
+  }, [statusFilter, sevFilters, sigmaOnly, getAccessTokenSilently]);
 
   useEffect(() => { load(); }, [load]);
   useEffect(() => { if (selected) loadCases(); }, [selected?.id]);
@@ -374,6 +380,30 @@ export function AlertQueue({ onNavigate }) {
             {st ?? 'All'}{st && counts[st] ? ` (${counts[st]})` : ''}
           </button>
         ))}
+        <span style={{ width: '1px', alignSelf: 'stretch', background: 'var(--border)', margin: '0 4px' }} />
+        {Object.keys(SEV_COLOR).map(sev => {
+          const active = sevFilters.has(sev);
+          return (
+            <button
+              key={sev}
+              style={active
+                ? { ...s.btnActive, borderColor: SEV_COLOR[sev], color: SEV_COLOR[sev], background: 'none' }
+                : s.btn}
+              onClick={() => setSevFilters(prev => {
+                const next = new Set(prev);
+                next.has(sev) ? next.delete(sev) : next.add(sev);
+                return next;
+              })}
+            >{sev}</button>
+          );
+        })}
+        <button
+          style={sigmaOnly ? { ...s.btnActive, borderColor: 'var(--text-muted)' } : s.btn}
+          onClick={() => setSigmaOnly(v => !v)}
+        >Sigma</button>
+        {(sevFilters.size > 0 || sigmaOnly) && (
+          <button style={s.btn} onClick={() => { setSevFilters(new Set()); setSigmaOnly(false); }}>Clear filters</button>
+        )}
       </div>
 
       {selectedIds.size > 0 && (
@@ -435,8 +465,8 @@ export function AlertQueue({ onNavigate }) {
           })}
         </div>
       ) : (
-        <div style={{ maxWidth: '100%', overflowX: 'hidden' }}>
-          <table style={{ ...s.table, tableLayout: 'fixed', width: '100%', maxWidth: '100%' }}>
+        <div className="kudo-scroll" style={{ maxWidth: '100%', overflowX: 'auto' }}>
+          <table style={{ ...s.table, tableLayout: 'fixed', width: 'auto', minWidth: '100%' }}>
             <colgroup>
               <col style={{ width: '40px' }} />
               {COL_KEYS.map(k => <col key={k} style={{ width: `${colWidths[k]}px` }} />)}
