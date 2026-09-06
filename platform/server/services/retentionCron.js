@@ -5,10 +5,10 @@
 // Audit log retention is per-user configurable. Default 365 days per PCI DSS 10.7.
 // If audit_log_retention_enabled = false for a user, their audit entries are never auto-purged.
 
-import { createHash } from 'crypto';
 import cron from 'node-cron';
 import db from './db.js';
 import { pruneCorrelationState } from './correlation/state.js';
+import { auditRowHash } from './audit.js';
 
 let _opsPool;
 function getOpsPool() {
@@ -201,8 +201,12 @@ async function runIntegrityCheck() {
 
     let mismatches = 0;
     for (const row of rows) {
-      const hashInput = `${row.user_id}|${row.action}|${JSON.stringify(row.meta)}|${row.ip}|${new Date(row.created_at).toISOString()}`;
-      const expected = createHash('sha256').update(hashInput).digest('hex');
+      // row.meta is the stored JSON string verbatim (a `text` column). Hash it as-is
+      // via the shared helper — do NOT JSON.stringify it again (that double-encodes
+      // it and fails every row; see auditRowHash for the history).
+      const expected = auditRowHash(
+        row.user_id, row.action, row.meta, row.ip, new Date(row.created_at).toISOString(),
+      );
       if (expected !== row.row_hash) {
         mismatches++;
         console.error(`[integrity] MISMATCH audit_log id=${row.id} action=${row.action} user=${row.user_id}`);
