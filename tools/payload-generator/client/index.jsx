@@ -375,7 +375,7 @@ function MsfTab() {
           </div>
 
           {error && <div style={s.error}>{error}</div>}
-          <Button onClick={generate} disabled={!authorized}>Generate</Button>
+          <Button style={{ alignSelf: 'flex-start' }} onClick={generate} disabled={!authorized}>Generate</Button>
         </div>
       </div>
 

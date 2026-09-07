@@ -46,7 +46,7 @@ const styles = {
     borderBottom: active ? '2px solid var(--accent-amber)' : '2px solid transparent',
     background: active ? 'var(--bg-primary)' : 'transparent',
     userSelect: 'none',
-    transition: 'color 0.1s',
+    transition: 'color 0.15s var(--ease-out), border-color 0.15s var(--ease-out)',
   }),
   right: {
     marginLeft: 'auto',
@@ -322,8 +322,8 @@ export function TopNav({ activeApp, onSwitchApp, onMenuToggle, menuOpen, theme, 
                 key={app}
                 style={styles.appTab(activeApp === app)}
                 onClick={() => onSwitchApp(app)}
-                onMouseEnter={e => { if (activeApp !== app) e.currentTarget.style.color = 'var(--text-primary)'; }}
-                onMouseLeave={e => { if (activeApp !== app) e.currentTarget.style.color = 'var(--text-muted)'; }}
+                onMouseEnter={e => { if (activeApp !== app) { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.borderBottomColor = 'var(--text-subtle)'; } }}
+                onMouseLeave={e => { if (activeApp !== app) { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.borderBottomColor = 'transparent'; } }}
               >
                 {app === 'siem' ? 'SIEM' : 'Tools'}
               </div>
@@ -410,7 +410,7 @@ const rowStyles = {
     whiteSpace: 'nowrap',
     userSelect: 'none',
     flexShrink: 0,
-    transition: 'color 0.1s',
+    transition: 'color 0.15s var(--ease-out), border-color 0.15s var(--ease-out)',
   }),
 };
 
@@ -460,8 +460,8 @@ export function CategoryBar({ activeApp, activeCategory, siemView, onSelectCateg
                 onSelectCategory(tab.id);
               }
             }}
-            onMouseEnter={e => { if (!active) e.currentTarget.style.color = 'var(--text-primary)'; }}
-            onMouseLeave={e => { if (!active) e.currentTarget.style.color = 'var(--text-muted)'; }}
+            onMouseEnter={e => { if (!active) { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.borderBottomColor = 'var(--text-subtle)'; } }}
+            onMouseLeave={e => { if (!active) { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.borderBottomColor = 'transparent'; } }}
           >
             {tab.label}
           </div>
@@ -509,8 +509,8 @@ export function ToolBar({ activeCategory, tools, onNavigate }) {
               cursor: tab.route ? 'pointer' : 'default',
             }}
             onClick={() => tab.route && onNavigate(tab.route)}
-            onMouseEnter={e => { if (tab.route && !active) e.currentTarget.style.color = 'var(--text-primary)'; }}
-            onMouseLeave={e => { if (tab.route && !active) e.currentTarget.style.color = 'var(--text-muted)'; }}
+            onMouseEnter={e => { if (tab.route && !active) { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.borderBottomColor = 'var(--text-subtle)'; } }}
+            onMouseLeave={e => { if (tab.route && !active) { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.borderBottomColor = 'transparent'; } }}
           >
             {tab.name}{!tab.route ? ' (soon)' : ''}
           </div>

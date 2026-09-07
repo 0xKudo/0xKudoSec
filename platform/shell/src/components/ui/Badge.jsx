@@ -4,24 +4,29 @@
  * One design rule, everywhere (severity, status, verdict, risk, signal, count).
  * Do not hand-roll badge styles in components; import `badgeStyle` or <Badge>.
  *
- * Why these specific properties:
- *   - inline-flex + align/justify center : optically centers uppercase text.
- *     `line-height: 1` does NOT center caps (it crops the line box and the text
- *     rides high) -- lineHeight 'normal' plus flex centering is what works.
- *   - justifySelf/alignSelf 'start'/'center' : badges are often placed in CSS
- *     grid rows (e.g. the dashboard alert rows use a fixed first column). Grid
- *     items stretch to fill their track by default, which made badges render
+ * Vertical centering of uppercase text (Field root-cause fix, 2026-09-08):
+ *   - Root cause: with a normal line box, uppercase caps sit high (no descenders
+ *     fill the space below), so the ink rides above the optical centre.
+ *   - Real fix: `text-box-trim: trim-both; text-box-edge: cap alphabetic;` on an
+ *     INLINE-BLOCK element trims the box to the cap band so symmetric padding
+ *     centres perfectly. Flex defeats the trim (its anonymous text box no-ops it),
+ *     so this element must be inline-block, not inline-flex. That rule + an
+ *     @supports guard + the symmetric-padding override live on `.kudo-badge` in
+ *     theme.css (inline styles cannot express @supports).
+ *   - Fallback (engines without text-box-trim): biased padding here -- a little
+ *     more top than bottom -- nudges the caps down to the optical centre.
+ *   - justifySelf/alignSelf 'start'/'center' : badges often sit in CSS grid rows;
+ *     grid items stretch to fill their track by default, which made badges render
  *     full-width. These keep the badge sized to its content in ANY container.
  *   - flexShrink 0 : never squash inside flex rows.
  */
 
 const BASE = {
-  display: 'inline-flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  lineHeight: 'normal',
+  display: 'inline-block',
+  textAlign: 'center',
+  lineHeight: 1,
   fontSize: '10px',
-  padding: '1px 7px',
+  padding: '3px 7px 2px',
   letterSpacing: '0.06em',
   textTransform: 'uppercase',
   whiteSpace: 'nowrap',
@@ -50,9 +55,13 @@ export function badgeStyle(color = 'var(--border)', overrides = {}) {
   };
 }
 
-export function Badge({ color, filled, style, children, ...rest }) {
+export function Badge({ color, filled, style, className = '', children, ...rest }) {
   return (
-    <span style={{ ...badgeStyle(color, { filled, ...(style || {}) }) }} {...rest}>
+    <span
+      className={`kudo-badge ${className}`.trim()}
+      style={{ ...badgeStyle(color, { filled, ...(style || {}) }) }}
+      {...rest}
+    >
       {children}
     </span>
   );
