@@ -71,7 +71,7 @@ const s = {
     fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em',
     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
   },
-  table: { width: '100%', borderCollapse: 'collapse' },
+  table: { width: '100%', borderCollapse: 'collapse', fontFamily: 'var(--font-mono)' },
   th: {
     textAlign: 'left', padding: '8px 18px 8px 14px', fontSize: '10px',
     letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-muted)',
@@ -114,7 +114,7 @@ const s = {
   modalBody: { padding: '16px', overflow: 'auto', flex: 1 },
   fieldRow: { display: 'grid', gridTemplateColumns: '140px 1fr', borderBottom: '1px solid var(--border-subtle)', padding: '6px 0', gap: '12px' },
   fieldLabel: { fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', paddingTop: '2px' },
-  fieldValue: { fontSize: '12px', color: 'var(--text-primary)', wordBreak: 'break-word', whiteSpace: 'pre-wrap' },
+  fieldValue: { fontSize: '12px', color: 'var(--text-primary)', wordBreak: 'break-word', whiteSpace: 'pre-wrap', fontFamily: 'var(--font-mono)' },
   modalActions: { padding: '12px 16px', borderTop: '1px solid var(--border)', display: 'flex', gap: '8px', background: 'var(--bg-surface)' },
   input: {
     background: 'var(--bg-primary)', border: '1px solid var(--border)', color: 'var(--text-primary)',

@@ -77,7 +77,7 @@ const s = {
     gap: '14px',
   },
   metricIcon: { color: 'var(--text-subtle)', flexShrink: 0, display: 'flex' },
-  metricValue: (color) => ({ fontSize: '24px', lineHeight: 1, color: color || 'var(--text-primary)' }),
+  metricValue: (color) => ({ fontSize: '24px', lineHeight: 1, color: color || 'var(--text-primary)', fontFamily: 'var(--font-mono)' }),
   metricLabel: { fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: '5px' },
 
   row: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)' },

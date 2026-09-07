@@ -1,24 +1,33 @@
 @import url('https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Archivo+Expanded:wght@600;700;800&family=Fira+Code:wght@400;500&display=swap');
 
 :root {
-  --bg-primary: #111110;
-  --bg-surface: #1a1917;
-  --bg-sidebar: #0e0d0c;
-  --border: #1f1e1c;
-  --border-subtle: #181715;
-  --bg-panel: #161514;
-  --text-primary: #e8e6e3;
-  --text-muted: #6e6b68;
-  --text-subtle: #4a4845;
+  /* Field identity (dark = warm ink-night). Base is dark-first; [data-theme="light"]
+     overrides below. Swapped from the original warm-dark/amber theme 2026-09-08. */
+  --bg-primary: #14120e;
+  --bg-surface: #1c1a15;
+  --bg-sidebar: #100e0a;
+  --border: #2a2620;
+  --border-subtle: #211e18;
+  --bg-panel: #1f1c16;
+  --text-primary: #ece7dd;
+  --text-muted: #9a9285;
+  --text-subtle: #615b50;
   --severity-critical: #ef4444;
   --severity-high: #d97706;
   --severity-medium: #ca8a04;
   --severity-low: #16a34a;
   --severity-info: #60a5fa;
-  --btn-primary-bg: #e8e6e3;
-  --btn-primary-text: #111110;
-  --accent-amber: #d97706;
-  --font: 'Fira Code', 'Consolas', 'Monaco', monospace;
+  --btn-primary-bg: #ece7dd;
+  --btn-primary-text: #14120e;
+  /* Brand accent kept under the name --accent-amber (74 call sites) but revalued to
+     petrol. Reserved for links / active nav / focus / selected states, never a primary
+     button fill (primary stays neutral ink/paper). */
+  --accent-amber: #6fa8c9;
+  /* Type split: Archivo for UI/body, Archivo Expanded for display headlines,
+     Fira Code for machine data only (logs, event tables, IDs, timestamps, code). */
+  --font: 'Archivo', system-ui, sans-serif;
+  --font-display: 'Archivo Expanded', 'Archivo', system-ui, sans-serif;
+  --font-mono: 'Fira Code', 'Consolas', 'Monaco', monospace;
 
   /* --- Redesign Phase A: additive tokens (no existing token changed) --- */
 
@@ -50,9 +59,9 @@
   --dur-slow: 320ms;
 
   /* Interactive-state tokens (dark) */
-  --hover-bg: rgba(232, 230, 227, 0.06);
-  --active-bg: rgba(232, 230, 227, 0.10);
-  --focus-ring: #60a5fa;
+  --hover-bg: rgba(236, 231, 221, 0.06);
+  --active-bg: rgba(236, 231, 221, 0.10);
+  --focus-ring: #6fa8c9;
 
   /* Elevation (subtle, warm-tinted) */
   --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.35);
@@ -65,22 +74,31 @@
 }
 
 [data-theme="light"] {
-  --bg-primary: #faf8f5;
-  --bg-surface: #ffffff;
-  --bg-sidebar: #f0ece6;
-  --border: #e0d8cc;
-  --border-subtle: #ece4d8;
-  --bg-panel: #f5f2ee;
-  --text-primary: #1a1714;
-  --text-muted: #8a8078;
-  --text-subtle: #c0b8b0;
-  --btn-primary-bg: #1a1714;
-  --btn-primary-text: #faf8f5;
+  /* Field identity (light = warm paper). */
+  --bg-primary: #f5f2ea;
+  --bg-surface: #fffdf7;
+  --bg-sidebar: #efe9dc;
+  --border: #e3ddce;
+  --border-subtle: #ece5d6;
+  --bg-panel: #faf6ee;
+  --text-primary: #1b1a17;
+  --text-muted: #6f685b;
+  --text-subtle: #a99f8f;
+  --btn-primary-bg: #1b1a17;
+  --btn-primary-text: #f8f6f0;
+  /* Petrol accent revalued for the paper ground (keeps AA contrast). */
+  --accent-amber: #2b4a63;
+  /* Severity retuned deeper for the light ground (previously inherited the dark brights). */
+  --severity-critical: #b91c1c;
+  --severity-high: #a15c07;
+  --severity-medium: #8a6d0a;
+  --severity-low: #2f7a34;
+  --severity-info: #2563a8;
 
   /* Interactive-state tokens (light) */
-  --hover-bg: rgba(26, 23, 20, 0.05);
-  --active-bg: rgba(26, 23, 20, 0.09);
-  --focus-ring: #2563eb;
+  --hover-bg: rgba(27, 26, 23, 0.05);
+  --active-bg: rgba(27, 26, 23, 0.09);
+  --focus-ring: #2b4a63;
 
   /* Elevation (light) */
   --shadow-1: 0 1px 2px rgba(80, 60, 40, 0.10);
@@ -376,7 +394,8 @@ textarea.kudo-field__control { min-height: 140px; resize: vertical; }
 .kudo-table {
   width: 100%;
   border-collapse: collapse;
-  font-family: var(--font);
+  /* Data tables render machine data: keep mono. */
+  font-family: var(--font-mono);
   font-size: 12px;
 }
 .kudo-table th {

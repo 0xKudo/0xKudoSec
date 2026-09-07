@@ -73,7 +73,7 @@ const s = {
   },
   kpiCard: { background: 'var(--bg-surface)', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '4px' },
   kpiLabel: { fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' },
-  kpiValue: (color) => ({ fontSize: '28px', color: color || 'var(--text-primary)', lineHeight: 1 }),
+  kpiValue: (color) => ({ fontSize: '28px', color: color || 'var(--text-primary)', lineHeight: 1, fontFamily: 'var(--font-mono)' }),
   kpiSub: { fontSize: '10px', color: 'var(--text-muted)' },
   chartsRow: {
     display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)',
@@ -90,13 +90,13 @@ const s = {
     fontWeight: active ? 'bold' : 'normal',
   }),
   legendDot: (color) => ({ width: '7px', height: '7px', borderRadius: '50%', background: color, flexShrink: 0 }),
-  sourceTable: { width: '100%', fontSize: '11px', borderCollapse: 'collapse' },
+  sourceTable: { width: '100%', fontSize: '11px', borderCollapse: 'collapse', fontFamily: 'var(--font-mono)' },
   sectionBar: {
     padding: '8px 20px', background: 'var(--bg-surface)', borderBottom: '1px solid var(--border)',
     fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em',
     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
   },
-  table: { borderCollapse: 'collapse', tableLayout: 'fixed' },
+  table: { borderCollapse: 'collapse', tableLayout: 'fixed', fontFamily: 'var(--font-mono)' },
   th: {
     textAlign: 'left', padding: '8px 18px 8px 14px', fontSize: '10px',
     letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-muted)',
@@ -123,7 +123,7 @@ const s = {
   modalBody: { padding: '16px', overflow: 'auto', flex: 1 },
   fieldRow: { display: 'grid', gridTemplateColumns: '160px 1fr', borderBottom: '1px solid var(--border-subtle)', padding: '6px 0', gap: '12px' },
   fieldLabel: { fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', paddingTop: '2px' },
-  fieldValue: { fontSize: '12px', color: 'var(--text-primary)', wordBreak: 'break-word', whiteSpace: 'pre-wrap' },
+  fieldValue: { fontSize: '12px', color: 'var(--text-primary)', wordBreak: 'break-word', whiteSpace: 'pre-wrap', fontFamily: 'var(--font-mono)' },
   alertsPanelWrap: {
     background: 'var(--bg-surface)',
     borderBottom: '1px solid var(--border-subtle)',
@@ -1403,7 +1403,7 @@ export function SiemDashboard({ onNavigate }) {
                     <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Create Case from Alert</div>
                     <div style={{ display: 'flex', gap: '8px' }}>
                       <input
-                        style={{ background: 'var(--bg-primary)', border: '1px solid var(--border)', color: 'var(--text-primary)', fontFamily: 'var(--font)', fontSize: '12px', padding: '6px 10px', outline: 'none', flex: 1 }}
+                        style={{ background: 'var(--bg-primary)', border: '1px solid var(--border)', color: 'var(--text-primary)', fontFamily: 'var(--font-mono)', fontSize: '12px', padding: '6px 10px', outline: 'none', flex: 1 }}
                         placeholder="Case title..."
                         value={caseTitle}
                         onChange={e => setCaseTitle(e.target.value)}
@@ -1419,7 +1419,7 @@ export function SiemDashboard({ onNavigate }) {
                       <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Add to Existing Case</div>
                       <div style={{ display: 'flex', gap: '8px' }}>
                         <select
-                          style={{ background: 'var(--bg-primary)', border: '1px solid var(--border)', color: 'var(--text-primary)', fontFamily: 'var(--font)', fontSize: '12px', padding: '6px 10px', outline: 'none', flex: 1 }}
+                          style={{ background: 'var(--bg-primary)', border: '1px solid var(--border)', color: 'var(--text-primary)', fontFamily: 'var(--font-mono)', fontSize: '12px', padding: '6px 10px', outline: 'none', flex: 1 }}
                           value={selectedCaseId}
                           onChange={e => setSelectedCaseId(e.target.value)}
                         >

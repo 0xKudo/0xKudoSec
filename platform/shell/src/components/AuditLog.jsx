@@ -94,7 +94,7 @@ const styles = {
     marginLeft: 'auto',
   },
   tableWrap: { flex: 1, overflow: 'auto' },
-  table: { width: '100%', borderCollapse: 'collapse', fontSize: '11px' },
+  table: { width: '100%', borderCollapse: 'collapse', fontSize: '11px', fontFamily: 'var(--font-mono)' },
   card: {
     borderBottom: '1px solid var(--border-subtle)',
     padding: '10px 16px',

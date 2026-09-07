@@ -36,7 +36,7 @@ const s = {
   metricsRow: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1px', background: 'var(--border-subtle)', border: '1px solid var(--border)' },
   metricTile: { background: 'var(--bg-surface)', padding: '12px 14px', display: 'flex', alignItems: 'center', gap: '10px' },
   metricIcon: { color: 'var(--text-subtle)', flexShrink: 0, display: 'flex' },
-  metricValue: (color) => ({ fontSize: '20px', lineHeight: 1, color: color || 'var(--text-primary)' }),
+  metricValue: (color) => ({ fontSize: '20px', lineHeight: 1, color: color || 'var(--text-primary)', fontFamily: 'var(--font-mono)' }),
   metricLabel: { fontSize: '9px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: '4px' },
 
   toolRow: {

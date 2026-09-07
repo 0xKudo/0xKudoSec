@@ -109,7 +109,7 @@ const s = {
   },
   searchInput: {
     flex: 1, background: 'var(--bg-primary)', border: '1px solid var(--border)',
-    color: 'var(--text-primary)', fontFamily: 'var(--font)', fontSize: '11px',
+    color: 'var(--text-primary)', fontFamily: 'var(--font-mono)', fontSize: '11px',
     padding: '6px 8px', outline: 'none', letterSpacing: '0.02em', minWidth: 0,
   },
   searchClear: {
@@ -141,7 +141,7 @@ const s = {
   modalBody: { padding: '12px 16px', overflowY: 'auto', flex: 1 },
   fieldRow: { display: 'grid', gridTemplateColumns: '120px 1fr', borderBottom: '1px solid var(--border-subtle)', padding: '7px 0', gap: '8px' },
   fieldLabel: { fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', paddingTop: '2px' },
-  fieldValue: { fontSize: '12px', color: 'var(--text-primary)', wordBreak: 'break-word', whiteSpace: 'pre-wrap' },
+  fieldValue: { fontSize: '12px', color: 'var(--text-primary)', wordBreak: 'break-word', whiteSpace: 'pre-wrap', fontFamily: 'var(--font-mono)' },
 };
 
 function Donut({ data, size = 120 }) {

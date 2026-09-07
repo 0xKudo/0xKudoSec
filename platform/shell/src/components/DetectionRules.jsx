@@ -53,7 +53,7 @@ const s = {
     borderBottom: active ? '2px solid var(--accent-amber)' : '2px solid transparent',
     marginBottom: '-1px',
   }),
-  table: { width: '100%', borderCollapse: 'collapse' },
+  table: { width: '100%', borderCollapse: 'collapse', fontFamily: 'var(--font-mono)' },
   th: {
     textAlign: 'left', padding: '8px 14px', fontSize: '10px', letterSpacing: '0.08em',
     textTransform: 'uppercase', color: 'var(--text-muted)', borderBottom: '1px solid var(--border)',

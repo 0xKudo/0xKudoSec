@@ -167,8 +167,8 @@ const s = {
     border: '1px solid var(--border-subtle)', padding: '4px 6px', fontSize: '10px',
     display: 'flex', flexDirection: 'column', gap: '1px', position: 'relative',
   },
-  cellId: { fontSize: '10px', fontWeight: 600, color: 'inherit' },
+  cellId: { fontSize: '10px', fontWeight: 600, color: 'inherit', fontFamily: 'var(--font-mono)' },
   cellName: { fontSize: '9px', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
-  cellCount: { position: 'absolute', top: '3px', right: '5px', fontSize: '10px', color: 'var(--text-primary)' },
+  cellCount: { position: 'absolute', top: '3px', right: '5px', fontSize: '10px', color: 'var(--text-primary)', fontFamily: 'var(--font-mono)' },
   muted: { fontSize: '11px', color: 'var(--text-muted)', padding: '8px 0' },
 };

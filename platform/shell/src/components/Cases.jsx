@@ -37,7 +37,7 @@ const s = {
     padding: '10px 20px', borderBottom: '1px solid var(--border)',
     background: 'var(--bg-surface)', display: 'flex', gap: '8px', alignItems: 'center',
   },
-  table: { width: '100%', borderCollapse: 'collapse' },
+  table: { width: '100%', borderCollapse: 'collapse', fontFamily: 'var(--font-mono)' },
   th: {
     textAlign: 'left', padding: '8px 14px', fontSize: '10px', letterSpacing: '0.08em',
     textTransform: 'uppercase', color: 'var(--text-muted)', borderBottom: '1px solid var(--border)',

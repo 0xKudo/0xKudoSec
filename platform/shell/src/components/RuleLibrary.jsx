@@ -128,7 +128,7 @@ const s = {
     color: active ? 'var(--accent-amber)' : 'var(--text-muted)', background: 'none', minWidth: '30px',
   }),
   tableWrap: { overflowX: 'auto', maxWidth: '100%' },
-  table: { width: '100%', borderCollapse: 'collapse', minWidth: '760px' },
+  table: { width: '100%', borderCollapse: 'collapse', minWidth: '760px', fontFamily: 'var(--font-mono)' },
   th: {
     textAlign: 'left', padding: '8px 14px', fontSize: '10px', letterSpacing: '0.08em',
     textTransform: 'uppercase', color: 'var(--text-muted)', borderBottom: '1px solid var(--border)',
@@ -154,7 +154,7 @@ const s = {
   modalBody: { padding: '16px', overflow: 'auto', flex: 1 },
   fieldRow: { display: 'grid', gridTemplateColumns: '150px 1fr', borderBottom: '1px solid var(--border-subtle)', padding: '6px 0', gap: '12px' },
   fieldLabel: { fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', paddingTop: '2px' },
-  fieldValue: { fontSize: '12px', color: 'var(--text-primary)', wordBreak: 'break-word', whiteSpace: 'pre-wrap' },
+  fieldValue: { fontSize: '12px', color: 'var(--text-primary)', wordBreak: 'break-word', whiteSpace: 'pre-wrap', fontFamily: 'var(--font-mono)' },
   block: { marginTop: '16px', border: '1px solid var(--border)', background: 'var(--bg-primary)' },
   blockHead: { fontSize: '10px', color: 'var(--text-muted)', letterSpacing: '0.06em', textTransform: 'uppercase', padding: '8px 12px', borderBottom: '1px solid var(--border-subtle)', background: 'var(--bg-surface)' },
   blockBody: { padding: '12px' },

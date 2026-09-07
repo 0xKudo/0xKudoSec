@@ -218,7 +218,7 @@ const s = {
     marginBottom: '12px',
     lineHeight: 1.6,
   },
-  table: { width: '100%', borderCollapse: 'collapse' },
+  table: { width: '100%', borderCollapse: 'collapse', fontFamily: 'var(--font-mono)' },
   th: {
     textAlign: 'left', padding: '8px 14px', fontSize: '10px',
     letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-muted)',

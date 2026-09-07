@@ -29,7 +29,7 @@ const s = {
   },
   searchInput: {
     flex: 1, background: 'var(--bg-primary)', border: '1px solid var(--border)',
-    color: 'var(--text-primary)', fontFamily: 'var(--font)', fontSize: '13px',
+    color: 'var(--text-primary)', fontFamily: 'var(--font-mono)', fontSize: '13px',
     padding: '8px 12px', outline: 'none', letterSpacing: '0.02em',
   },
   btn: {
@@ -64,7 +64,7 @@ const s = {
     display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0,
   },
   tableWrap: { flex: 1, overflow: 'auto', width: '100%' },
-  table: { width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' },
+  table: { width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', fontFamily: 'var(--font-mono)' },
   th: {
     textAlign: 'left', padding: '8px 14px', fontSize: '10px', letterSpacing: '0.08em',
     textTransform: 'uppercase', color: 'var(--text-muted)', borderBottom: '1px solid var(--border)',

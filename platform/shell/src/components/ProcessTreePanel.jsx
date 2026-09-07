@@ -11,7 +11,7 @@ const s = {
   muted: { fontSize: '11px', color: 'var(--text-muted)' },
   fallbackNote: { fontSize: '10px', color: 'var(--text-muted)', marginBottom: '6px', fontStyle: 'italic' },
   nodeRow: { display: 'flex', alignItems: 'flex-start', gap: '8px', padding: '5px 0', borderBottom: '1px solid var(--border-subtle)' },
-  nodeMeta: { flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' },
+  nodeMeta: { flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', fontFamily: 'var(--font-mono)' },
   btn: {
     background: 'none', border: '1px solid var(--border)', color: 'var(--text-muted)',
     fontFamily: 'var(--font)', fontSize: '10px', padding: '2px 8px', cursor: 'pointer',
