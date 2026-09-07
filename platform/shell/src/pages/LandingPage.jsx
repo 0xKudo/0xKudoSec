@@ -7,37 +7,8 @@ import { setThemeWithTransition } from '../lib/viewTransition';
 // ── Update this URL with each Electron release ────────────────────────────────
 const DESKTOP_DOWNLOAD_URL = 'https://github.com/0xKudoX/0xKudoSec-releases/releases/download/v1.2.51/0xKudo-Security-Toolkit-Setup-1.2.51.exe';
 
-// Donut chart: same algorithm as SiemDashboard.jsx DonutChart
-function DonutChart({ size = 80 }) {
-  const cx = size / 2, cy = size / 2;
-  const R = size * 0.41;
-  const r = size * 0.25;
-  const data = [
-    { count: 9,  color: '#ef4444' },
-    { count: 18, color: '#d97706' },
-    { count: 22, color: '#ca8a04' },
-    { count: 51, color: '#16a34a' },
-  ];
-  const total = data.reduce((s, d) => s + d.count, 0);
-  let angle = -Math.PI / 2;
-  const paths = data.map(({ color, count }) => {
-    const sweep = (count / total) * 2 * Math.PI;
-    const x1 = cx + R * Math.cos(angle), y1 = cy + R * Math.sin(angle);
-    const x2 = cx + R * Math.cos(angle + sweep), y2 = cy + R * Math.sin(angle + sweep);
-    const ix1 = cx + r * Math.cos(angle), iy1 = cy + r * Math.sin(angle);
-    const ix2 = cx + r * Math.cos(angle + sweep), iy2 = cy + r * Math.sin(angle + sweep);
-    const large = sweep > Math.PI ? 1 : 0;
-    const d = `M ${x1} ${y1} A ${R} ${R} 0 ${large} 1 ${x2} ${y2} L ${ix2} ${iy2} A ${r} ${r} 0 ${large} 0 ${ix1} ${iy1} Z`;
-    angle += sweep;
-    return <path key={color} d={d} fill={color} opacity={0.85} stroke="var(--bg-surface)" strokeWidth="1.5" />;
-  });
-  return (
-    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ flexShrink: 0 }}>
-      {paths}
-      <circle cx={cx} cy={cy} r={r - 1} fill="var(--bg-surface)" />
-    </svg>
-  );
-}
+// Alert-trend mini bars (replaces the retired severity donut)
+const TREND_BARS = [30, 44, 22, 58, 40, 72, 34, 60, 48, 84, 52, 68];
 
 // Shared data
 const SIEM_CAPABILITIES = [
@@ -78,13 +49,11 @@ const PHASES = [
   {
     key: 'detect',
     label: 'Detect',
-    color: 'var(--severity-critical)',
     tools: ['Alert Triage Assistant', 'Threat Intelligence Aggregator', 'Log Anomaly Analyzer', 'Network Threat Analyzer', 'Phishing Email Analyzer'],
   },
   {
     key: 'investigate',
     label: 'Investigate',
-    color: 'var(--severity-high)',
     tools: [
       'OSINT Recon Dashboard', 'CVE Exploit Mapper', 'Payload Obfuscation Analyzer',
       { name: 'Encode / Decode', route: '/decoder' },
@@ -94,19 +63,16 @@ const PHASES = [
   {
     key: 'report',
     label: 'Report',
-    color: 'var(--severity-low)',
     tools: ['Incident Report Generator'],
   },
   {
     key: 'compliance',
     label: 'Compliance',
-    color: 'var(--severity-info)',
     tools: ['Security Policy Translator'],
   },
   {
     key: 'simulate',
     label: 'Simulate / Test',
-    color: '#a855f7',
     tools: [
       { name: 'Reverse Shell Generator', route: '/reverse-shell-generator' },
       'Intruder', 'Vulnerability Scanner',
@@ -124,8 +90,7 @@ const s = {
   // hero
   hero: { textAlign: 'center', padding: '88px 48px 72px', borderBottom: '1px solid var(--border)', position: 'relative', overflow: 'hidden' },
   heroGrid: { position: 'absolute', inset: 0, backgroundImage: 'linear-gradient(var(--border-subtle) 1px, transparent 1px), linear-gradient(90deg, var(--border-subtle) 1px, transparent 1px)', backgroundSize: '48px 48px', opacity: 0.35, pointerEvents: 'none' },
-  heroTag: { display: 'inline-block', fontSize: '10px', lineHeight: 1, letterSpacing: '0.14em', textIndent: '0.14em', textTransform: 'uppercase', color: 'var(--accent-amber)', border: '1px solid var(--accent-amber)', padding: '5px 12px', marginBottom: '28px', position: 'relative' },
-  heroHeadline: { fontSize: '46px', fontWeight: 600, lineHeight: 1.15, color: 'var(--text-primary)', marginBottom: '22px', letterSpacing: '-0.02em', position: 'relative' },
+  heroHeadline: { fontFamily: 'var(--font-display)', fontSize: '46px', fontWeight: 700, lineHeight: 1.08, color: 'var(--text-primary)', marginBottom: '22px', letterSpacing: '-0.02em', position: 'relative' },
   heroHeadlineAccent: { color: 'var(--accent-amber)' },
   heroSub: { fontSize: '14px', color: 'var(--text-muted)', lineHeight: 1.75, maxWidth: '500px', margin: '0 auto 36px', position: 'relative' },
   heroCtas: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '14px', marginBottom: '18px', position: 'relative' },
@@ -133,7 +98,7 @@ const s = {
 
   // hero mobile
   heroMobile: { textAlign: 'center', padding: '48px 24px 40px', borderBottom: '1px solid var(--border)', position: 'relative', overflow: 'hidden' },
-  heroHeadlineMobile: { fontSize: '28px', fontWeight: 600, lineHeight: 1.2, color: 'var(--text-primary)', marginBottom: '16px', letterSpacing: '-0.01em', position: 'relative' },
+  heroHeadlineMobile: { fontFamily: 'var(--font-display)', fontSize: '28px', fontWeight: 700, lineHeight: 1.12, color: 'var(--text-primary)', marginBottom: '16px', letterSpacing: '-0.01em', position: 'relative' },
   heroSubMobile: { fontSize: '13px', color: 'var(--text-muted)', lineHeight: 1.7, marginBottom: '28px', position: 'relative' },
   heroCtasMobile: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px', marginBottom: '16px', position: 'relative' },
 
@@ -178,14 +143,13 @@ const s = {
   // phase list
   phaseEntry: { marginBottom: '28px' },
   phaseHeader: { display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px', paddingBottom: '10px', borderBottom: '1px solid var(--border-subtle)' },
-  phaseDot: (color) => ({ width: '9px', height: '9px', borderRadius: '50%', background: color, flexShrink: 0 }),
   phaseName: { fontSize: '11px', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-primary)' },
   phaseCount: { fontSize: '10px', color: 'var(--text-muted)', marginLeft: 'auto' },
   toolTags: { display: 'flex', flexWrap: 'wrap', gap: '6px' },
   toolTag: { fontSize: '11px', padding: '5px 12px', border: '1px solid var(--border)', color: 'var(--text-muted)', background: 'var(--bg-surface)', letterSpacing: '0.02em' },
 
   // SIEM preview (inside editorial, desktop only: hidden on mobile)
-  previewWrap: { border: '1px solid var(--border)', background: 'var(--bg-sidebar)', marginBottom: '32px', overflow: 'hidden', fontSize: '11px' },
+  previewWrap: { border: '1px solid var(--border)', background: 'var(--bg-sidebar)', marginBottom: '32px', overflow: 'hidden', fontSize: '11px', '--font': 'var(--font-mono)' },
   previewTopbar: { background: 'var(--bg-surface)', borderBottom: '1px solid var(--border)', padding: '8px 14px', display: 'flex', alignItems: 'center', gap: '8px' },
   previewDot: (c) => ({ width: '7px', height: '7px', borderRadius: '50%', background: c, flexShrink: 0 }),
   previewTopbarTitle: { fontSize: '10px', color: 'var(--text-muted)', letterSpacing: '0.06em', textTransform: 'uppercase', flex: 1 },
@@ -208,10 +172,8 @@ const s = {
   sevBadge: (color) => ({ fontSize: '8px', padding: '1px 5px', border: `1px solid ${color}`, color, letterSpacing: '0.04em', fontWeight: 600, whiteSpace: 'nowrap', flexShrink: 0 }),
   rightSplit: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1px', background: 'var(--border-subtle)' },
   rightPanel: { background: 'var(--bg-surface)', padding: '10px 14px', display: 'flex', flexDirection: 'column' },
-  donutWrap: { display: 'flex', alignItems: 'center', gap: '12px', flex: 1, paddingTop: '4px' },
-  donutLegend: { display: 'flex', flexDirection: 'column', gap: '5px' },
-  legendItem: { display: 'flex', alignItems: 'center', gap: '5px', fontSize: '9px', color: 'var(--text-muted)' },
-  legendDot: (c) => ({ width: '6px', height: '6px', borderRadius: '50%', background: c, flexShrink: 0 }),
+  trendWrap: { display: 'flex', alignItems: 'flex-end', gap: '2px', flex: 1, paddingTop: '6px' },
+  trendBar: { flex: 1, minHeight: '2px', background: 'color-mix(in srgb, var(--text-muted) 55%, transparent)' },
   srcTable: { flex: 1, display: 'flex', flexDirection: 'column', gap: '4px', overflow: 'hidden', paddingTop: '2px' },
   srcRow: { display: 'flex', justifyContent: 'space-between', fontSize: '9px', color: 'var(--text-muted)', alignItems: 'center' },
   srcHead: { display: 'flex', justifyContent: 'space-between', fontSize: '8px', color: 'var(--text-subtle)', textTransform: 'uppercase', letterSpacing: '0.06em', paddingBottom: '3px', borderBottom: '1px solid var(--border-subtle)' },
@@ -305,9 +267,9 @@ function SiemPreview() {
     <div style={s.previewWrap}>
       {/* Topbar */}
       <div style={s.previewTopbar}>
-        <div style={s.previewDot('#ef4444')} />
-        <div style={s.previewDot('#ca8a04')} />
-        <div style={s.previewDot('#16a34a')} />
+        <div style={s.previewDot('var(--severity-critical)')} />
+        <div style={s.previewDot('var(--severity-medium)')} />
+        <div style={s.previewDot('var(--severity-low)')} />
         <span style={s.previewTopbarTitle}>SIEM / Dashboard</span>
         <div style={s.previewTimeBtnRow}>
           {['1h','6h','24h','48h','7d'].map(t => (
@@ -317,9 +279,9 @@ function SiemPreview() {
       </div>
       {/* KPI row */}
       <div style={s.kpiRow}>
-        <div style={s.kpiCard}><div style={s.kpiLabel}>Active Alerts</div><div style={s.kpiVal('#ef4444')}>3</div><div style={s.kpiSub}>unacknowledged</div></div>
-        <div style={s.kpiCard}><div style={s.kpiLabel}>Critical</div><div style={s.kpiVal('#ef4444')}>3</div><div style={s.kpiSub}>severity critical</div></div>
-        <div style={s.kpiCard}><div style={s.kpiLabel}>High</div><div style={s.kpiVal('#d97706')}>7</div><div style={s.kpiSub}>severity high</div></div>
+        <div style={s.kpiCard}><div style={s.kpiLabel}>Active Alerts</div><div style={s.kpiVal('var(--severity-critical)')}>3</div><div style={s.kpiSub}>unacknowledged</div></div>
+        <div style={s.kpiCard}><div style={s.kpiLabel}>Critical</div><div style={s.kpiVal('var(--severity-critical)')}>3</div><div style={s.kpiSub}>severity critical</div></div>
+        <div style={s.kpiCard}><div style={s.kpiLabel}>High</div><div style={s.kpiVal('var(--severity-high)')}>7</div><div style={s.kpiSub}>severity high</div></div>
         <div style={s.kpiCard}><div style={s.kpiLabel}>Total Events</div><div style={s.kpiVal()}>172,800</div><div style={s.kpiSub}>last 24h</div></div>
       </div>
       {/* Mid row */}
@@ -331,12 +293,12 @@ function SiemPreview() {
             <span style={s.viewAll}>View All</span>
           </div>
           {[
-            { sev: 'critical', color: '#ef4444', msg: 'Lateral movement detected: WORKSTATION-04', time: '10:32 PM' },
-            { sev: 'high',     color: '#d97706', msg: 'Brute force: 47 failed logins on admin',   time: '10:28 PM' },
-            { sev: 'critical', color: '#ef4444', msg: 'Suspicious scheduled task via svchost',      time: '10:21 PM' },
+            { sev: 'critical', color: 'var(--severity-critical)', msg: 'Lateral movement detected: WORKSTATION-04', time: '10:32 PM' },
+            { sev: 'high',     color: 'var(--severity-high)',     msg: 'Brute force: 47 failed logins on admin',   time: '10:28 PM' },
+            { sev: 'critical', color: 'var(--severity-critical)', msg: 'Suspicious scheduled task via svchost',      time: '10:21 PM' },
           ].map((a, i) => (
             <div key={i} style={s.alertRow}>
-              <span style={s.sevBadge(a.color)}>{a.sev}</span>
+              <span className="fld-sev" style={s.sevBadge(a.color)}>{a.sev}</span>
               <span style={s.alertMsg}>{a.msg}</span>
               <span style={s.alertTime}>{a.time}</span>
             </div>
@@ -344,14 +306,11 @@ function SiemPreview() {
         </div>
         <div style={s.rightSplit}>
           <div style={s.rightPanel}>
-            <div style={s.chartTitle}>By Severity</div>
-            <div style={s.donutWrap}>
-              <DonutChart size={72} />
-              <div style={s.donutLegend}>
-                {[['#ef4444','critical 9%'],['#d97706','high 18%'],['#ca8a04','medium 22%'],['#16a34a','low 51%']].map(([c,l]) => (
-                  <div key={c} style={s.legendItem}><div style={s.legendDot(c)} />{l}</div>
-                ))}
-              </div>
+            <div style={s.chartTitle}>Alert Trend<span style={s.viewAll}>24h</span></div>
+            <div style={s.trendWrap}>
+              {TREND_BARS.map((h, i) => (
+                <div key={i} style={{ ...s.trendBar, height: h + '%' }} />
+              ))}
             </div>
           </div>
           <div style={s.rightPanel}>
@@ -368,7 +327,7 @@ function SiemPreview() {
       {/* Tabbed insights */}
       <div style={s.tabStrip}>
         <div style={s.tabRow}>
-          {['Top Event IDs','Failed Logins','Top Usernames','Alert Trend','Rule Hits'].map((t, i) => (
+          {['Top Event IDs','Failed Logins','Top Usernames','Rule Hits'].map((t, i) => (
             <button key={t} style={s.tabBtn(i === 0)}>{t}</button>
           ))}
         </div>
@@ -404,13 +363,13 @@ function SiemPreview() {
           </thead>
           <tbody>
             {[
-              { time: '9:46:39 PM', sev: 'info', sevColor: '#60a5fa', eid: '1',  cat: 'process', host: 'MSI', src: '-', dst: '-', user: 'admin', msg: 'Process Create: RuleName: UtcTime: 2026-04-03...' },
-              { time: '9:46:39 PM', sev: 'info', sevColor: '#60a5fa', eid: '8',  cat: '-',       host: 'MSI', src: '-', dst: '-', user: 'admin', msg: 'CreateRemoteThread detected: SourceImage: C:\\Windows\\System32...' },
-              { time: '9:46:38 PM', sev: 'info', sevColor: '#60a5fa', eid: '1',  cat: 'process', host: 'MSI', src: '-', dst: '-', user: 'admin', msg: 'Process Create: RuleName: UtcTime: 2026-04-03...' },
+              { time: '9:46:39 PM', sev: 'info', sevColor: 'var(--severity-info)', eid: '1',  cat: 'process', host: 'MSI', src: '-', dst: '-', user: 'admin', msg: 'Process Create: RuleName: UtcTime: 2026-04-03...' },
+              { time: '9:46:39 PM', sev: 'info', sevColor: 'var(--severity-info)', eid: '8',  cat: '-',       host: 'MSI', src: '-', dst: '-', user: 'admin', msg: 'CreateRemoteThread detected: SourceImage: C:\\Windows\\System32...' },
+              { time: '9:46:38 PM', sev: 'info', sevColor: 'var(--severity-info)', eid: '1',  cat: 'process', host: 'MSI', src: '-', dst: '-', user: 'admin', msg: 'Process Create: RuleName: UtcTime: 2026-04-03...' },
             ].map((r, i) => (
               <tr key={i}>
                 <td style={s.eTd}>{r.time}</td>
-                <td style={s.eTd}><span style={s.eTdSev(r.sevColor)}>{r.sev}</span></td>
+                <td style={s.eTd}><span className="fld-sev" style={s.eTdSev(r.sevColor)}>{r.sev}</span></td>
                 <td style={s.eTd}>{r.eid}</td>
                 <td style={s.eTd}>{r.cat}</td>
                 <td style={s.eTd}>{r.host}</td>
@@ -433,14 +392,13 @@ function DesktopLanding({ onLogin }) {
   const scrollToTools = () => toolsRef.current?.scrollIntoView({ behavior: 'smooth' });
   const scrollToSiem = () => siemRef.current?.scrollIntoView({ behavior: 'smooth' });
   return (
-    <div style={s.page}>
+    <div className="field-scope" style={s.page}>
       <LandingNav onLogin={onLogin} onScrollToTools={scrollToTools} isMobile={false} />
       {/* Hero */}
       <section style={s.hero}>
-        <div style={s.heroGrid} />
         <h1 style={s.heroHeadline}>
-          Security operations,{' '}
-          <span style={s.heroHeadlineAccent}>unified.</span>
+          Enterprise security operations,{' '}
+          <span style={s.heroHeadlineAccent}>built for everyone.</span>
         </h1>
         <p style={s.heroSub}>
           Real-time SIEM and 19 security tools covering detection, investigation, reporting, compliance, and simulation. Built to be easy to use for SOC analysts, pen testers, and security engineers.
@@ -449,13 +407,13 @@ function DesktopLanding({ onLogin }) {
           <button
             style={s.btnPrimary}
             onClick={onLogin}
-            onMouseEnter={e => { e.currentTarget.style.background = '#111110'; e.currentTarget.style.color = '#e8e6e3'; e.currentTarget.style.borderColor = '#e8e6e3'; }}
-            onMouseLeave={e => { e.currentTarget.style.background = '#e8e6e3'; e.currentTarget.style.color = '#111110'; e.currentTarget.style.borderColor = '#e8e6e3'; }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.borderColor = 'var(--text-primary)'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'var(--btn-primary-bg)'; e.currentTarget.style.color = 'var(--btn-primary-text)'; e.currentTarget.style.borderColor = 'var(--btn-primary-bg)'; }}
           >Create Free Account</button>
           <button
             style={s.btnSecondary}
             onClick={scrollToTools}
-            onMouseEnter={e => { e.currentTarget.style.background = 'var(--text-muted)'; e.currentTarget.style.color = 'var(--bg-primary)'; e.currentTarget.style.borderColor = 'var(--text-muted)'; }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'var(--text-primary)'; e.currentTarget.style.color = 'var(--bg-surface)'; e.currentTarget.style.borderColor = 'var(--text-primary)'; }}
             onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.borderColor = 'var(--border)'; }}
           >Browse Tools</button>
           <a
@@ -526,7 +484,6 @@ function DesktopLanding({ onLogin }) {
           {PHASES.map(phase => (
             <div key={phase.key} style={s.phaseEntry}>
               <div style={s.phaseHeader}>
-                <div style={s.phaseDot(phase.color)} />
                 <span style={s.phaseName}>{phase.label}</span>
                 <span style={s.phaseCount}>{phase.tools.length} tools</span>
               </div>
@@ -580,14 +537,13 @@ function MobileLanding({ onLogin }) {
   const scrollToTools = () => toolsRef.current?.scrollIntoView({ behavior: 'smooth' });
   const scrollToSiem = () => siemRef.current?.scrollIntoView({ behavior: 'smooth' });
   return (
-    <div style={s.page}>
+    <div className="field-scope" style={s.page}>
       <LandingNav onLogin={onLogin} onScrollToTools={scrollToTools} isMobile={true} />
       {/* Hero */}
       <section style={s.heroMobile}>
-        <div style={s.heroGrid} />
         <h1 style={s.heroHeadlineMobile}>
-          Security operations,{' '}
-          <span style={s.heroHeadlineAccent}>unified.</span>
+          Enterprise security operations,{' '}
+          <span style={s.heroHeadlineAccent}>built for everyone.</span>
         </h1>
         <p style={s.heroSubMobile}>
           Real-time SIEM and 19 security tools covering detection, investigation, reporting, compliance, and simulation.
@@ -654,7 +610,6 @@ function MobileLanding({ onLogin }) {
           {PHASES.map(phase => (
             <div key={phase.key} style={s.phaseEntry}>
               <div style={s.phaseHeader}>
-                <div style={s.phaseDot(phase.color)} />
                 <span style={s.phaseName}>{phase.label}</span>
                 <span style={s.phaseCount}>{phase.tools.length} tools</span>
               </div>

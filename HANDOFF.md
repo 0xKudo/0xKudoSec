@@ -15,15 +15,37 @@ Unified cybersecurity tools platform at `0xkudo.com`. Monorepo — shared Expres
 
 ---
 
+### 2026-09-08 — Field redesign: gallery signed off, Phase 2 = landing page only (IN PROGRESS)
+
+Approved design direction **Field** (warm paper light / warm ink-night dark, single **petrol**
+accent, Archivo + Archivo Expanded + Fira Code-for-data). Full decisions + token table:
+`docs/plans/2026-09-08-field-redesign.md` and memory [[project_field_redesign]]. The **element
+gallery** (session artifact) is signed off — neutral primary buttons (petrol reserved for
+links/active/focus, never a fill), badge centering via `text-box-trim` on inline-block +
+`justify-self:start`, uniform-width severity chips, pill filters, functional insight tabs
+(hoverable/filterable), real Alert Trend bar chart, faithful ATT&CK technique-cell matrix, NO
+severity donut/bar chart, NO color-coded phase squares. Also spec'd (build later, after Field):
+composable dashboard (`docs/specs/2026-09-08-customizable-dashboard.md`, anime.js Draggable +
+push-down/compact-up reflow, POC done). **Rollout: LANDING PAGE FIRST** — restyle
+`LandingPage.jsx` to Field via a scoped `.field-scope` class (Field tokens light+dark + fonts for
+the landing subtree only), WITHOUT touching `theme.css` globally or the 19 tools / SIEM. Landing
+elements are NOT resizable. No anime.js on the landing (CSS hover/underline). Whole-app theme
+migration is a later phase.
+
+### 2026-09-08 — Landing page copy/design pass DEPLOYED
+
+**VPS now on `0d8efbc` (main), shell-only deploy, health 200.** Landing page (`platform/shell/src/pages/LandingPage.jsx`): removed the "Open Security Operations Platform" hero eyebrow (desktop + mobile), removed the SIEM/19/Windows/Auth0 stats bar and its now-unused styles, hero subtext now leads with ease of use for the target roles, and the "How it works" intro corrected from "Three capabilities that set it apart from a basic log viewer" to the honest "Four capabilities, from real-time ingestion to case management". Reviewed the rest of the page against the XDR/SOAR roadmap: copy correctly stops at "SIEM + 19 tools" and already surfaces the live Sigma Rule Library + MITRE ATT&CK mapping; nothing overclaims correlation/entities/incidents/response (built-but-not-GA), left as-is. Deploy: `git pull --ff-only` (f00b8d1→0d8efbc) + `npm run build --workspace platform/shell` + plain `pm2 restart cybertools-server` (id 6, catalog env preserved = still live). Verified old strings gone / new copy present in the built bundle.
+
 ### 2026-09-06 — PICK-UP BLOCK (READ FIRST — supersedes all earlier blocks below)
 
 **⚠️ HANDING OFF TO A DIFFERENT ACCOUNT:** `docs/` is gitignored and HANDOFF.md + memory files are NOT committed to git — they do NOT travel via git. Copy this file, `docs/specs/2026-09-05-sigma-rule-library.md`, and `docs/plans/2026-09-07-sigma-catalog-phase-d-matcher.md` to the other account manually. Test files are gitignored too (commit with `git add -f`). This machine's git remote push FAILS, so `origin/main` tracking is STALE here — do not trust `git log origin/main..main`. The user pushes from elsewhere.
 
 **LOCAL COMMITS TO PUSH (local `main`, newest last):** `682ee5f` (D3 matcher-on-ingest + D4 re2) → `883678b` (audit false-alarm fix) → `1104495` (noise field_signature → jsonb). All THREE are already applied/deployed live on the VPS, but still need `git push` so GitHub matches prod. Earlier already-pushed: `ac3d174` (Phase C) and predecessors.
 
-**VPS RUNTIME STATE RIGHT NOW (`root@92.112.181.219`, `ssh -i ~/.ssh/vps_cybertools`, `/var/www/cybertools`, pm2 `cybertools-server` id 6, PORT 4001, Node v24, HEAD `1104495` equivalent):**
+**VPS RUNTIME STATE RIGHT NOW (`root@92.112.181.219`, `ssh -i ~/.ssh/vps_cybertools`, `/var/www/cybertools`, pm2 `cybertools-server` id 6, PORT 4001, Node v24, HEAD `0d8efbc` as of 2026-09-08; catalog runtime notes below still current):**
 - **Sigma catalog matcher is LIVE (2026-09-06, later session — went out of shadow).** pm2 env: `CATALOG_MATCHER_SHADOW=` (empty), `CATALOG_DISABLED=` (empty). The matcher runs on every ingest batch and **INSERTS real alerts** into `alerts` (`sigma_identity` set), deduped on `alerts_sigma_dedup (user_id, sigma_identity, group_key)`. Confirmed working: 0 → 11 sigma alerts, a 104-row batch produced `110 hits → 10 new, 100 deduped` (no flood, thanks to the 5-rule noise trim). Rendered in the Alerts view with the neutral "Sigma" badge. Threshold-only catalog cron still scheduled (every 3 min).
-- **🚨 ENV IS RUNTIME-ONLY, NOT IN .env OR GIT.** Both flags are empty now (= live). A plain `pm2 restart` keeps that. Emergency kill-switch: `CATALOG_DISABLED=1 pm2 restart cybertools-server --update-env` stops all catalog inserts instantly. To go back to measure-only: `CATALOG_MATCHER_SHADOW=1 pm2 restart … --update-env`. There is NO `CATALOG_*` var in `.env`, so a `pm2 delete`+start keeps it live (both unset = live) — set the kill-switch first if recreating the process during an incident.
+- **CPU-throttle mitigation (2026-09-06):** `catalogCron` was firing every 3 min doing scans that hit the statement timeout + spawned Postgres parallel workers = a top CPU consumer per Hostinger's hPanel (which showed the box is throttled for exceeding its CPU quota — "Maximum CPU resets reached"). Slowed to **every 20 min** via `CATALOG_EVAL_INTERVAL_MIN=20` + `CATALOG_LOOKBACK_SECONDS=1500`, **now IN `.env`** (persistent). Full root-cause + the dedicated-host migration plan: see memory [[project-cybertools-status]] 2026-09-06 block and `docs/plans/2026-09-06-cybertools-dedicated-migration.md`.
+- **🚨 THE KILL-SWITCH FLAGS ARE RUNTIME-ONLY, NOT IN .env OR GIT.** `CATALOG_DISABLED` + `CATALOG_MATCHER_SHADOW` are both empty now (= live). A plain `pm2 restart` keeps that. Emergency kill-switch: `CATALOG_DISABLED=1 pm2 restart cybertools-server --update-env` stops all catalog inserts instantly. To go back to measure-only: `CATALOG_MATCHER_SHADOW=1 pm2 restart … --update-env`. There is NO `CATALOG_*` var in `.env`, so a `pm2 delete`+start keeps it live (both unset = live) — set the kill-switch first if recreating the process during an incident.
 - Health local+public 200. `unstable restarts: 0`.
 
 **SHADOW MEASUREMENT SO FAR (2026-09-06):** matcher works end-to-end, no build/run errors. Sample batches: `1 row → 2 hits (90-177ms)`, `143 rows → 626 hits (2547ms)`. **The raw catalog is far too noisy to go live: ~4.4 rules match per event → hundreds of alerts/min if inserts were on.** Per-batch cost ~2.5s node CPU for a 143-row batch (once/min at Flush 60). VPS load ~5.3 during shadow (up ~1 from ~4.3 before; box is 2 shared cores + ~9% CPU steal + 0 swap, 9 pm2 apps + Postgres).

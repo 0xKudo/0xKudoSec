@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Archivo+Expanded:wght@600;700;800&family=Fira+Code:wght@400;500&display=swap');
 
 :root {
   --bg-primary: #111110;
@@ -85,6 +85,61 @@
   /* Elevation (light) */
   --shadow-1: 0 1px 2px rgba(80, 60, 40, 0.10);
   --shadow-2: 0 4px 16px rgba(80, 60, 40, 0.14);
+}
+
+/* ── Field landing scope (Phase 2) ─────────────────────────────────────────────
+   Self-contained Field theme for the public landing page ONLY. Applied via
+   className="field-scope" on the landing root. Redefines the design tokens for
+   that subtree so the rest of the app keeps its current amber/mono theme until a
+   later whole-app phase. Dark-first (matches the app): bare .field-scope = dark,
+   [data-theme="light"] .field-scope = light. */
+.field-scope {
+  --bg-primary: #14120e;
+  --bg-surface: #1c1a15;
+  --bg-sidebar: #100e0a;
+  --bg-panel: #1f1c16;
+  --border: #2a2620;
+  --border-subtle: #211e18;
+  --text-primary: #ece7dd;
+  --text-muted: #9a9285;
+  --text-subtle: #615b50;
+  --accent-amber: #6fa8c9;           /* petrol brand accent (links/active/focus only) */
+  --btn-primary-bg: #ece7dd;          /* neutral primary */
+  --btn-primary-text: #14120e;
+  --focus-ring: #6fa8c9;
+  --severity-critical: #ef4444;
+  --severity-high: #d97706;
+  --severity-medium: #ca8a04;
+  --severity-low: #16a34a;
+  --severity-info: #60a5fa;
+  --font: 'Archivo', system-ui, sans-serif;
+  --font-display: 'Archivo Expanded', 'Archivo', system-ui, sans-serif;
+  --font-mono: 'Fira Code', 'Consolas', 'Monaco', monospace;
+}
+[data-theme="light"] .field-scope {
+  --bg-primary: #f5f2ea;
+  --bg-surface: #fffdf7;
+  --bg-sidebar: #efe9dc;
+  --bg-panel: #faf6ee;
+  --border: #e3ddce;
+  --border-subtle: #ece5d6;
+  --text-primary: #1b1a17;
+  --text-muted: #6f685b;
+  --text-subtle: #a99f8f;
+  --accent-amber: #2b4a63;
+  --btn-primary-bg: #1b1a17;
+  --btn-primary-text: #f8f6f0;
+  --focus-ring: #2b4a63;
+  --severity-critical: #b91c1c;
+  --severity-high: #a15c07;
+  --severity-medium: #8a6d0a;
+  --severity-low: #2f7a34;
+  --severity-info: #2563a8;
+}
+/* Optically-centered severity chips inside the landing (matches the gallery fix) */
+.field-scope .fld-sev { display: inline-block; text-align: center; line-height: 1; }
+@supports (text-box-trim: trim-both) {
+  .field-scope .fld-sev { text-box-trim: trim-both; text-box-edge: cap alphabetic; }
 }
 
 * {

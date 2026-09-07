@@ -11,6 +11,30 @@
 
 ## Completed Improvements
 
+### Severity + Sigma filters on Alerts and Rule Library (2026-09-06)
+
+User asked for a filter-by-severity control (same button style as the SIEM dashboard / Log Search) on both the Alerts tab and the Sigma Rule Library, plus a filter-by-Sigma toggle on Alerts (using the "Sigma" badge as the concept).
+
+- **Alerts (`AlertQueue.jsx` + `siem.js GET /alerts`):** added multi-select severity buttons (critical/high/medium/low/info, colored when active) and a Sigma toggle to the filter bar, plus a "Clear filters" button. Both are **server-side** filters (new `?severity=a,b` and `?source=sigma` params on `/alerts`) so they stay correct under the route's `LIMIT 200`. `a.severity = ANY($n)` and `a.sigma_identity IS NOT NULL`.
+- **Rule Library (`RuleLibrary.jsx` + `siem.js GET /rules/sigma/catalog`):** added the same multi-select severity buttons to the catalog filter bar; server accepts `?severity=a,b` → `s.severity = ANY($n)`. No Sigma toggle there (the whole catalog is Sigma).
+- Server-only + shell change; deploy = `git pull` + shell rebuild + `pm2 restart`. No migration.
+
+### Electron window clipping / no horizontal scrollbar (2026-09-06, iterate)
+
+User (Electron, non-maximized window): dropdown menus shrink and clip outside the window, wide content is cut off with no horizontal scrollbar, and elements should fit without clipping or shrinking. Chosen approach: **fit first, scroll as fallback.**
+
+- **Root cause 1 — `#root { zoom: 1.15 }` (`theme.css`).** Inflated the whole app ~15%, and since `html, body { overflow: hidden }`, the overflow clipped with no scrollbar on smaller windows (documented in memory `feedback_zoom_layout_debugging`). Set desktop zoom to `1` (mobile was already `1`). Everything renders ~13% smaller and fits far better.
+- **Root cause 2 — Alerts table wrapper was `overflowX: 'hidden'`** with a `table-layout: fixed`, `maxWidth: 100%` table, so the far-right status `<select>` column clipped off-window with no way to scroll to it. Changed the wrapper to `overflowX: 'auto'` + `className="kudo-scroll"` and the table to `width: auto; minWidth: 100%`, so it fills the pane and grows to its columns' natural width with a horizontal scrollbar when the window is narrow. Rule Library's catalog table already had `overflowX: auto` (`tableWrap`).
+- **Still to verify in the Electron window (needs a visual pass + screenshot):** whether any other view (Detection Rules, Tuning Center, Log Search, Cases, Configuration) still clips after the zoom change, and the native `<select>` popup opening off-window near the right edge (an OS-level popup, only partly controllable via CSS — the scroll + zoom fixes should keep the select away from the extreme edge). Extend the `overflowX: auto` table-wrapper pattern to any view that still clips.
+
+### Alert Queue — bulk "Mark Ack" / "Mark Resolved" not persisting (2026-09-06)
+
+**Bug (reported by user):** In the Alerts tab, selecting alerts and clicking the bulk **Mark Ack** button (next to Mark Resolved) showed the acknowledged badge, but the status reverted to `new` on the next reload. The per-row status dropdown and the modal's Mark Acknowledged button both worked and correctly moved alerts to the Acknowledged tab.
+
+**Root cause (server):** `platform/server/routes/siem.js` `POST /alerts/bulk` built the id placeholders as `$${i + 2}`, correct for the delete branch (`[uid, ...ids]`, ids start at `$2`) but wrong for the status branch (`[uid, status, ...ids]`, ids start at `$3`). The `status` value therefore occupied `$2` and the id list collided with it, producing `id IN ('acknowledged')`. Postgres casts the IN list to the column type (integer) and throws `invalid input syntax for type integer: "acknowledged"` → 500. `AlertQueue.jsx bulkAction()` does not check the response, so it optimistically updates local state (badge flips), then the next `loadAlerts()` overwrites it with the server's unchanged `new` status. Delete worked (its offsets aligned) and single-status worked (separate `PATCH /alerts/:id` route with correct offsets).
+
+**Fix:** per-branch id offset via `idPlaceholders(start)` — delete uses `(2)`, status uses `(3)`. Also added `updated_at = NOW()` to the bulk status UPDATE to match the single PATCH. Server-only; no migration, no shell rebuild. Deploy = `git pull` + `pm2 restart cybertools-server`.
+
 ### Mobile SIEM Dashboard — Parity and Filter fixes (2026-04-07)
 
 **Fixed:**
