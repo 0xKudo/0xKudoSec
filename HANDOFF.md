@@ -15,7 +15,154 @@ Unified cybersecurity tools platform at `0xkudo.com`. Monorepo — shared Expres
 
 ---
 
-### 2026-09-08 — Field redesign: gallery signed off, Phase 2 = landing page only (IN PROGRESS)
+### 2026-09-08 — DONE: Sigma Rules reorg + ATT&CK tab + rows-per-page + download icon (items 1 & 2)
+
+Built this session (local, shell build compiles clean; deploy pending). Item 3 (dashboard
+widgets) still TO PLAN — see block below.
+
+- **Item 1 — Detection Rules reorg (`DetectionRules.jsx`, `RuleLibrary.jsx`):**
+  - Sub-tab "Rule Library" → **"Sigma Rules"**; panel header `SIEM / Rule Library` → `SIEM / Sigma Rules`.
+    Legal/prose copy left as-is (kept "Sigma Rule Library").
+  - **Rows-per-page selector** added to the paginator row in `RuleLibrary` (10/25/50/100, **default 10**).
+    `limit` now lives in `filters` state; `loadCatalog` sends `filters.limit` instead of hardcoded `50`;
+    changing it auto-reloads to page 1 (existing filters→loadCatalog effect) and the server recomputes
+    `total_pages` from the new limit, so page numbers stay correct.
+  - **ATT&CK Coverage moved to its own sibling sub-tab** after Sigma Rules. `AttackCoverage` was extracted
+    from inside `RuleLibrary` (its `#attack-coverage` section removed) and is now rendered directly in
+    `DetectionRules` under `tab === 'attack'`. Tabs are now: Alerts | Suppression | Sigma Rules | ATT&CK Coverage.
+  - **Technique-click wiring preserved cross-tab:** clicking a technique in the ATT&CK tab sets
+    `sigmaTechnique = { id, nonce }` in `DetectionRules` and switches to the Sigma Rules tab; `RuleLibrary`
+    takes a new `techniqueFilter` prop and a `useEffect` on its `nonce`/`id` sets `filters.technique`,
+    which auto-reloads the catalog filtered to that technique.
+- **Item 2 — Download icon:** replaced the literal `↓` glyph with Lucide `<Download>` in
+  `TopNav.jsx` (`↓ Desktop App` → icon + "Desktop App", anchor made inline-flex) and
+  `LandingPage.jsx` hero CTA (`↓ Download for Windows` → icon + label). Icon uses `currentColor`
+  so it follows the existing hover color-swap.
+- **NOT verified in the running authenticated app** (SIEM is behind Auth0; preview drops the session).
+  Landing icon is public. Eyeball both in a normal browser after deploy.
+
+### 2026-09-08 — TO PLAN (next account) — dashboard widgets (item 3)
+
+Requested by Layne; NOT yet built. Plan + implement. (Items 1 & 2 above are now DONE.)
+
+**1. Detection Rules → "Sigma Rules" reorg + pagination — ✅ DONE (see block above)**
+- Problem: the Detection Rules view's Rule Library sub-tab shows a very long rule list, and the
+  ATT&CK coverage matrix is buried at the very bottom of that same list.
+- **Rename "Rule Library" → "Sigma Rules"** in the UI: the sub-tab label
+  (`DetectionRules.jsx:329`) and the panel header (`RuleLibrary.jsx:348`, currently
+  `SIEM / Rule Library`). Leave legal/prose copy (PrivacyPage, SecurityPage, LandingPage) as a
+  judgment call — probably keep "Sigma Rule Library" there.
+- **Page-size filter on Sigma Rules:** `RuleLibrary.jsx` paginates server-side with a hardcoded
+  `limit: '50'` (`loadCatalog`, ~line 244) and a `page` state (line 214); paginator window is
+  `getPageWindow` (~line 68), Prev/Next at ~line 518. Add a rows-per-page selector
+  (e.g. 10/25/50/100), **default 10**, wired into the fetch limit, and make the paginator recompute
+  total pages from `total`/`limit` so page numbers stay correct when the size changes.
+- **Move the MITRE ATT&CK coverage matrix to its own SIEM sub-tab AFTER "Sigma Rules".** Today
+  `AttackCoverage` is rendered *inside* `RuleLibrary` (`RuleLibrary.jsx:543`), which is why it sits
+  below the list. Extract it: add a new sub-tab in `DetectionRules.jsx` (the `tab` state +
+  `tab === 'library'` switch at line 333) — e.g. tabs become Detection Rules | Sigma Rules |
+  ATT&CK Coverage — and render `<AttackCoverage />` in the new tab instead of nested in RuleLibrary.
+  Confirm the technique-click → CVE/rule wiring (`RuleLibrary.jsx:543` onSelectTechnique) still works
+  once it's a sibling, not a child.
+
+**2. Desktop-app download button icon — ✅ DONE (see block above)**
+- The "↓ Desktop App" button uses a literal `↓` glyph that looks bad. Replace with a proper icon
+  (Lucide `Download` is already the icon set in use — see `lucide-react` imports in `TopNav.jsx`).
+  Spots: `TopNav.jsx` (~line 335, the `↓ Desktop App` link) and `LandingPage.jsx` (the
+  `↓ Download for Windows` hero CTA). Keep it a clean single icon + label.
+
+**3. Customizable dashboard (widgets) — already spec'd, still unbuilt**
+- The Field plan's remaining feature: make the SIEM dashboard elements user-composable widgets
+  (add/move/resize on a grid, saved per user). Full spec exists at
+  `docs/specs/2026-09-08-customizable-dashboard.md` (anime.js Draggable, push-down/compact-up reflow,
+  `dashboard_layouts` table with RLS-at-creation). This is the big remaining piece and where anime.js
+  finally gets pulled in (deliberately deferred from Phase 7).
+
+### 2026-09-08 — Field redesign: Phase 4 display-face (kept + extended) + amber-cleanup
+
+Commit `7a16032` (local main). Deploy pending. `b9cc1f8` (SIEM view titles, deployed) signed
+off by user → extended + amber hardcodes converted.
+
+- **Display face extended to all 19 tool page titles** (`tools/*/client/index.jsx`
+  `title` style → `fontFamily: 'var(--font-display)'`). SIEM view titles already done in
+  `b9cc1f8`. Archivo Expanded @import loads 600/700/800, so `fontWeight:normal` titles render at
+  the nearest loaded weight (600) — intentional, reads as display-grade.
+- **ATT&CK coverage heat ramp** (`AttackCoverage.jsx`): was hardcoded amber `rgb(217,119,6)`; now
+  `color-mix(in srgb, var(--accent-amber) N%, transparent)` → petrol AND theme-aware (accent
+  differs light/dark). This was the user-reported "matrix cards not updated" issue.
+- **Amber → token cleanup** (fixes light mode; all were dark-correct hardcodes):
+  - `App.jsx` Electron loading splash → Field tokens + `[ 0xKudo ]` Archivo wordmark, Fira Code labels.
+  - `SiemDashboard` `SEV_COLOR_HEX` map + alert-trend "recent" bar fill → tokens/accent (SVG fill
+    accepts var() in Chromium).
+  - `SiemDashboardMobile` `sevColor()` + `SEV_COLOR_HEX` maps → tokens; active pill text `#111110`
+    → `var(--bg-primary)`.
+  - `Sidebar`/`SiemSidebar` `STOPPED` status, `SiemConfiguration` agent-status colors + warning box,
+    `LogSources` warning box → `var(--severity-*)` / color-mix.
+  - `theme.css` `.kudo-table tr.flagged` tint → `color-mix(var(--severity-high) 6%)`.
+- Shell build compiles clean. Not screenshot-verified in the authenticated app (preview auth drops).
+
+### 2026-09-08 — Field redesign: Phase 6 (badges) + Phase 7 (motion, CSS) + payload-gen button fix
+
+Commit `496213f` (local main). Deploy pending.
+
+- **Payload Generator Generate button** (`tools/payload-generator/client/index.jsx`): was
+  full-width — it's a `<Button>` that's a stretching flex child. Added
+  `style={{ alignSelf: 'flex-start' }}` so it hugs content, matching the reverse-shell tool.
+  No max-width was involved.
+- **Phase 6 — Badge centering** (`ui/Badge.jsx` + `theme.css`): `BASE` switched from inline-flex
+  to **inline-block** + `text-align:center` + biased padding (`3px 7px 2px`) as the all-engines
+  fallback; the `Badge` component now carries `className="kudo-badge"`. `.kudo-badge` in theme.css
+  gained the root-cause fix under `@supports (text-box-trim: trim-both)`
+  (`text-box-trim:trim-both; text-box-edge:cap alphabetic` + symmetric padding with `!important`
+  to beat the component's inline biased padding on supporting engines). Standalone `badgeStyle()`
+  users (SIEM `sevBadge`) get the biased-padding fallback (no class) — acceptable; full
+  single-source-of-truth would mean adding the class at every badge site (deferred).
+- **Phase 7 — motion, CSS-only (anime.js deliberately NOT used** — user chose CSS to avoid the
+  planned theme-toggle stale-inline-color footgun; anime.js reserved for the dashboard drag
+  feature): (1) `.kudo-btn--primary:hover` now **inverts solid→outline** (was `filter:brightness`),
+  `--btn-primary-bg` border added so the rest state has a visible edge; (2) `.kudo-table tbody
+  tr:hover .kudo-badge` **soft-fills** via `color-mix(in srgb, currentColor 14%, transparent)` —
+  low-opacity severity tint, no strobing; (3) nav tabs (`TopNav` `appTab` + `rowStyles.tab`, both
+  main nav and category/tool bars) get a **smooth underline-in on hover** (transition on
+  border-color + `borderBottomColor` set in the existing mouseEnter/Leave handlers). All
+  token/currentColor based — theme-toggle safe.
+- **Verification:** shell build compiles clean; landing renders. Authenticated app (TopNav +
+  in-context badges) NOT screenshot-verified — preview kept dropping the Auth0 session this
+  session; eyeball in a normal browser.
+
+### 2026-09-08 — Field redesign: WHOLE-APP THEME (Phases 2-3) committed `e8c9922`
+
+**Promotes the Field identity from landing-only to the entire app.** Commit `e8c9922`
+(local main, pushed by user; VPS deploy pending/in-progress).
+
+- **theme.css (Phase 2):** global `:root` (dark) and `[data-theme="light"]` tokens swapped
+  to Field (warm ink-night / warm paper); light severity + accent retuned. `--accent-amber`
+  name kept, revalued to petrol; focus ring → accent. `--font` → Archivo, added
+  `--font-display` (Archivo Expanded) + `--font-mono` (Fira Code); `.kudo-table` → mono.
+  The `.field-scope` landing block still exists but is now redundant (identical to global) —
+  harmless, left in place.
+- **Mono-for-data sweep (Phase 3):** data surfaces repointed to `var(--font-mono)` so machine
+  data stays monospace while UI chrome is Archivo — event/log/alert/rule tables, KPI values,
+  search inputs, event-detail `fieldValue`s, ATT&CK `cellId`/`cellCount`, process trees.
+  Files: SiemDashboard, SiemDashboardMobile, AlertQueue, LogSearch, LogSources, Cases,
+  AuditLog, DetectionRules, RuleLibrary, TuningCenter, AttackCoverage, ProcessTreePanel,
+  Dashboard, DashboardMobile.
+- **NOT done — Phase 4** (display-face `--font-display` on SIEM view titles / page H1s):
+  deliberately deferred; those titles are small 13px breadcrumbs and Archivo Expanded may look
+  heavy — decide visually first.
+- **Verification caveat:** the mono sweep was NOT visually confirmed against populated data this
+  session (local DB/auth/preview-port friction). theme.css Phase 2 was seen rendering on the
+  authenticated dashboard; the per-component mono cells still want an eyeball in a running app.
+- **Sweep pattern (for future components):** set `fontFamily: 'var(--font-mono)'` on the data
+  `table`/value/search-input style object; leave labels, buttons, titles, `fieldLabel` on Archivo.
+
+### 2026-09-08 — Field redesign: LANDING PAGE DEPLOYED ✅
+
+**VPS now on `c2c6cdd` (main), shell-only deploy, health 200, served bundle `index-BwFrASeO.js` confirmed live.** The landing-first Field rework (Phase 5) is in production at `0xkudo.com`. `theme.css` gained the font `@import` (Archivo / Archivo Expanded / Fira Code) + the scoped `.field-scope` token block (light+dark, petrol accent, neutral primary) — global `:root` and the 19 tools / SIEM are UNTOUCHED. `LandingPage.jsx` restyled to Field via the scope: Archivo Expanded hero + "Enterprise security operations, built for everyone." tagline, functional insight tabs + Alert Trend bars in the SIEM preview. Cleanup: hardcoded severity hex in `SiemPreview` → `var(--severity-*)` (so the preview follows the retuned light-mode palette), dead `phaseDot`/per-phase `color` and the unused hero eyebrow style removed. Verified in-browser light + dark before commit. Deploy: `git pull --ff-only` (0d8efbc→c2c6cdd) + `npm run build --workspace platform/shell` + plain `pm2 restart cybertools-server` (id 6, catalog env preserved). Commit `c2c6cdd`.
+
+**Remaining Field phases (NOT started):** global `theme.css` token swap + mono-for-data sweep across the 19 tools / SIEM (Phases 2–4, 6–8 of the plan), then the composable dashboard (`docs/specs/2026-09-08-customizable-dashboard.md`).
+
+### 2026-09-08 — Field redesign: gallery signed off, Phase 2 = landing page only (LANDING DONE, whole-app pending)
 
 Approved design direction **Field** (warm paper light / warm ink-night dark, single **petrol**
 accent, Archivo + Archivo Expanded + Fira Code-for-data). Full decisions + token table:
@@ -42,7 +189,7 @@ migration is a later phase.
 
 **LOCAL COMMITS TO PUSH (local `main`, newest last):** `682ee5f` (D3 matcher-on-ingest + D4 re2) → `883678b` (audit false-alarm fix) → `1104495` (noise field_signature → jsonb). All THREE are already applied/deployed live on the VPS, but still need `git push` so GitHub matches prod. Earlier already-pushed: `ac3d174` (Phase C) and predecessors.
 
-**VPS RUNTIME STATE RIGHT NOW (`root@92.112.181.219`, `ssh -i ~/.ssh/vps_cybertools`, `/var/www/cybertools`, pm2 `cybertools-server` id 6, PORT 4001, Node v24, HEAD `0d8efbc` as of 2026-09-08; catalog runtime notes below still current):**
+**VPS RUNTIME STATE RIGHT NOW (`root@92.112.181.219`, `ssh -i ~/.ssh/vps_cybertools`, `/var/www/cybertools`, pm2 `cybertools-server` id 6, PORT 4001, Node v24, HEAD `c2c6cdd` as of 2026-09-08; catalog runtime notes below still current):**
 - **Sigma catalog matcher is LIVE (2026-09-06, later session — went out of shadow).** pm2 env: `CATALOG_MATCHER_SHADOW=` (empty), `CATALOG_DISABLED=` (empty). The matcher runs on every ingest batch and **INSERTS real alerts** into `alerts` (`sigma_identity` set), deduped on `alerts_sigma_dedup (user_id, sigma_identity, group_key)`. Confirmed working: 0 → 11 sigma alerts, a 104-row batch produced `110 hits → 10 new, 100 deduped` (no flood, thanks to the 5-rule noise trim). Rendered in the Alerts view with the neutral "Sigma" badge. Threshold-only catalog cron still scheduled (every 3 min).
 - **CPU-throttle mitigation (2026-09-06):** `catalogCron` was firing every 3 min doing scans that hit the statement timeout + spawned Postgres parallel workers = a top CPU consumer per Hostinger's hPanel (which showed the box is throttled for exceeding its CPU quota — "Maximum CPU resets reached"). Slowed to **every 20 min** via `CATALOG_EVAL_INTERVAL_MIN=20` + `CATALOG_LOOKBACK_SECONDS=1500`, **now IN `.env`** (persistent). Full root-cause + the dedicated-host migration plan: see memory [[project-cybertools-status]] 2026-09-06 block and `docs/plans/2026-09-06-cybertools-dedicated-migration.md`.
 - **🚨 THE KILL-SWITCH FLAGS ARE RUNTIME-ONLY, NOT IN .env OR GIT.** `CATALOG_DISABLED` + `CATALOG_MATCHER_SHADOW` are both empty now (= live). A plain `pm2 restart` keeps that. Emergency kill-switch: `CATALOG_DISABLED=1 pm2 restart cybertools-server --update-env` stops all catalog inserts instantly. To go back to measure-only: `CATALOG_MATCHER_SHADOW=1 pm2 restart … --update-env`. There is NO `CATALOG_*` var in `.env`, so a `pm2 delete`+start keeps it live (both unset = live) — set the kill-switch first if recreating the process during an incident.

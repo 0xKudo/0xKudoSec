@@ -4,6 +4,7 @@ import { useIsMobile } from '../hooks/useIsMobile.js';
 import { badgeStyle } from './ui/index.js';
 import { ATTACK_TECHNIQUES, ATTACK_TACTIC_BY_ID, techniqueLabel } from '../../../shared/attack.js';
 import { RuleLibrary } from './RuleLibrary';
+import { AttackCoverage } from './AttackCoverage.jsx';
 
 const SEV_COLOR = {
   critical: 'var(--severity-critical)',
@@ -113,7 +114,8 @@ export function DetectionRules({ onNavigate }) {
   const { getAccessTokenSilently } = useAuth0();
   const [rules, setRules] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState('alert'); // 'alert' | 'suppress' | 'library'
+  const [tab, setTab] = useState('alert'); // 'alert' | 'suppress' | 'library' | 'attack'
+  const [sigmaTechnique, setSigmaTechnique] = useState(null); // { id, nonce } from ATT&CK Coverage clicks
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null);
@@ -326,14 +328,25 @@ export function DetectionRules({ onNavigate }) {
           Suppression {suppressCount > 0 && `(${suppressCount})`}
         </button>
         <button style={s.tab(tab === 'library')} onClick={() => setTab('library')}>
-          Rule Library
+          Sigma Rules
+        </button>
+        <button style={s.tab(tab === 'attack')} onClick={() => setTab('attack')}>
+          ATT&amp;CK Coverage
         </button>
       </div>
 
-      {tab === 'library' && <RuleLibrary embedded />}
+      {tab === 'library' && <RuleLibrary embedded techniqueFilter={sigmaTechnique} />}
+      {tab === 'attack' && (
+        <div style={{ padding: '16px 20px' }}>
+          <AttackCoverage onSelectTechnique={(id) => {
+            setSigmaTechnique({ id, nonce: Date.now() });
+            setTab('library');
+          }} />
+        </div>
+      )}
 
       {/* Search + filter bar */}
-      {tab !== 'library' && (
+      {(tab === 'alert' || tab === 'suppress') && (
       <div style={{ padding: '8px 20px', borderBottom: '1px solid var(--border)', background: 'var(--bg-surface)', display: 'flex', flexDirection: 'column', gap: '6px' }}>
         <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
           <input
@@ -386,7 +399,7 @@ export function DetectionRules({ onNavigate }) {
       </div>
       )}
 
-      {tab !== 'library' && (isMobile ? (
+      {(tab === 'alert' || tab === 'suppress') && (isMobile ? (
         <div>
           {!loading && !filteredRules.length && (
             <div style={s.muted}>{visibleRules.length === 0 ? `No ${tab} rules yet. Tap "+ New Rule" to create one.` : 'No rules match your search.'}</div>

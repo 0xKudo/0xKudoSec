@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useIsMobile } from '../hooks/useIsMobile.js';
 import { badgeStyle } from './ui/index.js';
-import { AttackCoverage } from './AttackCoverage.jsx';
 
 // Sigma Rule Library (Phase 5). Enable SigmaHQ community categories, browse the
 // converted catalog, and tune individual rules, all against the global catalog
@@ -204,7 +203,9 @@ function WhereTree({ node, depth = 0, k = 'r' }) {
   return <>{Object.entries(node).map(([f, v]) => leaf(f, Array.isArray(v) ? 'in' : 'eq', v))}</>;
 }
 
-export function RuleLibrary({ embedded = false }) {
+const PAGE_SIZES = [10, 25, 50, 100];
+
+export function RuleLibrary({ embedded = false, techniqueFilter = null }) {
   const { getAccessTokenSilently } = useAuth0();
   const isMobile = useIsMobile();
 
@@ -215,7 +216,7 @@ export function RuleLibrary({ embedded = false }) {
   const [hasMore, setHasMore] = useState(false);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
-  const [filters, setFilters] = useState({ category: '', status: '', fidelity: '', technique: '', q: '', severity: [] });
+  const [filters, setFilters] = useState({ category: '', status: '', fidelity: '', technique: '', q: '', severity: [], limit: 10 });
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState(null);
   const [detail, setDetail] = useState(null);       // full rule doc for the modal
@@ -241,7 +242,7 @@ export function RuleLibrary({ embedded = false }) {
     setLoading(true);
     try {
       const h = await authHeaders();
-      const p = new URLSearchParams({ page: String(pg), limit: '50' });
+      const p = new URLSearchParams({ page: String(pg), limit: String(filters.limit || 10) });
       if (filters.category) p.set('category', filters.category);
       if (filters.status) p.set('status', filters.status);
       if (filters.fidelity) p.set('fidelity', filters.fidelity);
@@ -262,6 +263,13 @@ export function RuleLibrary({ embedded = false }) {
 
   useEffect(() => { loadStatus(); loadSettings(); }, [loadStatus, loadSettings]);
   useEffect(() => { loadCatalog(1); }, [loadCatalog]);
+
+  // ATT&CK Coverage lives in a sibling tab now; a technique click there sets this
+  // prop (id + nonce) to jump here and filter the catalog to that technique. The
+  // filter change auto-reloads via the effect above.
+  useEffect(() => {
+    if (techniqueFilter?.id) setFilters(f => ({ ...f, technique: techniqueFilter.id }));
+  }, [techniqueFilter?.nonce, techniqueFilter?.id]);
 
   // Poll status while a sync is running, then refresh the catalog once it settles.
   useEffect(() => {
@@ -345,7 +353,7 @@ export function RuleLibrary({ embedded = false }) {
     <div style={s.container}>
       {!embedded && (
         <div style={s.header}>
-          <span style={s.title}>SIEM &nbsp;<span style={s.sub}>/ Rule Library</span></span>
+          <span style={s.title}>SIEM &nbsp;<span style={s.sub}>/ Sigma Rules</span></span>
           <div style={s.actions}>{syncBtn}</div>
         </div>
       )}
@@ -515,6 +523,15 @@ export function RuleLibrary({ embedded = false }) {
 
         {total > 0 && (
           <div style={{ display: 'flex', gap: '4px', alignItems: 'center', flexWrap: 'wrap', marginTop: '12px' }}>
+            <span style={{ ...s.sub, marginRight: '4px' }}>Rows</span>
+            <select
+              style={s.select}
+              value={filters.limit}
+              onChange={e => setFilters(f => ({ ...f, limit: parseInt(e.target.value, 10) }))}
+            >
+              {PAGE_SIZES.map(n => <option key={n} value={n}>{n}</option>)}
+            </select>
+            <span style={{ width: '1px', alignSelf: 'stretch', background: 'var(--border)', margin: '0 6px' }} />
             <button style={s.btn} disabled={page <= 1} onClick={() => loadCatalog(page - 1)}>Prev</button>
             {(() => {
               const win = pageWindow(page, totalPages);
@@ -536,14 +553,6 @@ export function RuleLibrary({ embedded = false }) {
             <span style={{ ...s.sub, marginLeft: '8px' }}>{total} rules</span>
           </div>
         )}
-      </div>
-
-      <div style={s.section} id="attack-coverage">
-        <div style={s.sectionTitle}>ATT&amp;CK Coverage</div>
-        <AttackCoverage onSelectTechnique={(id) => {
-          setFilters(f => ({ ...f, technique: id }));
-          document.getElementById('rule-catalog')?.scrollIntoView({ behavior: 'smooth' });
-        }} />
       </div>
 
       {detail && (

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { useLocation } from 'react-router-dom';
-import { Sun, Moon } from 'lucide-react';
+import { Sun, Moon, Download } from 'lucide-react';
 import { setThemeWithTransition } from '../lib/viewTransition';
 
 const isElectron = typeof window !== 'undefined' && window.electron?.isElectron === true;
@@ -333,10 +333,10 @@ export function TopNav({ activeApp, onSwitchApp, onMenuToggle, menuOpen, theme, 
             {!isElectron && (
               <a
                 href={DESKTOP_DOWNLOAD_URL}
-                style={{ fontSize: '11px', color: 'var(--accent-amber)', textDecoration: 'none', letterSpacing: '0.04em', whiteSpace: 'nowrap', border: '1px solid var(--accent-amber)', padding: '4px 10px' }}
+                style={{ fontSize: '11px', color: 'var(--accent-amber)', textDecoration: 'none', letterSpacing: '0.04em', whiteSpace: 'nowrap', border: '1px solid var(--accent-amber)', padding: '4px 10px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                 onMouseEnter={e => { e.currentTarget.style.background = 'var(--accent-amber)'; e.currentTarget.style.color = 'var(--bg-primary)'; }}
                 onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = 'var(--accent-amber)'; }}
-              >↓ Desktop App</a>
+              ><Download size={13} strokeWidth={2} aria-hidden="true" /> Desktop App</a>
             )}
             {isAuthenticated ? (
               <>

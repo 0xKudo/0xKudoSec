@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useIsMobile } from '../hooks/useIsMobile';
-import { Sun, Moon } from 'lucide-react';
+import { Sun, Moon, Download } from 'lucide-react';
 import { setThemeWithTransition } from '../lib/viewTransition';
 
 // ── Update this URL with each Electron release ────────────────────────────────
@@ -421,7 +421,7 @@ function DesktopLanding({ onLogin }) {
             style={{ ...s.btnSecondary, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px', color: 'var(--accent-amber)', borderColor: 'var(--accent-amber)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}
             onMouseEnter={e => { e.currentTarget.style.background = 'var(--accent-amber)'; e.currentTarget.style.color = 'var(--bg-primary)'; }}
             onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = 'var(--accent-amber)'; }}
-          >↓ Download for Windows</a>
+          ><Download size={15} strokeWidth={2} aria-hidden="true" /> Download for Windows</a>
         </div>
         <p style={s.heroNote}>
           <span style={{ color: 'var(--severity-low)' }}>✓</span>
