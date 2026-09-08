@@ -57,7 +57,7 @@ const s = {
     alignItems: 'center',
     gap: '12px',
   },
-  title: { fontSize: '13px', color: 'var(--text-primary)', letterSpacing: '0.02em' },
+  title: { fontSize: '13px', color: 'var(--text-primary)', letterSpacing: '0.02em', fontFamily: 'var(--font-display)' },
   titleSub: { color: 'var(--text-muted)', fontSize: '11px' },
   body: { padding: 'var(--space-5)', display: 'flex', flexDirection: 'column', gap: 'var(--space-5)' },
 

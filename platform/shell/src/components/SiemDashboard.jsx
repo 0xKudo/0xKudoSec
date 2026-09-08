@@ -44,7 +44,7 @@ const s = {
     padding: '0 20px', height: '45px', borderBottom: '1px solid var(--border)',
     background: 'var(--bg-surface)', display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0,
   },
-  pageTitle: { fontSize: '13px', color: 'var(--text-primary)', letterSpacing: '0.04em' },
+  pageTitle: { fontSize: '13px', color: 'var(--text-primary)', letterSpacing: '0.02em', fontFamily: 'var(--font-display)' },
   pageSub: { color: 'var(--text-muted)', fontSize: '11px' },
   actions: { marginLeft: 'auto', display: 'flex', gap: '8px', alignItems: 'center' },
   btn: {

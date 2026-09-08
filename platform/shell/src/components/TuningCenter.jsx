@@ -12,7 +12,7 @@ const s = {
     padding: '0 20px', height: '45px', borderBottom: '1px solid var(--border)',
     background: 'var(--bg-surface)', display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0,
   },
-  title: { fontSize: '13px', color: 'var(--text-primary)', letterSpacing: '0.04em' },
+  title: { fontSize: '13px', color: 'var(--text-primary)', letterSpacing: '0.02em', fontFamily: 'var(--font-display)' },
   tabs: { display: 'flex', borderBottom: '1px solid var(--border)', background: 'var(--bg-surface)', flexShrink: 0 },
   tabsMobile: { display: 'flex', flexWrap: 'wrap', justifyContent: 'center', borderBottom: '1px solid var(--border)', background: 'var(--bg-surface)', flexShrink: 0 },
   tab: (active) => ({

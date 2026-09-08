@@ -155,7 +155,7 @@ const s = {
     alignItems: 'center',
     gap: '12px',
   },
-  pageTitle: { fontSize: '13px', color: 'var(--text-primary)', letterSpacing: '0.04em' },
+  pageTitle: { fontSize: '13px', color: 'var(--text-primary)', letterSpacing: '0.02em', fontFamily: 'var(--font-display)' },
   pageSub: { color: 'var(--text-muted)', fontSize: '11px' },
   section: {
     borderBottom: '1px solid var(--border)',
