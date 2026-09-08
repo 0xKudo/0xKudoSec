@@ -24,6 +24,17 @@ const EMPTY_FORM = (action = 'alert') => ({
 
 const CATEGORIES = ['', 'authentication', 'network', 'process', 'file', 'dns', 'registry', 'system', 'firewall', 'account', 'policy'];
 const SEVERITIES = ['', 'critical', 'high', 'medium', 'low', 'info'];
+const PAGE_SIZES = [10, 25, 50, 100];
+
+// A window of at least `span` page numbers centered on the current page, clamped
+// to [1, totalPages]. Mirrors the Sigma Rules paginator (RuleLibrary.jsx).
+function pageWindow(current, totalPages, span = 5) {
+  if (totalPages <= span) return Array.from({ length: totalPages }, (_, i) => i + 1);
+  let start = Math.max(1, current - Math.floor(span / 2));
+  const end = Math.min(totalPages, start + span - 1);
+  start = Math.max(1, end - span + 1);
+  return Array.from({ length: end - start + 1 }, (_, i) => start + i);
+}
 
 const s = {
   container: { padding: 0, flex: 1, minHeight: 0, overflow: 'auto' },
@@ -66,6 +77,16 @@ const s = {
   },
   sevBadge: (color) => badgeStyle(color),
   muted: { padding: '40px 20px', color: 'var(--text-muted)', fontSize: '12px', textAlign: 'center' },
+  pager: { display: 'flex', gap: '4px', alignItems: 'center', flexWrap: 'wrap', padding: '12px 20px', borderTop: '1px solid var(--border-subtle)' },
+  pageBtn: (active) => ({
+    fontFamily: 'var(--font)', fontSize: '11px', padding: '4px 10px', cursor: 'pointer', letterSpacing: '0.04em',
+    border: `1px solid ${active ? 'var(--accent-amber)' : 'var(--border)'}`,
+    color: active ? 'var(--accent-amber)' : 'var(--text-muted)', background: 'none', minWidth: '30px',
+  }),
+  pageSelect: {
+    background: 'var(--bg-surface)', border: '1px solid var(--border)', color: 'var(--text-primary)',
+    fontFamily: 'var(--font)', fontSize: '12px', padding: '4px 8px', outline: 'none', cursor: 'pointer',
+  },
   overlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 },
   modal: { background: 'var(--bg-primary)', border: '1px solid var(--border)', width: '580px', maxWidth: '95vw', maxHeight: '85vh', display: 'flex', flexDirection: 'column' },
   modalHeader: { padding: '12px 16px', borderBottom: '1px solid var(--border)', background: 'var(--bg-surface)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' },
@@ -264,6 +285,12 @@ export function DetectionRules({ onNavigate }) {
   const [searchTerms, setSearchTerms] = useState([]); // committed terms
   const [sevFilters, setSevFilters] = useState(new Set()); // active severity filters
 
+  // Client-side pagination for the alert/suppression lists (same UX as Sigma Rules).
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  // Any change to the visible set resets to page 1 so the paginator stays coherent.
+  useEffect(() => { setPage(1); }, [tab, searchTerms, sevFilters, pageSize]);
+
   function commitSearch() {
     const term = searchInput.trim();
     if (term && !searchTerms.includes(term)) {
@@ -292,6 +319,37 @@ export function DetectionRules({ onNavigate }) {
     ].join(' ').toLowerCase();
     return searchTerms.every(t => haystack.includes(t.toLowerCase()));
   });
+
+  const totalPages = Math.max(1, Math.ceil(filteredRules.length / pageSize));
+  const safePage = Math.min(page, totalPages);
+  const pagedRules = filteredRules.slice((safePage - 1) * pageSize, safePage * pageSize);
+
+  const renderPager = () => (filteredRules.length > 0 && (
+    <div style={s.pager}>
+      <span style={{ ...s.sub, marginRight: '4px' }}>Rows</span>
+      <select style={s.pageSelect} value={pageSize} onChange={e => setPageSize(parseInt(e.target.value, 10))}>
+        {PAGE_SIZES.map(n => <option key={n} value={n}>{n}</option>)}
+      </select>
+      <span style={{ width: '1px', alignSelf: 'stretch', background: 'var(--border)', margin: '0 6px' }} />
+      <button style={s.btn} disabled={safePage <= 1} onClick={() => setPage(safePage - 1)}>Prev</button>
+      {(() => {
+        const win = pageWindow(safePage, totalPages);
+        const nodes = [];
+        if (win[0] > 1) {
+          nodes.push(<button key="first" style={s.pageBtn(false)} onClick={() => setPage(1)}>1</button>);
+          if (win[0] > 2) nodes.push(<span key="e1" style={s.sub}>…</span>);
+        }
+        for (const n of win) nodes.push(<button key={n} style={s.pageBtn(n === safePage)} onClick={() => setPage(n)}>{n}</button>);
+        if (win[win.length - 1] < totalPages) {
+          if (win[win.length - 1] < totalPages - 1) nodes.push(<span key="e2" style={s.sub}>…</span>);
+          nodes.push(<button key="last" style={s.pageBtn(false)} onClick={() => setPage(totalPages)}>{totalPages}</button>);
+        }
+        return nodes;
+      })()}
+      <button style={s.btn} disabled={safePage >= totalPages} onClick={() => setPage(safePage + 1)}>Next</button>
+      <span style={{ ...s.sub, marginLeft: '8px' }}>{filteredRules.length} rules</span>
+    </div>
+  ));
 
   return (
     <div style={s.container}>
@@ -404,7 +462,7 @@ export function DetectionRules({ onNavigate }) {
           {!loading && !filteredRules.length && (
             <div style={s.muted}>{visibleRules.length === 0 ? `No ${tab} rules yet. Tap "+ New Rule" to create one.` : 'No rules match your search.'}</div>
           )}
-          {filteredRules.map(rule => (
+          {pagedRules.map(rule => (
             <div
               key={rule.id}
               style={{ borderBottom: '1px solid var(--border-subtle)', padding: '12px 16px', opacity: rule.enabled ? 1 : 0.5, cursor: 'pointer' }}
@@ -432,6 +490,7 @@ export function DetectionRules({ onNavigate }) {
               )}
             </div>
           ))}
+          {renderPager()}
         </div>
       ) : (
         <div style={{ overflowX: 'auto' }}>
@@ -453,7 +512,7 @@ export function DetectionRules({ onNavigate }) {
                     : 'No rules match your search.'}
                 </td></tr>
               )}
-              {filteredRules.map(rule => (
+              {pagedRules.map(rule => (
                 <tr
                   key={rule.id}
                   style={{ cursor: 'pointer', opacity: rule.enabled ? 1 : 0.5 }}
@@ -487,6 +546,7 @@ export function DetectionRules({ onNavigate }) {
               ))}
             </tbody>
           </table>
+          {renderPager()}
         </div>
       ))}
 
