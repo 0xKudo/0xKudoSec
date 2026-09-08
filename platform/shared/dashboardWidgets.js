@@ -7,7 +7,7 @@ export const MAX_WIDGETS = 24;
 // kind: 'siem' = a built-in SIEM panel; 'tool' = the generic tool-surface widget.
 // Sizes are in grid units (w = columns, h = rows).
 export const WIDGETS = [
-  { id: 'kpi-row',        title: 'Key Stats',           kind: 'siem', minW: 2, minH: 2, defW: 12, defH: 3 },
+  { id: 'kpi-row',        title: 'Key Stats',           kind: 'siem', minW: 3, minH: 3, defW: 12, defH: 3 },
   { id: 'alerts-list',    title: 'Active Alerts',       kind: 'siem', minW: 4, minH: 4, defW: 6,  defH: 6 },
   { id: 'ai-alert-analysis', title: 'AI Alert Analysis', kind: 'siem', minW: 4, minH: 3, defW: 6, defH: 4 },
   { id: 'alert-trend',    title: 'Alert Trend',         kind: 'siem', minW: 3, minH: 3, defW: 3,  defH: 4 },

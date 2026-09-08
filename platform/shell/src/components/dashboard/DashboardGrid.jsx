@@ -1,7 +1,7 @@
 import { useState, useRef, useLayoutEffect, useEffect, useCallback } from 'react';
 import { createScope, createDraggable } from 'animejs';
 import { useIsMobile } from '../../hooks/useIsMobile.js';
-import { GRID, WIDGETS, widgetMeta, MAX_WIDGETS } from '../../../../shared/dashboardWidgets.js';
+import { GRID, WIDGETS, widgetMeta, isKnownWidget, MAX_WIDGETS } from '../../../../shared/dashboardWidgets.js';
 import { cellRect, cellW, pxToCell, clampToGrid, resolve, stackForMobile } from './grid.js';
 import { renderWidget } from './widgetRegistry.jsx';
 import { Widget } from './Widget.jsx';
@@ -31,8 +31,17 @@ const btn = (active) => ({
 
 export function DashboardGrid({ onNavigate, editing: editingProp, onEditingChange }) {
   const isMobile = useIsMobile();
+  // Heal a hydrated layout before it renders: drop widget ids that no longer
+  // exist (removed widgets) and re-pack through resolve() so the survivors have
+  // no gaps or overlaps. Runs only on hydration (see useDashboardLayout).
+  const normalize = useCallback((raw) => {
+    if (!Array.isArray(raw)) return DEFAULT_LAYOUT;
+    const known = raw.filter(w => w && isKnownWidget(w.widgetId));
+    if (!known.length) return DEFAULT_LAYOUT;
+    return resolve(known.map(w => clampToGrid(w, widgetMeta(w.widgetId) || {})), null);
+  }, []);
   // localStorage-first, hydrated from + debounced-saved to /api/siem/dashboards.
-  const { layout, setLayout, saving } = useDashboardLayout('default', DEFAULT_LAYOUT);
+  const { layout, setLayout, saving } = useDashboardLayout('default', DEFAULT_LAYOUT, normalize);
 
   // Editing is controlled by the SIEM nav-bar cog when App passes it in; falls
   // back to internal state (sidebar/mobile layouts that have no nav cog).

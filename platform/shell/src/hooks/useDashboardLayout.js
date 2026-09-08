@@ -6,10 +6,18 @@ import { useAuth0 } from '@auth0/auth0-react';
 // debounce-written back to the server. Returns { layout, setLayout, saving }.
 const LS_KEY = (name) => `kudo_dashboard_${name}`;
 
-export function useDashboardLayout(name = 'default', fallback = []) {
+// `normalize` (optional) is applied to any HYDRATED layout (localStorage on
+// init, or the server copy) before it becomes state — so a stale saved layout
+// (dropped/removed widget ids leaving gaps or overlaps) self-heals through the
+// caller's resolve() instead of rendering as-is. It runs only on hydration, so
+// it never fights the debounced save (which fires on user edits via setLayout).
+export function useDashboardLayout(name = 'default', fallback = [], normalize) {
   const { getAccessTokenSilently } = useAuth0();
+  const norm = useRef(normalize);
+  norm.current = normalize;
+  const apply = useCallback((v) => (norm.current ? norm.current(v) : v), []);
   const [layout, setLayoutState] = useState(() => {
-    try { const v = localStorage.getItem(LS_KEY(name)); if (v) return JSON.parse(v); } catch { /* ignore */ }
+    try { const v = localStorage.getItem(LS_KEY(name)); if (v) return apply(JSON.parse(v)); } catch { /* ignore */ }
     return fallback;
   });
   const [saving, setSaving] = useState(false);
@@ -23,7 +31,7 @@ export function useDashboardLayout(name = 'default', fallback = []) {
         const res = await fetch(`/api/siem/dashboards/${name}`, { headers: { Authorization: `Bearer ${token}` } });
         if (!res.ok) return;
         const data = await res.json();
-        if (live && Array.isArray(data.layout) && data.layout.length) setLayoutState(data.layout);
+        if (live && Array.isArray(data.layout) && data.layout.length) setLayoutState(apply(data.layout));
       } catch { /* offline: keep localStorage/fallback */ }
     })();
     return () => { live = false; };
