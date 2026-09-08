@@ -9,6 +9,7 @@ import { Dashboard, trackToolVisit } from './components/Dashboard';
 import { DashboardMobile } from './components/DashboardMobile';
 import { SiemDashboard } from './components/SiemDashboard';
 import { SiemDashboardMobile } from './components/SiemDashboardMobile';
+import { DashboardGrid } from './components/dashboard/DashboardGrid';
 import { AlertQueue } from './components/AlertQueue';
 import { DetectionRules } from './components/DetectionRules';
 import { LogSearch } from './components/LogSearch';
@@ -71,6 +72,7 @@ function ToolLoader({ toolId }) {
 const NO_AUTH_ROUTES = ['/decoder', '/reverse-shell-generator', '/wordlist-generator', '/payload-generator', '/privacy', '/security'];
 const SIEM_VIEW_PATHS = {
   '/siem': 'dashboard',
+  '/siem/my-dashboard': 'my-dashboard',
   '/siem/alerts': 'alerts',
   '/siem/rules': 'rules',
   '/siem/logsearch': 'logsearch',
@@ -487,6 +489,7 @@ function AppInner() {
                     <div style={{ display: siemView === 'dashboard' ? 'contents' : 'none' }}>
                       {isMobile ? <SiemDashboardMobile onNavigate={handleSiemNavigate} /> : <SiemDashboard onNavigate={handleSiemNavigate} />}
                     </div>
+                    {siemView === 'my-dashboard' && <DashboardGrid onNavigate={handleSiemNavigate} />}
                     {siemView === 'alerts' && <AlertQueue onNavigate={handleSiemNavigate} />}
                     {siemView === 'rules' && <DetectionRules onNavigate={handleSiemNavigate} />}
                     {siemView === 'logsearch' && <LogSearch />}
@@ -494,7 +497,7 @@ function AppInner() {
                     {siemView === 'configuration' && <SiemConfiguration navLayout={navLayout} setNavLayout={setNavLayoutAndPersist} theme={theme} setTheme={setTheme} />}
                     {siemView === 'auditlog' && <AuditLog />}
                     {siemView === 'noise' && <TuningCenter />}
-                    {!['dashboard','alerts','rules','logsearch','cases','configuration','auditlog','noise'].includes(siemView) && (
+                    {!['dashboard','my-dashboard','alerts','rules','logsearch','cases','configuration','auditlog','noise'].includes(siemView) && (
                       <div style={{ padding: '40px', color: 'var(--text-muted)', fontSize: '13px' }}>
                         {siemView.charAt(0).toUpperCase() + siemView.slice(1)}: coming soon
                       </div>

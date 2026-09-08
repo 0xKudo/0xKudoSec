@@ -64,6 +64,7 @@ const styles = {
 
 const NAV = [
   { id: 'dashboard',     label: 'Dashboard' },
+  { id: 'my-dashboard',  label: 'My Dashboard' },
   { id: 'alerts',        label: 'Alert Queue' },
   { id: 'cases',         label: 'Cases' },
   { id: 'logsearch',     label: 'Log Search' },
