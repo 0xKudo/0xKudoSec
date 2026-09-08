@@ -84,11 +84,11 @@ const isElectron = typeof window !== 'undefined' && window.electron?.isElectron 
 
 function ElectronLoadingScreen() {
   return (
-    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#111110', userSelect: 'none', WebkitAppRegion: 'drag' }}>
-      <div style={{ fontSize: '22px', fontWeight: 'bold', letterSpacing: '0.08em', color: '#e8e6e3', fontFamily: 'Courier New, Courier, monospace', marginBottom: '6px' }}>0xKudo</div>
-      <div style={{ fontSize: '11px', letterSpacing: '0.12em', textTransform: 'uppercase', color: '#6e6b68', fontFamily: 'Courier New, Courier, monospace', marginBottom: '40px' }}>Security Toolkit</div>
-      <div style={{ width: '32px', height: '32px', border: '2px solid #2a2928', borderTopColor: '#e8e6e3', borderRadius: '50%', animation: 'spin 0.8s linear infinite', marginBottom: '20px' }} />
-      <div style={{ fontSize: '11px', letterSpacing: '0.06em', color: '#4a4845', textTransform: 'uppercase', fontFamily: 'Courier New, Courier, monospace' }}>Connecting...</div>
+    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-primary)', userSelect: 'none', WebkitAppRegion: 'drag' }}>
+      <div style={{ fontSize: '22px', fontWeight: 'bold', letterSpacing: '0.06em', color: 'var(--text-primary)', fontFamily: 'var(--font)', marginBottom: '6px' }}>[ 0xKudo ]</div>
+      <div style={{ fontSize: '11px', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', marginBottom: '40px' }}>Security Toolkit</div>
+      <div style={{ width: '32px', height: '32px', border: '2px solid var(--border)', borderTopColor: 'var(--text-primary)', borderRadius: '50%', animation: 'spin 0.8s linear infinite', marginBottom: '20px' }} />
+      <div style={{ fontSize: '11px', letterSpacing: '0.06em', color: 'var(--text-subtle)', textTransform: 'uppercase', fontFamily: 'var(--font-mono)' }}>Connecting...</div>
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );

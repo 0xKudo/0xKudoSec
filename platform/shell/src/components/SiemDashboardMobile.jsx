@@ -8,13 +8,13 @@ const SEVERITIES = ['critical', 'high', 'medium', 'low', 'info'];
 
 function sevColor(sev) {
   const map = {
-    critical: '#ef4444',
-    high: '#d97706',
-    medium: '#ca8a04',
-    low: '#16a34a',
-    info: '#60a5fa',
+    critical: 'var(--severity-critical)',
+    high: 'var(--severity-high)',
+    medium: 'var(--severity-medium)',
+    low: 'var(--severity-low)',
+    info: 'var(--severity-info)',
   };
-  return map[(sev || '').toLowerCase()] || '#888';
+  return map[(sev || '').toLowerCase()] || 'var(--text-muted)';
 }
 
 const SEV_COLOR = {
@@ -25,11 +25,11 @@ const SEV_COLOR = {
   info: 'var(--severity-info)',
 };
 const SEV_COLOR_HEX = {
-  critical: '#ef4444',
-  high: '#d97706',
-  medium: '#ca8a04',
-  low: '#16a34a',
-  info: '#60a5fa',
+  critical: 'var(--severity-critical)',
+  high: 'var(--severity-high)',
+  medium: 'var(--severity-medium)',
+  low: 'var(--severity-low)',
+  info: 'var(--severity-info)',
 };
 
 const s = {
@@ -124,7 +124,7 @@ const s = {
   sevPanelBtn: (active, color) => ({
     background: active ? color : 'none',
     border: `1px solid ${color}`,
-    color: active ? '#111110' : color,
+    color: active ? 'var(--bg-primary)' : color,
     fontFamily: 'var(--font)',
     fontSize: '10px',
     padding: '4px 12px',

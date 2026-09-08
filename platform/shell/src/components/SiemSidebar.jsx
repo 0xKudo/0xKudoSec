@@ -87,7 +87,7 @@ function useFluentBitStatus() {
 
 const STATUS_COLOR = {
   RUNNING: '#16a34a',
-  STOPPED: '#d97706',
+  STOPPED: 'var(--severity-high)',
   STARTING: '#60a5fa',
   STOPPING: '#60a5fa',
   NOT_INSTALLED: '#6b7280',

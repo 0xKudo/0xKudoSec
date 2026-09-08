@@ -3,12 +3,14 @@ import { useAuth0 } from '@auth0/auth0-react';
 import { ATTACK_TACTICS, ATTACK_TECHNIQUES, ATTACK_TACTIC_BY_ID, techniqueLabel } from '../../../shared/attack.js';
 import { useIsMobile } from '../hooks/useIsMobile.js';
 
-// Heat ramp: amber (#d97706) at increasing opacity by count. 0 = faint outline only.
-const HEAT_RGB = '217, 119, 6';
+// Heat ramp: the Field petrol accent (--accent-amber, revalued to petrol) at
+// increasing opacity by count. 0 = faint outline only. color-mix keeps it
+// theme-aware -- the accent resolves to a different petrol in light vs dark.
 function heatBg(count, max) {
   if (!count) return 'transparent';
   const ratio = max > 0 ? count / max : 0;
-  return `rgba(${HEAT_RGB}, ${(0.18 + 0.72 * Math.sqrt(ratio)).toFixed(3)})`;
+  const pct = ((0.18 + 0.72 * Math.sqrt(ratio)) * 100).toFixed(1);
+  return `color-mix(in srgb, var(--accent-amber) ${pct}%, transparent)`;
 }
 
 const WINDOW_OPTIONS = [1, 6, 24, 24 * 7, 24 * 30]; // hours, mapped to days for the API

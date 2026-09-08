@@ -210,9 +210,9 @@ const s = {
     marginRight: '8px',
   },
   warning: {
-    background: 'rgba(217, 119, 6, 0.12)',
-    border: '1px solid #d97706',
-    color: '#d97706',
+    background: 'color-mix(in srgb, var(--severity-high) 12%, transparent)',
+    border: '1px solid var(--severity-high)',
+    color: 'var(--severity-high)',
     padding: '10px 14px',
     fontSize: '11px',
     marginBottom: '12px',

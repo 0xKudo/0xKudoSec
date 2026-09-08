@@ -436,7 +436,7 @@ textarea.kudo-field__control { min-height: 140px; resize: vertical; }
   background: color-mix(in srgb, currentColor 14%, transparent);
   transition: background var(--dur-fast) var(--ease-out);
 }
-.kudo-table tr.flagged > td { color: var(--severity-high); background: rgba(217, 119, 6, 0.06); }
+.kudo-table tr.flagged > td { color: var(--severity-high); background: color-mix(in srgb, var(--severity-high) 6%, transparent); }
 
 /* Empty state */
 .kudo-empty {

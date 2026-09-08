@@ -183,7 +183,7 @@ const s = {
     cursor: 'pointer', letterSpacing: '0.04em', marginRight: '8px',
   },
   warning: {
-    background: 'rgba(217, 119, 6, 0.12)', border: '1px solid #d97706', color: '#d97706',
+    background: 'color-mix(in srgb, var(--severity-high) 12%, transparent)', border: '1px solid var(--severity-high)', color: 'var(--severity-high)',
     padding: '10px 14px', fontSize: '11px', marginBottom: '12px', lineHeight: 1.6,
   },
   note: { fontSize: '11px', color: 'var(--text-muted)', marginTop: '10px', lineHeight: 1.6 },
@@ -1134,7 +1134,7 @@ winlogbeat.event_logs:
                       minHeight: '400px',
                       fontFamily: 'var(--font)',
                       fontSize: '12px',
-                      background: 'var(--bg-secondary, #0e0d0c)',
+                      background: 'var(--bg-sidebar)',
                       color: 'var(--text-primary)',
                       border: '1px solid var(--border)',
                       padding: '12px',
@@ -1396,7 +1396,7 @@ winlogbeat.event_logs:
                       <span style={{
                         fontSize: '11px',
                         fontWeight: 'bold',
-                        color: agentStatus === 'RUNNING' ? '#16a34a' : agentStatus === 'STOPPED' ? '#d97706' : agentStatus === 'NOT_INSTALLED' ? '#ef4444' : 'var(--text-muted)',
+                        color: agentStatus === 'RUNNING' ? 'var(--severity-low)' : agentStatus === 'STOPPED' ? 'var(--severity-high)' : agentStatus === 'NOT_INSTALLED' ? 'var(--severity-critical)' : 'var(--text-muted)',
                         letterSpacing: '0.04em',
                       }}>
                         {agentStatus === 'RUNNING' ? '● Running' : agentStatus === 'STOPPED' ? '○ Stopped' : agentStatus === 'STARTING' ? '◌ Starting...' : agentStatus === 'STOPPING' ? '◌ Stopping...' : agentStatus === 'NOT_INSTALLED' ? '✕ Not Installed' : '? Unknown'}

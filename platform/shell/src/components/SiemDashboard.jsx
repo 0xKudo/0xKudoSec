@@ -10,12 +10,14 @@ const SEV_COLOR = {
   low: 'var(--severity-low)',
   info: 'var(--severity-info)',
 };
+// Severity color tokens. Used in SVG fill= (the donut), which accepts var() in
+// Chromium, so these stay theme-aware (the light theme retunes each severity).
 const SEV_COLOR_HEX = {
-  critical: '#ef4444',
-  high: '#d97706',
-  medium: '#ca8a04',
-  low: '#16a34a',
-  info: '#60a5fa',
+  critical: 'var(--severity-critical)',
+  high: 'var(--severity-high)',
+  medium: 'var(--severity-medium)',
+  low: 'var(--severity-low)',
+  info: 'var(--severity-info)',
 };
 
 const HOURS_OPTIONS = [1, 6, 24, 48, 168];
@@ -382,7 +384,7 @@ function SparklineChart({ data, hours, onBarClick }) {
               style={{ cursor: onBarClick ? 'pointer' : 'default' }}
             >
               <rect x={x} y={y} width={barW} height={barH}
-                fill={isRecent ? '#d97706' : 'var(--text-muted)'}
+                fill={isRecent ? 'var(--accent-amber)' : 'var(--text-muted)'}
                 opacity={isRecent ? 0.9 : 0.5}
                 rx="1"
               />
