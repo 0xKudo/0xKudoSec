@@ -15,10 +15,29 @@ Unified cybersecurity tools platform at `0xkudo.com`. Monorepo — shared Expres
 
 ---
 
+### 2026-09-08 — DONE: Alerts/Suppression pagination + ATT&CK matrix click fix (deployed thru e652cb4)
+
+- **Alerts & Suppression rows-per-page + paginator** (`DetectionRules.jsx`, commit `3e67de3`, NOT yet
+  deployed): client-side pagination over the in-memory `filteredRules` list (these tabs load all rules
+  from `/api/siem/rules` and filter locally, unlike Sigma Rules which pages server-side). Rows selector
+  10/25/50/100 (default 10) + numbered paginator via a shared `pageWindow` helper (mirrors RuleLibrary).
+  `renderPager()` is reused in both the desktop table and mobile card layouts. Page resets to 1 on
+  tab/search/severity/pageSize change (`useEffect`). Build compiles clean.
+- **ATT&CK coverage matrix click fix** (`platform/server/routes/siem.js` catalog technique filter,
+  commit `e652cb4`, DEPLOYED — VPS `main` at `e652cb4`, pm2 restarted, health 200): the technique
+  filter was an exact array match, so clicking a parent technique (T1059) in the matrix missed all its
+  sub-technique rules (T1059.001) and vice versa — rules are tagged at mixed granularity. Now
+  hierarchical: `EXISTS (unnest(attack_techniques) tt WHERE tt = $p OR tt LIKE $p||'.%' OR $p LIKE tt||'.%')`.
+  Verified live: T1059 91→338, T1021.001 15→25 matching rules.
+- **Known pre-existing failure (NOT mine):** `platform/server/tests/siem-routes.test.js` has 4 tests
+  failing with `vi.mocked(pool.query).mockResolvedValueOnce is not a function` (e.g. events/by-severity,
+  sources). Fails identically on baseline; a test-setup/isolation issue in the shared db mock
+  (`tests/setup.js` mocks `services/db.js` via `vi.hoisted`), not a product bug. Fix separately.
+
 ### 2026-09-08 — DONE: Sigma Rules reorg + ATT&CK tab + rows-per-page + download icon (items 1 & 2)
 
-Built this session (local, shell build compiles clean; deploy pending). Item 3 (dashboard
-widgets) still TO PLAN — see block below.
+Built this session and DEPLOYED (commit `2ca6077`, VPS `main`, shell rebuilt, pm2 restarted, health 200).
+Item 3 (dashboard widgets) still TO PLAN — see block below.
 
 - **Item 1 — Detection Rules reorg (`DetectionRules.jsx`, `RuleLibrary.jsx`):**
   - Sub-tab "Rule Library" → **"Sigma Rules"**; panel header `SIEM / Rule Library` → `SIEM / Sigma Rules`.
