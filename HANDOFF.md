@@ -15,6 +15,19 @@ Unified cybersecurity tools platform at `0xkudo.com`. Monorepo — shared Expres
 
 ---
 
+### 2026-09-07 — DONE (local, UNDEPLOYED) — Dashboard rebuilt from legacy cards (Layne's 2nd review)
+
+Layne's follow-up: restore the PRE-redesign dashboard layout (ref `public_html/portfolio-src/src/assets/siem-dashboard.png`),
+kill duplicate widget headers, and port the legacy cards the first widget pass had stubbed. Built on `main`, shell builds clean, grid 9/9. NOT committed/deployed.
+- **Duplicate headers:** `Widget.jsx` now renders its chrome bar (grip/title/remove) ONLY in customize mode; in view mode each panel owns its section label. No more doubled titles.
+- **KPI combined + reflowing:** new `panels/KpiRow.jsx` = one widget (`kpi-row`) with `grid-template-columns: repeat(auto-fit, minmax(150px,1fr))` → 4-across / 2×2 / 1-col by width. Removed the 4 separate `kpi-*` widgets + `KpiStat.jsx`.
+- **Alert Trend restored:** `panels/AlertTrend.jsx` rewritten with the legacy SparklineChart + 1h/6h/24h/48h/7d window pills (fed by `/api/siem/alerts/hourly?hours=`).
+- **Event Insights re-added:** new `panels/EventInsights.jsx` = tabbed Top Event IDs / Failed Logins / Top Usernames / Rule Hits; row clicks broadcast `window` CustomEvent `siem-events-search`; `EventsExplorer` listens and sets its search (cross-widget drill-down).
+- **Active Alerts list:** new `panels/AlertsList.jsx` = legacy left-panel mini-list (status chips, View All → alerts, click → ack modal).
+- **AI Alert Analysis (Electron):** new `panels/AiAlertAnalysis.jsx` fed by `/api/siem/realtime/results`; empty-state until local AI analysis runs. In DEFAULT_LAYOUT only when `window.electron?.isElectron`.
+- **Default layout** (`DashboardGrid.jsx`, electron-aware): kpi-row(w12) / alerts-list(left) + alert-trend+top-sources over event-insights(right) / recent-events(w12). +ai-alert-analysis under alerts-list on Electron.
+- `TopSources` gained its "Top Sources" label. Deploy: shell-only, no migration.
+
 ### 2026-09-07 — DONE (local, UNDEPLOYED) — Customizable dashboard refinements (Layne's review)
 
 All fixes below BUILT on `main`, shell builds clean, grid tests green (9/9). NOT committed, NOT deployed.

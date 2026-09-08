@@ -7,18 +7,18 @@ export const MAX_WIDGETS = 24;
 // kind: 'siem' = a built-in SIEM panel; 'tool' = the generic tool-surface widget.
 // Sizes are in grid units (w = columns, h = rows).
 export const WIDGETS = [
-  { id: 'kpi-active',     title: 'Active Alerts', kind: 'siem', minW: 2, minH: 2, defW: 3, defH: 2 },
-  { id: 'kpi-critical',   title: 'Critical',      kind: 'siem', minW: 2, minH: 2, defW: 3, defH: 2 },
-  { id: 'kpi-high',       title: 'High',          kind: 'siem', minW: 2, minH: 2, defW: 3, defH: 2 },
-  { id: 'kpi-events',     title: 'Total Events',  kind: 'siem', minW: 2, minH: 2, defW: 3, defH: 2 },
-  { id: 'alert-queue',    title: 'Alert Queue',   kind: 'siem', minW: 4, minH: 4, defW: 6, defH: 6 },
-  { id: 'top-sources',    title: 'Top Sources',   kind: 'siem', minW: 3, minH: 3, defW: 4, defH: 5 },
+  { id: 'kpi-row',        title: 'Key Stats',           kind: 'siem', minW: 2, minH: 2, defW: 12, defH: 3 },
+  { id: 'alerts-list',    title: 'Active Alerts',       kind: 'siem', minW: 4, minH: 4, defW: 6,  defH: 6 },
+  { id: 'ai-alert-analysis', title: 'AI Alert Analysis', kind: 'siem', minW: 4, minH: 3, defW: 6, defH: 4 },
+  { id: 'alert-trend',    title: 'Alert Trend',         kind: 'siem', minW: 3, minH: 3, defW: 3,  defH: 4 },
+  { id: 'top-sources',    title: 'Top Sources',         kind: 'siem', minW: 3, minH: 3, defW: 3,  defH: 4 },
+  { id: 'event-insights', title: 'Event Insights',      kind: 'siem', minW: 4, minH: 4, defW: 6,  defH: 8 },
   { id: 'recent-events',  title: 'Recent Events',       kind: 'siem', minW: 6, minH: 6, defW: 12, defH: 8 },
-  { id: 'alert-trend',    title: 'Alert Trend',         kind: 'siem', minW: 4, minH: 3, defW: 6, defH: 4 },
-  { id: 'attack-coverage',title: 'ATT&CK Coverage',     kind: 'siem', minW: 5, minH: 4, defW: 8, defH: 6 },
-  { id: 'case-list',      title: 'Cases',               kind: 'siem', minW: 4, minH: 4, defW: 6, defH: 6 },
-  { id: 'log-search',     title: 'Log Search',          kind: 'siem', minW: 5, minH: 5, defW: 8, defH: 7 },
-  { id: 'tool-panel',     title: 'Tool',                kind: 'tool', minW: 4, minH: 4, defW: 6, defH: 6 },
+  { id: 'alert-queue',    title: 'Alert Queue',         kind: 'siem', minW: 4, minH: 4, defW: 6,  defH: 6 },
+  { id: 'attack-coverage',title: 'ATT&CK Coverage',     kind: 'siem', minW: 5, minH: 4, defW: 8,  defH: 6 },
+  { id: 'case-list',      title: 'Cases',               kind: 'siem', minW: 4, minH: 4, defW: 6,  defH: 6 },
+  { id: 'log-search',     title: 'Log Search',          kind: 'siem', minW: 5, minH: 5, defW: 8,  defH: 7 },
+  { id: 'tool-panel',     title: 'Tool',                kind: 'tool', minW: 4, minH: 4, defW: 6,  defH: 6 },
 ];
 
 const byId = new Map(WIDGETS.map(w => [w.id, w]));

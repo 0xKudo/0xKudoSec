@@ -214,6 +214,13 @@ export function EventsExplorer() {
 
   useEffect(() => { const t = setTimeout(() => setDebouncedSearch(search), 300); return () => clearTimeout(t); }, [search]);
 
+  // Event Insights widget drill-downs (event_id/username/rule) broadcast here.
+  useEffect(() => {
+    const onSearch = (e) => setSearch(typeof e.detail === 'string' ? e.detail : '');
+    window.addEventListener('siem-events-search', onSearch);
+    return () => window.removeEventListener('siem-events-search', onSearch);
+  }, []);
+
   const loadRecent = useCallback(async () => {
     if (loadingRef.current) return;
     loadingRef.current = true;

@@ -7,15 +7,20 @@ import { renderWidget } from './widgetRegistry.jsx';
 import { Widget } from './Widget.jsx';
 import { useDashboardLayout } from '../../hooks/useDashboardLayout.js';
 
+const isElectron = typeof window !== 'undefined' && window.electron?.isElectron === true;
+
+// Default layout mirrors the pre-widget SIEM dashboard: a full-width key-stats
+// row, then Active Alerts (+ AI Alert Analysis on Electron) on the left with
+// Alert Trend + Top Sources over the Event Insights tabs on the right, and the
+// full Recent Events explorer across the bottom.
 export const DEFAULT_LAYOUT = [
-  { id: 'w1', widgetId: 'kpi-active',     x: 0, y: 0, w: 3, h: 2 },
-  { id: 'w2', widgetId: 'kpi-critical',   x: 3, y: 0, w: 3, h: 2 },
-  { id: 'w3', widgetId: 'kpi-high',       x: 6, y: 0, w: 3, h: 2 },
-  { id: 'w4', widgetId: 'kpi-events',     x: 9, y: 0, w: 3, h: 2 },
-  { id: 'w5', widgetId: 'alert-queue',    x: 0, y: 2,  w: 6,  h: 6 },
-  { id: 'w6', widgetId: 'top-sources',    x: 6, y: 2,  w: 6,  h: 6 },
-  { id: 'w7', widgetId: 'alert-trend',    x: 0, y: 8,  w: 12, h: 4 },
-  { id: 'w8', widgetId: 'recent-events',  x: 0, y: 12, w: 12, h: 8 },
+  { id: 'w1', widgetId: 'kpi-row',        x: 0, y: 0,  w: 12, h: 3 },
+  { id: 'w2', widgetId: 'alerts-list',    x: 0, y: 3,  w: 6,  h: isElectron ? 6 : 12 },
+  { id: 'w3', widgetId: 'alert-trend',    x: 6, y: 3,  w: 3,  h: 4 },
+  { id: 'w4', widgetId: 'top-sources',    x: 9, y: 3,  w: 3,  h: 4 },
+  { id: 'w5', widgetId: 'event-insights', x: 6, y: 7,  w: 6,  h: 8 },
+  ...(isElectron ? [{ id: 'w6', widgetId: 'ai-alert-analysis', x: 0, y: 9, w: 6, h: 6 }] : []),
+  { id: 'w7', widgetId: 'recent-events',  x: 0, y: 15, w: 12, h: 8 },
 ];
 
 const btn = (active) => ({

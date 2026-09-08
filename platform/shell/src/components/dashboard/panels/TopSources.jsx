@@ -27,6 +27,7 @@ export function TopSources() {
 
   return (
     <div style={{ padding: '10px 12px' }}>
+      <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px' }}>Top Sources</div>
       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
         <tbody>
           {sources.slice(0, 10).map(row => {

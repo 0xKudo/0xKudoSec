@@ -1,8 +1,11 @@
 import { useState, useEffect } from 'react';
-import { KpiStat } from './panels/KpiStat.jsx';
+import { KpiRow } from './panels/KpiRow.jsx';
 import { TopSources } from './panels/TopSources.jsx';
 import { EventsExplorer } from './panels/EventsExplorer.jsx';
 import { AlertTrend } from './panels/AlertTrend.jsx';
+import { AlertsList } from './panels/AlertsList.jsx';
+import { AiAlertAnalysis } from './panels/AiAlertAnalysis.jsx';
+import { EventInsights } from './panels/EventInsights.jsx';
 import { AlertQueue } from '../AlertQueue.jsx';
 import { Cases } from '../Cases.jsx';
 import { LogSearch } from '../LogSearch.jsx';
@@ -34,13 +37,13 @@ function ToolPanelWidget({ toolId }) {
 
 // widgetId -> render(ctx, config). ctx carries { onNavigate }.
 const RENDERERS = {
-  'kpi-active':      () => <KpiStat metric="active" />,
-  'kpi-critical':    () => <KpiStat metric="critical" />,
-  'kpi-high':        () => <KpiStat metric="high" />,
-  'kpi-events':      () => <KpiStat metric="events" />,
+  'kpi-row':         () => <KpiRow />,
+  'alerts-list':     (ctx) => <AlertsList onNavigate={ctx.onNavigate} />,
+  'ai-alert-analysis': () => <AiAlertAnalysis />,
   'top-sources':     () => <TopSources />,
   'recent-events':   () => <EventsExplorer />,
   'alert-trend':     () => <AlertTrend />,
+  'event-insights':  (ctx) => <EventInsights onNavigate={ctx.onNavigate} />,
   'alert-queue':     (ctx) => <AlertQueue onNavigate={ctx.onNavigate} />,
   'case-list':       (ctx) => <Cases onNavigate={ctx.onNavigate} />,
   'log-search':      () => <LogSearch />,
