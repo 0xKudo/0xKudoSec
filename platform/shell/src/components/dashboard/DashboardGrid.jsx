@@ -39,6 +39,19 @@ export function DashboardGrid({ onNavigate }) {
   const { layout, setLayout, saving } = useDashboardLayout('default', DEFAULT_LAYOUT);
 
   const [editing, setEditing] = useState(false);
+  // Show "Saved" briefly after a save settles, then fade it out (was permanent).
+  const [savedFlash, setSavedFlash] = useState(false);
+  const prevSaving = useRef(saving);
+  useEffect(() => {
+    if (prevSaving.current && !saving) {
+      setSavedFlash(true);
+      const t = setTimeout(() => setSavedFlash(false), 2500);
+      prevSaving.current = saving;
+      return () => clearTimeout(t);
+    }
+    prevSaving.current = saving;
+  }, [saving]);
+
   const boardRef = useRef(null);
   const [boardW, setBoardW] = useState(1200);
   const layoutRef = useRef(layout);
@@ -169,7 +182,6 @@ export function DashboardGrid({ onNavigate }) {
     <div style={{ padding: '16px 20px', overflow: 'auto', flex: 1, minHeight: 0 }}>
       {!isMobile && (
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', flexWrap: 'wrap' }}>
-          <button style={btn(editing)} onClick={() => setEditing(e => !e)}>{editing ? 'Done' : 'Customize'}</button>
           {editing && (
             <>
               <select style={selectStyle} value="" disabled={atMax} onChange={e => { addWidget(e.target.value); e.target.value = ''; }}>
@@ -179,9 +191,12 @@ export function DashboardGrid({ onNavigate }) {
               <button style={btn(false)} onClick={resetLayout}>Reset layout</button>
             </>
           )}
-          {saving !== undefined && (
-            <span style={{ marginLeft: 'auto', fontSize: '11px', color: 'var(--text-muted)' }}>{saving ? 'Saving…' : 'Saved'}</span>
-          )}
+          <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '10px' }}>
+            {(saving || savedFlash) && (
+              <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{saving ? 'Saving…' : 'Saved'}</span>
+            )}
+            <button style={btn(editing)} onClick={() => setEditing(e => !e)}>{editing ? 'Done' : 'Customize'}</button>
+          </span>
         </div>
       )}
       <div ref={boardRef} style={{ position: 'relative', width: '100%', height: boardH }}>

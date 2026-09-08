@@ -43,7 +43,7 @@ export function KpiRow() {
       gap: '1px', background: 'var(--border-subtle)', height: '100%', alignContent: 'stretch',
     }}>
       {cards.map(c => (
-        <div key={c.label} style={{ background: 'var(--bg-surface)', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '4px', justifyContent: 'center', minWidth: 0 }}>
+        <div key={c.label} style={{ background: 'var(--bg-surface)', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '4px', justifyContent: 'center', alignItems: 'center', textAlign: 'center', minWidth: 0 }}>
           <span style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{c.label}</span>
           <span style={{ fontSize: '28px', lineHeight: 1, color: c.color || 'var(--text-primary)', fontFamily: 'var(--font-mono)' }}>{fmt(c.value)}</span>
           <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{c.sub}</span>

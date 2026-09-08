@@ -170,11 +170,16 @@ export function EventsExplorer() {
   const [srcFilter, setSrcFilterRaw] = useState(persisted?.srcFilter ?? null);
   const [visibleCols, setVisibleColsRaw] = useState(persisted?.visibleCols ?? COL_NAMES.map(() => true));
   const [showSuppressed, setShowSuppressed] = useState(false);
+  const [sigmaOnly, setSigmaOnlyRaw] = useState(persisted?.sigmaOnly ?? false);
+  const [pageSize, setPageSize] = useState(persisted?.pageSize ?? 20);
+  const [page, setPage] = useState(1);
   const [panelOpen, setPanelOpen] = useState(false);
 
   function persist(overrides) {
-    savePersistedState({ hours, sevFilters: [...sevFilters], catFilter, srcFilter, visibleCols, ...overrides });
+    savePersistedState({ hours, sevFilters: [...sevFilters], catFilter, srcFilter, visibleCols, sigmaOnly, pageSize, ...overrides });
   }
+  function setSigmaOnly(v) { setSigmaOnlyRaw(v); persist({ sigmaOnly: v }); }
+  function changePageSize(v) { setPageSize(v); persist({ pageSize: v }); }
   function setHours(v) { setHoursRaw(v); persist({ hours: v }); }
   function setSevFilters(next) {
     setSevFiltersRaw(prev => {
@@ -208,11 +213,16 @@ export function EventsExplorer() {
   const loadingRef = useRef(false);
 
   const filteredRecent = sevFilters.size > 1 ? recent.filter(r => sevFilters.has(r.severity)) : recent;
+  const totalPages = Math.max(1, Math.ceil(filteredRecent.length / pageSize));
+  const safePage = Math.min(page, totalPages);
+  const pagedRecent = filteredRecent.slice((safePage - 1) * pageSize, safePage * pageSize);
   const { widths, onMouseDown } = useResizableColumns(COL_DEFAULTS_W);
   const visibleIdxs = COL_NAMES.map((_, i) => i).filter(i => visibleCols[i]);
-  const activeFilterCount = [sevFilters.size > 0, catFilter, srcFilter].filter(Boolean).length + visibleCols.filter(v => !v).length;
+  const activeFilterCount = [sevFilters.size > 0, catFilter, srcFilter, sigmaOnly].filter(Boolean).length + visibleCols.filter(v => !v).length;
 
   useEffect(() => { const t = setTimeout(() => setDebouncedSearch(search), 300); return () => clearTimeout(t); }, [search]);
+  // Any change to the visible set resets to page 1 so the paginator stays coherent.
+  useEffect(() => { setPage(1); }, [sevFilters, catFilter, srcFilter, sigmaOnly, debouncedSearch, showSuppressed, pageSize, hours]);
 
   // Event Insights widget drill-downs (event_id/username/rule) broadcast here.
   useEffect(() => {
@@ -234,10 +244,11 @@ export function EventsExplorer() {
       if (srcFilter) params.set('source', srcFilter);
       if (debouncedSearch.trim()) params.set('q', debouncedSearch.trim());
       if (showSuppressed) params.set('showSuppressed', '1');
+      if (sigmaOnly) params.set('sigma', '1');
       const res = await fetch(`/api/siem/events/recent?${params}`, { headers });
       if (res.ok) { const data = await res.json(); setRecent(Array.isArray(data) ? data : []); }
     } catch { /* transient */ } finally { setLoading(false); loadingRef.current = false; }
-  }, [hours, sevFilters, catFilter, srcFilter, debouncedSearch, showSuppressed, getAccessTokenSilently]);
+  }, [hours, sevFilters, catFilter, srcFilter, debouncedSearch, showSuppressed, sigmaOnly, getAccessTokenSilently]);
 
   const loadFacets = useCallback(async () => {
     try {
@@ -321,6 +332,11 @@ export function EventsExplorer() {
         <input style={s.searchInput} type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="search message, event_id, username, host, ip… or field:value" spellCheck={false} />
         {search && <button style={s.searchClear} onClick={() => setSearch('')} title="Clear search">✕</button>}
         <button
+          title="Only events that triggered a Sigma-sourced alert"
+          style={{ background: sigmaOnly ? 'var(--text-muted)' : 'none', border: '1px solid var(--text-muted)', color: sigmaOnly ? 'var(--bg-primary)' : 'var(--text-muted)', fontFamily: 'var(--font)', fontSize: '11px', padding: '4px 12px', cursor: 'pointer', letterSpacing: '0.04em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}
+          onClick={() => setSigmaOnly(!sigmaOnly)}
+        >Sigma</button>
+        <button
           style={panelOpen ? s.btnActive : { ...s.btn, ...(activeFilterCount > 0 ? { borderColor: 'var(--text-primary)', color: 'var(--text-primary)' } : {}) }}
           onClick={() => setPanelOpen(v => !v)}
         >Filters{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}</button>
@@ -339,24 +355,39 @@ export function EventsExplorer() {
 
       <div style={s.sectionBar}>
         <span>Recent Events</span>
-        <span style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '10px' }}>
+        <span style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '10px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
           <span>
-            {filteredRecent.length} shown
+            {filteredRecent.length} match
             {sevFilters.size > 0 ? `, ${[...sevFilters].join(',')}` : ''}
             {catFilter ? `, ${catFilter}` : ''}
             {srcFilter ? `, ${srcFilter}` : ''}
+            {sigmaOnly ? ', sigma' : ''}
             {debouncedSearch.trim() ? `, "${debouncedSearch.trim()}"` : ''}
           </span>
-          {(sevFilters.size > 0 || catFilter || srcFilter) && (
+          {(sevFilters.size > 0 || catFilter || srcFilter || sigmaOnly) && (
             <button
               style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontFamily: 'var(--font)', fontSize: '10px', cursor: 'pointer', letterSpacing: '0.04em', textTransform: 'uppercase', padding: 0 }}
-              onClick={() => { setSevFilters(new Set()); setCatFilter(null); setSrcFilter(null); }}
+              onClick={() => { setSevFilters(new Set()); setCatFilter(null); setSrcFilter(null); setSigmaOnly(false); }}
             >Clear filters</button>
           )}
+          <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <span>Rows</span>
+            <select
+              style={{ background: 'var(--bg-primary)', border: '1px solid var(--border)', color: 'var(--text-muted)', fontFamily: 'var(--font)', fontSize: '10px', padding: '2px 4px', cursor: 'pointer', outline: 'none' }}
+              value={pageSize} onChange={e => changePageSize(parseInt(e.target.value, 10))}
+            >
+              {[20, 50, 100, 200].map(n => <option key={n} value={n}>{n}</option>)}
+            </select>
+          </span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <button style={{ background: 'none', border: '1px solid var(--border)', color: 'var(--text-muted)', fontFamily: 'var(--font)', fontSize: '10px', padding: '2px 8px', cursor: safePage <= 1 ? 'default' : 'pointer', opacity: safePage <= 1 ? 0.4 : 1 }} disabled={safePage <= 1} onClick={() => setPage(safePage - 1)}>Prev</button>
+            <span>{safePage}/{totalPages}</span>
+            <button style={{ background: 'none', border: '1px solid var(--border)', color: 'var(--text-muted)', fontFamily: 'var(--font)', fontSize: '10px', padding: '2px 8px', cursor: safePage >= totalPages ? 'default' : 'pointer', opacity: safePage >= totalPages ? 0.4 : 1 }} disabled={safePage >= totalPages} onClick={() => setPage(safePage + 1)}>Next</button>
+          </span>
         </span>
       </div>
 
-      <div style={{ overflow: 'auto', flex: 1, minHeight: 0 }}>
+      <div className="kudo-scroll" style={{ overflow: 'auto', flex: 1, minHeight: 0 }}>
         <table style={{ ...s.table, width: '100%', minWidth: `${visibleIdxs.reduce((sum, i) => sum + widths[i], 0)}px` }}>
           <colgroup>{visibleIdxs.map(i => <col key={i} style={{ width: `${widths[i]}px` }} />)}</colgroup>
           <thead>
@@ -373,7 +404,7 @@ export function EventsExplorer() {
             {filteredRecent.length === 0 && !loading && (
               <tr><td colSpan={visibleIdxs.length} style={s.muted}>No events yet</td></tr>
             )}
-            {filteredRecent.map(row => (
+            {pagedRecent.map(row => (
               <tr key={row.id} style={{ cursor: 'pointer' }}
                 onClick={() => { setSelectedEvent(row); loadCasesForEvent(); }}
                 onContextMenu={e => { e.preventDefault(); setContextMenu({ x: e.clientX, y: e.clientY, row }); }}

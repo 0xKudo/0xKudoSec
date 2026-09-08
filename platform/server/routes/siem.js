@@ -230,6 +230,10 @@ router.get('/events/recent', wrap(async (req, res) => {
   if (src) { params.push(src); conditions.push(`source = $${params.length}`); }
   for (const c of buildSearchConditions(q, params)) conditions.push(c);
   if (req.query.showSuppressed !== '1') await applySuppressFilters(userId, params, conditions);
+  // Sigma filter: only events that triggered a Sigma-sourced alert (alerts.sigma_identity set).
+  if (req.query.sigma === '1') {
+    conditions.push(`EXISTS (SELECT 1 FROM alerts a WHERE a.log_id = logs.id AND a.sigma_identity IS NOT NULL)`);
+  }
 
   const { rows } = await req.db.query(
     `SELECT id, timestamp, severity, event_id, event_category, message,

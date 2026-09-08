@@ -15,6 +15,17 @@ Unified cybersecurity tools platform at `0xkudo.com`. Monorepo — shared Expres
 
 ---
 
+### 2026-09-07 — DONE (local, UNDEPLOYED) — Dashboard polish pass (Layne's 3rd review)
+
+Shell builds clean, grid 9/9, siem.js node --check OK. **This deploy includes a SERVER change** (still no migration): shell build + pm2 restart.
+- **Chrome bar:** no title text; the WHOLE bar is the drag handle (`data-drag-grip` on the bar, remove btn stops propagation). `Widget.jsx`.
+- **Themed scrollbars:** `.kudo-scroll` on the Widget body + EventsExplorer table (vertical bars now match the horizontal one).
+- **Key Stats centered:** `KpiRow` cards center-aligned so the auto-fit reflow (4/2×2/1) looks right at any width.
+- **Customize button** moved to the right of the toolbar; **Saved** indicator now auto-hides ~2.5s after a save settles (was permanent). `DashboardGrid.jsx`.
+- **Recent Events paginator:** rows selector 20/50/100/200 (default 20) + Prev/Next + page count in the section bar; persisted in `siem_filter_state`.
+- **Sigma filter on Recent Events:** toolbar Sigma pill → `?sigma=1`; server `/events/recent` adds `EXISTS (alerts a WHERE a.log_id = logs.id AND a.sigma_identity IS NOT NULL)` (events that triggered a Sigma-sourced alert). `siem.js` + `EventsExplorer.jsx`.
+- **Alert Trend drill-down:** bars clickable → bucket modal (`/alerts/hourly/detail?hours=&bucket=`) listing that window's alerts → click an alert → alert detail modal with Acknowledge. `AlertTrend.jsx`.
+
 ### 2026-09-07 — DONE (local, UNDEPLOYED) — Dashboard rebuilt from legacy cards (Layne's 2nd review)
 
 Layne's follow-up: restore the PRE-redesign dashboard layout (ref `public_html/portfolio-src/src/assets/siem-dashboard.png`),

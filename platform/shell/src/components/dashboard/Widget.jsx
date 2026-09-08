@@ -17,17 +17,16 @@ export function Widget({ item, editing, onRemove, children }) {
         transition: REDUCED_MOTION ? 'none' : 'left 160ms ease, top 160ms ease, width 160ms ease, height 160ms ease',
       }}
     >
-      {/* Chrome bar shows ONLY in customize mode. In view mode each panel renders
-          its own section label, so a persistent shell title would double it. */}
+      {/* Chrome bar shows ONLY in customize mode. The whole bar is the drag
+          handle (no title text — each panel renders its own section label). */}
       {editing && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 10px', borderBottom: '1px solid var(--border-subtle)', flex: '0 0 auto', background: 'var(--bg-primary)' }}>
-          <span data-drag-grip title="Drag" style={{ cursor: 'grab', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', userSelect: 'none' }}>⠿</span>
-          <span style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{item.title}</span>
-          <button onClick={() => onRemove(item.id)} aria-label="Remove widget"
+        <div data-drag-grip title="Drag to move" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 10px', borderBottom: '1px solid var(--border-subtle)', flex: '0 0 auto', background: 'var(--bg-primary)', cursor: 'grab' }}>
+          <span style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', userSelect: 'none' }}>⠿</span>
+          <button onPointerDown={e => e.stopPropagation()} onClick={() => onRemove(item.id)} aria-label="Remove widget"
             style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontFamily: 'var(--font)', fontSize: '14px', lineHeight: 1 }}>×</button>
         </div>
       )}
-      <div style={{ flex: 1, minHeight: 0, overflow: 'auto', position: 'relative' }}>{children}</div>
+      <div className="kudo-scroll" style={{ flex: 1, minHeight: 0, overflow: 'auto', position: 'relative' }}>{children}</div>
       {editing && (
         <span data-resize-handle style={{
           position: 'absolute', right: 0, bottom: 0, width: '16px', height: '16px', cursor: 'nwse-resize',
