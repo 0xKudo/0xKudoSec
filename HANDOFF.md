@@ -15,9 +15,59 @@ Unified cybersecurity tools platform at `0xkudo.com`. Monorepo — shared Expres
 
 ---
 
-### 2026-09-08 — DONE (local, undeployed): Customizable dashboard widgets (Phases 1-3)
+### 2026-09-08 — TO FIX (next account) — Customizable dashboard refinements (Layne's review)
 
-Executing `docs/plans/2026-09-08-customizable-dashboard-impl.md` inline on `main` (7 tasks).
+Deployed dashboard reviewed live by Layne. Fixes requested, NOT yet built. All in the
+`platform/shell/src/components/dashboard/` files + App/nav. Verify LIVE (no local test server).
+
+**1. Collapse to a SINGLE dashboard — the customizable grid IS the "Dashboard" tab.**
+- Problem: there are now two tabs, "Dashboard" (legacy `SiemDashboard`) and "My Dashboard"
+  (the new `DashboardGrid`). Layne wants only ONE: the Dashboard tab should be the customizable grid.
+- Remove the "My Dashboard" nav entry from BOTH `SiemSidebar.jsx` (the `{ id: 'my-dashboard' }` line
+  in the VIEWS array ~L67) and `TopNav.jsx` SIEM_TABS (~L421). Remove `'/siem/my-dashboard'` from
+  `App.jsx` `SIEM_VIEW_PATHS` (~L74).
+- In `App.jsx` (~L487): make `siemView === 'dashboard'` render `<DashboardGrid onNavigate=… />` instead
+  of `SiemDashboard`/`SiemDashboardMobile`. Drop the separate `siemView === 'my-dashboard'` branch and
+  the `'my-dashboard'` entry from the fallback whitelist (~L498). `/siem` → 'dashboard' now shows the grid.
+- **DECISION/RISK to confirm with Layne:** the legacy `SiemDashboard.jsx` has features the widget
+  version does NOT yet have — the slide-in Filter panel (time range/severity/category/source/columns),
+  the event-detail modal + Process Tree, column resize, and the alert sparkline drill-down. Replacing the
+  Dashboard tab wholesale LOSES those unless ported. Options: (a) accept the loss for v1; (b) add a
+  "recent events" widget with the filter/modal ported in; (c) keep legacy SiemDashboard reachable
+  elsewhere. Recommend (a) for now, revisit in Phase 4/5. The old `dashboard` branch is currently
+  "always mounted (hidden via CSS) so WS/intervals stay alive" — the grid's widgets self-poll, so that
+  always-mounted wrapper can be dropped when swapping.
+
+**2. Remove the Severity Breakdown donut widget entirely** (not used).
+- Delete `severity-donut` from: `platform/shared/dashboardWidgets.js` WIDGETS, `dashboard/widgetRegistry.jsx`
+  RENDERERS, and `dashboard/DashboardGrid.jsx` DEFAULT_LAYOUT (the `w6` entry). Optionally delete
+  `dashboard/panels/SeverityDonut.jsx`. Server `sanitizeLayout` already drops unknown ids, so any saved
+  layout still referencing it self-heals.
+
+**3. Remove the "(KPI)" language from the KPI stat tiles.**
+- In `platform/shared/dashboardWidgets.js`, the four KPI widget titles read "Active Alerts (KPI)",
+  "Critical (KPI)", "High (KPI)", "Total Events (KPI)". Change to plain "Active Alerts", "Critical",
+  "High", "Total Events". NOTE the resulting "Active Alerts" title collides with the `alert-queue`
+  widget's title (also "Active Alerts") — rename `alert-queue` title to "Alert Queue" to disambiguate.
+
+**4. Add Alert Trend + Top Sources to the DEFAULT layout** (widgets exist but aren't placed by default).
+- In `dashboard/DashboardGrid.jsx` DEFAULT_LAYOUT, add entries for `alert-trend` and `top-sources`
+  (both already in the registry). Suggested: after removing the donut, place `top-sources` where it was
+  (x:6-ish) and `alert-trend` in a wide row under the KPIs. Re-check the whole default grid packs without
+  gaps (or just call the layout through `resolve` mentally). Confirm with Layne this is "add", not "the
+  default is fine and these should be optional-only".
+
+**Deploy after fixing:** shell-only (unless registry/server sanitize changes need nothing new) →
+`git pull` + `npm run build --workspace platform/shell` + `pm2 restart cybertools-server`. No new migration.
+
+### 2026-09-08 — DONE + DEPLOYED: Customizable dashboard widgets (Phases 1-3)
+
+**DEPLOYED to VPS 2026-09-08** (HEAD `0c8ef39`): migration ran as superuser (`sudo -u postgres psql -d
+cybertools -f db/migrations/2026-09-08-dashboard-layouts.sql` → table owned by cybertools_app, RLS
+enabled+forced, user_isolation policy), `npm install` (animejs), shell rebuilt, pm2 restarted, health 200,
+`/api/siem/dashboards/default` returns 401 unauth (mounted). See "TO FIX" block ABOVE for Layne's review notes.
+
+Executed `docs/plans/2026-09-08-customizable-dashboard-impl.md` inline on `main` (7 tasks).
 Decisions: anime.js v4 (per spec), single default layout but tool widgets IN v1, first pass = Phases 1-3.
 Checkpoint after each task = commit + HANDOFF/memory update. Verify LIVE (no local test server).
 
