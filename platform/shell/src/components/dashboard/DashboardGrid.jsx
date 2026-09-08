@@ -218,6 +218,17 @@ export function DashboardGrid({ onNavigate, editing: editingProp, onEditingChang
         </div>
       )}
       <div ref={boardRef} onContextMenu={onBoardContextMenu} style={{ position: 'relative', width: '100%', height: boardHWithAdd }}>
+        {/* Snap-grid wallpaper: only in customize mode, so the user can see where
+            widgets align (à la a trading-terminal layout editor). One line per
+            column step and per row step, drawn behind the widgets. */}
+        {editing && !isMobile && (
+          <div aria-hidden style={{
+            position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 0,
+            backgroundImage: 'linear-gradient(to right, var(--border-subtle) 1px, transparent 1px), linear-gradient(to bottom, var(--border-subtle) 1px, transparent 1px)',
+            backgroundSize: `${cellW(boardW) + GRID.gap}px 100%, 100% ${GRID.rowH + GRID.gap}px`,
+            opacity: 0.5,
+          }} />
+        )}
         {items.map(it => (
           <Widget key={it.id} item={it} editing={editing && !isMobile} onRemove={removeWidget}>
             {renderWidget(it, { onNavigate })}
