@@ -5,6 +5,7 @@ import { GRID, WIDGETS, widgetMeta, MAX_WIDGETS } from '../../../../shared/dashb
 import { cellRect, cellW, pxToCell, clampToGrid, resolve, stackForMobile } from './grid.js';
 import { renderWidget } from './widgetRegistry.jsx';
 import { Widget } from './Widget.jsx';
+import { useDashboardLayout } from '../../hooks/useDashboardLayout.js';
 
 export const DEFAULT_LAYOUT = [
   { id: 'w1', widgetId: 'kpi-active',     x: 0, y: 0, w: 3, h: 2 },
@@ -26,12 +27,10 @@ const selectStyle = {
   fontFamily: 'var(--font)', fontSize: '12px', padding: '4px 8px', outline: 'none', cursor: 'pointer',
 };
 
-export function DashboardGrid({ onNavigate, layout: extLayout, setLayout: extSetLayout, saving }) {
+export function DashboardGrid({ onNavigate }) {
   const isMobile = useIsMobile();
-  // Task 7 injects layout+setLayout from a persistence hook; until then, local state.
-  const [localLayout, setLocalLayout] = useState(DEFAULT_LAYOUT);
-  const layout = extLayout ?? localLayout;
-  const setLayout = extSetLayout ?? setLocalLayout;
+  // localStorage-first, hydrated from + debounced-saved to /api/siem/dashboards.
+  const { layout, setLayout, saving } = useDashboardLayout('default', DEFAULT_LAYOUT);
 
   const [editing, setEditing] = useState(false);
   const boardRef = useRef(null);

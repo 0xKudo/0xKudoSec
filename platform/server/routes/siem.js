@@ -21,6 +21,7 @@ import multer from 'multer';
 import { audit } from '../services/audit.js';
 import { broadcast } from '../services/wsBroadcast.js';
 import { ingestKeyLimiter, ruleImportLimiter } from '../middleware/rateLimiter.js';
+import { isKnownWidget, widgetMeta, GRID, MAX_WIDGETS } from '../../shared/dashboardWidgets.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -498,6 +499,55 @@ router.get('/alerts/trend', wrap(async (req, res) => {
     [uid(req)]
   );
   res.json(rows);
+}));
+
+// ── Customizable dashboard layouts (per user, RLS-isolated) ──────────────────
+// The server is the authority over a saved layout: drop unknown widgetIds and
+// clamp every geometry field to the grid before storing, so a tampered client
+// cannot persist junk or oversized widgets.
+function sanitizeLayout(raw) {
+  if (!Array.isArray(raw)) return [];
+  const out = [];
+  for (const w of raw.slice(0, MAX_WIDGETS)) {
+    if (!w || !isKnownWidget(w.widgetId)) continue;
+    const m = widgetMeta(w.widgetId);
+    const width = Math.min(GRID.cols, Math.max(m.minW, Math.round(Number(w.w) || m.defW)));
+    const height = Math.max(m.minH, Math.round(Number(w.h) || m.defH));
+    const x = Math.min(GRID.cols - width, Math.max(0, Math.round(Number(w.x) || 0)));
+    const y = Math.max(0, Math.round(Number(w.y) || 0));
+    const entry = { id: String(w.id || `w${out.length}`), widgetId: w.widgetId, x, y, w: width, h: height };
+    if (w.config && typeof w.config === 'object') entry.config = w.config;
+    out.push(entry);
+  }
+  return out;
+}
+
+router.get('/dashboards/:name', wrap(async (req, res) => {
+  const name = String(req.params.name).slice(0, 64);
+  const { rows } = await req.db.query(
+    'SELECT name, layout FROM dashboard_layouts WHERE user_id = $1 AND name = $2',
+    [uid(req), name]
+  );
+  res.json(rows[0] || { name, layout: [] });
+}));
+
+router.put('/dashboards/:name', wrap(async (req, res) => {
+  const name = String(req.params.name).slice(0, 64);
+  const layout = sanitizeLayout(req.body?.layout);
+  const { rows } = await req.db.query(
+    `INSERT INTO dashboard_layouts (user_id, name, layout, updated_at)
+     VALUES ($1, $2, $3::jsonb, now())
+     ON CONFLICT (user_id, name) DO UPDATE SET layout = EXCLUDED.layout, updated_at = now()
+     RETURNING name, layout`,
+    [uid(req), name, JSON.stringify(layout)]
+  );
+  res.json(rows[0]);
+}));
+
+router.delete('/dashboards/:name', wrap(async (req, res) => {
+  const name = String(req.params.name).slice(0, 64);
+  await req.db.query('DELETE FROM dashboard_layouts WHERE user_id = $1 AND name = $2', [uid(req), name]);
+  res.json({ ok: true });
 }));
 
 // GET /siem/alerts/hourly — alert counts per bucket for a given time window

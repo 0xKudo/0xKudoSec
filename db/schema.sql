@@ -1214,3 +1214,18 @@ CREATE POLICY user_isolation ON public.sigma_rule_overrides USING ((user_id = cu
 ALTER TABLE public.alerts ADD COLUMN IF NOT EXISTS sigma_identity text;
 
 CREATE UNIQUE INDEX IF NOT EXISTS alerts_sigma_dedup ON public.alerts (user_id, sigma_identity, group_key) WHERE sigma_identity IS NOT NULL;
+
+-- Per-user customizable dashboard layouts (2026-09-08). RLS from creation.
+CREATE TABLE IF NOT EXISTS public.dashboard_layouts (
+  user_id     text        NOT NULL,
+  name        text        NOT NULL DEFAULT 'default',
+  layout      jsonb       NOT NULL DEFAULT '[]'::jsonb,
+  is_default  boolean     NOT NULL DEFAULT true,
+  updated_at  timestamp with time zone NOT NULL DEFAULT now(),
+  PRIMARY KEY (user_id, name)
+);
+
+ALTER TABLE public.dashboard_layouts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ONLY public.dashboard_layouts FORCE ROW LEVEL SECURITY;
+
+CREATE POLICY user_isolation ON public.dashboard_layouts USING ((user_id = current_setting('app.user_id'::text, true))) WITH CHECK ((user_id = current_setting('app.user_id'::text, true)));
