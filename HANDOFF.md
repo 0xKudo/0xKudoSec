@@ -15,6 +15,68 @@ Unified cybersecurity tools platform at `0xkudo.com`. Monorepo — shared Expres
 
 ---
 
+### 2026-09-08 — DONE (local, undeployed): Customizable dashboard widgets (Phases 1-3)
+
+Executing `docs/plans/2026-09-08-customizable-dashboard-impl.md` inline on `main` (7 tasks).
+Decisions: anime.js v4 (per spec), single default layout but tool widgets IN v1, first pass = Phases 1-3.
+Checkpoint after each task = commit + HANDOFF/memory update. Verify LIVE (no local test server).
+
+- **Task 1 DONE (`7a722f9`, not deployed):** `npm i animejs@^4.5.0` in `platform/shell` (exports
+  `createDraggable`/`createScope` confirmed) + `platform/shared/dashboardWidgets.js` (shared widget
+  metadata: `GRID{cols12,rowH46,gap10}`, `MAX_WIDGETS=24`, `WIDGETS[]` incl. `tool-panel`, `isKnownWidget`).
+- **Task 2 DONE (`b02ae50`, not deployed):** `platform/shell/src/components/dashboard/grid.js` — pure
+  geometry (`cellRect`/`pxToCell`/`cellW`) + reflow (`overlaps`/`clampToGrid`/`pushDown`/`compactUp`/
+  `resolve`/`stackForMobile`), 9 unit tests green (`grid.test.js`). No React, runs in node.
+- **Task 3 DONE (`a1a3dfd`, not deployed):** 5 self-fetching panels in
+  `dashboard/panels/` — `KpiStat` (metric prop: active→alerts/counts status new, else stats
+  critical/high/total), `SeverityDonut` (by-severity + copied SVG donut), `TopSources`
+  (by-source {host,count}), `RecentEvents` (recent, compact Time/Sev/Host/Message, read-only),
+  `AlertTrend` (alerts/trend {day,count} → daily bars). Each polls on its own interval. No jsdom in
+  shell so no unit test — build-clean + live check. Field names: COL_FIELDS timestamp/severity/host/message.
+- **Task 4 DONE (`1e79a94`, not deployed):** `dashboard/widgetRegistry.jsx` — `renderWidget(entry, ctx)`
+  maps 13 widgetIds to live components (KPIs, donut, sources, recent, trend, AlertQueue, Cases, LogSearch,
+  AttackCoverage, tool-panel). Unknown id → "Unavailable widget" placeholder. `tool-panel` replicates
+  App.jsx's dynamic `import(../../../../tools/${toolId}/client/index.jsx)` loader (local, avoids circular
+  import); toolId picker deferred to Phase 5. NOTE: AlertQueue/Cases/LogSearch have NO `embedded` prop —
+  rendered as-is (their own header shows under the widget title bar); trimming = Phase-5 polish.
+- **Task 5 DONE (`941c3be`, not deployed):** static widget grid in VIEW MODE. `dashboard/Widget.jsx`
+  (positioned frame, title bar, `data-widget-id`, drag-grip/resize-handle/× hidden until edit mode,
+  reduced-motion aware) + `dashboard/DashboardGrid.jsx` (owns layout, `ResizeObserver` → boardW,
+  `cellRect` positioning, `stackForMobile` under 720px, exports `DEFAULT_LAYOUT`). Wired as ADDITIVE
+  SIEM view `my-dashboard` — App.jsx branch + `SIEM_VIEW_PATHS['/siem/my-dashboard']` + nav entries in
+  BOTH `SiemSidebar.jsx` and `TopNav.jsx` SIEM_TABS. Existing `dashboard` view untouched. LIVE-CHECK:
+  open SIEM → My Dashboard, widgets render live data; resize window; shrink <720px = single column.
+- **Task 6 DONE (`e5c241d`, not deployed):** customize mode in `DashboardGrid.jsx`. Customize/Done toggle
+  + Add-widget select (disabled at MAX 24) + Reset layout + Saving/Saved indicator. **MOVE = anime.js**
+  `createScope`+`createDraggable` (trigger=drag grip, container=board, `onSettle`→commit by reading real
+  rect → `pxToCell` → `resolve` → setLayout + clear transform). **RESIZE = native pointer** on the corner
+  handle (anime translates, can't resize a parent — flagged deviation): live px width/height, commit
+  rounds to grid units. Scope rebuilt on `editing`/`boardW`/idsKey change; `scope.revert()` on cleanup.
+  DashboardGrid now optionally takes `layout`/`setLayout`/`saving` props (Task 7 wires the hook; falls
+  back to local state). anime.js v4 API confirmed: options trigger/container/containerPadding/snap,
+  callbacks onRelease/onSettle. NOT drag-tested live yet — the release-commit + transform-clear + scope
+  rebuild interplay is the risk area; eyeball drag/resize/reflow in the running app.
+- **Task 7 DONE (`99671ca`, not deployed) — ALL PHASES 1-3 COMPLETE:** `db/migrations/2026-09-08-dashboard-layouts.sql`
+  (table + `user_isolation` RLS + owner/grant guards) + folded into `db/schema.sql`. Endpoints in `siem.js`:
+  GET/PUT/DELETE `/api/siem/dashboards/:name` with server-side `sanitizeLayout` (drops unknown widgetIds,
+  clamps geometry, MAX 24). `useDashboardLayout` hook (localStorage-first, server-hydrate, debounced 800ms
+  PUT) wired into DashboardGrid (replaces local state; shows Saving/Saved). 2 endpoint tests pass.
+  ⚠️ `platform/server/tests/` is GITIGNORED — `dashboards.test.js` exists locally but is NOT committed.
+
+**DEPLOY (whole feature, server + shell + MIGRATION):** on VPS as superuser, run the migration BEFORE restart:
+`psql "$DATABASE_URL" -f db/migrations/2026-09-08-dashboard-layouts.sql` → `git pull` → `npm run build --workspace platform/shell` → `pm2 restart cybertools-server`. Commits to push: `7a722f9,b02ae50,a1a3dfd,1e79a94,941c3be,e5c241d,99671ca`.
+
+**RUN SERVER TESTS CORRECTLY:** `npm run test --workspace=platform/server -- <name>` (NOT `npx vitest` from
+root — that skips `platform/server/vitest.config.js`+`setup.js` and every db-mocked test spuriously fails).
+Correcting an earlier note: siem-routes has **1** real pre-existing failure (`/api/siem/stats` "returns stats
+shape" — mock response consumed before the stats query), not 4; unrelated to this work.
+
+**LIVE-TEST CHECKLIST (My Dashboard):** widgets render live data; Customize → drag (anime.js) with
+push-down/compact-up reflow; corner resize (native pointer); add/remove/reset; reload persists (localStorage
++ server); <720px stacks read-only. Drag-commit + transform-clear + scope-rebuild is the untested risk area.
+  static grid as additive "My Dashboard" SIEM view → anime.js customize mode → `dashboard_layouts` table
+  (RLS) + endpoints + debounced persistence. Task 7 needs a VPS migration run BEFORE server restart.
+
 ### 2026-09-08 — DONE: Alerts/Suppression pagination + ATT&CK matrix click fix (deployed thru e652cb4)
 
 - **Alerts & Suppression rows-per-page + paginator** (`DetectionRules.jsx`, commit `3e67de3`, NOT yet
