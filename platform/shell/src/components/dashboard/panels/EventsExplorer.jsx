@@ -80,7 +80,7 @@ function useResizableColumns(defaults) {
   return { widths, onMouseDown };
 }
 
-function FilterPanel({ open, onClose, hours, setHours, sevFilters, toggleSevFilter, setSevFilters, catFilter, setCatFilter, srcFilter, setSrcFilter, categories, sourcesList, visibleCols, setVisibleCols, showSuppressed, setShowSuppressed }) {
+function FilterPanel({ open, onClose, hours, setHours, sevFilters, toggleSevFilter, setSevFilters, catFilter, setCatFilter, srcFilter, setSrcFilter, categories, sourcesList, visibleCols, setVisibleCols, showSuppressed, setShowSuppressed, sigmaOnly, setSigmaOnly }) {
   if (!open) return null;
   const catOptions = categories.length ? categories : ALL_CATEGORIES;
   return (
@@ -134,6 +134,18 @@ function FilterPanel({ open, onClose, hours, setHours, sevFilters, toggleSevFilt
             </div>
           </div>
         )}
+
+        <div style={s.panelSection}>
+          <div style={s.panelSectionTitle}>Sigma</div>
+          <div style={s.panelBtnRow}>
+            <button style={!sigmaOnly ? s.btnActive : s.btn} onClick={() => setSigmaOnly(false)}>All</button>
+            <button
+              title="Only events that triggered a Sigma-sourced alert"
+              style={sigmaOnly ? { ...s.btnActive } : { ...s.btn, borderColor: 'var(--text-muted)' }}
+              onClick={() => setSigmaOnly(true)}
+            >Sigma only</button>
+          </div>
+        </div>
 
         <div style={s.panelSection}>
           <div style={s.panelSectionTitle}>Suppressed Events</div>
@@ -332,11 +344,6 @@ export function EventsExplorer() {
         <input style={s.searchInput} type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="search message, event_id, username, host, ip… or field:value" spellCheck={false} />
         {search && <button style={s.searchClear} onClick={() => setSearch('')} title="Clear search">✕</button>}
         <button
-          title="Only events that triggered a Sigma-sourced alert"
-          style={{ background: sigmaOnly ? 'var(--text-muted)' : 'none', border: '1px solid var(--text-muted)', color: sigmaOnly ? 'var(--bg-primary)' : 'var(--text-muted)', fontFamily: 'var(--font)', fontSize: '11px', padding: '4px 12px', cursor: 'pointer', letterSpacing: '0.04em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}
-          onClick={() => setSigmaOnly(!sigmaOnly)}
-        >Sigma</button>
-        <button
           style={panelOpen ? s.btnActive : { ...s.btn, ...(activeFilterCount > 0 ? { borderColor: 'var(--text-primary)', color: 'var(--text-primary)' } : {}) }}
           onClick={() => setPanelOpen(v => !v)}
         >Filters{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}</button>
@@ -351,6 +358,7 @@ export function EventsExplorer() {
         categories={categories} sourcesList={sourcesList}
         visibleCols={visibleCols} setVisibleCols={setVisibleCols}
         showSuppressed={showSuppressed} setShowSuppressed={setShowSuppressed}
+        sigmaOnly={sigmaOnly} setSigmaOnly={setSigmaOnly}
       />
 
       <div style={s.sectionBar}>

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
-import { TimeFieldValue, badgeStyle } from '../../ui/index.js';
+import { badgeStyle } from '../../ui/index.js';
+import { AlertDetailModal } from '../../AlertDetailModal.jsx';
 
 const SEV_COLOR = { critical: 'var(--severity-critical)', high: 'var(--severity-high)', medium: 'var(--severity-medium)', low: 'var(--severity-low)', info: 'var(--severity-info)' };
 const sevColor = (sv) => SEV_COLOR[(sv || '').toLowerCase()] || 'var(--text-muted)';
@@ -8,8 +9,6 @@ const overlay = { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', di
 const modalBox = { background: 'var(--bg-primary)', border: '1px solid var(--border)', width: '720px', maxWidth: '95vw', maxHeight: '80vh', display: 'flex', flexDirection: 'column' };
 const modalHead = { padding: '12px 16px', borderBottom: '1px solid var(--border)', background: 'var(--bg-surface)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' };
 const closeBtn = { background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '16px', cursor: 'pointer', fontFamily: 'var(--font)' };
-const fieldRow = { display: 'grid', gridTemplateColumns: '150px 1fr', borderBottom: '1px solid var(--border-subtle)', padding: '6px 0', gap: '12px' };
-const smallBtn = { background: 'none', border: '1px solid var(--border)', color: 'var(--text-muted)', fontFamily: 'var(--font)', fontSize: '11px', padding: '4px 12px', cursor: 'pointer', letterSpacing: '0.04em' };
 
 // Alert Trend sparkline with a 1h/6h/24h/48h/7d window selector. Ported from the
 // legacy SiemDashboard: bar buckets adapt to the window, recent bars use the
@@ -76,7 +75,7 @@ function SparklineChart({ data, hours, onBarClick }) {
   );
 }
 
-export function AlertTrend() {
+export function AlertTrend({ onNavigate }) {
   const { getAccessTokenSilently } = useAuth0();
   const [hours, setHours] = useState(24);
   const [hourly, setHourly] = useState([]);
@@ -104,12 +103,6 @@ export function AlertTrend() {
     } catch { /* transient */ } finally { setBucketLoading(false); }
   }, [hours, getAccessTokenSilently]);
 
-  async function ackAlert(id) {
-    try {
-      const token = await getAccessTokenSilently();
-      await fetch(`/api/siem/alerts/${id}`, { method: 'PATCH', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'acknowledged' }) });
-    } catch { /* ignore */ }
-  }
 
   const pill = (active) => ({
     background: active ? 'var(--btn-primary-bg)' : 'none', color: active ? 'var(--btn-primary-text)' : 'var(--text-muted)',
@@ -171,39 +164,13 @@ export function AlertTrend() {
       )}
 
       {selectedAlert && (
-        <div style={overlay} onClick={() => setSelectedAlert(null)}>
-          <div style={{ ...modalBox, width: '620px' }} onClick={e => e.stopPropagation()}>
-            <div style={modalHead}>
-              <span style={{ fontSize: '12px', color: 'var(--text-primary)', letterSpacing: '0.04em' }}>
-                {bucket && <span style={{ color: 'var(--text-muted)', cursor: 'pointer', marginRight: '8px' }} onClick={() => setSelectedAlert(null)}>← Back</span>}
-                Alert &nbsp;&nbsp; <span style={{ color: sevColor(selectedAlert.severity) }}>{selectedAlert.severity}</span>
-              </span>
-              <button style={closeBtn} onClick={() => setSelectedAlert(null)}>✕</button>
-            </div>
-            <div className="kudo-scroll" style={{ padding: '16px', overflow: 'auto', flex: 1 }}>
-              {[
-                ['Title', selectedAlert.title], ['Status', selectedAlert.status], ['Severity', selectedAlert.severity],
-                ['Rule', selectedAlert.rule_name], ['Host', selectedAlert.host], ['Username', selectedAlert.username],
-                ['Source IP', selectedAlert.source_ip], ['Dest IP', selectedAlert.dest_ip], ['Event ID', selectedAlert.event_id],
-                ['Message', selectedAlert.message],
-                ['Time', <TimeFieldValue times={selectedAlert.occurrence_times} count={selectedAlert.count} fallback={selectedAlert.last_seen ? new Date(selectedAlert.last_seen).toLocaleString() : (selectedAlert.created_at ? new Date(selectedAlert.created_at).toLocaleString() : null)} />],
-              ].filter(([, v]) => v != null && v !== '').map(([label, value]) => (
-                <div key={label} style={fieldRow}>
-                  <div style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', paddingTop: '2px' }}>{label}</div>
-                  <div style={{ fontSize: '12px', color: 'var(--text-primary)', wordBreak: 'break-word', whiteSpace: 'pre-wrap', fontFamily: 'var(--font-mono)' }}>{typeof value === 'object' ? value : String(value)}</div>
-                </div>
-              ))}
-              {(selectedAlert.id || selectedAlert.alert_id) && (
-                <div style={{ marginTop: '16px' }}>
-                  <button style={{ ...smallBtn, background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-text)' }}
-                    onClick={() => { ackAlert(selectedAlert.id || selectedAlert.alert_id); setSelectedAlert(null); setBucket(b => b ? { ...b, alerts: b.alerts.filter(x => (x.alert_id || x.id) !== (selectedAlert.alert_id || selectedAlert.id)) } : b); }}>
-                    Acknowledge
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
+        <AlertDetailModal
+          alert={selectedAlert}
+          onClose={() => setSelectedAlert(null)}
+          onNavigate={onNavigate}
+          onStatusChange={(id, st) => setBucket(b => b ? { ...b, alerts: b.alerts.map(x => (x.alert_id || x.id) === id ? { ...x, status: st } : x) } : b)}
+          onDeleted={(id) => setBucket(b => b ? { ...b, alerts: b.alerts.filter(x => (x.alert_id || x.id) !== id) } : b)}
+        />
       )}
     </div>
   );

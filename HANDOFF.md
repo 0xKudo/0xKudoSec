@@ -15,9 +15,17 @@ Unified cybersecurity tools platform at `0xkudo.com`. Monorepo — shared Expres
 
 ---
 
-### 2026-09-07 — DONE (local, UNDEPLOYED) — Dashboard polish pass (Layne's 3rd review)
+### 2026-09-07 — TO FIX (Layne's 4th review) — dashboard interaction issues
 
-Shell builds clean, grid 9/9, siem.js node --check OK. **This deploy includes a SERVER change** (still no migration): shell build + pm2 restart.
+All in `platform/shell/src/components/dashboard/` + App/TopNav/SiemSidebar unless noted. Verify LIVE.
+1. **[DONE]** Alert Trend bucket-modal → click an alert must open the EXACT same modal as the Alerts tab (AlertQueue row modal: event fields + Process Tree + Create Case + Mark ack/resolved/Delete), not the compact custom one. Extract AlertQueue's modal to a shared `AlertDetailModal` and use it in both AlertTrend and AlertQueue.
+2. **[DONE]** Sigma filter belongs INSIDE the Recent Events Filters panel, not as a separate toolbar pill. Move it into `FilterPanel` (a Sigma section), drop the toolbar button.
+3. **[DONE]** Replace the "Customize" text button with an ICON button (cog / layout glyph), right-aligned in the SIEM nav bar (the Dashboard/Alerts/Cases tab row), visible on the dashboard. Needs `editing` lifted to App and passed to TopNav/SiemSidebar (button) + DashboardGrid.
+4. **[DONE]** Remove the "Add widget" select. Instead: an empty placeholder tile with a + (chrome bar "Add a widget") that opens the widget picker, AND/OR right-click anywhere on the board → add-widget menu that inserts the chosen widget at the clicked cell, reflowing neighbors.
+
+### 2026-09-07 — DONE + DEPLOYED — Dashboard polish pass (Layne's 3rd review)
+
+Shell builds clean, grid 9/9, siem.js node --check OK. DEPLOYED 2026-09-07 (`7f051a4`, server + shell, no migration).
 - **Chrome bar:** no title text; the WHOLE bar is the drag handle (`data-drag-grip` on the bar, remove btn stops propagation). `Widget.jsx`.
 - **Themed scrollbars:** `.kudo-scroll` on the Widget body + EventsExplorer table (vertical bars now match the horizontal one).
 - **Key Stats centered:** `KpiRow` cards center-aligned so the auto-fit reflow (4/2×2/1) looks right at any width.

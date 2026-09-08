@@ -171,6 +171,7 @@ function AppInner() {
     return derivedSiemView ?? 'dashboard';
   });
   const [menuOpen, setMenuOpen] = useState(false);
+  const [dashEditing, setDashEditing] = useState(false); // dashboard customize mode, toggled from the SIEM nav bar
   const [keyRotatedBanner, setKeyRotatedBanner] = useState(false);
   const [realtimeDisabledBanner, setRealtimeDisabledBanner] = useState(null);
   const [navLayout, setNavLayout] = useState(
@@ -417,6 +418,8 @@ function AppInner() {
             activeCategory={null}
             siemView={siemView}
             onSiemNavigate={handleSiemNavigate}
+            dashEditing={dashEditing}
+            onToggleDashEditing={() => setDashEditing(e => !e)}
           />
         )}
         {navLayout === 'topnav' && !isMobile && activeApp === 'tools' &&
@@ -482,7 +485,7 @@ function AppInner() {
               )}
               {(
                   <RequireAuth>
-                    {siemView === 'dashboard' && <DashboardGrid onNavigate={handleSiemNavigate} />}
+                    {siemView === 'dashboard' && <DashboardGrid onNavigate={handleSiemNavigate} editing={navLayout === 'topnav' && !isMobile ? dashEditing : undefined} onEditingChange={navLayout === 'topnav' && !isMobile ? setDashEditing : undefined} />}
                     {siemView === 'alerts' && <AlertQueue onNavigate={handleSiemNavigate} />}
                     {siemView === 'rules' && <DetectionRules onNavigate={handleSiemNavigate} />}
                     {siemView === 'logsearch' && <LogSearch />}

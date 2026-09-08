@@ -28,17 +28,20 @@ const btn = (active) => ({
   border: '1px solid var(--border)', color: active ? 'var(--btn-primary-text)' : 'var(--text-muted)',
   fontFamily: 'var(--font)', fontSize: '11px', padding: '4px 12px', cursor: 'pointer', letterSpacing: '0.04em',
 });
-const selectStyle = {
-  background: 'var(--bg-surface)', border: '1px solid var(--border)', color: 'var(--text-primary)',
-  fontFamily: 'var(--font)', fontSize: '12px', padding: '4px 8px', outline: 'none', cursor: 'pointer',
-};
 
-export function DashboardGrid({ onNavigate }) {
+export function DashboardGrid({ onNavigate, editing: editingProp, onEditingChange }) {
   const isMobile = useIsMobile();
   // localStorage-first, hydrated from + debounced-saved to /api/siem/dashboards.
   const { layout, setLayout, saving } = useDashboardLayout('default', DEFAULT_LAYOUT);
 
-  const [editing, setEditing] = useState(false);
+  // Editing is controlled by the SIEM nav-bar cog when App passes it in; falls
+  // back to internal state (sidebar/mobile layouts that have no nav cog).
+  const controlled = onEditingChange !== undefined;
+  const [editingInternal, setEditingInternal] = useState(false);
+  const editing = controlled ? editingProp : editingInternal;
+  const setEditing = controlled ? onEditingChange : setEditingInternal;
+  // Widget picker: { x, y } cell target (or 'end') while choosing a widget to add.
+  const [picker, setPicker] = useState(null);
   // Show "Saved" briefly after a save settles, then fade it out (was permanent).
   const [savedFlash, setSavedFlash] = useState(false);
   const prevSaving = useRef(saving);
@@ -65,13 +68,15 @@ export function DashboardGrid({ onNavigate }) {
   }, []);
 
   // ── layout mutations (all routed through resolve so overlaps never persist) ──
-  const addWidget = useCallback((widgetId) => {
+  const addWidget = useCallback((widgetId, at) => {
     const cur = layoutRef.current;
     if (!widgetId || cur.length >= MAX_WIDGETS) return;
     const m = widgetMeta(widgetId);
     const id = `w${Date.now().toString(36)}`;
-    const maxY = cur.reduce((n, w) => Math.max(n, w.y + w.h), 0);
-    const next = [...cur, clampToGrid({ id, widgetId, x: 0, y: maxY, w: m.defW, h: m.defH }, m)];
+    // Place at the clicked cell when given (right-click / placeholder), else stack at the bottom.
+    const x = at ? Math.max(0, Math.min(GRID.cols - m.defW, at.x)) : 0;
+    const y = at ? at.y : cur.reduce((n, w) => Math.max(n, w.y + w.h), 0);
+    const next = [...cur, clampToGrid({ id, widgetId, x, y, w: m.defW, h: m.defH }, m)];
     setLayout(resolve(next, id));
   }, [setLayout]);
 
@@ -178,34 +183,79 @@ export function DashboardGrid({ onNavigate }) {
   const boardH = rows * (GRID.rowH + GRID.gap);
   const atMax = layout.length >= MAX_WIDGETS;
 
+  const showToolbar = !isMobile && (editing || !controlled);
+  // Placeholder "add widget" tile sits one row below the current content in edit mode.
+  const addTile = editing && !isMobile && !atMax
+    ? { id: '__add__', x: 0, y: rows, w: Math.min(4, GRID.cols), h: 3 }
+    : null;
+  const addPx = addTile ? cellRect(addTile, boardW) : null;
+  const boardHWithAdd = addTile ? (rows + addTile.h) * (GRID.rowH + GRID.gap) : boardH;
+
+  const openPickerAt = (e, at) => {
+    e.preventDefault();
+    setPicker({ at, px: { left: Math.min(e.clientX, window.innerWidth - 240), top: Math.min(e.clientY, window.innerHeight - 320) } });
+  };
+  const onBoardContextMenu = (e) => {
+    if (!editing || isMobile || !boardRef.current) return;
+    if (e.target.closest('[data-widget-id]')) return; // let widget-level menus (events table) win
+    const b = boardRef.current.getBoundingClientRect();
+    const cell = pxToCell({ left: e.clientX - b.left, top: e.clientY - b.top, width: cellW(b.width), height: GRID.rowH }, boardRef.current.clientWidth);
+    openPickerAt(e, cell);
+  };
+
   return (
     <div style={{ padding: '16px 20px', overflow: 'auto', flex: 1, minHeight: 0 }}>
-      {!isMobile && (
+      {showToolbar && (
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', flexWrap: 'wrap' }}>
-          {editing && (
-            <>
-              <select style={selectStyle} value="" disabled={atMax} onChange={e => { addWidget(e.target.value); e.target.value = ''; }}>
-                <option value="">{atMax ? 'Max widgets reached' : 'Add widget…'}</option>
-                {WIDGETS.map(w => <option key={w.id} value={w.id}>{w.title}</option>)}
-              </select>
-              <button style={btn(false)} onClick={resetLayout}>Reset layout</button>
-            </>
-          )}
+          {editing && <button style={btn(false)} onClick={resetLayout}>Reset layout</button>}
+          {editing && <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Right-click the board or use the + tile to add a widget.</span>}
           <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '10px' }}>
             {(saving || savedFlash) && (
               <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{saving ? 'Saving…' : 'Saved'}</span>
             )}
-            <button style={btn(editing)} onClick={() => setEditing(e => !e)}>{editing ? 'Done' : 'Customize'}</button>
+            {!controlled && <button style={btn(editing)} onClick={() => setEditing(e => !e)}>{editing ? 'Done' : 'Customize'}</button>}
           </span>
         </div>
       )}
-      <div ref={boardRef} style={{ position: 'relative', width: '100%', height: boardH }}>
+      <div ref={boardRef} onContextMenu={onBoardContextMenu} style={{ position: 'relative', width: '100%', height: boardHWithAdd }}>
         {items.map(it => (
           <Widget key={it.id} item={it} editing={editing && !isMobile} onRemove={removeWidget}>
             {renderWidget(it, { onNavigate })}
           </Widget>
         ))}
+        {addTile && (
+          <button
+            onClick={(e) => openPickerAt(e, { x: 0, y: rows })}
+            title="Add a widget"
+            style={{
+              position: 'absolute', left: addPx.left, top: addPx.top, width: addPx.width, height: addPx.height,
+              background: 'none', border: '1px dashed var(--border)', color: 'var(--text-muted)', cursor: 'pointer',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '6px',
+              fontFamily: 'var(--font)', fontSize: '12px', letterSpacing: '0.04em', boxSizing: 'border-box',
+            }}
+          >
+            <span style={{ fontSize: '24px', lineHeight: 1 }}>+</span>
+            Add a widget
+          </button>
+        )}
       </div>
+
+      {picker && (
+        <>
+          <div onClick={() => setPicker(null)} onContextMenu={(e) => { e.preventDefault(); setPicker(null); }} style={{ position: 'fixed', inset: 0, zIndex: 1200 }} />
+          <div style={{ position: 'fixed', left: picker.px.left, top: picker.px.top, zIndex: 1201, width: '220px', maxHeight: '300px', overflow: 'auto', background: 'var(--bg-surface)', border: '1px solid var(--border)', boxShadow: '0 4px 16px rgba(0,0,0,0.4)' }} className="kudo-scroll">
+            <div style={{ padding: '8px 12px', fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', borderBottom: '1px solid var(--border-subtle)' }}>Add widget</div>
+            {WIDGETS.map(w => (
+              <button key={w.id}
+                onClick={() => { addWidget(w.id, picker.at); setPicker(null); }}
+                style={{ display: 'block', width: '100%', textAlign: 'left', background: 'none', border: 'none', borderBottom: '1px solid var(--border-subtle)', color: 'var(--text-primary)', fontFamily: 'var(--font)', fontSize: '12px', padding: '8px 12px', cursor: 'pointer' }}
+                onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-primary)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'none'}
+              >{w.title}</button>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }

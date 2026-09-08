@@ -438,7 +438,7 @@ const TOOL_CATEGORIES = [
 ];
 
 // Row 2: category / view tabs
-export function CategoryBar({ activeApp, activeCategory, siemView, onSelectCategory, onSiemNavigate }) {
+export function CategoryBar({ activeApp, activeCategory, siemView, onSelectCategory, onSiemNavigate, dashEditing, onToggleDashEditing }) {
   const tabs = activeApp === 'siem' ? SIEM_TABS : TOOL_CATEGORIES;
 
   return (
@@ -467,6 +467,24 @@ export function CategoryBar({ activeApp, activeCategory, siemView, onSelectCateg
           </div>
         );
       })}
+      {activeApp === 'siem' && siemView === 'dashboard' && onToggleDashEditing && (
+        <button
+          title={dashEditing ? 'Done customizing layout' : 'Customize layout'}
+          aria-label={dashEditing ? 'Done customizing layout' : 'Customize layout'}
+          onClick={onToggleDashEditing}
+          style={{
+            marginLeft: 'auto', alignSelf: 'center', marginRight: '12px', flexShrink: 0,
+            background: dashEditing ? 'var(--btn-primary-bg)' : 'none', border: '1px solid var(--border)',
+            color: dashEditing ? 'var(--btn-primary-text)' : 'var(--text-muted)', cursor: 'pointer',
+            padding: '4px 8px', display: 'flex', alignItems: 'center',
+          }}
+        >
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" />
+            <rect x="14" y="14" width="7" height="7" /><rect x="3" y="14" width="7" height="7" />
+          </svg>
+        </button>
+      )}
     </div>
   );
 }

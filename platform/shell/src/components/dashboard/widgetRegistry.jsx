@@ -42,7 +42,7 @@ const RENDERERS = {
   'ai-alert-analysis': () => <AiAlertAnalysis />,
   'top-sources':     () => <TopSources />,
   'recent-events':   () => <EventsExplorer />,
-  'alert-trend':     () => <AlertTrend />,
+  'alert-trend':     (ctx) => <AlertTrend onNavigate={ctx.onNavigate} />,
   'event-insights':  (ctx) => <EventInsights onNavigate={ctx.onNavigate} />,
   'alert-queue':     (ctx) => <AlertQueue onNavigate={ctx.onNavigate} />,
   'case-list':       (ctx) => <Cases onNavigate={ctx.onNavigate} />,
