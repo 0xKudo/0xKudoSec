@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import { KpiStat } from './panels/KpiStat.jsx';
-import { SeverityDonut } from './panels/SeverityDonut.jsx';
 import { TopSources } from './panels/TopSources.jsx';
-import { RecentEvents } from './panels/RecentEvents.jsx';
+import { EventsExplorer } from './panels/EventsExplorer.jsx';
 import { AlertTrend } from './panels/AlertTrend.jsx';
 import { AlertQueue } from '../AlertQueue.jsx';
 import { Cases } from '../Cases.jsx';
@@ -39,14 +38,16 @@ const RENDERERS = {
   'kpi-critical':    () => <KpiStat metric="critical" />,
   'kpi-high':        () => <KpiStat metric="high" />,
   'kpi-events':      () => <KpiStat metric="events" />,
-  'severity-donut':  () => <SeverityDonut />,
   'top-sources':     () => <TopSources />,
-  'recent-events':   () => <RecentEvents />,
+  'recent-events':   () => <EventsExplorer />,
   'alert-trend':     () => <AlertTrend />,
   'alert-queue':     (ctx) => <AlertQueue onNavigate={ctx.onNavigate} />,
   'case-list':       (ctx) => <Cases onNavigate={ctx.onNavigate} />,
   'log-search':      () => <LogSearch />,
-  'attack-coverage': () => <AttackCoverage />,
+  'attack-coverage': (ctx) => <AttackCoverage onSelectTechnique={(id) => {
+    try { localStorage.setItem('siem-restore-technique', id); } catch {}
+    ctx.onNavigate?.('rules');
+  }} />,
   'tool-panel':      (ctx, config) => <ToolPanelWidget toolId={config?.toolId} />,
 };
 

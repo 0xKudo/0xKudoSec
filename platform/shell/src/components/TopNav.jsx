@@ -418,7 +418,6 @@ const rowStyles = {
 
 const SIEM_TABS = [
   { id: 'dashboard',     label: 'Dashboard' },
-  { id: 'my-dashboard',  label: 'My Dashboard' },
   { id: 'alerts',        label: 'Alerts' },
   { id: 'cases',         label: 'Cases' },
   { id: 'logsearch',     label: 'Log Search' },

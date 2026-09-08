@@ -12,9 +12,10 @@ export const DEFAULT_LAYOUT = [
   { id: 'w2', widgetId: 'kpi-critical',   x: 3, y: 0, w: 3, h: 2 },
   { id: 'w3', widgetId: 'kpi-high',       x: 6, y: 0, w: 3, h: 2 },
   { id: 'w4', widgetId: 'kpi-events',     x: 9, y: 0, w: 3, h: 2 },
-  { id: 'w5', widgetId: 'alert-queue',    x: 0, y: 2, w: 6, h: 6 },
-  { id: 'w6', widgetId: 'severity-donut', x: 6, y: 2, w: 4, h: 5 },
-  { id: 'w7', widgetId: 'recent-events',  x: 0, y: 8, w: 8, h: 6 },
+  { id: 'w5', widgetId: 'alert-queue',    x: 0, y: 2,  w: 6,  h: 6 },
+  { id: 'w6', widgetId: 'top-sources',    x: 6, y: 2,  w: 6,  h: 6 },
+  { id: 'w7', widgetId: 'alert-trend',    x: 0, y: 8,  w: 12, h: 4 },
+  { id: 'w8', widgetId: 'recent-events',  x: 0, y: 12, w: 12, h: 8 },
 ];
 
 const btn = (active) => ({
@@ -122,9 +123,15 @@ export function DashboardGrid({ onNavigate }) {
       const startX = e.clientX, startY = e.clientY;
       const startW = el.offsetWidth, startH = el.offsetHeight;
       const cwUnit = cellW(board.clientWidth);
+      // Floor the live drag at the widget's real minimum so contents never clip
+      // mid-resize (clampToGrid enforces the same min on commit).
+      const it = layoutRef.current.find(x => x.id === id);
+      const m = it ? widgetMeta(it.widgetId) : null;
+      const minWpx = m ? m.minW * cwUnit + (m.minW - 1) * GRID.gap : 60;
+      const minHpx = m ? m.minH * GRID.rowH + (m.minH - 1) * GRID.gap : 60;
       const onMove = (ev) => {
-        el.style.width = `${Math.max(60, startW + (ev.clientX - startX))}px`;
-        el.style.height = `${Math.max(60, startH + (ev.clientY - startY))}px`;
+        el.style.width = `${Math.max(minWpx, startW + (ev.clientX - startX))}px`;
+        el.style.height = `${Math.max(minHpx, startH + (ev.clientY - startY))}px`;
       };
       const onUp = () => {
         window.removeEventListener('pointermove', onMove);

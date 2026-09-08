@@ -15,9 +15,31 @@ Unified cybersecurity tools platform at `0xkudo.com`. Monorepo — shared Expres
 
 ---
 
-### 2026-09-08 — TO FIX (next account) — Customizable dashboard refinements (Layne's review)
+### 2026-09-07 — DONE (local, UNDEPLOYED) — Customizable dashboard refinements (Layne's review)
 
-Deployed dashboard reviewed live by Layne. Fixes requested, NOT yet built. All in the
+All fixes below BUILT on `main`, shell builds clean, grid tests green (9/9). NOT committed, NOT deployed.
+Deploy: shell-only → `git pull` + `npm run build --workspace platform/shell` + `pm2 restart cybertools-server`. No migration.
+- **Item 1 DONE:** collapsed to ONE dashboard. `siemView === 'dashboard'` now renders `<DashboardGrid>`;
+  removed the always-mounted legacy `SiemDashboard` wrapper + the `my-dashboard` branch/whitelist entry in
+  App.jsx, `'/siem/my-dashboard'` from SIEM_VIEW_PATHS, the `my-dashboard` nav rows in SiemSidebar.jsx +
+  TopNav.jsx, and the `SiemDashboard`/`SiemDashboardMobile` imports. `SiemDashboard.jsx` file kept but now unused.
+- **Item 2 DONE:** severity-donut removed from dashboardWidgets.js, widgetRegistry, DEFAULT_LAYOUT; `SeverityDonut.jsx` deleted.
+- **Item 3 DONE:** "(KPI)" stripped from the 4 KPI titles; `alert-queue` title → "Alert Queue".
+- **Item 4 DONE:** DEFAULT_LAYOUT rebuilt — KPIs / alert-queue+top-sources / alert-trend (w12) / recent-events (w12 h8). Packs with no gaps.
+- **Filter port (Layne asked for full):** new `dashboard/panels/EventsExplorer.jsx` — full slide-in FilterPanel
+  (time/severity/category/source/columns/suppressed) + field-aware search + resizable-column table +
+  event-detail modal w/ ProcessTreePanel + right-click ContextMenu + case create/add. Registered as the
+  `recent-events` renderer (replaced the compact `RecentEvents.jsx`, which was deleted). recent-events
+  min bumped to 6×6, def 12×8. Persists filters to the legacy `siem_filter_state` LS key.
+- **Min-size clip fix:** DashboardGrid resize DRAG now floors at each widget's real minW/minH px (was flat 60px),
+  so contents no longer clip mid-resize before snapping back. (clampToGrid already enforced mins on commit.)
+- **ATT&CK widget technique click:** the `attack-coverage` widget rendered `<AttackCoverage />` with no
+  `onSelectTechnique`, so cells were dead. Now it writes the clicked id to `localStorage['siem-restore-technique']`
+  and calls `ctx.onNavigate('rules')`; DetectionRules reads+clears that key on mount → opens Sigma Rules filtered
+  to the technique (same effect as the standalone ATT&CK sub-tab, which can't be reached from a widget).
+
+<!-- ORIGINAL REVIEW NOTES (kept for reference) -->
+Deployed dashboard reviewed live by Layne. All in the
 `platform/shell/src/components/dashboard/` files + App/nav. Verify LIVE (no local test server).
 
 **1. Collapse to a SINGLE dashboard — the customizable grid IS the "Dashboard" tab.**

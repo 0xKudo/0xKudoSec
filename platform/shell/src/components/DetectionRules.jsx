@@ -164,6 +164,15 @@ export function DetectionRules({ onNavigate }) {
 
   useEffect(() => { load(); }, [load]);
 
+  // Handoff from the ATT&CK Coverage dashboard widget: open Sigma Rules filtered
+  // to the clicked technique. (The standalone ATT&CK sub-tab wires this directly;
+  // the widget can't, so it drops the id in localStorage before navigating here.)
+  useEffect(() => {
+    let id = null;
+    try { id = localStorage.getItem('siem-restore-technique'); if (id) localStorage.removeItem('siem-restore-technique'); } catch {}
+    if (id) { setSigmaTechnique({ id, nonce: Date.now() }); setTab('library'); }
+  }, []);
+
   const visibleRules = rules.filter(r => (r.action || 'alert') === tab);
 
   function openNew() {
