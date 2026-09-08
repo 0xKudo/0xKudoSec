@@ -1134,7 +1134,14 @@ router.get('/rules/sigma/catalog', wrap(async (req, res) => {
       const sevs = String(req.query.severity || '').split(',').map(v => v.trim()).filter(v => validSev.includes(v));
       if (sevs.length) conds.push(`s.severity = ANY(${add(sevs)})`);
     }
-    if (req.query.technique) conds.push(`${add(String(req.query.technique).toUpperCase())} = ANY(s.attack_techniques)`);
+    if (req.query.technique) {
+      // Hierarchical ATT&CK match so the coverage matrix always surfaces associated
+      // rules: a parent (T1059) matches its sub-techniques (T1059.001), and a
+      // sub-technique matches rules tagged with its parent. Rules are tagged at
+      // mixed granularity, so an exact match misses most of the family.
+      const p = add(String(req.query.technique).toUpperCase());
+      conds.push(`EXISTS (SELECT 1 FROM unnest(s.attack_techniques) tt WHERE tt = ${p} OR tt LIKE ${p} || '.%' OR ${p} LIKE tt || '.%')`);
+    }
     if (req.query.q) conds.push(`s.title ILIKE ${add(`%${String(req.query.q).slice(0, 100)}%`)}`);
     return { conds, params };
   };
